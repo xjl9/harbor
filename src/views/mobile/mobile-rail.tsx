@@ -144,7 +144,7 @@ export function PosterTile({ meta, onOpenDetail }: { meta: Meta; onOpenDetail?: 
       onClick={() => open(meta)}
       className="w-[124px] shrink-0 text-start transition-transform duration-150 active:scale-[0.96]"
     >
-      <Poster src={src} onError={onError} seed={meta.id} ratio="portrait" lazy className="rounded-[14px]">
+      <Poster src={src} onError={onError} seed={meta.id} ratio="portrait" lazy className="rounded-[14px] ring-1 ring-white/[0.06]">
         {award && <AwardCorner award={award} />}
         {!settings.rpdbKey && meta.imdbRating && (
           <span className="pointer-events-none absolute bottom-1.5 end-1.5 flex items-center gap-0.5 rounded-md bg-black/70 px-1.5 py-0.5 text-[10.5px] font-bold text-white backdrop-blur-sm">
@@ -153,7 +153,9 @@ export function PosterTile({ meta, onOpenDetail }: { meta: Meta; onOpenDetail?: 
           </span>
         )}
       </Poster>
-      <p className="mt-1.5 line-clamp-2 text-[12.5px] font-medium leading-snug text-ink-muted">{meta.name}</p>
+      <p className="mt-1.5 line-clamp-2 min-h-[2.7em] text-[12.5px] font-medium leading-snug text-ink-muted">
+        {meta.name}
+      </p>
     </button>
   );
 }
