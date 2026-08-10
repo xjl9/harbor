@@ -41,9 +41,14 @@ export default defineConfig({
     __BUILD_DATE__: JSON.stringify(new Date().toISOString().slice(0, 10)),
   },
   server: {
-    host: "127.0.0.1",
+    // TAURI_DEV_HOST is set by `tauri android|ios dev` so the device can reach
+    // the dev server over the network; desktop dev stays loopback-only.
+    host: process.env.TAURI_DEV_HOST || "127.0.0.1",
     port: 1420,
     strictPort: true,
+    hmr: process.env.TAURI_DEV_HOST
+      ? { protocol: "ws", host: process.env.TAURI_DEV_HOST, port: 1421 }
+      : undefined,
     watch: { ignored: ["**/src-tauri/**"] },
   },
   resolve: {
