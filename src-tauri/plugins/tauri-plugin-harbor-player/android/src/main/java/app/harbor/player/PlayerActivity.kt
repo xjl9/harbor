@@ -31,6 +31,7 @@ import androidx.media3.datasource.DefaultDataSource
 import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
+import androidx.media3.session.MediaSession
 import androidx.media3.ui.PlayerView
 import app.tauri.plugin.JSArray
 import app.tauri.plugin.JSObject
@@ -48,6 +49,7 @@ class PlayerActivity : ComponentActivity() {
     private var player: ExoPlayer? = null
     private val ticker = Handler(Looper.getMainLooper())
     private var released = false
+    private var mediaSession: MediaSession? = null
     private var currentTracks: Tracks? = null
     private var videoWidth = 16
     private var videoHeight = 9
@@ -120,6 +122,11 @@ class PlayerActivity : ComponentActivity() {
             .build()
         player = exo
         playerView.player = exo
+        // Lock-screen / notification transport + hardware media-button (headset, bluetooth,
+        // media keys) handling. A unique session id keeps onNewIntent reloads from colliding.
+        mediaSession = MediaSession.Builder(this, exo)
+            .setId("harbor-${System.identityHashCode(exo)}")
+            .build()
 
         val subConfigs = (intent.getStringArrayExtra("subs") ?: emptyArray()).mapNotNull { spec ->
             val p = spec.split("|")
@@ -352,6 +359,8 @@ class PlayerActivity : ComponentActivity() {
         released = true
         ticker.removeCallbacksAndMessages(null)
         currentTracks = null
+        mediaSession?.release()
+        mediaSession = null
         val p = player
         if (p != null) {
             if (notify) {
