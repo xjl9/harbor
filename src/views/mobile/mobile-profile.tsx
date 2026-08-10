@@ -46,35 +46,51 @@ export function MobileProfile({ onOpenRemote }: { onOpenRemote: () => void }) {
   const native = isMobileNative();
   const installedAddonCount = loadInstalled().length;
 
-  const keyValue = (v: string | undefined) => (v && v.trim() ? "••••" : "Not set");
+  const keySet = (v: string | undefined) => !!(v && v.trim());
 
   return (
-    <div className="flex h-full flex-col gap-6 px-5 pt-4">
-      <header className="flex items-center justify-center">
-        <h1 className="font-display text-[22px] font-medium text-ink">Profile</h1>
-      </header>
+    <div className="relative flex h-full flex-col gap-7 px-5 pb-8 pt-5">
+      {/* Ambient identity wash: the profile's own color bleeds from the top, same cinematic depth as the home hero. */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-72"
+        style={{
+          background: `radial-gradient(125% 72% at 50% -12%, color-mix(in oklab, ${color} 30%, transparent), transparent 72%)`,
+        }}
+      />
 
-      <button
-        type="button"
-        onClick={() => setSwitching(true)}
-        className="flex flex-col items-center gap-3 transition-transform active:scale-[0.98]"
-      >
-        <span
-          className="flex h-[84px] w-[84px] items-center justify-center overflow-hidden rounded-full text-[30px] font-bold text-white shadow-[0_10px_28px_-10px_rgba(0,0,0,0.6)]"
-          style={{ background: avatar ? undefined : color }}
+      <header className="flex flex-col items-center gap-4 pt-2">
+        <button
+          type="button"
+          onClick={() => setSwitching(true)}
+          className="flex flex-col items-center gap-3.5 transition-transform active:scale-[0.98]"
         >
-          {avatar ? (
-            <img src={avatar} alt="" className="h-full w-full object-cover" />
-          ) : (
-            name.slice(0, 1).toUpperCase()
-          )}
-        </span>
-        <span className="text-[18px] font-semibold text-ink">{name}</span>
-        <span className="flex items-center gap-1.5 text-[13px] font-semibold text-accent">
-          <Users size={14} strokeWidth={2.4} />
+          <span
+            className="flex h-[92px] w-[92px] items-center justify-center overflow-hidden rounded-full text-[32px] font-semibold text-white ring-1 ring-white/15"
+            style={{
+              background: avatar ? undefined : color,
+              boxShadow: `0 18px 48px -14px color-mix(in oklab, ${color} 62%, transparent)`,
+            }}
+          >
+            {avatar ? (
+              <img src={avatar} alt="" className="h-full w-full object-cover" />
+            ) : (
+              name.slice(0, 1).toUpperCase()
+            )}
+          </span>
+          <h1 className="font-display text-[27px] font-medium leading-none tracking-[-0.01em] text-ink">
+            {name}
+          </h1>
+        </button>
+        <button
+          type="button"
+          onClick={() => setSwitching(true)}
+          className="flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.05] px-3.5 py-1.5 text-[12.5px] font-semibold text-ink-muted backdrop-blur-sm transition-colors active:bg-white/[0.1]"
+        >
+          <Users size={13} strokeWidth={2.4} />
           Switch profile
-        </span>
-      </button>
+        </button>
+      </header>
 
       <section className="flex flex-col gap-3">
         <h2 className="px-1 text-[12px] font-bold uppercase tracking-[0.16em] text-ink-subtle">
@@ -87,16 +103,23 @@ export function MobileProfile({ onOpenRemote }: { onOpenRemote: () => void }) {
       </section>
 
       <section className="flex flex-col gap-3">
-        <h2 className="px-1 text-[12px] font-bold uppercase tracking-[0.16em] text-ink-subtle">
-          Streaming setup
-        </h2>
-        <div className="overflow-hidden rounded-2xl border border-edge-soft/70 bg-elevated/40">
+        <div className="flex flex-col gap-1.5">
+          <h2 className="px-1 text-[12px] font-bold uppercase tracking-[0.16em] text-ink-subtle">
+            Streaming setup
+          </h2>
+          <p className="px-1 text-[12.5px] leading-snug text-ink-subtle">
+            A TMDB key unlocks the full catalog. RPDB bakes ratings into every poster.
+          </p>
+        </div>
+        <div className="overflow-hidden rounded-2xl border border-white/[0.06] bg-elevated/40">
           {native && (
             <>
               <Row
                 icon={<Link2 size={20} strokeWidth={2} />}
                 label="Desktop connection"
-                value={connected ? settings.remoteHostAddress : settings.remoteHostAddress || "Not set"}
+                value={connected ? settings.remoteHostAddress : settings.remoteHostAddress || undefined}
+                pending={!connected && !settings.remoteHostAddress}
+                pendingLabel="Connect"
                 dot={connected ? "ok" : null}
                 onClick={() =>
                   setEditing({
@@ -113,7 +136,9 @@ export function MobileProfile({ onOpenRemote }: { onOpenRemote: () => void }) {
           <Row
             icon={<KeyRound size={20} strokeWidth={2} />}
             label="TMDB API key"
-            value={keyValue(settings.tmdbKey)}
+            value={keySet(settings.tmdbKey) ? "••••" : undefined}
+            pending={!keySet(settings.tmdbKey)}
+            dot={keySet(settings.tmdbKey) ? "ok" : null}
             onClick={() =>
               setEditing({
                 key: "tmdbKey",
@@ -127,7 +152,9 @@ export function MobileProfile({ onOpenRemote }: { onOpenRemote: () => void }) {
           <Row
             icon={<KeyRound size={20} strokeWidth={2} />}
             label="TVDB API key"
-            value={keyValue(settings.tvdbKey)}
+            value={keySet(settings.tvdbKey) ? "••••" : undefined}
+            pending={!keySet(settings.tvdbKey)}
+            dot={keySet(settings.tvdbKey) ? "ok" : null}
             onClick={() =>
               setEditing({
                 key: "tvdbKey",
@@ -141,13 +168,15 @@ export function MobileProfile({ onOpenRemote }: { onOpenRemote: () => void }) {
           <Row
             icon={<KeyRound size={20} strokeWidth={2} />}
             label="RPDB API key"
-            value={keyValue(settings.rpdbKey)}
+            value={keySet(settings.rpdbKey) ? "••••" : undefined}
+            pending={!keySet(settings.rpdbKey)}
+            dot={keySet(settings.rpdbKey) ? "ok" : null}
             onClick={() =>
               setEditing({
                 key: "rpdbKey",
                 label: "RPDB API key",
                 placeholder: "Paste key",
-                hint: "Optional. Rated posters on rails.",
+                hint: "Rated posters on every rail. Paid plan at ratingposterdb.com.",
               })
             }
           />
@@ -155,13 +184,15 @@ export function MobileProfile({ onOpenRemote }: { onOpenRemote: () => void }) {
           <Row
             icon={<Puzzle size={20} strokeWidth={2} />}
             label="Addons"
-            value={`${installedAddonCount || "None"}`}
+            value={installedAddonCount ? `${installedAddonCount}` : undefined}
+            pending={!installedAddonCount}
+            pendingLabel="Add"
             onClick={() => setAddonsOpen(true)}
           />
         </div>
       </section>
 
-      <section className="overflow-hidden rounded-2xl border border-edge-soft/70 bg-elevated/40">
+      <section className="overflow-hidden rounded-2xl border border-white/[0.06] bg-elevated/40">
         <Row
           icon={<MonitorSmartphone size={20} strokeWidth={2} />}
           label="Remote"
@@ -326,6 +357,8 @@ function Row({
   label,
   value,
   dot,
+  pending,
+  pendingLabel = "Set up",
   onClick,
   danger,
 }: {
@@ -333,6 +366,8 @@ function Row({
   label: string;
   value?: string;
   dot?: "ok" | null;
+  pending?: boolean;
+  pendingLabel?: string;
   onClick: () => void;
   danger?: boolean;
 }) {
@@ -348,6 +383,11 @@ function Row({
       </span>
       {dot === "ok" && <span className="h-2 w-2 rounded-full bg-success" />}
       {value && <span className="max-w-[40%] truncate text-[13.5px] text-ink-subtle">{value}</span>}
+      {pending && (
+        <span className="rounded-full bg-accent/10 px-2.5 py-1 text-[11.5px] font-semibold text-accent">
+          {pendingLabel}
+        </span>
+      )}
       {!danger && <ChevronRight size={18} strokeWidth={2.2} className="text-ink-subtle" />}
     </button>
   );
