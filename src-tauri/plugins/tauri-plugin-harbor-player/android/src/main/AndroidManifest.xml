@@ -8,6 +8,7 @@
             android:resizeableActivity="true"
             android:launchMode="singleTask"
             android:theme="@style/Theme.AppCompat.NoActionBar"
+            android:enableOnBackInvokedCallback="false"
             android:exported="false" />
     </application>
 </manifest>

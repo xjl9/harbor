@@ -9,7 +9,9 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.util.Log
 import android.util.Rational
+import android.view.KeyEvent
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.annotation.RequiresApi
@@ -61,6 +63,19 @@ class PlayerActivity : ComponentActivity() {
         WindowCompat.setDecorFitsSystemWindows(window, false)
         setContentView(R.layout.activity_player)
         playerView = findViewById(R.id.player_view)
+        // Back must always exit the player. On targetSdk 33+ predictive back routes through the
+        // dispatcher (not key events); this callback finishes the Activity, which drives
+        // onDestroy -> releasePlayer(notify=true) -> the 'closed' event -> the React view pops.
+        // dispatchKeyEvent below covers the legacy (non-predictive) path as a fallback.
+        onBackPressedDispatcher.addCallback(
+            this,
+            object : androidx.activity.OnBackPressedCallback(true) {
+                override fun handleOnBackPressed() {
+                    Log.i("HarborPlayer", "onBackPressedDispatcher fired inPip=$isInPictureInPictureMode")
+                    if (!isInPictureInPictureMode) finish()
+                }
+            },
+        )
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         enterImmersive()
         setup()
@@ -302,6 +317,22 @@ class PlayerActivity : ComponentActivity() {
         }
     }
 
+    // Predictive back is disabled for this Activity (manifest enableOnBackInvokedCallback=false),
+    // so BACK arrives as a key event. Intercept it here — before the media3 PlayerView in the
+    // view tree can consume it to toggle its controls — so BACK always exits the player, which
+    // drives onDestroy -> releasePlayer(notify=true) -> the 'closed' event -> the React view pops.
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        if (event.keyCode == KeyEvent.KEYCODE_BACK &&
+            event.action == KeyEvent.ACTION_UP &&
+            !isInPictureInPictureMode
+        ) {
+            Log.i("HarborPlayer", "dispatchKeyEvent BACK up -> finish")
+            finish()
+            return true
+        }
+        return super.dispatchKeyEvent(event)
+    }
+
     override fun onStop() {
         super.onStop()
         if (!isChangingConfigurations && !isInPictureInPictureMode) releasePlayer()
@@ -314,6 +345,7 @@ class PlayerActivity : ComponentActivity() {
     }
 
     private fun releasePlayer(notify: Boolean = true) {
+        Log.i("HarborPlayer", "releasePlayer notify=$notify released=$released")
         if (released) return
         released = true
         ticker.removeCallbacksAndMessages(null)
