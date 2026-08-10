@@ -1,4 +1,4 @@
-import { invoke, Channel } from "@tauri-apps/api/core";
+import { invoke, addPluginListener, type PluginListener } from "@tauri-apps/api/core";
 
 export type NativeSubtitle = { url: string; lang?: string; label?: string };
 
@@ -10,13 +10,17 @@ export type NativeLoadRequest = {
   title?: string;
 };
 
-export type NativePlayerEvent =
-  | { event: "tick"; positionSec: number; durationSec: number; bufferedSec: number; playing: boolean }
-  | { event: "state"; status: "loading" | "ready" | "ended" | "error"; errorCode?: string }
-  | { event: "closed"; positionSec: number; durationSec: number };
+export type NativeTick = {
+  positionSec: number;
+  durationSec: number;
+  bufferedSec: number;
+  playing: boolean;
+};
+export type NativeState = { status: "loading" | "ready" | "ended" | "error"; errorCode?: string };
+export type NativeClosed = { positionSec: number; durationSec: number };
 
-export async function load(req: NativeLoadRequest, channel: Channel<NativePlayerEvent>): Promise<void> {
-  await invoke("plugin:harbor-player|load", { payload: req, channel });
+export async function load(req: NativeLoadRequest): Promise<void> {
+  await invoke("plugin:harbor-player|load", { payload: req });
 }
 export async function play(): Promise<void> {
   await invoke("plugin:harbor-player|play");
@@ -29,4 +33,14 @@ export async function seek(positionSec: number): Promise<void> {
 }
 export async function stop(): Promise<void> {
   await invoke("plugin:harbor-player|stop");
+}
+
+export function onTick(cb: (t: NativeTick) => void): Promise<PluginListener> {
+  return addPluginListener("harbor-player", "tick", cb);
+}
+export function onState(cb: (s: NativeState) => void): Promise<PluginListener> {
+  return addPluginListener("harbor-player", "state", cb);
+}
+export function onClosed(cb: (c: NativeClosed) => void): Promise<PluginListener> {
+  return addPluginListener("harbor-player", "closed", cb);
 }
