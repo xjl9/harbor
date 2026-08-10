@@ -82,7 +82,7 @@ export function MobileWhosWatching({ onClose }: { onClose: () => void }) {
           type="button"
           onClick={onClose}
           aria-label="Close"
-          className="flex h-10 w-10 touch-manipulation items-center justify-center rounded-full bg-elevated/60 text-ink-muted ring-1 ring-edge-soft backdrop-blur transition-transform duration-150 active:scale-[0.94] active:bg-raised"
+          className="flex h-11 w-11 touch-manipulation items-center justify-center rounded-full bg-elevated/60 text-ink-muted ring-1 ring-edge-soft backdrop-blur transition-transform duration-150 active:scale-[0.94] active:bg-raised"
         >
           <X size={18} strokeWidth={2.4} />
         </button>

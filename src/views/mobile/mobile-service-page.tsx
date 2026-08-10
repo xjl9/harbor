@@ -138,7 +138,7 @@ function ServiceHero({
           type="button"
           onClick={onBack}
           aria-label="Back"
-          className="-ms-2 flex h-10 w-10 items-center justify-center rounded-full text-ink-muted transition-transform active:scale-[0.96]"
+          className="-ms-2 flex h-11 w-11 items-center justify-center rounded-full text-ink-muted transition-transform active:scale-[0.96]"
         >
           <ChevronLeft size={24} strokeWidth={2.4} />
         </button>
