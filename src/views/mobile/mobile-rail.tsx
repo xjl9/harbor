@@ -97,26 +97,33 @@ function RankTile({ meta, rank, onOpenDetail }: { meta: Meta; rank: number; onOp
     <button
       type="button"
       onClick={() => open(meta)}
-      className="w-[150px] shrink-0 text-start transition-transform duration-150 active:scale-[0.97]"
+      className="w-[164px] shrink-0 text-start transition-transform duration-150 active:scale-[0.97]"
     >
-      <div className="relative w-full" style={{ aspectRatio: "150 / 176" }}>
+      <div className="relative w-full" style={{ aspectRatio: "164 / 184" }}>
+        {/* Confident solid serif numeral — editorial ranked-list, not Netflix's ghost outline. */}
         <span
           aria-hidden
-          className="pointer-events-none absolute -start-[4%] top-0 font-medium leading-[0.82] text-transparent"
+          className="pointer-events-none absolute bottom-0 -start-[3%] select-none font-medium leading-[0.7] text-raised"
           style={{
             fontFamily: "var(--font-display)",
-            fontSize: rank >= 10 ? "118px" : "158px",
-            letterSpacing: "-0.05em",
-            WebkitTextStroke: "2.2px var(--color-ink-muted)",
+            fontSize: rank >= 10 ? "134px" : "180px",
+            letterSpacing: "-0.06em",
           }}
         >
           {rank}
         </span>
-        <div className="absolute end-0 top-0 w-[62%]">
-          <Poster src={src} onError={onError} seed={meta.id} ratio="portrait" lazy className="rounded-[12px]" />
+        <div className="absolute bottom-0 end-0 w-[64%]">
+          <Poster
+            src={src}
+            onError={onError}
+            seed={meta.id}
+            ratio="portrait"
+            lazy
+            className="rounded-[12px] shadow-[0_14px_32px_-16px_rgba(0,0,0,0.85)] ring-1 ring-white/[0.07]"
+          />
         </div>
       </div>
-      <p className="mt-1.5 line-clamp-1 ps-[38%] text-[12px] font-medium text-ink-muted">{meta.name}</p>
+      <p className="mt-2 line-clamp-1 ps-[36%] text-[12px] font-medium text-ink-muted">{meta.name}</p>
     </button>
   );
 }

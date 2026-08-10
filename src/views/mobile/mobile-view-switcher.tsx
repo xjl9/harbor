@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ComponentType } from "react";
+import { ChevronDown } from "lucide-react";
 import { HomeIcon } from "@/components/icons/home-icon";
 import { MoviesIcon } from "@/components/icons/movies-icon";
 import { TvIcon } from "@/components/icons/tv-icon";
@@ -47,7 +48,6 @@ export function MobileViewSwitcher({ view, onSelect }: { view: View; onSelect: (
   const rootRef = useRef<HTMLDivElement>(null);
   const views = settings.hideContent.anime ? VIEWS.filter((v) => v.id !== "anime") : VIEWS;
   const current = VIEWS.find((v) => v.id === view) ?? VIEWS[0];
-  const CurrentIcon = current.Icon;
 
   useEffect(() => {
     if (!open) return;
@@ -72,12 +72,15 @@ export function MobileViewSwitcher({ view, onSelect }: { view: View; onSelect: (
         aria-expanded={open}
         aria-label={`Browsing ${current.label}. Change section`}
         onClick={() => setOpen((o) => !o)}
-        className="flex h-11 items-center gap-1.5 rounded-[14px] border border-edge-soft/60 bg-elevated/85 pe-3 ps-2 text-ink shadow-[0_8px_24px_-10px_rgba(0,0,0,0.5)] backdrop-blur-xl transition-transform duration-150 active:scale-[0.96]"
+        className="flex h-11 items-center gap-1 rounded-full border border-white/10 bg-black/25 pe-2 ps-3.5 text-ink backdrop-blur-xl transition-transform duration-150 active:scale-[0.96]"
       >
-        <span className="flex h-[26px] w-[26px] items-center justify-center">
-          <CurrentIcon />
-        </span>
         <span className="text-[13.5px] font-semibold">{current.label}</span>
+        <ChevronDown
+          size={16}
+          strokeWidth={2.4}
+          className="text-white/55 transition-transform duration-200"
+          style={{ transform: open ? "rotate(180deg)" : "none" }}
+        />
       </button>
 
       {open && (
