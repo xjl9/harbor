@@ -80,6 +80,7 @@ export function MobileBrowse() {
         )}
       </ViewLayer>
 
+      <div className="pointer-events-none absolute inset-x-0 top-0 z-30 h-36 bg-gradient-to-b from-black/60 via-black/22 to-transparent" />
       <div
         className="pointer-events-none absolute inset-x-0 top-0 z-40 flex items-start justify-between gap-3 px-3"
         style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 10px)" }}

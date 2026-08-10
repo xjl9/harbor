@@ -137,119 +137,120 @@ export function MobileHero({ slides, onOpenDetail }: { slides: Meta[]; onOpenDet
   const layerTransition = reduce ? "none" : `opacity ${DISSOLVE_MS}ms ease-in-out`;
 
   return (
-    <section className="flex flex-col gap-3">
-      <div className="px-4">
-        <div className="relative aspect-[16/13] w-full overflow-hidden rounded-[24px] bg-surface ring-1 ring-edge-soft/50">
-          <button
-            type="button"
-            aria-label={`Open ${current.name}`}
-            onClick={open}
-            className="absolute inset-0 z-0 block h-full w-full text-start"
-          >
-            {src0 && (
-              <img
-                key="l0"
-                src={src0}
-                alt=""
-                decoding="async"
-                className="absolute inset-0 h-full w-full object-cover"
-                style={{ opacity: front === 0 ? 1 : 0, transition: layerTransition }}
-              />
+    <section className="relative -mt-3 mb-1">
+      <div className="relative h-[62svh] min-h-[440px] w-full overflow-hidden">
+        <button
+          type="button"
+          aria-label={`Open ${current.name}`}
+          onClick={open}
+          className="absolute inset-0 z-0 block h-full w-full text-start"
+        >
+          {src0 && (
+            <img
+              key="l0"
+              src={src0}
+              alt=""
+              decoding="async"
+              className="absolute inset-0 h-full w-full object-cover"
+              style={{ opacity: front === 0 ? 1 : 0, transition: layerTransition }}
+            />
+          )}
+          {src1 && (
+            <img
+              key="l1"
+              src={src1}
+              alt=""
+              decoding="async"
+              className="absolute inset-0 h-full w-full object-cover"
+              style={{ opacity: front === 1 ? 1 : 0, transition: layerTransition }}
+            />
+          )}
+          {/* Cinematic blend: image reads clean up top, dissolves into the page canvas at
+              the bottom so the rows below feel like they emerge from the film still. */}
+          <div className="absolute inset-x-0 bottom-0 top-[30%] bg-gradient-to-t from-canvas via-canvas/70 to-transparent" />
+          <div className="absolute inset-x-0 bottom-0 h-[38%] bg-gradient-to-t from-canvas to-transparent" />
+        </button>
+        <div
+          className="pointer-events-none absolute inset-x-0 bottom-0 z-10 flex flex-col gap-3.5 px-5 pb-7"
+          style={{
+            opacity: textOn ? 1 : 0,
+            transform: textOn ? "translateY(0)" : "translateY(8px)",
+            transition: reduce ? "none" : `opacity ${TEXT_MS}ms ease, transform ${TEXT_MS}ms ease`,
+          }}
+        >
+          <span className="inline-flex items-center gap-1.5 self-start text-[10.5px] font-semibold uppercase tracking-[0.16em] text-white/85">
+            <TrendingUp size={12} strokeWidth={2.8} className="text-accent" />
+            #{safeActive + 1} in {kindLabel(current.type)} Today
+          </span>
+          {logo ? (
+            <img
+              src={logo}
+              alt={current.name}
+              className="max-h-[84px] max-w-[80%] object-contain object-left drop-shadow-[0_2px_16px_rgba(0,0,0,0.6)]"
+            />
+          ) : (
+            <h2 className="font-display text-[38px] font-medium leading-[0.98] tracking-tight text-white drop-shadow-[0_2px_16px_rgba(0,0,0,0.6)]">
+              {current.name}
+            </h2>
+          )}
+          <div className="flex items-center gap-3 text-[13px] text-white/75">
+            {year && <span className="font-medium">{year}</span>}
+            {current.imdbRating && (
+              <span className="flex items-center gap-1.5">
+                <ImdbIcon className="h-[15px] w-auto rounded-[3px]" />
+                <span className="font-semibold text-white">{current.imdbRating}</span>
+              </span>
             )}
-            {src1 && (
-              <img
-                key="l1"
-                src={src1}
-                alt=""
-                decoding="async"
-                className="absolute inset-0 h-full w-full object-cover"
-                style={{ opacity: front === 1 ? 1 : 0, transition: layerTransition }}
-              />
-            )}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/45 to-black/5" />
-          </button>
-          <div
-            className="pointer-events-none absolute inset-x-0 bottom-0 z-10 flex flex-col gap-3 p-5"
-            style={{
-              opacity: textOn ? 1 : 0,
-              transform: textOn ? "translateY(0)" : "translateY(8px)",
-              transition: reduce ? "none" : `opacity ${TEXT_MS}ms ease, transform ${TEXT_MS}ms ease`,
-            }}
-          >
-            <span className="inline-flex items-center gap-1.5 self-start rounded-md bg-black/45 px-2.5 py-1 text-[11.5px] font-semibold text-white backdrop-blur-md">
-              <TrendingUp size={12} strokeWidth={2.6} className="text-accent" />
-              #{safeActive + 1} in {kindLabel(current.type)} Today
-            </span>
-            {logo ? (
-              <img
-                src={logo}
-                alt={current.name}
-                className="max-h-[62px] max-w-[74%] object-contain object-left drop-shadow-[0_2px_12px_rgba(0,0,0,0.7)]"
-              />
-            ) : (
-              <h2 className="font-display text-[30px] font-medium leading-[1.02] tracking-tight text-white drop-shadow-[0_2px_12px_rgba(0,0,0,0.7)]">
-                {current.name}
-              </h2>
-            )}
-            <div className="flex items-center gap-3 text-[13px] text-white/80">
-              {year && <span className="font-medium">{year}</span>}
-              {current.imdbRating && (
-                <span className="flex items-center gap-1.5">
-                  <ImdbIcon className="h-[15px] w-auto rounded-[3px]" />
-                  <span className="font-semibold text-white">{current.imdbRating}</span>
-                </span>
-              )}
-              {current.genres?.[0] && <span className="text-white/70">{current.genres[0]}</span>}
-            </div>
-            <div className={`mt-1 flex items-center gap-2.5 ${textOn ? "pointer-events-auto" : "pointer-events-none"}`}>
-              <button
-                type="button"
-                onClick={() => playOnHost(current)}
-                className="flex h-[52px] items-center gap-2.5 rounded-full bg-white px-8 text-[16px] font-semibold text-black shadow-[0_6px_20px_-6px_rgba(0,0,0,0.5)] transition-transform duration-150 active:scale-[0.97]"
-              >
-                <Play size={19} strokeWidth={0} fill="currentColor" />
-                Play
-              </button>
-              <button
-                type="button"
-                aria-label={inWl ? "In My List" : "Add to My List"}
-                onClick={() =>
-                  toggleWatchlist({ id: current.id, type: current.type, name: current.name, poster: current.poster })
-                }
-                className="flex h-[52px] w-[52px] shrink-0 items-center justify-center rounded-full border border-white/25 bg-black/35 text-white backdrop-blur-sm transition-transform duration-150 active:scale-[0.94]"
-              >
-                {inWl ? <Check size={20} strokeWidth={2.6} className="text-accent" /> : <Plus size={21} strokeWidth={2.2} />}
-              </button>
-              <button
-                type="button"
-                aria-label="More info"
-                onClick={open}
-                className="flex h-[52px] w-[52px] shrink-0 items-center justify-center rounded-full border border-white/25 bg-black/35 text-white backdrop-blur-sm transition-transform duration-150 active:scale-[0.94]"
-              >
-                <Info size={21} strokeWidth={2.2} />
-              </button>
-            </div>
+            {current.genres?.[0] && <span className="text-white/65">{current.genres[0]}</span>}
           </div>
+          <div className={`mt-1.5 flex items-center gap-2.5 ${textOn ? "pointer-events-auto" : "pointer-events-none"}`}>
+            <button
+              type="button"
+              onClick={() => playOnHost(current)}
+              className="flex h-[54px] flex-1 items-center justify-center gap-2.5 rounded-full bg-white text-[16px] font-semibold text-black shadow-[0_8px_24px_-8px_rgba(0,0,0,0.6)] transition-transform duration-150 active:scale-[0.97]"
+            >
+              <Play size={19} strokeWidth={0} fill="currentColor" />
+              Play
+            </button>
+            <button
+              type="button"
+              aria-label={inWl ? "In My List" : "Add to My List"}
+              onClick={() =>
+                toggleWatchlist({ id: current.id, type: current.type, name: current.name, poster: current.poster })
+              }
+              className="flex h-[54px] w-[54px] shrink-0 items-center justify-center rounded-full border border-white/15 bg-white/10 text-white backdrop-blur-md transition-transform duration-150 active:scale-[0.94]"
+            >
+              {inWl ? <Check size={20} strokeWidth={2.6} className="text-accent" /> : <Plus size={21} strokeWidth={2.2} />}
+            </button>
+            <button
+              type="button"
+              aria-label="More info"
+              onClick={open}
+              className="flex h-[54px] w-[54px] shrink-0 items-center justify-center rounded-full border border-white/15 bg-white/10 text-white backdrop-blur-md transition-transform duration-150 active:scale-[0.94]"
+            >
+              <Info size={21} strokeWidth={2.2} />
+            </button>
+          </div>
+          {shown.length > 1 && (
+            <div className="pointer-events-auto mt-1 flex items-center gap-1.5">
+              {shown.map((m, i) => (
+                <button
+                  key={m.id}
+                  type="button"
+                  aria-label={`Show ${m.name}`}
+                  onClick={() => {
+                    pausedUntil.current = Date.now() + PILL_PAUSE_MS;
+                    goTo(i);
+                  }}
+                  className={`h-1 rounded-full transition-all duration-300 ${
+                    i === target ? "w-6 bg-accent" : "w-1 bg-white/30"
+                  }`}
+                />
+              ))}
+            </div>
+          )}
         </div>
       </div>
-      {shown.length > 1 && (
-        <div className="flex items-center justify-center gap-1.5">
-          {shown.map((m, i) => (
-            <button
-              key={m.id}
-              type="button"
-              aria-label={`Show ${m.name}`}
-              onClick={() => {
-                pausedUntil.current = Date.now() + PILL_PAUSE_MS;
-                goTo(i);
-              }}
-              className={`h-1.5 rounded-full transition-all duration-300 ${
-                i === target ? "w-5 bg-accent" : "w-1.5 bg-ink/20"
-              }`}
-            />
-          ))}
-        </div>
-      )}
     </section>
   );
 }
