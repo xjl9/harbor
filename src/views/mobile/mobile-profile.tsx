@@ -8,6 +8,7 @@ import {
   LogOut,
   MonitorSmartphone,
   Puzzle,
+  SlidersHorizontal,
   Users,
 } from "lucide-react";
 import { useState, type ReactNode } from "react";
@@ -17,6 +18,7 @@ import { useProfiles } from "@/lib/profiles";
 import { useSettings } from "@/lib/settings";
 import { loadInstalled } from "@/lib/addon-store";
 import { MobileAddons } from "./mobile-addons";
+import { MobileSettings } from "./mobile-settings";
 import { MobileWhosWatching } from "./mobile-whos-watching";
 import { useMobileRemote } from "./mobile-remote";
 import { useRegisterSheet } from "./mobile-sheet-lock";
@@ -43,13 +45,14 @@ export function MobileProfile({ onOpenRemote }: { onOpenRemote: () => void }) {
   const [switching, setSwitching] = useState(false);
   const [editing, setEditing] = useState<EditField | null>(null);
   const [addonsOpen, setAddonsOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const native = isMobileNative();
   const installedAddonCount = loadInstalled().length;
 
   const keySet = (v: string | undefined) => !!(v && v.trim());
 
   return (
-    <div className="relative flex h-full flex-col gap-7 px-5 pb-8 pt-5">
+    <div className="relative flex min-h-full flex-col gap-7 px-5 pb-8 pt-5">
       {/* Ambient identity wash: the profile's own color bleeds from the top, same cinematic depth as the home hero. */}
       <div
         aria-hidden
@@ -194,6 +197,12 @@ export function MobileProfile({ onOpenRemote }: { onOpenRemote: () => void }) {
 
       <section className="overflow-hidden rounded-2xl border border-white/[0.06] bg-elevated/40">
         <Row
+          icon={<SlidersHorizontal size={20} strokeWidth={2} />}
+          label="Settings"
+          onClick={() => setSettingsOpen(true)}
+        />
+        <Divider />
+        <Row
           icon={<MonitorSmartphone size={20} strokeWidth={2} />}
           label="Remote"
           onClick={onOpenRemote}
@@ -221,6 +230,7 @@ export function MobileProfile({ onOpenRemote }: { onOpenRemote: () => void }) {
 
       {switching && <MobileWhosWatching onClose={() => setSwitching(false)} />}
       {addonsOpen && <MobileAddons onClose={() => setAddonsOpen(false)} />}
+      {settingsOpen && <MobileSettings onClose={() => setSettingsOpen(false)} />}
       {editing && (
         <EditSheet
           field={editing}
