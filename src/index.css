@@ -17,15 +17,17 @@
 }
 
 @theme {
-  --color-canvas: oklch(0.18 0.004 260);
-  --color-surface: oklch(0.22 0.004 260);
-  --color-elevated: oklch(0.27 0.004 260);
-  --color-raised: oklch(0.32 0.004 260);
-  --color-ink: oklch(0.97 0.003 260);
-  --color-ink-muted: oklch(0.72 0.003 260);
-  --color-ink-subtle: oklch(0.65 0.003 260);
-  --color-edge: oklch(0.36 0.004 260 / 0.55);
-  --color-edge-soft: oklch(0.36 0.004 260 / 0.25);
+  /* Warm-black ramp (hue ~48, low chroma) — a cinematic warm charcoal rather than the
+     old cool blue-gray (hue 260); pairs with the amber accent for one warm identity. */
+  --color-canvas: oklch(0.165 0.006 48);
+  --color-surface: oklch(0.205 0.006 48);
+  --color-elevated: oklch(0.255 0.007 48);
+  --color-raised: oklch(0.31 0.008 48);
+  --color-ink: oklch(0.97 0.004 70);
+  --color-ink-muted: oklch(0.72 0.005 62);
+  --color-ink-subtle: oklch(0.65 0.005 62);
+  --color-edge: oklch(0.40 0.006 48 / 0.55);
+  --color-edge-soft: oklch(0.40 0.006 48 / 0.25);
   --color-accent: oklch(0.78 0.13 60);
   --color-accent-soft: oklch(0.78 0.13 60 / 0.18);
   --color-danger: oklch(0.55 0.18 25);
