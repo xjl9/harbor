@@ -8,6 +8,7 @@ import { setPosterBaseUrl } from "@/lib/providers/rpdb";
 import { setMdblistBatchKey } from "@/lib/providers/mdblist-batch";
 import { setUiLanguage } from "@/lib/i18n";
 import { makeSafeTauriUnlisten } from "@/lib/tauri-unlisten";
+import { isDesktopTauri } from "@/lib/platform";
 import { STORAGE_KEY } from "./settings/defaults";
 import { readSettingsFile, writeSettingsFile } from "./settings/file-store";
 import { loadFontData, saveFontData } from "./font-storage";
@@ -286,7 +287,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     window.__harborStremioDeeplink = settings.stremioDeeplinkInstall;
-    if (!("__TAURI_INTERNALS__" in window)) return;
+    if (!isDesktopTauri()) return;
     void import("@tauri-apps/api/core").then(({ invoke }) => {
       void invoke("deeplink_set_stremio", { enabled: settings.stremioDeeplinkInstall }).catch(
         (e) => console.warn("[harbor] deeplink_set_stremio failed", e),
@@ -295,7 +296,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   }, [settings.stremioDeeplinkInstall]);
 
   useEffect(() => {
-    if (!("__TAURI_INTERNALS__" in window)) return;
+    if (!isDesktopTauri()) return;
     void import("@tauri-apps/api/window").then(({ getCurrentWindow }) => {
       getCurrentWindow()
         .setDecorations(settings.useNativeTitleBar)
@@ -308,7 +309,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   }, [settings.customAppIcon]);
 
   useEffect(() => {
-    if (!("__TAURI_INTERNALS__" in window)) return;
+    if (!isDesktopTauri()) return;
     void import("@tauri-apps/api/core").then(({ invoke }) => {
       void invoke("tray_set_prefs", {
         prefs: {
@@ -322,7 +323,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   }, [settings.closeToTray, settings.trayAlwaysOnTop, settings.pauseMinimized, settings.pauseUnfocused]);
 
   useEffect(() => {
-    if (!("__TAURI_INTERNALS__" in window)) return;
+    if (!isDesktopTauri()) return;
     let cancelled = false;
     const unlisteners: Array<() => void> = [];
     const track = (rawUnlisten: () => void) => {
