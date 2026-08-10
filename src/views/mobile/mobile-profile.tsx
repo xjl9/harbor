@@ -7,6 +7,7 @@ import {
   Link2,
   LogOut,
   MonitorSmartphone,
+  Puzzle,
   Users,
 } from "lucide-react";
 import { useState, type ReactNode } from "react";
@@ -14,6 +15,8 @@ import { useAuth } from "@/lib/auth";
 import { isMobileNative } from "@/lib/platform";
 import { useProfiles } from "@/lib/profiles";
 import { useSettings } from "@/lib/settings";
+import { loadInstalled } from "@/lib/addon-store";
+import { MobileAddons } from "./mobile-addons";
 import { MobileWhosWatching } from "./mobile-whos-watching";
 import { useMobileRemote } from "./mobile-remote";
 import { useRegisterSheet } from "./mobile-sheet-lock";
@@ -38,7 +41,9 @@ export function MobileProfile({ onOpenRemote }: { onOpenRemote: () => void }) {
   const color = remote?.color ?? activeProfile?.color ?? "oklch(0.78 0.13 60)";
   const [switching, setSwitching] = useState(false);
   const [editing, setEditing] = useState<EditField | null>(null);
+  const [addonsOpen, setAddonsOpen] = useState(false);
   const native = isMobileNative();
+  const installedAddonCount = loadInstalled().length;
 
   const keyValue = (v: string | undefined) => (v && v.trim() ? "••••" : "Not set");
 
@@ -145,6 +150,13 @@ export function MobileProfile({ onOpenRemote }: { onOpenRemote: () => void }) {
               })
             }
           />
+          <Divider />
+          <Row
+            icon={<Puzzle size={20} strokeWidth={2} />}
+            label="Addons"
+            value={`${installedAddonCount || "None"}`}
+            onClick={() => setAddonsOpen(true)}
+          />
         </div>
       </section>
 
@@ -176,6 +188,7 @@ export function MobileProfile({ onOpenRemote }: { onOpenRemote: () => void }) {
       </section>
 
       {switching && <MobileWhosWatching onClose={() => setSwitching(false)} />}
+      {addonsOpen && <MobileAddons onClose={() => setAddonsOpen(false)} />}
       {editing && (
         <EditSheet
           field={editing}
