@@ -1,0 +1,11 @@
+"$schema" = "schemas/schema.json"
+
+[default]
+description = "Allows the Harbor native player commands."
+permissions = [
+    "allow-load",
+    "allow-play",
+    "allow-pause",
+    "allow-seek",
+    "allow-stop",
+]

@@ -33,6 +33,7 @@
     "fs:default",
     "deep-link:default",
     "process:default",
+    "harbor-player:default",
     {
       "identifier": "fs:allow-write-file",
       "allow": [{ "path": "**" }]

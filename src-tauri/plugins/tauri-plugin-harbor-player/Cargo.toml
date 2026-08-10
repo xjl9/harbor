@@ -1,0 +1,19 @@
+[package]
+name = "tauri-plugin-harbor-player"
+version = "0.1.0"
+description = "Native Android media3/ExoPlayer video player for Harbor mobile"
+edition = "2021"
+rust-version = "1.77.2"
+links = "tauri-plugin-harbor-player"
+
+[dependencies]
+tauri = { version = "2" }
+serde = { version = "1", features = ["derive"] }
+thiserror = "2"
+
+[build-dependencies]
+tauri-plugin = { version = "2", features = ["build"] }
+
+[package.metadata.docs.rs]
+rustc-args = ["--cfg", "docsrs"]
+rustdoc-args = ["--cfg", "docsrs"]
