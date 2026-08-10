@@ -5,7 +5,6 @@ import { ImdbIcon } from "@/components/icons/imdb-icon";
 import { HeroAwardsCorner } from "@/views/detail/hero-awards";
 import { useSettings } from "@/lib/settings";
 import type { TmdbDetail } from "@/lib/providers/tmdb";
-import { Pill } from "./ui";
 
 type HeroSummary = { type: string; wins: number; nominations: number }[];
 
@@ -81,7 +80,7 @@ export function Hero({
               className="max-h-[54px] max-w-[86%] object-contain object-left drop-shadow-[0_2px_10px_rgba(0,0,0,0.6)]"
             />
           ) : (
-            <h1 className="font-display text-[24px] font-medium leading-[1.05] tracking-tight text-ink">
+            <h1 className="font-display text-[28px] font-medium leading-[1.02] tracking-tight text-ink">
               {title}
             </h1>
           )}
@@ -126,24 +125,30 @@ function MetaPills({
   runtime?: string;
   genres: string[];
 }) {
+  // Clean inline metadata (matches the home hero) instead of a row of identical gray
+  // capsules — year/runtime recede, the rating is emphasized, genres are subtle.
+  const items: React.ReactNode[] = [];
+  if (year) items.push(<span key="y" className="font-medium text-ink">{year}</span>);
+  if (rating)
+    items.push(
+      <span key="r" className="flex items-center gap-1.5">
+        {isImdb ? (
+          <ImdbIcon className="h-[14px] w-auto rounded-[3px]" />
+        ) : (
+          <Star size={12} strokeWidth={0} fill="currentColor" className="text-accent" />
+        )}
+        <span className="font-semibold text-ink">{rating}</span>
+      </span>,
+    );
+  if (runtime) items.push(<span key="rt">{runtime}</span>);
+  for (const g of genres.slice(0, 3)) items.push(<span key={`g-${g}`} className="text-ink-subtle">{g}</span>);
   return (
-    <div className="flex flex-wrap items-center gap-x-2.5 gap-y-2">
-      {year && <Pill>{year}</Pill>}
-      {rating && (
-        <Pill>
-          <span className="flex items-center gap-1.5">
-            {isImdb ? (
-              <ImdbIcon className="h-[14px] w-auto rounded-[3px]" />
-            ) : (
-              <Star size={12} strokeWidth={0} fill="currentColor" className="text-accent" />
-            )}
-            <span className="font-semibold text-ink">{rating}</span>
-          </span>
-        </Pill>
-      )}
-      {runtime && <Pill>{runtime}</Pill>}
-      {genres.slice(0, 3).map((g) => (
-        <Pill key={g}>{g}</Pill>
+    <div className="flex flex-wrap items-center gap-y-1 text-[13px] text-ink-muted">
+      {items.map((it, i) => (
+        <span key={i} className="inline-flex items-center">
+          {i > 0 && <span aria-hidden className="mx-2 text-ink-subtle/40">·</span>}
+          {it}
+        </span>
       ))}
     </div>
   );

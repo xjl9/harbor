@@ -2,7 +2,7 @@ import { useState } from "react";
 
 export function SectionTitle({ children }: { children: React.ReactNode }) {
   return (
-    <h2 className="font-display text-[18px] font-medium tracking-tight text-ink">{children}</h2>
+    <h2 className="font-display text-[19px] font-medium tracking-[-0.01em] text-ink">{children}</h2>
   );
 }
 
