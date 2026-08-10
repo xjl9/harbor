@@ -51,6 +51,13 @@ export function isMobileNative(): boolean {
   return osClass() === "android" || osClass() === "ios";
 }
 
+// A Tauri build on a desktop OS. Use this (not raw isTauri) to gate desktop-only
+// native calls — window geometry, HDR staging, mpv embed, PiP resize — because
+// `__TAURI_INTERNALS__` is also present on Android/iOS, where those APIs throw.
+export function isDesktopTauri(): boolean {
+  return isTauri() && !isMobileNative();
+}
+
 export function isMobileDevice(): boolean {
   if (typeof navigator === "undefined" || typeof window === "undefined") return false;
   const ua = navigator.userAgent || "";

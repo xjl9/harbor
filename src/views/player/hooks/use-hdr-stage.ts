@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { isWindowsDesktop } from "@/lib/platform";
+import { isDesktopTauri, isWindowsDesktop } from "@/lib/platform";
 import {
   hdrOverlayClose,
   hdrOverlayHide,
@@ -72,8 +72,7 @@ export function useHdrStage(params: {
       setWant(true);
       return;
     }
-    const isTauri = "__TAURI__" in window || "__TAURI_INTERNALS__" in window;
-    if (!isTauri) return;
+    if (!isDesktopTauri()) return;
     let cancelled = false;
     let unMoved: (() => void) | null = null;
     let timer: number | null = null;
@@ -100,8 +99,7 @@ export function useHdrStage(params: {
 
   useEffect(() => {
     if (!want) return;
-    const isTauri = "__TAURI__" in window || "__TAURI_INTERNALS__" in window;
-    if (!isTauri) return;
+    if (!isDesktopTauri()) return;
     let cancelled = false;
     let unReady: (() => void) | null = null;
     let unDead: (() => void) | null = null;
@@ -188,8 +186,7 @@ export function useHdrStage(params: {
 
   useEffect(() => {
     if (!failed) return;
-    const isTauri = "__TAURI__" in window || "__TAURI_INTERNALS__" in window;
-    if (!isTauri) return;
+    if (!isDesktopTauri()) return;
     let prevHdr = true;
     const id = window.setInterval(() => {
       void displayHdrActive().then((hdr) => {
