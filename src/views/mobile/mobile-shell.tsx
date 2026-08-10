@@ -74,6 +74,17 @@ function ShellBody() {
   return (
     <div ref={rootRef} className="absolute inset-0 z-30 flex flex-col bg-canvas">
       <style>{TAB_TRANSITION_CSS}</style>
+      {/* Film grain: a whisper of monochrome noise over the whole shell for cinematic
+          depth/texture. Fixed + pointer-events-none + below the picker/player overlays. */}
+      <div
+        aria-hidden
+        className="pointer-events-none fixed inset-0 z-[60] opacity-[0.06] mix-blend-overlay motion-reduce:hidden"
+        style={{
+          backgroundImage:
+            "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='hg'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.82' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23hg)'/%3E%3C/svg%3E\")",
+          backgroundSize: "140px 140px",
+        }}
+      />
       <div className="relative flex min-h-0 flex-1 flex-col">
         <TabLayer active={tab === "home"}>
           {seen.has("home") && <MobileBrowse />}
