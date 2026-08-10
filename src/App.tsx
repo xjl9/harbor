@@ -25,7 +25,7 @@ import { flushCloudSync } from "@/views/player/hooks/use-stremio-sync";
 import { startWriteQueueFlusher } from "@/lib/stremio-write-queue";
 import { setNativeMemoryActive } from "@/lib/native-memory";
 import { useOverlayPinned } from "@/lib/overlay-pin";
-import { isMobileWeb, isRemoteRoute } from "@/lib/platform";
+import { isMobileNative, isMobileWeb, isRemoteRoute } from "@/lib/platform";
 import { makeSafeTauriUnlisten } from "@/lib/tauri-unlisten";
 import { activeLayout } from "@/lib/theme";
 import { useThemePreview } from "@/lib/theme-preview";
@@ -348,7 +348,7 @@ export function App({ onReady }: { onReady?: () => void }) {
                                                   <MiddleClickScroll />
                                                   <ThemeBackdrop />
                                                   <WatchlistSync />
-                                                  {isMobileWeb() || isRemoteRoute() ? (
+                                                  {isMobileWeb() || isMobileNative() || isRemoteRoute() ? (
                                                     <>
                                                       <Suspense fallback={null}>
                                                         <MobileShell />
@@ -358,7 +358,7 @@ export function App({ onReady }: { onReady?: () => void }) {
                                                   ) : (
                                                     <Shell onReady={onReady} />
                                                   )}
-                                                  {!isMobileWeb() && !isRemoteRoute() && (
+                                                  {!isMobileWeb() && !isMobileNative() && !isRemoteRoute() && (
                                                     <Suspense fallback={null}>
                                                       <OnboardingModal />
                                                     </Suspense>

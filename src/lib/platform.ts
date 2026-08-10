@@ -8,7 +8,7 @@ export function isWeb(): boolean {
   return typeof window !== "undefined" && !("__TAURI_INTERNALS__" in window);
 }
 
-export type OsClass = "linux" | "macos" | "windows" | "web";
+export type OsClass = "linux" | "macos" | "windows" | "android" | "ios" | "web";
 
 function detectOs(): OsClass {
   if (!isTauri()) return "web";
@@ -16,6 +16,8 @@ function detectOs(): OsClass {
   if (platform === "linux") return "linux";
   if (platform === "macos") return "macos";
   if (platform === "windows") return "windows";
+  if (platform === "android") return "android";
+  if (platform === "ios") return "ios";
   return "web";
 }
 
@@ -41,6 +43,12 @@ export function isMacDesktop(): boolean {
 
 export function isWindowsDesktop(): boolean {
   return osClass() === "windows";
+}
+
+// Native Android/iOS build (Tauri mobile). Distinct from isMobileWeb, which is the
+// browser-served surface; both render the mobile shell.
+export function isMobileNative(): boolean {
+  return osClass() === "android" || osClass() === "ios";
 }
 
 export function isMobileDevice(): boolean {
