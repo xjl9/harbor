@@ -20,6 +20,7 @@ import { MobileAddons } from "./mobile-addons";
 import { MobileWhosWatching } from "./mobile-whos-watching";
 import { useMobileRemote } from "./mobile-remote";
 import { useRegisterSheet } from "./mobile-sheet-lock";
+import { useKeyboardInset } from "./use-keyboard-inset";
 import { setMobileRemoteStyle, useMobileRemoteStyle, type MobileRemoteStyle } from "./remote-style";
 import { HARBOR_BUGS_BASE } from "@/lib/config/endpoints";
 
@@ -220,9 +221,13 @@ function EditSheet({
   onClose: () => void;
 }) {
   const [value, setValue] = useState(initial);
+  const keyboardInset = useKeyboardInset();
   useRegisterSheet(true);
   return (
-    <div className="fixed inset-0 z-[70] flex items-end justify-center">
+    <div
+      className="fixed inset-0 z-[70] flex items-end justify-center transition-[padding] duration-150"
+      style={{ paddingBottom: keyboardInset }}
+    >
       <button
         type="button"
         aria-label="Close"
