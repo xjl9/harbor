@@ -35,7 +35,7 @@ export const ToolsLayer = memo(function ToolsLayer({
   gif,
   clip,
 }: {
-  engine: "html5" | "mpv";
+  engine: "html5" | "mpv" | "native";
   pipMode: boolean;
   drawMode: boolean;
   showWaiting: boolean;

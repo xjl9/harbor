@@ -5,7 +5,7 @@ export type AudioModalState = {
   tracks: TrackInfo[];
   selectedId: string | null;
   delaySec: number;
-  engine: "html5" | "mpv";
+  engine: "html5" | "mpv" | "native";
 };
 
 type Props = {

@@ -21,7 +21,7 @@ export function SkipPill({
   onCancelAutoNext,
   onDismiss,
 }: {
-  engine: "html5" | "mpv";
+  engine: "html5" | "mpv" | "native";
   segment: SkipSegment | null;
   hasNextEp: boolean;
   nextEp: PlayEpisode | null;

@@ -37,7 +37,7 @@ type Loader = ComponentProps<typeof LoaderLayer>;
 
 export type PlayerOverlayLayersProps = {
   snap: PlayerSnapshot;
-  engine: "html5" | "mpv";
+  engine: "html5" | "mpv" | "native";
   src: PlayerSrc;
   adStreamRef: PlayerSrc["streamRef"];
   adUrl: string;

@@ -6,7 +6,7 @@ import { applySubStyle } from "@/lib/player/sub-style";
 import type { useSettings } from "@/lib/settings";
 
 export function useSubStyleApply(params: {
-  engine: "html5" | "mpv";
+  engine: "html5" | "mpv" | "native";
   settings: ReturnType<typeof useSettings>["settings"];
   assNativeActive: boolean;
   imageNativeActive: boolean;

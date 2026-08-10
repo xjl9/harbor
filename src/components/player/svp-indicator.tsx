@@ -13,7 +13,7 @@ export function SvpIndicator({
   chromeVisible,
   suppressed = false,
 }: {
-  engine: "html5" | "mpv";
+  engine: "html5" | "mpv" | "native";
   chromeVisible: boolean;
   suppressed?: boolean;
 }) {

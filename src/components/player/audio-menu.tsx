@@ -13,7 +13,7 @@ type Props = {
   tracks: TrackInfo[];
   selectedId: string | null;
   delaySec: number;
-  engine: "html5" | "mpv";
+  engine: "html5" | "mpv" | "native";
   onSelect: (id: string) => void;
   onDelay: (sec: number) => void;
   onOpenChange?: (open: boolean) => void;
@@ -177,7 +177,7 @@ function TrackSection({
 }: {
   tracks: TrackInfo[];
   selectedId: string | null;
-  engine: "html5" | "mpv";
+  engine: "html5" | "mpv" | "native";
   onSelect: (id: string) => void;
 }) {
   const tr = useT();

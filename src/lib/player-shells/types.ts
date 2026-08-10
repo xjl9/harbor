@@ -57,7 +57,7 @@ export type PlayerShellProps = {
   tmdbKey?: string | null;
   season?: number | null;
   episode?: number | null;
-  engine: "html5" | "mpv";
+  engine: "html5" | "mpv" | "native";
   useOverlayPopups?: boolean;
   onMenuOpenChange?: (open: boolean) => void;
   download?: import("@/views/player/hooks/use-video-download").DownloadStatus;

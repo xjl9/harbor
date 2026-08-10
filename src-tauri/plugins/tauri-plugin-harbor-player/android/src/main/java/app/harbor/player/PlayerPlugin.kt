@@ -73,6 +73,7 @@ class PlayerPlugin(private val activity: Activity) : Plugin(activity) {
     fun load(invoke: Invoke) {
         val args = invoke.parseArgs(LoadArgs::class.java)
         val intent = Intent(activity, PlayerActivity::class.java)
+        intent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
         intent.putExtra("url", args.url)
         intent.putExtra("startMs", (args.startAtSec * 1000).toLong())
         intent.putExtra("headerKeys", args.headers.keys.toTypedArray())
@@ -82,31 +83,31 @@ class PlayerPlugin(private val activity: Activity) : Plugin(activity) {
             args.subtitles.map { "${it.url}|${it.lang ?: ""}|${it.label ?: ""}|" }.toTypedArray(),
         )
         activity.startActivity(intent)
-        invoke.resolve()
+        invoke.resolve(JSObject())
     }
 
     @Command
     fun play(invoke: Invoke) {
         activity.runOnUiThread { PlayerActivity.instance?.doPlay() }
-        invoke.resolve()
+        invoke.resolve(JSObject())
     }
 
     @Command
     fun pause(invoke: Invoke) {
         activity.runOnUiThread { PlayerActivity.instance?.doPause() }
-        invoke.resolve()
+        invoke.resolve(JSObject())
     }
 
     @Command
     fun seek(invoke: Invoke) {
         val args = invoke.parseArgs(SeekArgs::class.java)
         activity.runOnUiThread { PlayerActivity.instance?.doSeek(args.positionSec) }
-        invoke.resolve()
+        invoke.resolve(JSObject())
     }
 
     @Command
     fun stop(invoke: Invoke) {
         activity.runOnUiThread { PlayerActivity.instance?.doStop() }
-        invoke.resolve()
+        invoke.resolve(JSObject())
     }
 }

@@ -12,7 +12,7 @@ export function PlayerEnginePanel() {
   const t = useT();
 
   const choices: Array<{
-    id: "auto" | "html5" | "mpv";
+    id: "auto" | "html5" | "mpv" | "native";
     label: string;
     sub: string;
     recommended?: boolean;

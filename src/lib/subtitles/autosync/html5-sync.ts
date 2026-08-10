@@ -29,7 +29,7 @@ export type EngineReadiness = {
 };
 
 export type TriggerInput = {
-  engine: "html5" | "mpv";
+  engine: "html5" | "mpv" | "native";
   url: string;
   isLive?: boolean;
   notWebReady?: boolean;
@@ -56,7 +56,7 @@ export type ApplyRequest = {
 };
 
 export type AppliedSync = {
-  engine: "html5" | "mpv";
+  engine: "html5" | "mpv" | "native";
   installedVia: "in-memory" | "temp-file" | "blob" | "sub-swap";
   revert: () => void;
 };
@@ -206,7 +206,7 @@ async function installSyncedTrack(
 }
 
 export async function applyEngineSync(
-  engine: "html5" | "mpv",
+  engine: "html5" | "mpv" | "native",
   bridge: PlayerBridge,
   req: ApplyRequest,
 ): Promise<AppliedSync> {

@@ -53,7 +53,7 @@ export function useAutoSync(params: {
   bridgeRef: RefObject<PlayerBridge | null>;
   src: PlayerSrc;
   snap: PlayerSnapshot;
-  engine: "html5" | "mpv";
+  engine: "html5" | "mpv" | "native";
   settings: Settings;
 }): AutoSyncHandle {
   const { bridgeRef, src, snap, engine, settings } = params;

@@ -224,7 +224,7 @@ export type Settings = {
   discordShowPoster: boolean;
   discordShowTimestamp: boolean;
   discordShowPartyJoin: boolean;
-  playerEngine: "auto" | "html5" | "mpv";
+  playerEngine: "auto" | "html5" | "mpv" | "native";
   playerShellId: string;
   playerChromeTheme: "auto" | "default" | "stremio";
   playerMenuBlack: boolean;

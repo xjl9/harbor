@@ -34,7 +34,7 @@ export const PanelsLayer = memo(function PanelsLayer({
   onDismissNoAudio,
   onPickAnother,
 }: {
-  engine: "html5" | "mpv";
+  engine: "html5" | "mpv" | "native";
   isSeriesPlayback: boolean;
   meta: Meta;
   currentEpisode: PlayEpisode | undefined;

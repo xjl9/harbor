@@ -46,7 +46,7 @@ export function usePlayerBridge(params: {
 
   const [snap, setSnap] = useState<PlayerSnapshot>(emptySnapshot);
   const prevSnapRef = useRef<PlayerSnapshot>(emptySnapshot);
-  const [engine, setEngine] = useState<"html5" | "mpv">("html5");
+  const [engine, setEngine] = useState<"html5" | "mpv" | "native">("html5");
   const [autoFallbackTried, setAutoFallbackTried] = useState(false);
 
   const hdrOpaqueWindow = isWindowsDesktop() && settings.playerHdrOpaqueWindow;

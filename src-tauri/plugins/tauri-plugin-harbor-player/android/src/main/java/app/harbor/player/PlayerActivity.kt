@@ -51,6 +51,16 @@ class PlayerActivity : ComponentActivity() {
         setup()
     }
 
+    // singleTask: a new load() reuses this instance — swap in the new stream.
+    override fun onNewIntent(newIntent: android.content.Intent) {
+        super.onNewIntent(newIntent)
+        setIntent(newIntent)
+        releasePlayer()
+        released = false
+        enterImmersive()
+        setup()
+    }
+
     private fun enterImmersive() {
         val controller = WindowInsetsControllerCompat(window, window.decorView)
         controller.hide(WindowInsetsCompat.Type.systemBars())

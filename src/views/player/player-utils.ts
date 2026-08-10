@@ -1,7 +1,8 @@
 import { createHtml5Bridge } from "@/lib/player/html5";
 import { createMpvBridge, probeMpv, type MpvRect } from "@/lib/player/mpv";
+import { createNativeBridge } from "@/lib/player/android-native";
 import type { PlayerBridge } from "@/lib/player/bridge";
-import { isLinuxDesktop, isMacDesktop, isWindowsDesktop } from "@/lib/platform";
+import { isLinuxDesktop, isMacDesktop, isMobileNative, isWindowsDesktop } from "@/lib/platform";
 
 export const SYNC_DRIFT_TOLERANCE_S = 0.6;
 export const SYNC_SUPPRESS_MS = 1400;
@@ -28,7 +29,7 @@ export function round2(v: number): number {
 }
 
 export function embedFlags(
-  engine: "html5" | "mpv",
+  engine: "html5" | "mpv" | "native",
   mpvEmbed: boolean,
   videoWidth: number,
   videoHeight: number,
@@ -52,7 +53,7 @@ export function formatNames(names: string[]): string {
 }
 
 export async function pickBridge(
-  want: "auto" | "html5" | "mpv",
+  want: "auto" | "html5" | "mpv" | "native",
   notWebReady: boolean,
   mpvOpts: {
     anime4k: boolean;
@@ -67,7 +68,11 @@ export async function pickBridge(
     fullDownload?: boolean;
     getEmbedRect?: () => Promise<MpvRect | null> | MpvRect | null;
   },
-): Promise<{ bridge: PlayerBridge; engine: "html5" | "mpv" }> {
+): Promise<{ bridge: PlayerBridge; engine: "html5" | "mpv" | "native" }> {
+  // Native Android build: media3/ExoPlayer decodes MKV/HEVC the webview can't.
+  if (isMobileNative()) {
+    return { bridge: createNativeBridge(), engine: "native" };
+  }
   if (want === "html5") return { bridge: createHtml5Bridge(), engine: "html5" };
   if (want === "mpv") {
     const probe = await probeMpv();
