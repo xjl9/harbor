@@ -106,7 +106,7 @@ function ShellBody() {
         <TabLayer active={tab === "mystuff"}>
           {seen.has("mystuff") && (
             <BrowseScroll>
-              <MobileLibrary />
+              <MobileLibrary onConnect={() => selectTab("profile")} />
             </BrowseScroll>
           )}
         </TabLayer>

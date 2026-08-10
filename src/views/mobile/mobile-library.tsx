@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Bookmark, Clock, Star, WifiOff } from "lucide-react";
+import { Bookmark, Clock, Link2, MonitorSmartphone, Star } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { Meta } from "@/lib/cinemeta";
 import { Poster, usePosterChain } from "@/components/poster";
@@ -45,7 +45,7 @@ function readSavedTab(): SectionId {
   return "watchlist";
 }
 
-export function MobileLibrary() {
+export function MobileLibrary({ onConnect }: { onConnect?: () => void }) {
   const [tab, setTab] = useState<SectionId>(readSavedTab);
   const [detailMeta, setDetailMeta] = useState<Meta | null>(null);
   const { data, connected } = useLibraryData();
@@ -67,7 +67,13 @@ export function MobileLibrary() {
       <Header />
       <TabStrip tab={tab} onTab={setTab} />
       <div key={tab} className="ml-view-in">
-        <Section state={active} kind={tab} connected={connected} onOpenDetail={setDetailMeta} />
+        <Section
+          state={active}
+          kind={tab}
+          connected={connected}
+          onOpenDetail={setDetailMeta}
+          onConnect={onConnect}
+        />
       </div>
       {detailMeta && <MobileDetail meta={detailMeta} onClose={() => setDetailMeta(null)} />}
     </div>
@@ -117,13 +123,15 @@ function Section({
   kind,
   connected,
   onOpenDetail,
+  onConnect,
 }: {
   state: SectionState;
   kind: SectionId;
   connected: boolean;
   onOpenDetail: (m: Meta) => void;
+  onConnect?: () => void;
 }) {
-  if (!connected && state.entries.length === 0) return <NotConnected />;
+  if (!connected && state.entries.length === 0) return <NotConnected onConnect={onConnect} />;
   if (state.loading && state.entries.length === 0) return <SkeletonGrid />;
   if (state.entries.length === 0) return <Empty kind={kind} />;
   return (
@@ -179,30 +187,43 @@ function Empty({ kind }: { kind: SectionId }) {
   const cfg = EMPTY[kind];
   const Icon = cfg.icon;
   return (
-    <div className="flex flex-col items-center gap-3 pt-16 text-center">
-      <span className="grid h-14 w-14 place-items-center rounded-2xl bg-surface text-ink-subtle ring-1 ring-edge-soft">
-        <Icon size={24} strokeWidth={1.9} />
+    <div className="flex flex-col items-center gap-4 pt-16 text-center">
+      <span className="grid h-16 w-16 place-items-center rounded-2xl bg-elevated/40 text-ink-subtle ring-1 ring-edge-soft">
+        <Icon size={26} strokeWidth={1.8} />
       </span>
-      <div className="flex flex-col gap-1">
-        <h2 className="text-[15px] font-semibold text-ink">{cfg.title}</h2>
-        <p className="max-w-[260px] text-[13px] leading-relaxed text-ink-muted">{cfg.body}</p>
+      <div className="flex flex-col gap-1.5">
+        <h2 className="font-display text-[18px] font-medium tracking-[-0.01em] text-ink">{cfg.title}</h2>
+        <p className="max-w-[270px] text-[13.5px] leading-relaxed text-ink-muted">{cfg.body}</p>
       </div>
     </div>
   );
 }
 
-function NotConnected() {
+function NotConnected({ onConnect }: { onConnect?: () => void }) {
   return (
-    <div className="flex flex-col items-center gap-3 pt-16 text-center">
-      <span className="grid h-14 w-14 place-items-center rounded-2xl bg-surface text-ink-subtle ring-1 ring-edge-soft">
-        <WifiOff size={24} strokeWidth={1.9} />
+    <div className="flex flex-col items-center gap-4 pt-16 text-center">
+      <span className="relative grid h-16 w-16 place-items-center rounded-2xl bg-elevated/40 text-ink-muted ring-1 ring-edge-soft">
+        <MonitorSmartphone size={26} strokeWidth={1.8} />
       </span>
-      <div className="flex flex-col gap-1">
-        <h2 className="text-[15px] font-semibold text-ink">Not connected to a computer</h2>
-        <p className="max-w-[260px] text-[13px] leading-relaxed text-ink-muted">
-          Your library lives on Harbor. Connect to your computer and it shows up here.
+      <div className="flex flex-col gap-1.5">
+        <h2 className="font-display text-[19px] font-medium tracking-[-0.01em] text-ink">
+          Not connected to a computer
+        </h2>
+        <p className="max-w-[280px] text-[13.5px] leading-relaxed text-ink-muted">
+          Your watchlist, history and favorites live on your desktop Harbor. Link this device and
+          they sync here.
         </p>
       </div>
+      {onConnect && (
+        <button
+          type="button"
+          onClick={onConnect}
+          className="mt-1 flex items-center gap-2 rounded-full bg-ink px-5 py-2.5 text-[14px] font-semibold text-canvas transition-transform active:scale-[0.97] motion-reduce:transition-none"
+        >
+          <Link2 size={16} strokeWidth={2.4} />
+          Connect a computer
+        </button>
+      )}
     </div>
   );
 }
