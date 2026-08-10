@@ -1,4 +1,5 @@
 import { loadStoredSettings } from "@/lib/settings/load";
+import { isMobileNative } from "@/lib/platform";
 
 let windowFullscreen = false;
 let suppressNextExit = false;
@@ -30,6 +31,7 @@ export function consumeMarathonReenter(): boolean {
 }
 
 function isTauri(): boolean {
+  if (isMobileNative()) return false;
   return typeof window !== "undefined" && ("__TAURI__" in window || "__TAURI_INTERNALS__" in window);
 }
 

@@ -9,6 +9,8 @@ Allows the Harbor native player commands.
 - `allow-pause`
 - `allow-seek`
 - `allow-stop`
+- `allow-registerListener`
+- `allow-removeListener`
 
 ## Permission Table
 
@@ -93,6 +95,58 @@ Enables the play command without any pre-configured scope.
 <td>
 
 Denies the play command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`harbor-player:allow-registerListener`
+
+</td>
+<td>
+
+Enables the registerListener command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`harbor-player:deny-registerListener`
+
+</td>
+<td>
+
+Denies the registerListener command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`harbor-player:allow-removeListener`
+
+</td>
+<td>
+
+Enables the removeListener command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`harbor-player:deny-removeListener`
+
+</td>
+<td>
+
+Denies the removeListener command without any pre-configured scope.
 
 </td>
 </tr>
