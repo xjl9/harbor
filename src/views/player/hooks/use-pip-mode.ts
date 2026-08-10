@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type RefObject } from "react";
 import type { PlayerBridge } from "@/lib/player/bridge";
+import { isMobileNative } from "@/lib/platform";
 import { makeSafeTauriUnlisten } from "@/lib/tauri-unlisten";
 
 export function usePipMode(params: {
@@ -77,7 +78,9 @@ export function usePipMode(params: {
 
   const togglePipMode = useCallback(async () => {
     const isTauri = "__TAURI__" in window || "__TAURI_INTERNALS__" in window;
-    if (!isTauri) {
+    // Mobile native (Android) uses the ExoPlayer activity's own PiP, not the
+    // desktop window_pip_* commands.
+    if (!isTauri || isMobileNative()) {
       bridgeRef.current?.requestPiP();
       return;
     }

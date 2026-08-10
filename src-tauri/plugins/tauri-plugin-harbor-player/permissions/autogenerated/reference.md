@@ -9,6 +9,9 @@ Allows the Harbor native player commands.
 - `allow-pause`
 - `allow-seek`
 - `allow-stop`
+- `allow-set-audio-track`
+- `allow-set-subtitle-track`
+- `allow-enter-pip`
 - `allow-registerListener`
 - `allow-removeListener`
 
@@ -20,6 +23,32 @@ Allows the Harbor native player commands.
 <th>Description</th>
 </tr>
 
+
+<tr>
+<td>
+
+`harbor-player:allow-enter-pip`
+
+</td>
+<td>
+
+Enables the enter_pip command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`harbor-player:deny-enter-pip`
+
+</td>
+<td>
+
+Denies the enter_pip command without any pre-configured scope.
+
+</td>
+</tr>
 
 <tr>
 <td>
@@ -173,6 +202,58 @@ Enables the seek command without any pre-configured scope.
 <td>
 
 Denies the seek command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`harbor-player:allow-set-audio-track`
+
+</td>
+<td>
+
+Enables the set_audio_track command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`harbor-player:deny-set-audio-track`
+
+</td>
+<td>
+
+Denies the set_audio_track command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`harbor-player:allow-set-subtitle-track`
+
+</td>
+<td>
+
+Enables the set_subtitle_track command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`harbor-player:deny-set-subtitle-track`
+
+</td>
+<td>
+
+Denies the set_subtitle_track command without any pre-configured scope.
 
 </td>
 </tr>

@@ -6,6 +6,7 @@ import app.tauri.annotation.Command
 import app.tauri.annotation.InvokeArg
 import app.tauri.annotation.TauriPlugin
 import app.tauri.plugin.Invoke
+import app.tauri.plugin.JSArray
 import app.tauri.plugin.JSObject
 import app.tauri.plugin.Plugin
 
@@ -28,6 +29,11 @@ class LoadArgs {
 @InvokeArg
 class SeekArgs {
     var positionSec: Double = 0.0
+}
+
+@InvokeArg
+class TrackArgs {
+    var trackId: String? = null
 }
 
 /**
@@ -66,6 +72,13 @@ class PlayerPlugin(private val activity: Activity) : Plugin(activity) {
             o.put("positionSec", pos)
             o.put("durationSec", dur)
             instance?.trigger("closed", o)
+        }
+
+        fun sendTracks(audio: JSArray, subtitle: JSArray) {
+            val o = JSObject()
+            o.put("audio", audio)
+            o.put("subtitle", subtitle)
+            instance?.trigger("tracks", o)
         }
     }
 
@@ -108,6 +121,26 @@ class PlayerPlugin(private val activity: Activity) : Plugin(activity) {
     @Command
     fun stop(invoke: Invoke) {
         activity.runOnUiThread { PlayerActivity.instance?.doStop() }
+        invoke.resolve(JSObject())
+    }
+
+    @Command
+    fun setAudioTrack(invoke: Invoke) {
+        val args = invoke.parseArgs(TrackArgs::class.java)
+        activity.runOnUiThread { PlayerActivity.instance?.doSetAudioTrack(args.trackId) }
+        invoke.resolve(JSObject())
+    }
+
+    @Command
+    fun setSubtitleTrack(invoke: Invoke) {
+        val args = invoke.parseArgs(TrackArgs::class.java)
+        activity.runOnUiThread { PlayerActivity.instance?.doSetSubtitleTrack(args.trackId) }
+        invoke.resolve(JSObject())
+    }
+
+    @Command
+    fun enterPip(invoke: Invoke) {
+        activity.runOnUiThread { PlayerActivity.instance?.enterPip() }
         invoke.resolve(JSObject())
     }
 }

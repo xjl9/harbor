@@ -295,6 +295,18 @@
       "type": "string",
       "oneOf": [
         {
+          "description": "Enables the enter_pip command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-enter-pip",
+          "markdownDescription": "Enables the enter_pip command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the enter_pip command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-enter-pip",
+          "markdownDescription": "Denies the enter_pip command without any pre-configured scope."
+        },
+        {
           "description": "Enables the load command without any pre-configured scope.",
           "type": "string",
           "const": "allow-load",
@@ -367,6 +379,30 @@
           "markdownDescription": "Denies the seek command without any pre-configured scope."
         },
         {
+          "description": "Enables the set_audio_track command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-set-audio-track",
+          "markdownDescription": "Enables the set_audio_track command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the set_audio_track command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-set-audio-track",
+          "markdownDescription": "Denies the set_audio_track command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the set_subtitle_track command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-set-subtitle-track",
+          "markdownDescription": "Enables the set_subtitle_track command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the set_subtitle_track command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-set-subtitle-track",
+          "markdownDescription": "Denies the set_subtitle_track command without any pre-configured scope."
+        },
+        {
           "description": "Enables the stop command without any pre-configured scope.",
           "type": "string",
           "const": "allow-stop",
@@ -379,10 +415,10 @@
           "markdownDescription": "Denies the stop command without any pre-configured scope."
         },
         {
-          "description": "Allows the Harbor native player commands.\n#### This default permission set includes:\n\n- `allow-load`\n- `allow-play`\n- `allow-pause`\n- `allow-seek`\n- `allow-stop`\n- `allow-registerListener`\n- `allow-removeListener`",
+          "description": "Allows the Harbor native player commands.\n#### This default permission set includes:\n\n- `allow-load`\n- `allow-play`\n- `allow-pause`\n- `allow-seek`\n- `allow-stop`\n- `allow-set-audio-track`\n- `allow-set-subtitle-track`\n- `allow-enter-pip`\n- `allow-registerListener`\n- `allow-removeListener`",
           "type": "string",
           "const": "default",
-          "markdownDescription": "Allows the Harbor native player commands.\n#### This default permission set includes:\n\n- `allow-load`\n- `allow-play`\n- `allow-pause`\n- `allow-seek`\n- `allow-stop`\n- `allow-registerListener`\n- `allow-removeListener`"
+          "markdownDescription": "Allows the Harbor native player commands.\n#### This default permission set includes:\n\n- `allow-load`\n- `allow-play`\n- `allow-pause`\n- `allow-seek`\n- `allow-stop`\n- `allow-set-audio-track`\n- `allow-set-subtitle-track`\n- `allow-enter-pip`\n- `allow-registerListener`\n- `allow-removeListener`"
         }
       ]
     }

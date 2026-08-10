@@ -55,6 +55,10 @@ export type PlayerSnapshot = {
   errorMessage: string | null;
   errorCode: "decode" | "codec" | "network" | "source" | "unknown" | null;
   noAudio?: boolean;
+  // Native Android only: set once when the ExoPlayer Activity is torn down for
+  // good (back out / finish). The React player view watches this to pop back to
+  // detail instead of lingering as an empty webview under the closed surface.
+  nativeClosed?: boolean;
 };
 
 export type PlayerSource = {

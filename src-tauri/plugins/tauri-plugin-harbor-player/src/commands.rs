@@ -33,3 +33,24 @@ pub(crate) async fn seek<R: Runtime>(
 pub(crate) async fn stop<R: Runtime>(app: AppHandle<R>) -> crate::Result<EmptyResponse> {
     app.harbor_player().stop()
 }
+
+#[tauri::command]
+pub(crate) async fn set_audio_track<R: Runtime>(
+    app: AppHandle<R>,
+    payload: TrackRequest,
+) -> crate::Result<EmptyResponse> {
+    app.harbor_player().set_audio_track(payload)
+}
+
+#[tauri::command]
+pub(crate) async fn set_subtitle_track<R: Runtime>(
+    app: AppHandle<R>,
+    payload: TrackRequest,
+) -> crate::Result<EmptyResponse> {
+    app.harbor_player().set_subtitle_track(payload)
+}
+
+#[tauri::command]
+pub(crate) async fn enter_pip<R: Runtime>(app: AppHandle<R>) -> crate::Result<EmptyResponse> {
+    app.harbor_player().enter_pip()
+}

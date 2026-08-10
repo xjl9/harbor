@@ -29,4 +29,13 @@ impl<R: Runtime> HarborPlayer<R> {
     pub fn stop(&self) -> crate::Result<EmptyResponse> {
         Ok(EmptyResponse {})
     }
+    pub fn set_audio_track(&self, _payload: TrackRequest) -> crate::Result<EmptyResponse> {
+        Ok(EmptyResponse {})
+    }
+    pub fn set_subtitle_track(&self, _payload: TrackRequest) -> crate::Result<EmptyResponse> {
+        Ok(EmptyResponse {})
+    }
+    pub fn enter_pip(&self) -> crate::Result<EmptyResponse> {
+        Ok(EmptyResponse {})
+    }
 }

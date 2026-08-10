@@ -8,6 +8,9 @@ permissions = [
     "allow-pause",
     "allow-seek",
     "allow-stop",
+    "allow-set-audio-track",
+    "allow-set-subtitle-track",
+    "allow-enter-pip",
     "allow-registerListener",
     "allow-removeListener",
 ]

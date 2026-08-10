@@ -6,11 +6,20 @@ import {
   type PlayerCapabilities,
   type PlayerSnapshot,
   type PlayerSource,
+  type TrackInfo,
 } from "./bridge";
 
 type Tick = { positionSec: number; durationSec: number; bufferedSec: number; playing: boolean };
 type State = { status: "loading" | "ready" | "ended" | "error"; errorCode?: string };
 type Closed = { positionSec: number; durationSec: number };
+type NativeTrack = {
+  id: string;
+  label: string;
+  lang?: string;
+  selected: boolean;
+  channelCount?: number;
+};
+type TracksEvent = { audio: NativeTrack[]; subtitle: NativeTrack[] };
 
 const CAPS: PlayerCapabilities = {
   engine: "native",
@@ -50,7 +59,13 @@ export function createNativeBridge(): PlayerBridge {
           positionSec: t.positionSec,
           durationSec: t.durationSec || snap.durationSec,
           bufferedSec: t.bufferedSec,
-          status: t.playing ? "playing" : snap.status === "loading" ? "loading" : "paused",
+          status: t.playing
+            ? "playing"
+            : snap.status === "loading"
+              ? "loading"
+              : snap.status === "ended"
+                ? "ended"
+                : "paused",
           buffering: false,
         });
       }),
@@ -66,7 +81,24 @@ export function createNativeBridge(): PlayerBridge {
         }
       }),
       await addPluginListener("harbor-player", "closed", (c: Closed) => {
-        patch({ positionSec: c.positionSec, durationSec: c.durationSec || snap.durationSec, status: "ended" });
+        // Genuine teardown of the native Activity (user backed out / finished).
+        // Stream swaps reuse the singleTask Activity via onNewIntent and no longer
+        // emit "closed" (see PlayerActivity.releasePlayer notify flag), and a
+        // JS-initiated destroy() flips `disposed` first, so this reliably means
+        // the native player surface is gone. Flag it so the React view pops back.
+        if (disposed) return;
+        patch({
+          positionSec: c.positionSec,
+          durationSec: c.durationSec || snap.durationSec,
+          status: "ended",
+          nativeClosed: true,
+        });
+      }),
+      await addPluginListener("harbor-player", "tracks", (t: TracksEvent) => {
+        patch({
+          audioTracks: (t.audio ?? []).map((a) => toTrackInfo(a, "audio")),
+          subtitleTracks: (t.subtitle ?? []).map((s) => toTrackInfo(s, "subtitle")),
+        });
       }),
     );
   };
@@ -106,8 +138,12 @@ export function createNativeBridge(): PlayerBridge {
     setVolume: noop,
     setMuted: noop,
     setRate: noop,
-    setAudioTrack: noop,
-    setSubtitleTrack: noop,
+    setAudioTrack(id: string) {
+      void invoke("plugin:harbor-player|set_audio_track", { payload: { trackId: id } }).catch(noop);
+    },
+    setSubtitleTrack(id: string | null) {
+      void invoke("plugin:harbor-player|set_subtitle_track", { payload: { trackId: id } }).catch(noop);
+    },
     setSecondarySubtitleTrack: noop,
     setSubVisible: noop,
     setSubDelay: noop,
@@ -132,7 +168,9 @@ export function createNativeBridge(): PlayerBridge {
       return { ok: false, error: "not supported" };
     },
     setAbLoop: noop,
-    requestPiP: noopAsync,
+    async requestPiP() {
+      await invoke("plugin:harbor-player|enter_pip").catch(noop);
+    },
     exitPiP: noopAsync,
     requestFullscreen: noopAsync,
     exitFullscreen: noopAsync,
@@ -151,6 +189,17 @@ export function createNativeBridge(): PlayerBridge {
       pluginListeners.length = 0;
       listeners.clear();
     },
+  };
+}
+
+function toTrackInfo(t: NativeTrack, kind: "audio" | "subtitle"): TrackInfo {
+  return {
+    id: t.id,
+    label: t.label || t.lang || (kind === "audio" ? "Audio" : "Subtitle"),
+    lang: t.lang || undefined,
+    kind,
+    selected: !!t.selected,
+    channelCount: t.channelCount,
   };
 }
 

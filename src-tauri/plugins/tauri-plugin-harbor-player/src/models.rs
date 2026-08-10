@@ -31,4 +31,11 @@ pub struct SeekRequest {
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TrackRequest {
+    #[serde(default)]
+    pub track_id: Option<String>,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct EmptyResponse {}

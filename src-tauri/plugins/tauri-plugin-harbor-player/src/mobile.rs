@@ -49,4 +49,19 @@ impl<R: Runtime> HarborPlayer<R> {
             .run_mobile_plugin("stop", ())
             .map_err(Into::into)
     }
+    pub fn set_audio_track(&self, payload: TrackRequest) -> crate::Result<EmptyResponse> {
+        self.0
+            .run_mobile_plugin("setAudioTrack", payload)
+            .map_err(Into::into)
+    }
+    pub fn set_subtitle_track(&self, payload: TrackRequest) -> crate::Result<EmptyResponse> {
+        self.0
+            .run_mobile_plugin("setSubtitleTrack", payload)
+            .map_err(Into::into)
+    }
+    pub fn enter_pip(&self) -> crate::Result<EmptyResponse> {
+        self.0
+            .run_mobile_plugin("enterPip", ())
+            .map_err(Into::into)
+    }
 }
