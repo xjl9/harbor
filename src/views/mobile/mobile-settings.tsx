@@ -1,17 +1,17 @@
-import { Check, ChevronLeft, Globe } from "lucide-react";
-import { useState, type ReactNode } from "react";
+import { Check, ChevronLeft, ChevronRight, Globe } from "lucide-react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useSettings } from "@/lib/settings";
 import type { ContentCategory } from "@/lib/settings/types";
 import { useRegisterSheet } from "./mobile-sheet-lock";
 
 // Only settings the mobile shell actually reads are surfaced here, so every
 // control changes something real on the device — no decorative toggles.
-const CATEGORIES: Array<{ key: ContentCategory; label: string; hint: string }> = [
-  { key: "anime", label: "Anime", hint: "Anime browse view, rows and picks" },
-  { key: "liveTv", label: "Live TV", hint: "IPTV channels and guide" },
-  { key: "sports", label: "Sports", hint: "Live sports schedules" },
-  { key: "manga", label: "Manga", hint: "Manga reader and library" },
-  { key: "adult", label: "Adult", hint: "Adult catalogs and addons" },
+const CATEGORIES: Array<{ key: ContentCategory; label: string }> = [
+  { key: "anime", label: "Anime" },
+  { key: "liveTv", label: "Live TV" },
+  { key: "sports", label: "Sports" },
+  { key: "manga", label: "Manga" },
+  { key: "adult", label: "Adult" },
 ];
 
 const REGIONS: Array<{ code: string; name: string }> = [
@@ -34,103 +34,149 @@ const REGIONS: Array<{ code: string; name: string }> = [
   { code: "KR", name: "South Korea" },
 ];
 
+// Shared focus token — the same amber scalpel, so focus reads instantly on a
+// TV/gamepad as well as touch. Applied to every interactive element.
+const FOCUS =
+  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-canvas";
+
+// Light-impact feedback, gated: navigator.vibrate is a no-op on desktop (no
+// vibration hardware) and fires on Android touch surfaces. iOS native haptics
+// would swap in here once the Tauri binding is wired.
+function tapHaptic() {
+  if (typeof navigator === "undefined") return;
+  if ("vibrate" in navigator) {
+    try {
+      navigator.vibrate(8);
+    } catch {
+      /* ignore */
+    }
+  }
+}
+
 export function MobileSettings({ onClose }: { onClose: () => void }) {
   useRegisterSheet(true);
   const { settings, update } = useSettings();
   const [regionOpen, setRegionOpen] = useState(false);
+  const [closing, setClosing] = useState(false);
+
+  useEffect(() => {
+    if (!closing) return;
+    const t = window.setTimeout(onClose, 300);
+    return () => window.clearTimeout(t);
+  }, [closing, onClose]);
 
   const region = REGIONS.find((r) => r.code === settings.region) ?? null;
   const setCategory = (key: ContentCategory, show: boolean) =>
     update({ hideContent: { ...settings.hideContent, [key]: !show } });
 
   return (
-    <div className="fixed inset-0 z-[70] flex flex-col bg-canvas">
+    <div
+      className={`fixed inset-0 z-[70] flex flex-col bg-canvas ${
+        closing
+          ? "translate-x-full transition-transform duration-300 [transition-timing-function:var(--ease-out)]"
+          : "animate-slide-from-right"
+      }`}
+    >
+      {/* Ambient amber wash — Settings has no identity colour, so it whispers (~14%). */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-64"
+        style={{
+          background:
+            "radial-gradient(120% 68% at 50% -14%, color-mix(in oklab, var(--color-accent) 14%, transparent), transparent 70%)",
+        }}
+      />
+
       <header
-        className="flex items-center gap-3 px-4 pb-3"
+        className="flex items-center gap-3 px-5 pb-2"
         style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 14px)" }}
       >
         <button
           type="button"
-          onClick={onClose}
+          onClick={() => setClosing(true)}
           aria-label="Back"
-          className="-ms-2 flex h-11 w-11 items-center justify-center rounded-full text-ink-muted transition-transform active:scale-[0.94]"
+          className={`-ms-2 flex h-11 w-11 items-center justify-center rounded-full text-ink-muted ${FOCUS}`}
         >
           <ChevronLeft size={24} strokeWidth={2.2} />
         </button>
-        <h1 className="font-display text-[22px] font-medium tracking-[-0.01em] text-ink">Settings</h1>
+        <div>
+          <p className="text-[11px] font-sans font-semibold uppercase tracking-[0.22em] text-ink-subtle">
+            Preferences
+          </p>
+          <h1 className="font-display text-[30px] font-medium leading-none tracking-[-0.02em] text-ink">
+            Settings
+          </h1>
+        </div>
       </header>
 
       <div
-        className="flex-1 overflow-y-auto px-5 pt-3"
-        style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 32px)" }}
+        className="flex-1 overflow-y-auto px-5"
+        style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 40px)" }}
       >
-        <div className="flex flex-col gap-7">
-          <Section label="Appearance">
-            <Card>
-              <div className="flex flex-col gap-3 px-4 py-4">
-                <div>
-                  <p className="text-[15px] font-medium text-ink">Home layout</p>
-                  <p className="mt-0.5 text-[12.5px] leading-snug text-ink-subtle">
-                    Cinematic leads with a full-bleed hero. Classic is a compact grid.
-                  </p>
-                </div>
-                <Segmented
-                  value={settings.homeMode}
-                  onChange={(v) => update({ homeMode: v })}
-                  options={[
-                    { value: "harbor", label: "Cinematic" },
-                    { value: "classic", label: "Classic" },
-                  ]}
+        <Department
+          index={0}
+          first
+          kicker="Display"
+          folio="01"
+          title="How home looks"
+          standfirst="Set the shape of the home screen and how continue watching is kept."
+        >
+          <LayoutChoice value={settings.homeMode} onChange={(v) => update({ homeMode: v })} />
+          <span className="mt-4 block h-px bg-edge-soft" />
+          <ToggleRow
+            label="Separate Continue Watching per profile"
+            on={settings.cwPerProfile}
+            onChange={(v) => update({ cwPerProfile: v })}
+          />
+        </Department>
+
+        <Department
+          index={1}
+          kicker="Catalog"
+          folio="02"
+          title="What shows up"
+          standfirst="Choose which categories appear in the view switcher and rows."
+        >
+          <div className="overflow-hidden rounded-2xl border border-edge-soft bg-elevated/40">
+            {CATEGORIES.map((c, i) => (
+              <div key={c.key}>
+                {i > 0 && <span className="mx-4 block h-px bg-edge-soft/60" />}
+                <ToggleRow
+                  label={c.label}
+                  on={!settings.hideContent[c.key]}
+                  onChange={(v) => setCategory(c.key, v)}
                 />
               </div>
-              <Divider />
-              <ToggleRow
-                label="Separate Continue Watching per profile"
-                hint="Each profile keeps its own resume list."
-                on={settings.cwPerProfile}
-                onChange={(v) => update({ cwPerProfile: v })}
-              />
-            </Card>
-          </Section>
+            ))}
+          </div>
+        </Department>
 
-          <Section
-            label="Content"
-            caption="Choose which categories appear in the view switcher and rows."
+        <Department
+          index={2}
+          kicker="Region"
+          folio="03"
+          title="Where you watch from"
+          standfirst="Sets the catalog region for trending, popular and provider rows."
+        >
+          <button
+            type="button"
+            onClick={() => setRegionOpen(true)}
+            className={`flex w-full items-center gap-3.5 py-3.5 text-start ${FOCUS}`}
           >
-            <Card>
-              {CATEGORIES.map((c, i) => (
-                <div key={c.key}>
-                  {i > 0 && <Divider />}
-                  <ToggleRow
-                    label={c.label}
-                    hint={c.hint}
-                    on={!settings.hideContent[c.key]}
-                    onChange={(v) => setCategory(c.key, v)}
-                  />
-                </div>
-              ))}
-            </Card>
-          </Section>
-
-          <Section
-            label="Region"
-            caption="Sets the catalog region for trending, popular and provider rows."
-          >
-            <Card>
-              <button
-                type="button"
-                onClick={() => setRegionOpen(true)}
-                className="flex w-full items-center gap-3.5 px-4 py-3.5 text-start transition-colors active:bg-raised/60"
-              >
-                <Globe size={20} strokeWidth={2} className="text-ink-muted" />
-                <span className="flex-1 text-[15px] font-medium text-ink">Catalog region</span>
-                <span className="text-[13.5px] text-ink-subtle">
-                  {region ? region.name : settings.region || "Default"}
-                </span>
-              </button>
-            </Card>
-          </Section>
-        </div>
+            <Globe size={20} strokeWidth={2} className="shrink-0 text-ink-muted" />
+            <span className="text-[15.5px] font-medium text-ink">Catalog region</span>
+            <span className="flex-1" />
+            <span className="max-w-[42%] truncate text-[14px] text-ink-muted">
+              {region ? region.name : settings.region || "Default"}
+            </span>
+            {region && (
+              <span className="rounded-md bg-raised/50 px-1.5 py-0.5 font-mono text-[12px] tracking-[0.06em] text-ink-subtle">
+                {region.code}
+              </span>
+            )}
+            <ChevronRight size={18} strokeWidth={2.2} className="shrink-0 text-ink-subtle" />
+          </button>
+        </Department>
       </div>
 
       {regionOpen && (
@@ -147,6 +193,164 @@ export function MobileSettings({ onClose }: { onClose: () => void }) {
   );
 }
 
+// The signature: a serif department headline sitting ON a full-bleed hairline
+// rule with a mono folio numeral floated to the right margin. The repeating unit
+// IS the screen's identity and rhymes with mobile-rail.tsx.
+function Department({
+  index,
+  first,
+  kicker,
+  folio,
+  title,
+  standfirst,
+  children,
+}: {
+  index: number;
+  first?: boolean;
+  kicker: string;
+  folio: string;
+  title: string;
+  standfirst: string;
+  children: ReactNode;
+}) {
+  return (
+    <section
+      className={`harbor-rise ${first ? "mt-2" : "mt-11"}`}
+      style={{ animationDelay: `${index * 55}ms` }}
+    >
+      <div className="flex items-baseline justify-between gap-3">
+        <span className="text-[11px] font-sans font-semibold uppercase tracking-[0.2em] text-ink-subtle">
+          {kicker}
+        </span>
+        <span className="font-mono text-[12px] tabular-nums tracking-[0.05em] text-ink-subtle/55">
+          {folio}
+        </span>
+      </div>
+      <div className="mt-[3px] flex items-center gap-3.5">
+        <h2 className="shrink-0 font-display text-[21px] font-medium tracking-[-0.01em] text-ink">
+          {title}
+        </h2>
+        <span className="h-px flex-1 bg-edge-soft" />
+      </div>
+      <p className="mt-3 max-w-[32ch] text-[13px] leading-relaxed text-ink-muted">{standfirst}</p>
+      <div className="mt-5">{children}</div>
+    </section>
+  );
+}
+
+// Two editorial plates showing the actual Cinematic vs Classic layouts, not a
+// pill — the choice is a layout, so show it. Reuses the profile StylePreview idiom.
+function LayoutChoice({
+  value,
+  onChange,
+}: {
+  value: "harbor" | "classic";
+  onChange: (v: "harbor" | "classic") => void;
+}) {
+  const opts: Array<{ v: "harbor" | "classic"; label: string }> = [
+    { v: "harbor", label: "Cinematic" },
+    { v: "classic", label: "Classic" },
+  ];
+  return (
+    <div role="radiogroup" aria-label="Home layout" className="grid grid-cols-2 gap-3">
+      {opts.map((o) => {
+        const active = value === o.v;
+        return (
+          <button
+            key={o.v}
+            type="button"
+            role="radio"
+            aria-checked={active}
+            aria-label={o.label}
+            onClick={() => {
+              if (active) return;
+              tapHaptic();
+              onChange(o.v);
+            }}
+            className={`no-press relative rounded-2xl border bg-surface/50 p-3 text-start transition-colors ${FOCUS} ${
+              active ? "border-accent ring-1 ring-accent" : "border-edge-soft"
+            }`}
+          >
+            <div className="rounded-xl bg-canvas/60 p-2.5">
+              <div className="h-24">
+                {o.v === "harbor" ? (
+                  <div className="flex h-full flex-col gap-1.5">
+                    <div className="h-14 rounded-md bg-raised" />
+                    <div className="grid grid-cols-3 gap-1.5">
+                      <div className="h-5 rounded bg-edge" />
+                      <div className="h-5 rounded bg-edge" />
+                      <div className="h-5 rounded bg-edge" />
+                    </div>
+                  </div>
+                ) : (
+                  <div className="grid h-full grid-cols-3 grid-rows-2 gap-1.5">
+                    {Array.from({ length: 6 }).map((_, i) => (
+                      <div key={i} className="rounded bg-edge" />
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+            <span
+              className={`mt-2 block font-display text-[15px] ${active ? "text-ink" : "text-ink-muted"}`}
+            >
+              {o.label}
+            </span>
+            {active && (
+              <span className="harbor-pop absolute end-2 top-2 flex h-5 w-5 items-center justify-center rounded-full bg-accent text-canvas">
+                <Check size={12} strokeWidth={3} />
+              </span>
+            )}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+// The ROW is the control: a full-width role=switch button whose label is its
+// accessible name. Fixes hit-target, a11y naming, and dead-label-area in one move.
+function ToggleRow({
+  label,
+  on,
+  onChange,
+}: {
+  label: string;
+  on: boolean;
+  onChange: (v: boolean) => void;
+}) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={on}
+      onClick={() => {
+        tapHaptic();
+        onChange(!on);
+      }}
+      className={`no-press group flex w-full items-center gap-3 px-4 py-3.5 text-start transition-colors active:bg-raised/50 ${FOCUS}`}
+    >
+      {/* Label encodes state: ink when ON, ink-muted when OFF. */}
+      <span className={`min-w-0 flex-1 text-[15px] font-medium ${on ? "text-ink" : "text-ink-muted"}`}>
+        {label}
+      </span>
+      <span
+        aria-hidden
+        className={`relative flex h-[31px] w-[51px] shrink-0 items-center rounded-full transition-colors duration-[220ms] [transition-timing-function:var(--ease-out)] ${
+          on ? "bg-accent" : "bg-raised"
+        }`}
+      >
+        {/* Warm off-white knob, elongates on press for a real-switch feel. */}
+        <span
+          className={`absolute start-[2px] h-[27px] w-[27px] rounded-full bg-ink shadow-[0_1px_2px_rgba(0,0,0,0.35)] ring-1 ring-edge transition-all duration-[220ms] [transition-timing-function:var(--ease-out)] group-active:w-[31px] ${
+            on ? "translate-x-[20px] group-active:translate-x-[16px]" : "translate-x-0"
+          }`}
+        />
+      </span>
+    </button>
+  );
+}
+
 function RegionSheet({
   current,
   onPick,
@@ -157,146 +361,105 @@ function RegionSheet({
   onClose: () => void;
 }) {
   useRegisterSheet(true);
+  const [entered, setEntered] = useState(false);
+  const [leaving, setLeaving] = useState(false);
+  const [pending, setPending] = useState<string | null>(null);
+  const [query, setQuery] = useState("");
+  const activeRef = useRef<HTMLButtonElement | null>(null);
+
+  useEffect(() => {
+    const id = requestAnimationFrame(() => setEntered(true));
+    return () => cancelAnimationFrame(id);
+  }, []);
+  useEffect(() => {
+    activeRef.current?.scrollIntoView({ block: "center" });
+  }, []);
+
+  const dismiss = (after: () => void) => {
+    setLeaving(true);
+    window.setTimeout(after, 300);
+  };
+  const pick = (code: string) => {
+    if (pending) return;
+    tapHaptic();
+    setPending(code);
+    // Let the choice land before the sheet leaves.
+    window.setTimeout(() => dismiss(() => onPick(code)), 190);
+  };
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return REGIONS;
+    return REGIONS.filter(
+      (r) => r.name.toLowerCase().includes(q) || r.code.toLowerCase().includes(q),
+    );
+  }, [query]);
+
+  const chosen = pending ?? current;
+  const open = entered && !leaving;
+
   return (
     <div className="fixed inset-0 z-[80] flex items-end justify-center">
       <button
         type="button"
         aria-label="Close"
-        onClick={onClose}
-        className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-fade-in"
+        onClick={() => dismiss(onClose)}
+        className={`no-press absolute inset-0 backdrop-blur-sm transition-opacity duration-300 ${
+          open ? "opacity-100" : "opacity-0"
+        }`}
+        style={{ background: "oklch(0.12 0.006 48 / 0.62)" }}
       />
       <div
-        className="relative z-10 max-h-[70vh] w-full max-w-md overflow-y-auto rounded-t-3xl border border-white/[0.07] bg-elevated pb-8 shadow-[0_-12px_40px_-12px_rgba(0,0,0,0.7)]"
+        className={`relative z-10 flex max-h-[78vh] w-full max-w-md flex-col rounded-t-3xl border border-edge bg-elevated shadow-[0_-12px_40px_-12px_rgba(0,0,0,0.7)] transition-transform duration-300 [transition-timing-function:var(--ease-out)] ${
+          open ? "translate-y-0" : "translate-y-full"
+        }`}
         style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 16px)" }}
       >
-        <div className="sticky top-0 bg-elevated/95 px-5 pb-2 pt-4 backdrop-blur">
-          <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-ink/20" />
-          <h3 className="font-display text-[19px] font-medium text-ink">Catalog region</h3>
+        <div className="px-5 pt-3">
+          <div className="mx-auto mb-3 h-1 w-9 rounded-full bg-ink/20" />
+          <div className="flex items-baseline justify-between">
+            <h3 className="font-display text-[19px] font-medium text-ink">Catalog region</h3>
+            <span className="font-mono text-[12px] tabular-nums text-ink-subtle">
+              {filtered.length}
+            </span>
+          </div>
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search regions"
+            aria-label="Search regions"
+            className={`mt-3 w-full rounded-xl border border-edge-soft bg-canvas/60 px-3.5 py-2.5 text-[14px] text-ink placeholder:text-ink-subtle ${FOCUS}`}
+          />
         </div>
-        <div className="px-3">
-          {REGIONS.map((r) => {
-            const active = r.code === current;
+        <div className="mt-2 overflow-y-auto px-3">
+          {filtered.map((r) => {
+            const active = r.code === chosen;
             return (
               <button
                 key={r.code}
                 type="button"
-                onClick={() => onPick(r.code)}
-                className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-start transition-colors active:bg-raised/60"
+                ref={active ? activeRef : undefined}
+                onClick={() => pick(r.code)}
+                className={`grid w-full grid-cols-[1fr_auto_20px] items-center gap-3 px-2 py-3.5 text-start transition-colors active:bg-raised/50 ${FOCUS}`}
               >
-                <span className={`flex-1 text-[15px] ${active ? "font-semibold text-ink" : "font-medium text-ink-muted"}`}>
+                <span
+                  className={`truncate text-[15px] ${active ? "font-medium text-ink" : "text-ink-muted"}`}
+                >
                   {r.name}
                 </span>
-                <span className="text-[12.5px] text-ink-subtle">{r.code}</span>
-                {active && <Check size={18} strokeWidth={2.6} className="text-accent" />}
+                <span className="rounded-md bg-raised/50 px-1.5 py-0.5 font-mono text-[12px] tracking-[0.06em] text-ink-subtle">
+                  {r.code}
+                </span>
+                {active ? (
+                  <Check size={18} strokeWidth={2.6} className="harbor-pop text-accent" />
+                ) : (
+                  <span />
+                )}
               </button>
             );
           })}
         </div>
       </div>
-    </div>
-  );
-}
-
-function Section({
-  label,
-  caption,
-  children,
-}: {
-  label: string;
-  caption?: string;
-  children: ReactNode;
-}) {
-  return (
-    <section className="flex flex-col gap-3">
-      <div className="flex flex-col gap-1.5">
-        <h2 className="px-1 text-[12px] font-bold uppercase tracking-[0.16em] text-ink-subtle">
-          {label}
-        </h2>
-        {caption && <p className="px-1 text-[12.5px] leading-snug text-ink-subtle">{caption}</p>}
-      </div>
-      {children}
-    </section>
-  );
-}
-
-function Card({ children }: { children: ReactNode }) {
-  return (
-    <div className="overflow-hidden rounded-2xl border border-white/[0.06] bg-elevated/40">{children}</div>
-  );
-}
-
-function Divider() {
-  return <span className="mx-4 block h-px bg-edge-soft/60" />;
-}
-
-function ToggleRow({
-  label,
-  hint,
-  on,
-  onChange,
-}: {
-  label: string;
-  hint?: string;
-  on: boolean;
-  onChange: (v: boolean) => void;
-}) {
-  return (
-    <div className="flex items-center gap-3 px-4 py-3.5">
-      <div className="min-w-0 flex-1">
-        <p className="text-[15px] font-medium text-ink">{label}</p>
-        {hint && <p className="mt-0.5 text-[12.5px] leading-snug text-ink-subtle">{hint}</p>}
-      </div>
-      <Toggle on={on} onChange={onChange} />
-    </div>
-  );
-}
-
-function Toggle({ on, onChange }: { on: boolean; onChange: (v: boolean) => void }) {
-  return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={on}
-      onClick={() => onChange(!on)}
-      className={`relative h-[30px] w-[50px] shrink-0 rounded-full transition-colors duration-200 ${
-        on ? "bg-accent" : "bg-raised"
-      }`}
-    >
-      <span
-        className={`absolute top-[3px] h-[24px] w-[24px] rounded-full bg-white shadow-[0_1px_3px_rgba(0,0,0,0.4)] transition-transform duration-200 ${
-          on ? "translate-x-[23px]" : "translate-x-[3px]"
-        }`}
-      />
-    </button>
-  );
-}
-
-function Segmented<T extends string>({
-  value,
-  options,
-  onChange,
-}: {
-  value: T;
-  options: Array<{ value: T; label: string }>;
-  onChange: (v: T) => void;
-}) {
-  return (
-    <div className="flex gap-1 rounded-full bg-raised/70 p-1">
-      {options.map((o) => {
-        const active = o.value === value;
-        return (
-          <button
-            key={o.value}
-            type="button"
-            onClick={() => onChange(o.value)}
-            className={`flex-1 rounded-full py-2 text-[13.5px] font-semibold transition-colors ${
-              active ? "bg-ink text-canvas" : "text-ink-muted"
-            }`}
-          >
-            {o.label}
-          </button>
-        );
-      })}
     </div>
   );
 }
