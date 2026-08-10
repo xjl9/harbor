@@ -216,7 +216,9 @@ class PlayerActivity : ComponentActivity() {
 
     fun doSetAudioTrack(id: String?) {
         val p = player ?: return
-        val ov = overrideFor(id) ?: return
+        val ov = overrideFor(id)
+        Log.i("HarborPlayer", "doSetAudioTrack id=$id currentTracks=${currentTracks != null} override=${ov != null}")
+        if (ov == null) return
         p.trackSelectionParameters = p.trackSelectionParameters.buildUpon()
             .setOverrideForType(ov)
             .build()
