@@ -1,6 +1,7 @@
 import { Suspense, lazy, useEffect, useRef, useState } from "react";
 import { Pause, Play } from "lucide-react";
 import { isMangaReaderRoute } from "@/lib/platform";
+import { useView } from "@/lib/view";
 import { HarborLoader } from "@/components/harbor-loader";
 import { MobileBrowse } from "./mobile-browse";
 import { MobileProfile } from "./mobile-profile";
@@ -17,6 +18,8 @@ import { MangaNowBar } from "./manga-remote/manga-now-bar";
 const RemoteApp = lazy(() => import("@/views/remote-app").then((m) => ({ default: m.RemoteApp })));
 const MangaRemote = lazy(() => import("./manga-remote/manga-remote").then((m) => ({ default: m.MangaRemote })));
 const MangaLocalReader = lazy(() => import("./manga-read/manga-local-reader").then((m) => ({ default: m.MangaLocalReader })));
+const PlayPicker = lazy(() => import("@/views/play-picker").then((m) => ({ default: m.PlayPicker })));
+const PlayerView = lazy(() => import("@/views/player").then((m) => ({ default: m.PlayerView })));
 
 export function MobileShell() {
   return (
@@ -100,7 +103,49 @@ function ShellBody() {
       </div>
       {showNowPlaying && <NowPlayingBar onExpand={() => selectTab("remote")} />}
       <BottomTabBar active={tab} onSelect={selectTab} />
+      <LocalPlayback />
     </div>
+  );
+}
+
+/**
+ * Standalone playback surfaces. On a native build "Play" opens the local picker
+ * (stream resolution on-device) and the picker hands a resolved source to the
+ * player — the same engine the desktop uses, rendered as full-screen overlays.
+ */
+function LocalPlayback() {
+  const { picker, player } = useView();
+  const playerActive = !!player;
+  return (
+    <>
+      {picker && (
+        <div className="absolute inset-0 z-[80] bg-canvas">
+          <Suspense fallback={<FullLoader />}>
+            <PlayPicker
+              key={`picker-${picker.meta.id}-${picker.episode?.season ?? ""}-${picker.episode?.episode ?? ""}-${picker.attempt ?? 0}`}
+              meta={picker.meta}
+              episode={picker.episode}
+              autoPlay={picker.intent === "download" ? false : picker.autoPlay}
+              attempt={picker.attempt}
+              intent={picker.intent}
+              seasonEpisodes={picker.seasonEpisodes}
+              resume={picker.resume}
+              playerActive={playerActive}
+            />
+          </Suspense>
+        </div>
+      )}
+      {player && (
+        <div className="absolute inset-0 z-[90] bg-black">
+          <Suspense fallback={<FullLoader />}>
+            <PlayerView
+              key={player.meta.id.startsWith("iptv:") ? "player-live" : `player-${player.meta.id}`}
+              src={player}
+            />
+          </Suspense>
+        </div>
+      )}
+    </>
   );
 }
 

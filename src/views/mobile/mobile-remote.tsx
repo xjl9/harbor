@@ -5,6 +5,7 @@ import { isMobileNative } from "@/lib/platform";
 import type { RemoteCommand, RemoteSnapshot } from "@/lib/remote/protocol";
 import { useRemoteClient } from "@/lib/remote/use-remote-client";
 import { useSettings } from "@/lib/settings";
+import { useView, type PlayEpisode } from "@/lib/view";
 
 type PlayOpts = { season?: number; episode?: number; resume?: boolean };
 
@@ -57,9 +58,21 @@ export function MobileRemoteProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const connected = status === "connected";
+  const view = useView();
 
   const playOnHost = useCallback(
     (meta: Meta, opts?: PlayOpts) => {
+      // On a native standalone build, "Play" resolves and plays locally through
+      // the same picker + player the desktop uses. The web remote build keeps
+      // driving the connected desktop.
+      if (native) {
+        const episode: PlayEpisode | undefined =
+          opts?.season != null && opts?.episode != null
+            ? { season: opts.season, episode: opts.episode }
+            : undefined;
+        view.openPicker(meta, episode, { autoPlay: true, resume: opts?.resume ?? true });
+        return;
+      }
       const sent = sendCommand({
         action: "playMeta",
         metaId: meta.id,
@@ -72,11 +85,15 @@ export function MobileRemoteProvider({ children }: { children: ReactNode }) {
       });
       showFlash(sent, sent ? `Playing on your computer` : "Not connected to a computer");
     },
-    [sendCommand, showFlash],
+    [native, view, sendCommand, showFlash],
   );
 
   const openOnHost = useCallback(
     (meta: Meta) => {
+      if (native) {
+        view.openMeta(meta);
+        return;
+      }
       const sent = sendCommand({
         action: "openMeta",
         metaId: meta.id,
@@ -86,7 +103,7 @@ export function MobileRemoteProvider({ children }: { children: ReactNode }) {
       });
       showFlash(sent, sent ? `Opened on your computer` : "Not connected to a computer");
     },
-    [sendCommand, showFlash],
+    [native, view, sendCommand, showFlash],
   );
 
   const value = useMemo<MobileRemoteValue>(
