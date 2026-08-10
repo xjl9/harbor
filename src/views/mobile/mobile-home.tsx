@@ -91,12 +91,20 @@ export function MobileHome() {
     <div className="flex flex-col gap-7 pt-3 motion-safe:[animation:harbor-step-in_420ms_var(--ease-out)_both]">
       <MobileHero slides={shownHero} onOpenDetail={setDetailMeta} />
       {cw.length > 0 && <MobileCwRow items={cw} onOpenDetail={setDetailMeta} />}
-      {shownRows[0] && shownRows[0].metas.length >= 6 && (
-        <MobileRankRail title="Top 10 Today" metas={dedupeMetas(shownRows[0].metas)} onOpenDetail={setDetailMeta} />
+      {shownRows[0] && shownRows[0].metas.length >= 6 ? (
+        <>
+          <MobileRankRail title="Top 10 Today" metas={dedupeMetas(shownRows[0].metas)} onOpenDetail={setDetailMeta} />
+          {shownRows.slice(1).map((r) => (
+            <MobileRail key={r.key} title={r.name} metas={dedupeMetas(r.metas).slice(0, 18)} onOpenDetail={setDetailMeta} />
+          ))}
+        </>
+      ) : (
+        // Row 0 has too few items for the ranked treatment — render it (and the rest) as
+        // normal rails instead of silently dropping it.
+        shownRows.map((r) => (
+          <MobileRail key={r.key} title={r.name} metas={dedupeMetas(r.metas).slice(0, 18)} onOpenDetail={setDetailMeta} />
+        ))
       )}
-      {shownRows.slice(1).map((r) => (
-        <MobileRail key={r.key} title={r.name} metas={dedupeMetas(r.metas).slice(0, 18)} onOpenDetail={setDetailMeta} />
-      ))}
       <div className="h-4" />
       {detailMeta && <MobileDetail meta={detailMeta} onClose={() => setDetailMeta(null)} />}
     </div>
@@ -121,27 +129,23 @@ function HomeSkeleton() {
 }
 
 function HeroSkeleton() {
+  // Geometry mirrors the real full-bleed MobileHero so the load->loaded swap is a
+  // cross-fade of identical boxes, not a reflow (was an inset rounded card -> jump).
   return (
-    <section className="flex flex-col gap-3">
-      <div className="px-4">
-        <div className="relative aspect-[16/13] w-full overflow-hidden rounded-[24px] bg-surface ring-1 ring-edge-soft/50">
-          <Shimmer />
-          <div className="absolute inset-x-0 bottom-0 flex flex-col gap-3 p-5">
-            <div className="h-5 w-28 rounded-md bg-elevated/50" />
-            <div className="h-7 w-2/3 rounded-lg bg-elevated/55" />
-            <div className="h-3.5 w-2/5 rounded bg-elevated/40" />
-            <div className="mt-1 flex items-center gap-2.5">
-              <div className="h-[52px] w-[132px] rounded-full bg-elevated/50" />
-              <div className="h-[52px] w-[52px] shrink-0 rounded-full bg-elevated/45" />
-              <div className="h-[52px] w-[52px] shrink-0 rounded-full bg-elevated/45" />
-            </div>
+    <section className="relative -mt-3 mb-1">
+      <div className="relative h-[62svh] min-h-[440px] w-full overflow-hidden bg-surface">
+        <Shimmer />
+        <div className="absolute inset-x-0 bottom-0 h-[38%] bg-gradient-to-t from-canvas to-transparent" />
+        <div className="absolute inset-x-0 bottom-0 flex flex-col gap-3.5 px-5 pb-7">
+          <div className="h-3.5 w-32 rounded bg-elevated/50" />
+          <div className="h-9 w-3/5 rounded-lg bg-elevated/55" />
+          <div className="h-3.5 w-2/5 rounded bg-elevated/40" />
+          <div className="mt-1.5 flex items-center gap-2.5">
+            <div className="h-[54px] flex-1 rounded-full bg-elevated/50" />
+            <div className="h-[54px] w-[54px] shrink-0 rounded-full bg-elevated/45" />
+            <div className="h-[54px] w-[54px] shrink-0 rounded-full bg-elevated/45" />
           </div>
         </div>
-      </div>
-      <div className="flex items-center justify-center gap-1.5">
-        <span className="h-1.5 w-5 rounded-full bg-ink/20" />
-        <span className="h-1.5 w-1.5 rounded-full bg-ink/12" />
-        <span className="h-1.5 w-1.5 rounded-full bg-ink/12" />
       </div>
     </section>
   );

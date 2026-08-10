@@ -125,7 +125,7 @@ export function MobileCwRow({
 
   return (
     <section className="flex flex-col gap-3">
-      <h2 className="px-4 text-[18px] font-semibold tracking-tight text-ink">Continue watching</h2>
+      <h2 className="px-4 font-display text-[19px] font-medium tracking-[-0.01em] text-ink">Continue watching</h2>
       <div className="flex gap-3 overflow-x-auto px-4 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {items.map((item) => (
           <MobileCwCard

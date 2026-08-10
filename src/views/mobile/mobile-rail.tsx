@@ -31,7 +31,7 @@ export function MobileRail({
         disabled={!onSeeAll}
         className="flex items-center gap-1 px-4 text-start disabled:cursor-default"
       >
-        <h2 className="text-[18px] font-semibold tracking-tight text-ink">{title}</h2>
+        <h2 className="font-display text-[19px] font-medium tracking-[-0.01em] text-ink">{title}</h2>
         {onSeeAll && <ChevronRight size={19} strokeWidth={2.4} className="text-ink-subtle" />}
       </button>
       <div className="flex gap-3 overflow-x-auto px-4 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
@@ -67,7 +67,7 @@ export function MobileRankRail({
         disabled={!onSeeAll}
         className="flex items-center gap-1 px-4 text-start disabled:cursor-default"
       >
-        <h2 className="text-[18px] font-semibold tracking-tight text-ink">{title}</h2>
+        <h2 className="font-display text-[19px] font-medium tracking-[-0.01em] text-ink">{title}</h2>
         {onSeeAll && <ChevronRight size={19} strokeWidth={2.4} className="text-ink-subtle" />}
       </button>
       <div className="flex gap-1 overflow-x-auto ps-4 pe-4 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
