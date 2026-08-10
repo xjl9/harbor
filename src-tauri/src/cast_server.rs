@@ -28,6 +28,7 @@ fn kill_orphan_sidecars() {
     }
 }
 
+#[cfg(desktop)]
 pub fn ensure_started_on_setup(_app: &AppHandle) {
     kill_orphan_sidecars();
 }

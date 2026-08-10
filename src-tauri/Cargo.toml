@@ -26,26 +26,20 @@ tauri-plugin-http = "2"
 tauri-plugin-dialog = "2"
 tauri-plugin-fs = "2"
 tauri-plugin-deep-link = "2"
-tauri-plugin-single-instance = { version = "2", features = ["deep-link"] }
-tauri-plugin-updater = "2"
 tauri-plugin-process = "2"
-tauri-plugin-window-state = "2"
 walkdir = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 tokio = { version = "1", features = ["full"] }
 tokio-util = { version = "0.7", features = ["io"] }
 axum = { version = "0.8", features = ["ws"] }
-reqwest = { version = "0.12", default-features = false, features = ["native-tls", "stream", "multipart", "json", "gzip"] }
+reqwest = { version = "0.12", default-features = false, features = ["stream", "multipart", "json", "gzip"] }
 flate2 = "1"
 zip = { version = "4", default-features = false, features = ["deflate-flate2"] }
 regex = "1"
 encoding_rs = "0.8"
 uuid = { version = "1", features = ["v4"] }
 futures-util = "0.3"
-gilrs = { version = "0.11", default-features = false, features = ["xinput"] }
-libmpv2 = "4"
-libmpv2-sys = "4"
 libc = "0.2"
 socket2 = "0.5"
 base64 = "0.22"
@@ -62,6 +56,20 @@ realfft = "3"
 ort = { version = "=2.0.0-rc.10", optional = true }
 ndarray = { version = "0.16", optional = true }
 whisper-rs = { version = "0.14", optional = true }
+
+# Desktop-only: mpv playback, gamepad input, tray, and the desktop plugin set do not
+# exist on Android/iOS. Mobile swaps reqwest's TLS to rustls (no OpenSSL on Android).
+[target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
+tauri-plugin-single-instance = { version = "2", features = ["deep-link"] }
+tauri-plugin-updater = "2"
+tauri-plugin-window-state = "2"
+gilrs = { version = "0.11", default-features = false, features = ["xinput"] }
+libmpv2 = "4"
+libmpv2-sys = "4"
+reqwest = { version = "0.12", default-features = false, features = ["native-tls"] }
+
+[target.'cfg(any(target_os = "android", target_os = "ios"))'.dependencies]
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls"] }
 
 [target.'cfg(windows)'.dependencies]
 windows = { version = "0.61", features = ["Win32_Foundation", "Win32_Security", "Win32_UI_WindowsAndMessaging", "Win32_UI_Shell", "Win32_Graphics_Gdi", "Win32_Graphics_Dxgi", "Win32_Graphics_Dxgi_Common", "Win32_System_Threading", "Win32_System_Power", "Win32_System_JobObjects", "Win32_System_ProcessStatus", "Win32_System_Diagnostics_ToolHelp", "Win32_System_SystemInformation", "Win32_System_LibraryLoader", "Win32_System_WinRT", "Media", "Foundation", "Storage_Streams"] }

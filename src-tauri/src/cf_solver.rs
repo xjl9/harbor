@@ -1,16 +1,25 @@
 use std::collections::HashMap;
+#[cfg(desktop)]
 use std::sync::mpsc;
 use std::sync::{Mutex, OnceLock};
 use std::time::{Duration, Instant};
 
-use tauri::{AppHandle, Manager, Url, WebviewUrl, WebviewWindowBuilder};
-use tokio::sync::{oneshot, Mutex as AsyncMutex};
+use tauri::AppHandle;
+#[cfg(desktop)]
+use tauri::{Manager, Url, WebviewUrl, WebviewWindowBuilder};
+#[cfg(desktop)]
+use tokio::sync::oneshot;
+#[cfg(desktop)]
+use tokio::sync::Mutex as AsyncMutex;
 
+#[cfg(desktop)]
 const SOLVER_LABEL: &str = "harbor-cf-solver";
 const CF_TTL: Duration = Duration::from_secs(20 * 60);
 
+#[cfg(desktop)]
 static PENDING: Mutex<Option<oneshot::Sender<String>>> = Mutex::new(None);
 
+#[cfg(desktop)]
 fn request_lock() -> &'static AsyncMutex<()> {
     static LOCK: OnceLock<AsyncMutex<()>> = OnceLock::new();
     LOCK.get_or_init(|| AsyncMutex::new(()))
@@ -27,6 +36,7 @@ fn cf_cache() -> &'static Mutex<HashMap<String, CfEntry>> {
     C.get_or_init(|| Mutex::new(HashMap::new()))
 }
 
+#[cfg(desktop)]
 fn last_ua() -> &'static Mutex<String> {
     static U: OnceLock<Mutex<String>> = OnceLock::new();
     U.get_or_init(|| Mutex::new(String::new()))
@@ -48,6 +58,7 @@ pub fn cf_invalidate(host: &str) {
     cf_cache().lock().unwrap().remove(host);
 }
 
+#[cfg(desktop)]
 fn harvest(app: &AppHandle, url: &str) {
     let Some(win) = app.get_webview_window(SOLVER_LABEL) else {
         return;
@@ -91,6 +102,7 @@ fn harvest(app: &AppHandle, url: &str) {
     eprintln!("[cf] harvested clearance for {}", host);
 }
 
+#[cfg(desktop)]
 const INIT_SCRIPT: &str = r#"
 (function () {
   if (window.__harborCfBooted) return;
@@ -125,6 +137,7 @@ const INIT_SCRIPT: &str = r#"
 })();
 "#;
 
+#[cfg(desktop)]
 #[tauri::command]
 pub fn cf_report(body: String, ua: String) {
     eprintln!("[cf] report {} bytes", body.len());
@@ -136,6 +149,7 @@ pub fn cf_report(body: String, ua: String) {
     }
 }
 
+#[cfg(desktop)]
 fn open_solver(app: &AppHandle, url: &str) -> Result<(), String> {
     if let Some(existing) = app.get_webview_window(SOLVER_LABEL) {
         eprintln!("[cf] reusing solver window");
@@ -180,6 +194,14 @@ fn open_solver(app: &AppHandle, url: &str) -> Result<(), String> {
         .map_err(|e| format!("build wait: {e}"))?
 }
 
+// No solver webview window exists on mobile; callers fall through to the plain
+// challenge error instead of popping the interactive solver.
+#[cfg(mobile)]
+pub async fn cf_fetch(_app: AppHandle, _url: String) -> Result<String, String> {
+    Err("cloudflare challenge solving requires the desktop app".into())
+}
+
+#[cfg(desktop)]
 pub async fn cf_fetch(app: AppHandle, url: String) -> Result<String, String> {
     let _guard = request_lock().lock().await;
     let (tx, rx) = oneshot::channel::<String>();

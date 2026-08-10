@@ -1,5 +1,6 @@
 use tokio::process::{Child, Command};
 
+#[cfg(desktop)]
 pub fn init() {
     #[cfg(windows)]
     win::init();
@@ -26,6 +27,7 @@ pub fn adopt(child: &Child) {
     let _ = child;
 }
 
+#[cfg(desktop)]
 pub fn reap_orphans() {
     reap_platform();
 }
@@ -43,7 +45,7 @@ fn reap_platform() {
         .output();
 }
 
-#[cfg(not(windows))]
+#[cfg(all(not(windows), desktop))]
 fn reap_platform() {
     for signature in ["harbor-thumbs-", "harbor-mv-"] {
         let _ = std::process::Command::new("pkill")

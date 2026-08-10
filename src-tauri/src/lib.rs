@@ -1,7 +1,9 @@
 mod anime4k;
 mod asr_model;
 mod binary_lookup;
+#[cfg(desktop)]
 mod browser;
+#[cfg(desktop)]
 mod display_fit;
 mod cast;
 mod cast_hls;
@@ -11,19 +13,27 @@ mod crash_report;
 mod diagnostics;
 mod cf_relay;
 mod cf_solver;
+#[cfg(desktop)]
 mod discord_rp;
 mod dlna;
 mod download;
+#[cfg(desktop)]
 mod dvr;
 mod fonts;
+#[cfg(desktop)]
 mod fullscreen;
+#[cfg(desktop)]
 mod gamepad;
+#[cfg(desktop)]
 mod hdr_overlay;
 mod http_fetch;
 mod local_lib;
 mod media_controls;
+#[cfg(desktop)]
 mod modal_overlay;
+#[cfg(desktop)]
 mod mpv;
+#[cfg(desktop)]
 mod multiview;
 mod proc_guard;
 mod proc_mem;
@@ -32,6 +42,7 @@ mod roku;
 mod mpv_render_mac;
 #[cfg(target_os = "linux")]
 mod mpv_render_linux;
+#[cfg(desktop)]
 mod pip;
 #[cfg(target_os = "macos")]
 mod pip_mac;
@@ -39,23 +50,28 @@ mod power;
 mod airplay;
 mod settings_store;
 mod shaders;
+#[cfg(desktop)]
 mod song_id;
+#[cfg(desktop)]
 mod song_id_gemini;
 mod stream_proxy;
 mod streams;
 mod stremio_auth;
 mod sub_extract;
 mod subsync;
+#[cfg(desktop)]
 mod svp;
 mod thumbs;
 mod torrent_engine;
 mod temp_prune;
 mod trailer;
 mod transcode;
+#[cfg(desktop)]
 mod tray;
 mod web_server;
 mod webview_helpers;
 
+#[cfg(desktop)]
 pub(crate) fn release_stremio_scheme(app: &tauri::AppHandle) {
     use tauri_plugin_deep_link::DeepLinkExt;
     match app.deep_link().unregister("stremio") {
@@ -65,18 +81,23 @@ pub(crate) fn release_stremio_scheme(app: &tauri::AppHandle) {
 }
 
 pub(crate) fn shutdown_services(app: &tauri::AppHandle) {
+    #[cfg(desktop)]
     release_stremio_scheme(app);
     thumbs::shutdown(app);
+    #[cfg(desktop)]
     multiview::shutdown(app);
+    #[cfg(desktop)]
     dvr::shutdown(app);
     stream_proxy::shutdown(app);
     cast_server::stop();
     torrent_engine::stop();
+    #[cfg(desktop)]
     discord_rp::shutdown(app);
     crash_report::mark_clean_exit();
 }
 
 pub static CLOSE_FLUSH_DONE: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+#[cfg(desktop)]
 static CLOSE_IN_PROGRESS: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
 
 #[tauri::command]
@@ -86,21 +107,30 @@ fn harbor_flush_done() {
 
 #[tauri::command]
 fn harbor_startup_ready(window: tauri::WebviewWindow) {
+    #[cfg(desktop)]
     if window.label() == "main" {
         let _ = window.set_focus();
     }
+    #[cfg(mobile)]
+    let _ = window;
 }
 
 #[tauri::command]
 fn close_aux_windows(app: tauri::AppHandle) {
-    use tauri::Manager;
-    for (label, window) in app.webview_windows() {
-        if label != "main" {
-            let _ = window.close();
+    #[cfg(desktop)]
+    {
+        use tauri::Manager;
+        for (label, window) in app.webview_windows() {
+            if label != "main" {
+                let _ = window.close();
+            }
         }
     }
+    #[cfg(mobile)]
+    let _ = app;
 }
 
+#[cfg(desktop)]
 #[tauri::command]
 async fn deeplink_set_stremio(app: tauri::AppHandle, enabled: bool) -> Result<(), String> {
     use tauri_plugin_deep_link::DeepLinkExt;
@@ -114,6 +144,7 @@ async fn deeplink_set_stremio(app: tauri::AppHandle, enabled: bool) -> Result<()
     Ok(())
 }
 
+#[cfg(desktop)]
 #[tauri::command]
 async fn deeplink_is_stremio_registered(app: tauri::AppHandle) -> Result<bool, String> {
     use tauri_plugin_deep_link::DeepLinkExt;
@@ -361,8 +392,10 @@ fn harbor_resume_webview(app: tauri::AppHandle) {
     }
 }
 
+#[cfg(desktop)]
 const REVEAL_FAILSAFE_MS: u64 = 12_000;
 
+#[cfg(desktop)]
 fn install_reveal_failsafe(app: &tauri::AppHandle) {
     use tauri::Manager;
     let handle = app.clone();
@@ -383,6 +416,7 @@ fn install_reveal_failsafe(app: &tauri::AppHandle) {
     });
 }
 
+#[cfg(desktop)]
 fn ensure_window_on_screen(app: &tauri::AppHandle) {
     use tauri::Manager;
     let Some(window) = app.get_webview_window("main") else {
@@ -476,14 +510,10 @@ pub fn run() {
             eprintln!("[stream-proxy] failed to start: {}", e);
             stream_proxy::ProxyState::placeholder()
         });
-    let mpv_state = mpv::MpvState::new();
-    let pip_state = pip::PipState::new();
-    let fullscreen_state = fullscreen::FullscreenState::new();
     let thumbs_state = thumbs::ThumbsState::new();
-    let dvr_state = dvr::DvrState::new();
-    let multiview_state = multiview::MultiviewState::new();
-    let modal_overlay_state = modal_overlay::ModalOverlayState::new();
-    let app_builder = tauri::Builder::default()
+    let app_builder = tauri::Builder::default();
+    #[cfg(desktop)]
+    let app_builder = app_builder
         .plugin(tauri_plugin_single_instance::init(|app, args, _cwd| {
             use tauri::{Emitter, Manager};
             if let Some(w) = app.get_webview_window("main") {
@@ -503,7 +533,8 @@ pub fn run() {
             if let Some(path) = media_file_from_args(&args) {
                 let _ = app.emit("harbor:open-file", path);
             }
-        }))
+        }));
+    let app_builder = app_builder
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_os::init())
         .plugin(tauri_plugin_shell::init())
@@ -511,8 +542,10 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_deep_link::init())
+        .plugin(tauri_plugin_process::init());
+    #[cfg(desktop)]
+    let app_builder = app_builder
         .plugin(tauri_plugin_updater::Builder::new().build())
-        .plugin(tauri_plugin_process::init())
         .plugin(
             tauri_plugin_window_state::Builder::default()
                 .with_state_flags(
@@ -522,15 +555,16 @@ pub fn run() {
                 )
                 .build(),
         )
+        .manage(mpv::MpvState::new())
+        .manage(pip::PipState::new())
+        .manage(fullscreen::FullscreenState::new())
+        .manage(dvr::DvrState::new())
+        .manage(modal_overlay::ModalOverlayState::new())
+        .manage(multiview::MultiviewState::new())
+        .manage(discord_rp::DiscordState::new());
+    let app_builder = app_builder
         .manage(proxy_state)
-        .manage(mpv_state)
-        .manage(pip_state)
-        .manage(fullscreen_state)
         .manage(thumbs_state)
-        .manage(dvr_state)
-        .manage(multiview_state)
-        .manage(modal_overlay_state)
-        .manage(discord_rp::DiscordState::new())
         .manage(download::DownloadState::new());
 
     #[cfg(target_os = "macos")]
@@ -545,21 +579,27 @@ pub fn run() {
             .unwrap()
     });
 
-    app_builder
-        .on_page_load(|webview, payload| {
-            if webview.label() == "main"
-                && matches!(payload.event(), tauri::webview::PageLoadEvent::Finished)
-            {
-                let _ = webview.window().show();
-            }
-        })
+    #[cfg(desktop)]
+    let app_builder = app_builder.on_page_load(|webview, payload| {
+        if webview.label() == "main"
+            && matches!(payload.event(), tauri::webview::PageLoadEvent::Finished)
+        {
+            let _ = webview.window().show();
+        }
+    });
+    let app_builder = app_builder
         .setup(move |app| {
             if let Err(error) = crash_report::initialize(app.handle()) {
                 eprintln!("[harbor::crash-report] initialization failed: {error}");
             }
-            proc_guard::init();
-            proc_guard::reap_orphans();
+            #[cfg(desktop)]
+            {
+                proc_guard::init();
+                proc_guard::reap_orphans();
+            }
+            #[cfg(desktop)]
             display_fit::install(app.handle());
+            #[cfg(desktop)]
             install_reveal_failsafe(app.handle());
             #[cfg(windows)]
             {
@@ -581,6 +621,7 @@ pub fn run() {
             make_main_transparent(&app.handle());
             #[cfg(windows)]
             install_maximize_guard(&app.handle());
+            #[cfg(desktop)]
             ensure_window_on_screen(&app.handle());
             #[cfg(target_os = "macos")]
             {
@@ -597,6 +638,7 @@ pub fn run() {
                     }
                 }
             }
+            #[cfg(desktop)]
             cast_server::ensure_started_on_setup(&app.handle());
             torrent_engine::ensure_started_on_setup(&app.handle());
             {
@@ -609,17 +651,21 @@ pub fn run() {
                 });
             }
             media_controls::ensure_started_on_setup(&app.handle());
+            #[cfg(desktop)]
             {
                 let handle = app.handle().clone();
                 std::thread::spawn(move || discord_rp::run_loop(handle));
             }
+            #[cfg(desktop)]
             gamepad::spawn(app.handle().clone());
             #[cfg(desktop)]
             if let Err(e) = tray::build(&app.handle()) {
                 eprintln!("[harbor::tray] build failed: {:?}", e);
             }
             Ok(())
-        })
+        });
+    #[cfg(desktop)]
+    let app_builder = app_builder
         .on_window_event(|window, event| {
             if window.label() != "main" {
                 return;
@@ -672,7 +718,9 @@ pub fn run() {
                 }
                 _ => {}
             }
-        })
+        });
+    #[cfg(desktop)]
+    let app_builder = app_builder
         .invoke_handler(tauri::generate_handler![
             crash_report::take_startup_crash_report,
             fonts::install_sub_font,
@@ -842,7 +890,110 @@ pub fn run() {
             deeplink_set_stremio,
             deeplink_is_stremio_registered,
             harbor_take_pending_file,
-        ])
+        ]);
+    // Mobile registers the portable command set only: no mpv/svp/tray/gamepad/pip
+    // (modules cfg-gated out) and no runtime deep-link toggling (manifest-declared).
+    #[cfg(mobile)]
+    let app_builder = app_builder
+        .invoke_handler(tauri::generate_handler![
+            crash_report::take_startup_crash_report,
+            fonts::install_sub_font,
+            fonts::remove_sub_font,
+            fonts::list_sub_fonts,
+            harbor_flush_done,
+            harbor_startup_ready,
+            close_aux_windows,
+            power::power_inhibit,
+            harbor_set_webview_memory_low,
+            harbor_set_webview_visible,
+            harbor_set_context_menu,
+            harbor_try_suspend_webview,
+            harbor_resume_webview,
+            save_text_file,
+            subsync::moviehash::compute_moviehash,
+            subsync::sync_subtitle,
+            subsync::scorer::subsync_score_transform,
+            subsync::torrent_sync::torrent_sync_availability,
+            subsync::torrent_sync::torrent_sync_subtitle,
+            subsync::torrent_sync::torrent_score_transform,
+            subsync::audio_tracks::audio_probe_tracks,
+            subsync::fingerprint::compute_chromaprint,
+            subsync::asr::asr_transcribe_windows,
+            subsync::asr::asr_verify,
+            sub_extract::subtitle_extract,
+            sub_extract::subtitle_extract_ass,
+            cast_server::stop_stremio_sidecar,
+            cast_server::cast_server_stop,
+            web_server::web_serve_start,
+            web_server::web_serve_stop,
+            web_server::web_serve_status,
+            web_server::remote_ws_broadcast,
+            web_server::remote_ws_client_count,
+            anime4k::anime4k_download,
+            anime4k::anime4k_dir,
+            asr_model::asr_ensure_model,
+            asr_model::asr_model_path,
+            shaders::shader_download,
+            shaders::shader_dir,
+            settings_store::settings_read,
+            settings_store::settings_write,
+            settings_store::secrets_read,
+            settings_store::secrets_write,
+            proc_mem::harbor_process_memory,
+            diagnostics::diagnostics_collect,
+            diagnostics::diagnostics_cleanup,
+            trailer::fetch_trailer,
+            temp_prune::temp_usage_bytes,
+            temp_prune::temp_clear,
+            download::download_start,
+            download::download_cancel,
+            stream_proxy::proxy_register,
+            stream_proxy::proxy_unregister,
+            stream_proxy::proxy_gc_idle,
+            cf_relay::cf_list_accounts,
+            cf_relay::cf_deploy_relay,
+            cf_relay::cf_delete_relay,
+            cf_relay::cf_relay_status,
+            webview_helpers::webview_reapply_transparency,
+            thumbs::thumbs_set_url,
+            thumbs::thumbs_spawn_eager,
+            thumbs::thumbs_get,
+            thumbs::thumbs_stop,
+            http_fetch::harbor_fetch,
+            http_fetch::harbor_upload,
+            media_controls::media_controls_update,
+            media_controls::media_controls_clear,
+            cast::cast_discover,
+            dlna::lan_ip,
+            cast::cast_load,
+            cast::cast_play,
+            cast::cast_pause,
+            cast::cast_seek,
+            cast::cast_stop,
+            cast::cast_status,
+            cast_server::cast_server_status,
+            cast_server::cast_server_restart,
+            torrent_engine::torrent_engine_status,
+            torrent_engine::torrent_engine_add,
+            torrent_engine::torrent_engine_select,
+            torrent_engine::torrent_engine_stats,
+            torrent_engine::torrent_engine_list,
+            torrent_engine::torrent_engine_pause,
+            torrent_engine::torrent_engine_resume,
+            torrent_engine::torrent_engine_remove,
+            torrent_engine::torrent_engine_selftest,
+            torrent_engine::torrent_engine_restart,
+            torrent_engine::torrent_engine_hard_reset,
+            torrent_engine::torrent_engine_set_options,
+            transcode::cast_ffmpeg_present,
+            streams::streams_run_pipeline,
+            streams::streams_parse,
+            streams::streams_core_version,
+            local_lib::harbor_scan_folder,
+            stremio_auth::stremio_auth_start,
+            harbor_take_pending_file,
+        ]);
+    app_builder
         .build(tauri::generate_context!())
         .expect("error while building tauri application")
         .run(|app_handle, event| {
