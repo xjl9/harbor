@@ -3,27 +3,44 @@ import {
   ChevronRight,
   FileText,
   HelpCircle,
+  KeyRound,
+  Link2,
   LogOut,
   MonitorSmartphone,
   Users,
 } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { useAuth } from "@/lib/auth";
+import { isMobileNative } from "@/lib/platform";
 import { useProfiles } from "@/lib/profiles";
+import { useSettings } from "@/lib/settings";
 import { MobileWhosWatching } from "./mobile-whos-watching";
 import { useMobileRemote } from "./mobile-remote";
+import { useRegisterSheet } from "./mobile-sheet-lock";
 import { setMobileRemoteStyle, useMobileRemoteStyle, type MobileRemoteStyle } from "./remote-style";
 import { HARBOR_BUGS_BASE } from "@/lib/config/endpoints";
+
+type EditField = {
+  key: "remoteHostAddress" | "tmdbKey" | "tvdbKey" | "rpdbKey";
+  label: string;
+  placeholder: string;
+  hint?: string;
+};
 
 export function MobileProfile({ onOpenRemote }: { onOpenRemote: () => void }) {
   const { user, signOut } = useAuth();
   const { activeProfile } = useProfiles();
-  const { snapshot } = useMobileRemote();
+  const { snapshot, connected } = useMobileRemote();
+  const { settings, update } = useSettings();
   const remote = snapshot.profile;
   const name = remote?.name || activeProfile?.name || user?.email?.split("@")[0] || "Guest";
   const avatar = remote?.avatar ?? activeProfile?.avatar ?? null;
   const color = remote?.color ?? activeProfile?.color ?? "oklch(0.78 0.13 60)";
   const [switching, setSwitching] = useState(false);
+  const [editing, setEditing] = useState<EditField | null>(null);
+  const native = isMobileNative();
+
+  const keyValue = (v: string | undefined) => (v && v.trim() ? "••••" : "Not set");
 
   return (
     <div className="flex h-full flex-col gap-6 px-5 pt-4">
@@ -63,6 +80,74 @@ export function MobileProfile({ onOpenRemote }: { onOpenRemote: () => void }) {
         </div>
       </section>
 
+      <section className="flex flex-col gap-3">
+        <h2 className="px-1 text-[12px] font-bold uppercase tracking-[0.16em] text-ink-subtle">
+          Streaming setup
+        </h2>
+        <div className="overflow-hidden rounded-2xl border border-edge-soft/70 bg-elevated/40">
+          {native && (
+            <>
+              <Row
+                icon={<Link2 size={20} strokeWidth={2} />}
+                label="Desktop connection"
+                value={connected ? settings.remoteHostAddress : settings.remoteHostAddress || "Not set"}
+                dot={connected ? "ok" : null}
+                onClick={() =>
+                  setEditing({
+                    key: "remoteHostAddress",
+                    label: "Desktop connection",
+                    placeholder: "192.168.1.20",
+                    hint: "IP address of the computer running Harbor, shown in its Remote settings.",
+                  })
+                }
+              />
+              <Divider />
+            </>
+          )}
+          <Row
+            icon={<KeyRound size={20} strokeWidth={2} />}
+            label="TMDB API key"
+            value={keyValue(settings.tmdbKey)}
+            onClick={() =>
+              setEditing({
+                key: "tmdbKey",
+                label: "TMDB API key",
+                placeholder: "Paste key",
+                hint: "Free at themoviedb.org. Powers rich detail pages and episode grids.",
+              })
+            }
+          />
+          <Divider />
+          <Row
+            icon={<KeyRound size={20} strokeWidth={2} />}
+            label="TVDB API key"
+            value={keyValue(settings.tvdbKey)}
+            onClick={() =>
+              setEditing({
+                key: "tvdbKey",
+                label: "TVDB API key",
+                placeholder: "Paste key",
+                hint: "Optional. Episode orders work without one via Harbor's proxy.",
+              })
+            }
+          />
+          <Divider />
+          <Row
+            icon={<KeyRound size={20} strokeWidth={2} />}
+            label="RPDB API key"
+            value={keyValue(settings.rpdbKey)}
+            onClick={() =>
+              setEditing({
+                key: "rpdbKey",
+                label: "RPDB API key",
+                placeholder: "Paste key",
+                hint: "Optional. Rated posters on rails.",
+              })
+            }
+          />
+        </div>
+      </section>
+
       <section className="overflow-hidden rounded-2xl border border-edge-soft/70 bg-elevated/40">
         <Row
           icon={<MonitorSmartphone size={20} strokeWidth={2} />}
@@ -91,6 +176,83 @@ export function MobileProfile({ onOpenRemote }: { onOpenRemote: () => void }) {
       </section>
 
       {switching && <MobileWhosWatching onClose={() => setSwitching(false)} />}
+      {editing && (
+        <EditSheet
+          field={editing}
+          initial={String(settings[editing.key] ?? "")}
+          onSave={(next) => {
+            const v = next.trim();
+            if (editing.key === "remoteHostAddress") update({ remoteHostAddress: v });
+            else if (editing.key === "tmdbKey") update({ tmdbKey: v });
+            else if (editing.key === "tvdbKey") update({ tvdbKey: v });
+            else update({ rpdbKey: v });
+            setEditing(null);
+          }}
+          onClose={() => setEditing(null)}
+        />
+      )}
+    </div>
+  );
+}
+
+function EditSheet({
+  field,
+  initial,
+  onSave,
+  onClose,
+}: {
+  field: EditField;
+  initial: string;
+  onSave: (next: string) => void;
+  onClose: () => void;
+}) {
+  const [value, setValue] = useState(initial);
+  useRegisterSheet(true);
+  return (
+    <div className="fixed inset-0 z-[70] flex items-end justify-center">
+      <button
+        type="button"
+        aria-label="Close"
+        onClick={onClose}
+        className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-fade-in"
+      />
+      <div
+        className="relative z-10 w-full max-w-md rounded-t-3xl border border-edge-soft/70 bg-elevated p-5 pb-8 shadow-[0_-12px_40px_-12px_rgba(0,0,0,0.7)]"
+        style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 20px)" }}
+      >
+        <h3 className="text-[16px] font-semibold text-ink">{field.label}</h3>
+        {field.hint && <p className="mt-1 text-[13px] leading-snug text-ink-muted">{field.hint}</p>}
+        <input
+          autoFocus
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          placeholder={field.placeholder}
+          autoCapitalize="none"
+          autoCorrect="off"
+          spellCheck={false}
+          inputMode={field.key === "remoteHostAddress" ? "decimal" : "text"}
+          className="mt-4 w-full rounded-xl border border-edge-soft/70 bg-canvas/70 px-4 py-3 text-[15px] text-ink placeholder:text-ink-subtle focus:border-accent focus:outline-none"
+          onKeyDown={(e) => {
+            if (e.key === "Enter") onSave(value);
+          }}
+        />
+        <div className="mt-4 flex gap-3">
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex-1 rounded-full border border-edge-soft/70 py-3 text-[14.5px] font-semibold text-ink-muted transition-colors active:bg-raised/60"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={() => onSave(value)}
+            className="flex-1 rounded-full bg-ink py-3 text-[14.5px] font-semibold text-canvas transition-transform active:scale-[0.98]"
+          >
+            Save
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -144,11 +306,15 @@ function TouchpadGlyph() {
 function Row({
   icon,
   label,
+  value,
+  dot,
   onClick,
   danger,
 }: {
   icon: ReactNode;
   label: string;
+  value?: string;
+  dot?: "ok" | null;
   onClick: () => void;
   danger?: boolean;
 }) {
@@ -162,6 +328,8 @@ function Row({
       <span className={`flex-1 text-[15px] font-medium ${danger ? "text-danger" : "text-ink"}`}>
         {label}
       </span>
+      {dot === "ok" && <span className="h-2 w-2 rounded-full bg-success" />}
+      {value && <span className="max-w-[40%] truncate text-[13.5px] text-ink-subtle">{value}</span>}
       {!danger && <ChevronRight size={18} strokeWidth={2.2} className="text-ink-subtle" />}
     </button>
   );

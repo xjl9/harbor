@@ -140,6 +140,7 @@ export type Settings = {
   uiScale: number;
   serveWebUi: boolean;
   remoteControlEnabled: boolean;
+  remoteHostAddress: string;
   controllerSupportEnabled: boolean;
   controllerBackgroundInput: boolean;
   controllerDeadzone: number;

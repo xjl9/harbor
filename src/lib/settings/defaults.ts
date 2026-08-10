@@ -90,6 +90,7 @@ export const DEFAULT: Settings = {
   uiScale: 1,
   serveWebUi: false,
   remoteControlEnabled: false,
+  remoteHostAddress: "",
   controllerSupportEnabled: true,
   controllerBackgroundInput: false,
   controllerDeadzone: 0.35,

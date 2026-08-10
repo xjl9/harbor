@@ -24,8 +24,13 @@ function defaultHost(): string {
  * Mobile browsers freeze timers and leave dead WebSockets when the tab is
  * backgrounded. Strategy: drop the socket on hide, open a fresh one on show —
  * never wait on backoff or ping probes after resume.
+ *
+ * `enabled: false` keeps the client fully idle — native standalone builds have
+ * no implied host (the page is not served by a desktop), so they only connect
+ * once the user configures one.
  */
-export function useRemoteClient(initialHost?: string) {
+export function useRemoteClient(initialHost?: string, opts?: { enabled?: boolean }) {
+  const enabled = opts?.enabled ?? true;
   const [host, setHost] = useState(initialHost || defaultHost());
   const [status, setStatus] = useState<RemoteClientStatus>("idle");
   const [error, setError] = useState<string | null>(null);
@@ -177,7 +182,12 @@ export function useRemoteClient(initialHost?: string) {
   }, [clearRetryTimer]);
 
   useEffect(() => {
-    connect();
+    if (!enabled) {
+      disconnect();
+      return;
+    }
+    manualClose.current = false;
+    connect(initialHost);
     return () => {
       manualClose.current = true;
       clearRetryTimer();
@@ -189,7 +199,7 @@ export function useRemoteClient(initialHost?: string) {
       wsRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [enabled, initialHost]);
 
   useEffect(() => {
     const onVisibility = () => {

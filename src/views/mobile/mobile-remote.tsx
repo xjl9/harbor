@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Check, WifiOff } from "lucide-react";
 import type { Meta } from "@/lib/cinemeta";
+import { isMobileNative } from "@/lib/platform";
 import type { RemoteCommand, RemoteSnapshot } from "@/lib/remote/protocol";
 import { useRemoteClient } from "@/lib/remote/use-remote-client";
 import { useSettings } from "@/lib/settings";
@@ -18,8 +19,15 @@ type MobileRemoteValue = {
 const Ctx = createContext<MobileRemoteValue | null>(null);
 
 export function MobileRemoteProvider({ children }: { children: ReactNode }) {
-  const { status, snapshot, sendCommand } = useRemoteClient();
   const { settings, update } = useSettings();
+  // Web remote is served BY the desktop, so its host is implied. A native build
+  // has no implied host — connect only to an explicitly configured one.
+  const native = isMobileNative();
+  const configuredHost = (settings.remoteHostAddress ?? "").trim();
+  const { status, snapshot, sendCommand } = useRemoteClient(
+    native ? configuredHost || undefined : undefined,
+    { enabled: !native || configuredHost !== "" },
+  );
   const [flash, setFlash] = useState<{ ok: boolean; text: string } | null>(null);
   const timer = useRef<number>(0);
 
