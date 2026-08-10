@@ -7,7 +7,15 @@ import { useRemoteClient } from "@/lib/remote/use-remote-client";
 import { useSettings } from "@/lib/settings";
 import { useView, type PlayEpisode } from "@/lib/view";
 
-type PlayOpts = { season?: number; episode?: number; resume?: boolean };
+type PlayOpts = {
+  season?: number;
+  episode?: number;
+  resume?: boolean;
+  // Full episode descriptor for anime/series that need the rich stream ids
+  // (kitsuStreamId, imdbId, tvdbEpisodeId, sourceMetaId, ...). Used on native
+  // local playback; the web remote falls back to season/episode.
+  playEpisode?: PlayEpisode;
+};
 
 type MobileRemoteValue = {
   connected: boolean;
@@ -67,9 +75,10 @@ export function MobileRemoteProvider({ children }: { children: ReactNode }) {
       // driving the connected desktop.
       if (native) {
         const episode: PlayEpisode | undefined =
-          opts?.season != null && opts?.episode != null
+          opts?.playEpisode ??
+          (opts?.season != null && opts?.episode != null
             ? { season: opts.season, episode: opts.episode }
-            : undefined;
+            : undefined);
         view.openPicker(meta, episode, { autoPlay: true, resume: opts?.resume ?? true });
         return;
       }

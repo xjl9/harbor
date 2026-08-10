@@ -18,6 +18,7 @@ import { Hero } from "./hero";
 import { DetailActions } from "./actions";
 import { Line, Overview } from "./ui";
 import { EpisodeSection } from "./episodes";
+import { AnimeEpisodeSection, firstAnimeEpisode, toPlayEpisode } from "./anime-episodes";
 import { CastRow, CastSkeleton, CrewSection } from "./cast";
 import { RecRail } from "./recommendations";
 import { AwardsSection } from "./awards";
@@ -107,6 +108,11 @@ function DetailBody({
 
   const anilist = useAnimeAnilistDetails(anime.canonicalId, isAnime);
   const animeCharacters = useAnimeCharacters(anime.canonicalId, isAnime);
+  // Anime streams resolve against the canonical kitsu id, not the browse id.
+  const playMeta = useMemo(
+    () => (isAnime ? { ...meta, id: anime.canonicalId ?? meta.id } : meta),
+    [isAnime, meta, anime.canonicalId],
+  );
   const malRating = useMalRating(
     isAnime
       ? { ...meta, id: anime.canonicalId ?? meta.id, imdbRating: detail?.rating ?? meta.imdbRating }
@@ -157,8 +163,15 @@ function DetailBody({
   const shownSimItems = useHideAnimeMetas(simItems);
 
   const onPlay = () => {
-    if (isSeries && first) playOnHost(meta, { season: first.season, episode: first.episode });
-    else playOnHost(meta);
+    if (isAnime) {
+      const firstAnime = firstAnimeEpisode(anime.episodes);
+      if (firstAnime) playOnHost(playMeta, { playEpisode: toPlayEpisode(firstAnime) });
+      else playOnHost(playMeta);
+    } else if (isSeries && first) {
+      playOnHost(meta, { season: first.season, episode: first.episode });
+    } else {
+      playOnHost(meta);
+    }
   };
 
   return (
@@ -202,6 +215,14 @@ function DetailBody({
             tmdbKey={key}
             seasons={seasons}
             onPlay={(ep) => playOnHost(meta, { season: ep.season, episode: ep.episode })}
+          />
+        )}
+
+        {isAnime && (
+          <AnimeEpisodeSection
+            episodes={anime.episodes}
+            loading={anime.loading}
+            onPlay={(ep) => playOnHost(playMeta, { playEpisode: ep })}
           />
         )}
 
