@@ -1,3 +1,0 @@
-app.harbor.player
-id player_view
-layout activity_player

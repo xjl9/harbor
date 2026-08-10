@@ -1,2 +1,0 @@
-int id player_view 0x0
-int layout activity_player 0x0
