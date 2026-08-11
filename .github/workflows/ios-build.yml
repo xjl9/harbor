@@ -1,0 +1,163 @@
+# Fork-only tooling: builds an unsigned, sideloadable iOS IPA for testing.
+# This workflow must never be included in PRs to the upstream repo.
+name: iOS build (unsigned)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ios-build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: iOS (aarch64, unsigned IPA)
+    runs-on: macos-15
+    timeout-minutes: 90
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Select Xcode 16.4
+        run: |
+          sudo xcode-select -s /Applications/Xcode_16.4.app
+          xcodebuild -version
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-ios
+
+      - name: Cache Rust build
+        uses: Swatinem/rust-cache@v2
+        with:
+          key: ios
+          workspaces: |
+            harbor-core
+            src-tauri
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v5
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install JavaScript dependencies
+        run: pnpm install --frozen-lockfile
+
+      # The bundle.resources fonts are gitignored .otf files fetched at setup time.
+      - name: Fetch bundled fonts
+        run: pnpm run setup:fonts
+
+      # Fast-fail diagnostic: surfaces Rust compile errors for the iOS target
+      # before the Xcode machinery can obscure them.
+      - name: cargo check (aarch64-apple-ios)
+        run: cargo check --manifest-path src-tauri/Cargo.toml --target aarch64-apple-ios
+
+      - name: Generate Xcode project
+        run: pnpm tauri ios init --ci --skip-targets-install -v
+
+      # The tauri CLI merges src-tauri/Info.ios.plist during `tauri ios build`,
+      # but this lane archives with raw xcodebuild (the CLI has no unsigned
+      # export method), so that merge never runs here. Verify the keys the app
+      # needs (background audio, librqbit loopback cleartext, ATS media
+      # exemptions for plain-http streams) and add any that are missing, then
+      # print the final plist for the log.
+      - name: Ensure Info.plist keys
+        run: |
+          set -euo pipefail
+          APP_DIR=$(find src-tauri/gen/apple -maxdepth 1 -type d -name '*_iOS' | head -1)
+          test -n "$APP_DIR"
+          PLIST="$APP_DIR/Info.plist"
+          echo "Generated plist: $PLIST"
+          PB=/usr/libexec/PlistBuddy
+          if $PB -c "Print :UIBackgroundModes" "$PLIST" >/dev/null 2>&1; then
+            $PB -c "Print :UIBackgroundModes" "$PLIST" | grep -qw audio || \
+              $PB -c "Add :UIBackgroundModes: string audio" "$PLIST"
+          else
+            $PB -c "Add :UIBackgroundModes array" "$PLIST"
+            $PB -c "Add :UIBackgroundModes:0 string audio" "$PLIST"
+          fi
+          $PB -c "Add :NSAppTransportSecurity dict" "$PLIST" 2>/dev/null || true
+          for ATS_KEY in NSAllowsLocalNetworking NSAllowsArbitraryLoadsForMedia NSAllowsArbitraryLoadsInWebContent; do
+            if $PB -c "Print :NSAppTransportSecurity:$ATS_KEY" "$PLIST" >/dev/null 2>&1; then
+              $PB -c "Set :NSAppTransportSecurity:$ATS_KEY true" "$PLIST"
+            else
+              $PB -c "Add :NSAppTransportSecurity:$ATS_KEY bool true" "$PLIST"
+            fi
+          done
+          $PB -c "Print" "$PLIST"
+
+      # Raw xcodebuild does not run beforeBuildCommand, so build the frontend
+      # here; the Rust build embeds ../dist at compile time.
+      - name: Build frontend
+        run: pnpm build
+
+      # The plain -list output includes the configuration names; cargo-mobile2
+      # projects use lowercase debug/release, so a case mismatch against the
+      # -configuration flag below is diagnosable from this listing.
+      - name: Discover Xcode project and scheme
+        id: xc
+        run: |
+          set -euo pipefail
+          XCODEPROJ=$(find src-tauri/gen/apple -maxdepth 1 -name '*.xcodeproj' | head -1)
+          test -n "$XCODEPROJ"
+          xcodebuild -list -project "$XCODEPROJ"
+          SCHEME=$(xcodebuild -list -project "$XCODEPROJ" -json | \
+            python3 -c 'import json,sys; d=json.load(sys.stdin); print(next(s for s in d["project"]["schemes"] if s.endswith("_iOS")))')
+          echo "project=$XCODEPROJ" >> "$GITHUB_OUTPUT"
+          echo "scheme=$SCHEME" >> "$GITHUB_OUTPUT"
+
+      # Unsigned archive for the sideload flow (AltStore or Sideloadly re-sign
+      # on install). The project's "Build Rust Code" phase compiles the Rust
+      # staticlib during the archive.
+      - name: xcodebuild archive (unsigned)
+        run: |
+          set -euo pipefail
+          xcodebuild \
+            -project "${{ steps.xc.outputs.project }}" \
+            -scheme "${{ steps.xc.outputs.scheme }}" \
+            -configuration release \
+            -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            -archivePath build/harbor-unsigned.xcarchive \
+            -skipPackagePluginValidation -skipMacroValidation \
+            CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO \
+            archive 2>&1 | tee xcodebuild-archive.log
+
+      - name: Package unsigned IPA
+        run: |
+          set -euo pipefail
+          APP=$(find build/harbor-unsigned.xcarchive/Products/Applications -maxdepth 1 -name '*.app' | head -1)
+          test -n "$APP"
+          mkdir -p build/Payload
+          cp -R "$APP" build/Payload/
+          (cd build && zip -qry Harbor-ios-unsigned.ipa Payload)
+          ls -la build/
+
+      - name: Upload IPA
+        uses: actions/upload-artifact@v7
+        with:
+          name: harbor-ios-unsigned
+          path: build/Harbor-ios-unsigned.ipa
+          retention-days: 14
+          if-no-files-found: error
+
+      - name: Upload build diagnostics
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: ios-build-diagnostics
+          path: |
+            xcodebuild-archive.log
+            src-tauri/gen/apple/project.yml
+            src-tauri/gen/apple/*.xcodeproj/project.pbxproj
+            src-tauri/gen/apple/*_iOS/Info.plist
+          retention-days: 7
+          if-no-files-found: warn
