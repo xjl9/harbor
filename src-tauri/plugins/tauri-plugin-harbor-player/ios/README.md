@@ -1,102 +1,102 @@
-# tauri-plugin-harbor-player — iOS leg (bring-up blueprint)
+# tauri-plugin-harbor-player, iOS leg
 
-**STATUS: UNVERIFIED SCAFFOLDING.** None of this was built or run — the dev box is
-Windows; iOS needs a Mac. The Android leg (media3/ExoPlayer) is complete and verified.
-This directory stages the iOS native player so a Mac session executes instead of starting
-cold. Everything here is a draft to compile-fix on the Mac, not working code.
+Full implementation of the harbor-player wire contract on the AVPlayer engine
+(`AVPlayerViewController` for transport UI plus PiP). The Android leg
+(media3/ExoPlayer) is the contract's ground truth; every command name, event name,
+and payload key here is byte-identical to `android/.../PlayerPlugin.kt` so the shared
+JS bridge (`src/lib/player/android-native.ts`) drives both platforms unchanged.
 
-The JS/bridge/ACL layers are already iOS-ready: `src/lib/player/android-native.ts` (despite
-the name) is the shared `PlayerBridge`, `capabilities/mobile.json` already grants
-`harbor-player:default` on iOS, and `pickBridge` routes `isMobileNative()` to it. The gap is
-entirely the Rust wiring + the native Swift player.
+Verification model is CI-first: the dev box is Windows, so this Swift is never
+compiled locally. The macOS CI lane (`tauri ios build`) is where it compiles and the
+sideloaded build is where it runs. Prefer boring AVFoundation/MediaPlayer APIs here.
 
-## Engine decision
+## Implemented
 
-- **This skeleton uses `AVPlayerViewController`** — built-in transport UI + PiP + background
-  audio, minimal code. It proves the bridge/PiP/audio-session plumbing and plays the common
-  case (MP4/HLS, H.264/HEVC/AAC).
-- **AVPlayer CANNOT do the mission's core case**: MKV containers, AC3/DTS audio, sidecar
-  SRT/ASS subs — i.e. most torrent releases. Android decodes these via media3; desktop via
-  libmpv. **For real iOS parity, swap the engine to MPVKit (libmpv) or MobileVLCKit** behind
-  the same `configure/doPlay/doPause/doSeek/doStop` interface in `HarborPlayerViewController`.
-  Recommended default: **MPVKit** (matches the desktop libmpv codebase; VLCKit 4 is the
-  fallback and has official iOS PiP). Keep AVPlayer as an MP4/HLS fast path if desired.
-- MPVKit/VLCKit are SwiftPM/xcframework deps added on the Mac (they don't build on Windows),
-  which is why this stays AVPlayer for now.
+Commands (all resolve `{}` immediately, like Android):
 
-## Step 1 — apply the Rust wiring (3 edits, currently NOT applied to keep Android green)
+| JS invoke `plugin:harbor-player\|…` | Swift | notes |
+|---|---|---|
+| `load` | `load` | presents fullscreen, applies `startAtSec` before playback, headers via `AVURLAssetHTTPHeaderFieldsKey`, rejects if no root view controller (never hangs the JS await); a load while presented swaps the item in place with NO `closed` (Android onNewIntent semantics) |
+| `play` / `pause` / `stop` | same | `stop` emits `closed` then dismisses |
+| `seek` | `seek` | |
+| `set_audio_track` | `setAudioTrack` | AVMediaSelectionGroup `.audible`; unknown/malformed id is a silent no-op |
+| `set_subtitle_track` | `setSubtitleTrack` | `.legible`; `trackId: null` selects nil (subtitles off) |
+| `enter_pip` | `enterPip` | best-effort no-op, see divergences |
 
-These are intentionally left out of the crate so the verified Android/desktop build is
-untouched. Apply them on the Mac (they are `cfg`-gated and won't affect Android):
+Events (via the base class `trigger`, listened to with
+`addPluginListener("harbor-player", …)`):
 
-**`src/mobile.rs`** — add at module scope (the file already calls
-`register_ios_plugin(init_plugin_harbor_player)` but never declares the symbol):
-```rust
-#[cfg(target_os = "ios")]
-tauri::ios_plugin_binding!(init_plugin_harbor_player);
-```
+- `tick` `{positionSec, durationSec, bufferedSec, playing}`: 500 ms wall-clock
+  `Timer` on the main RunLoop in `.common` mode, firing even while paused or
+  buffering (`addPeriodicTimeObserver` starves when time is not advancing, which
+  would freeze the JS snapshot in "playing"). `durationSec` is 0 until known;
+  `playing` derives from `timeControlStatus == .playing`.
+- `state` `{status, errorCode?}`: `loading|ready|ended|error` mapped from
+  `AVPlayerItem.status`, `timeControlStatus` (stall = loading, recovery = ready),
+  and `AVPlayerItemDidPlayToEndTime`. Error codes are media3-style names
+  (`ERROR_CODE_IO_NETWORK_CONNECTION_FAILED`, `ERROR_CODE_DECODING_FAILED`,
+  `ERROR_CODE_PARSING_CONTAINER_UNSUPPORTED`), never raw NSError domains: the JS
+  `mapError` substring-matches and "AVFoundationErrorDomain" contains "IO", which
+  would misclassify everything as a network failure.
+- `closed` `{positionSec, durationSec}`: exactly once per genuine teardown
+  (released-flag guarded), on user dismissal and on JS `stop`. Not on stream swap,
+  not on PiP entry, not while in PiP.
+- `tracks` `{audio: [{id, lang, label, selected}], subtitle: […]}`: built from
+  AVMediaSelectionGroup, emitted on item ready and after each `set_*_track`. Ids are
+  opaque (`a/0`, `s/1`, index into the group's options); label falls back
+  displayName, then lang, then `Track N`; lang falls back to `""`.
 
-**`build.rs`** — tell the plugin builder where the SwiftPM package is:
-```rust
-tauri_plugin::Builder::new(COMMANDS)
-    .android_path("android")
-    .ios_path("ios")   // <-- add
-    .build();
-```
+Also implemented: Now Playing parity with Android's MediaSession.
+`MPNowPlayingInfoCenter` carries the `load` payload's optional `title` plus live
+position/duration/rate; `MPRemoteCommandCenter` wires play/pause/togglePlayPause and
+`changePlaybackPositionCommand` (lock-screen transport and scrubbing). The audio
+session (`.playback`, `.moviePlayback`) activates on load and deactivates on
+teardown.
 
-**`src-tauri/src/lib.rs`** — the plugin is registered only under `cfg(target_os = "android")`;
-widen to `cfg(mobile)` so iOS gets the plugin + its `commands::load/play/...`:
-```rust
-#[cfg(mobile)]
-let app_builder = app_builder.plugin(tauri_plugin_harbor_player::init());
-```
-(Also update the stale `// Native media3/ExoPlayer player - Android only` comment above it.)
+## Codec ceiling (MPVKit swap still pending)
 
-## Step 2 — `tauri ios init` on the Mac
+AVFoundation only decodes MP4/MOV/HLS with H.264/HEVC/AAC (plus AV1 on A17+). MKV
+containers, AC3/DTS audio, and sidecar SRT/ASS subs, i.e. most torrent releases, need
+the MPVKit engine swap, which is a separate task. The engine surface in
+`HarborPlayerViewController` is confined to
+`configure/doPlay/doPause/doSeek/doStop/doSetAudioTrack/doSetSubtitleTrack/enterPip/teardown`
+so that swap stays surgical. Until then:
 
-Generates `src-tauri/gen/apple/` (Xcode project, Info.plist, entitlements) and the
-`.tauri/tauri-api` Swift package that `Package.swift` depends on. After it runs:
+- Sidecar subtitles in the `load` payload are parsed and accepted for wire parity but
+  unused; AVPlayer cannot attach them to a progressive asset.
+- In-container audio/subtitle tracks work through the `tracks` event and the AVKit
+  transport menus.
 
-- Confirm `Package.swift`'s `.package(name: "Tauri", path: "../.tauri/tauri-api")` matches the
-  actual generated path.
-- Merge the keys in `Info.plist.additions` into `gen/apple/<App>_iOS/Info.plist` (background
-  audio + `NSAllowsLocalNetworking` for librqbit's `http://127.0.0.1`). Do NOT replace the
-  generated plist.
+## Documented divergences from Android
 
-## Step 3 — verify the Tauri 2 iOS Swift API (skeleton assumed the standard template)
+- **`enter_pip` is best-effort.** `AVPlayerViewController` has no public programmatic
+  PiP start. The command logs and resolves. PiP itself works: the transport PiP
+  button, plus automatic fullscreen-to-PiP on background
+  (`allowsPictureInPicturePlayback`, and
+  `canStartPictureInPictureAutomaticallyFromInline` behind an iOS 14.2 guard).
+- **Backgrounding does not tear down.** Android releases the player on `onStop`
+  (emitting `closed`) unless in PiP; iOS keeps playing in the background with
+  lock-screen control (`UIBackgroundModes` audio plus the `.playback` session) and
+  emits `closed` only on dismissal. The JS bridge tolerates this: no `closed`, no
+  view pop.
+- **`channelCount` is omitted** from audio track rows. `AVMediaSelectionOption` does
+  not expose a channel count without loading asset tracks; the key is optional in the
+  contract and the JS handles its absence.
+- **Track selections made in AVKit's own menus do not re-emit `tracks`.** There is no
+  reliable KVO hook for `currentMediaSelection`; JS-driven selections re-emit, and the
+  next item-ready does too.
 
-Confirm against the pinned Tauri version's iOS Swift API — the skeleton assumes:
-- `class HarborPlayerPlugin: Plugin` base class
-- `invoke.parseArgs(T.self)` for decoding, `invoke.resolve()` / `invoke.resolve(JSObject)` for return
-- `trigger("event", data: JSObject)` for events (must match `addPluginListener` on the JS side)
-- `JSObject` typealias, `@_cdecl("init_plugin_harbor_player")` entry
-- `self.manager.viewController` to reach the app's root WKWebView controller for presentation
+## Info.plist
 
-## Step 4 — build, sign, sideload
+iOS-only keys live in `src-tauri/Info.ios.plist` (background audio,
+`NSAllowsLocalNetworking` for librqbit's `http://127.0.0.1`, landscape orientations).
+`tauri ios build` merges that file into the generated
+`gen/apple/harbor_iOS/Info.plist` on every build, so it needs no manual step. The old
+`Info.plist.additions` merge-by-hand fragment is deleted.
 
-Per the mission plan: **sideloadable IPA (AltStore/free 7-day cert)**, NOT App Store.
-`AVURLAssetHTTPHeaderFieldsKey` (debrid header injection) is fine for sideload; for App Store
-review, switch to an `AVAssetResourceLoaderDelegate`.
+## Header injection note
 
-## Command + event contract (matches the Android plugin exactly)
-
-| JS invoke `plugin:harbor-player\|…` | payload | Swift | status |
-|---|---|---|---|
-| `load` | `{payload:{url,headers,subtitles[],startAtSec}}` | `load` | drafted |
-| `play` / `pause` / `stop` | — | same | drafted |
-| `seek` | `{payload:{positionSec}}` | `seek` | drafted |
-| `set_audio_track` / `set_subtitle_track` | `{payload:{trackId}}` | `setAudioTrack`/`setSubtitleTrack` | **stub** → AVMediaSelectionGroup |
-| `enter_pip` | — | `enterPip` | **stub** → AVPictureInPictureController |
-| `registerListener` / `removeListener` | (Tauri built-in) | base class | needs the iOS Plugin base to provide it (Android's did) |
-
-Events emitted to `addPluginListener("harbor-player", …)`: `tick`
-`{positionSec,durationSec,bufferedSec,playing}`, `state` `{status,errorCode?}`, `closed`
-`{positionSec,durationSec}` — keys identical to `PlayerPlugin.kt`. The `tracks` event
-(audio/subtitle enumeration) is Android-only so far; add it when wiring AVMediaSelectionGroup.
-
-## Not yet done on iOS (parity gaps vs Android)
-
-- Real codec parity (MKV/HEVC/AC3/sidecar-subs) — needs MPVKit/VLCKit.
-- Audio/subtitle track enumeration + switching (`tracks` event + the two set commands).
-- Programmatic `enter_pip` (AVPlayerViewController only auto/user-initiates PiP).
-- `registerListener` support on the iOS Plugin base class (verify Tauri provides it like Kotlin).
+`AVURLAssetHTTPHeaderFieldsKey` is undocumented but long-stable and applies the
+debrid headers to every HTTP request the asset makes. Fine for the sideloaded
+(AltStore) build this app ships as; App Store review would need an
+`AVAssetResourceLoaderDelegate` instead.

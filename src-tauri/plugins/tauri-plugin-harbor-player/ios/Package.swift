@@ -1,8 +1,9 @@
 // swift-tools-version:5.9
-// UNVERIFIED SCAFFOLDING — not built on this Windows box. `tauri ios init` on the Mac
-// generates the sibling `.tauri/tauri-api` Swift package this depends on; confirm the
-// relative path below matches what the tooling produces for this repo before building.
-// See README.md in this directory for the full iOS bring-up steps.
+// The sibling `.tauri/tauri-api` package this depends on does not exist in a fresh
+// checkout: the plugin's build script (tauri_plugin::Builder ios_path, macOS host only)
+// copies it out of the tauri crate on the first iOS cargo build. The product/target
+// name must equal the Cargo crate name exactly; swift-rs emits
+// `cargo:rustc-link-lib=static=<name>` from it.
 import PackageDescription
 
 let package = Package(
