@@ -1,15 +1,12 @@
 /// Fullscreen player surface, the iOS analogue of Android's PlayerActivity.
 /// AVPlayerViewController supplies the transport UI and Picture in Picture.
 ///
-/// CODEC-PARITY WARNING: AVFoundation only decodes MP4/MOV/HLS with H.264/HEVC/AAC
-/// (plus AV1 on A17+). Most torrent releases are MKV/HEVC/AC3 with sidecar SRT/ASS,
-/// which AVPlayer cannot open. True parity with the Android media3 path and the
-/// desktop libmpv path needs an MPVKit engine swap. The engine surface is deliberately
-/// confined to configure/doPlay/doPause/doSeek/doStop/doSetAudioTrack/
-/// doSetSubtitleTrack/enterPip/teardown so that swap stays surgical.
+/// AVFoundation only decodes MP4/MOV/HLS with H.264/HEVC/AAC (plus AV1 on A17+),
+/// so the plugin routes those containers here and everything else (MKV, AC3/DTS,
+/// sidecar SRT/ASS) to HarborMpvViewController. Both engines implement
+/// HarborPlayerEngine; routing lives in HarborPlayerPlugin.
 import AVFoundation
 import AVKit
-import MediaPlayer
 import UIKit
 
 struct NativeTrackEntry {
@@ -17,9 +14,14 @@ struct NativeTrackEntry {
   let lang: String
   let label: String
   let selected: Bool
+  // Only the mpv engine can read this from the container; the key is optional
+  // on the wire and Android omits it too when unknown.
+  var channelCount: Int? = nil
 }
 
-final class HarborPlayerViewController: AVPlayerViewController, AVPlayerViewControllerDelegate {
+final class HarborPlayerViewController: AVPlayerViewController, AVPlayerViewControllerDelegate,
+  HarborPlayerEngine
+{
   var onTick: ((Double, Double, Double, Bool) -> Void)?
   var onState: ((String, String?) -> Void)?
   var onClosed: ((Double, Double) -> Void)?
@@ -31,7 +33,7 @@ final class HarborPlayerViewController: AVPlayerViewController, AVPlayerViewCont
   private var endToken: NSObjectProtocol?
   private var failToken: NSObjectProtocol?
   private var stallToken: NSObjectProtocol?
-  private var remoteCommandTokens: [(MPRemoteCommand, Any)] = []
+  private let nowPlaying = HarborNowPlaying()
   private var closedReported = false
   private var lastStatus: String?
   private var currentTitle: String?
@@ -159,8 +161,7 @@ final class HarborPlayerViewController: AVPlayerViewController, AVPlayerViewCont
     tickTimer?.invalidate()
     tickTimer = nil
     detachObservers()
-    unregisterRemoteCommands()
-    MPNowPlayingInfoCenter.default().nowPlayingInfo = nil
+    nowPlaying.clear()
     player?.pause()
     player = nil
     deactivateAudioSession()
@@ -329,57 +330,41 @@ final class HarborPlayerViewController: AVPlayerViewController, AVPlayerViewCont
   }
 
   private func registerRemoteCommands() {
-    guard remoteCommandTokens.isEmpty else { return }
-    let center = MPRemoteCommandCenter.shared()
-    func add(
-      _ command: MPRemoteCommand,
-      _ handler: @escaping (MPRemoteCommandEvent) -> MPRemoteCommandHandlerStatus
-    ) {
-      remoteCommandTokens.append((command, command.addTarget(handler: handler)))
-    }
-    add(center.playCommand) { [weak self] _ in
-      guard let self = self, self.player != nil else { return .commandFailed }
-      self.doPlay()
-      return .success
-    }
-    add(center.pauseCommand) { [weak self] _ in
-      guard let self = self, self.player != nil else { return .commandFailed }
-      self.doPause()
-      return .success
-    }
-    add(center.togglePlayPauseCommand) { [weak self] _ in
-      guard let self = self, let p = self.player else { return .commandFailed }
-      if p.timeControlStatus == .playing { self.doPause() } else { self.doPlay() }
-      return .success
-    }
-    add(center.changePlaybackPositionCommand) { [weak self] event in
-      guard let self = self, self.player != nil,
-        let e = event as? MPChangePlaybackPositionCommandEvent
-      else { return .commandFailed }
-      self.doSeek(e.positionTime)
-      return .success
-    }
-  }
-
-  private func unregisterRemoteCommands() {
-    for (command, token) in remoteCommandTokens { command.removeTarget(token) }
-    remoteCommandTokens.removeAll()
+    nowPlaying.register(
+      play: { [weak self] in
+        guard let self = self, self.player != nil else { return false }
+        self.doPlay()
+        return true
+      },
+      pause: { [weak self] in
+        guard let self = self, self.player != nil else { return false }
+        self.doPause()
+        return true
+      },
+      toggle: { [weak self] in
+        guard let self = self, let p = self.player else { return false }
+        if p.timeControlStatus == .playing { self.doPause() } else { self.doPlay() }
+        return true
+      },
+      seek: { [weak self] position in
+        guard let self = self, self.player != nil else { return false }
+        self.doSeek(position)
+        return true
+      })
   }
 
   private func updateNowPlaying() {
-    var info: [String: Any] = [:]
-    if let title = currentTitle { info[MPMediaItemPropertyTitle] = title }
+    var position: Double?
+    var duration: Double?
     if let item = player?.currentItem {
       let rawDur = item.duration
-      if rawDur.isNumeric && rawDur.seconds > 0 {
-        info[MPMediaItemPropertyPlaybackDuration] = rawDur.seconds
-      }
-      let pos = item.currentTime().seconds
-      if pos.isFinite { info[MPNowPlayingInfoPropertyElapsedPlaybackTime] = pos }
+      if rawDur.isNumeric && rawDur.seconds > 0 { duration = rawDur.seconds }
+      let rawPos = item.currentTime().seconds
+      if rawPos.isFinite { position = rawPos }
     }
-    info[MPNowPlayingInfoPropertyPlaybackRate] =
-      player?.timeControlStatus == .playing ? 1.0 : 0.0
-    MPNowPlayingInfoCenter.default().nowPlayingInfo = info
+    nowPlaying.update(
+      title: currentTitle, positionSec: position, durationSec: duration,
+      playing: player?.timeControlStatus == .playing)
   }
 
   // AVKit's default dismisses a fullscreen-presented controller the moment PiP

@@ -54,17 +54,59 @@ struct TrackArgs: Decodable {
   let trackId: String?
 }
 
+// One engine at a time behind the single wire contract. The plugin picks the
+// engine per URL in routesToMpv; everything downstream is engine-agnostic.
+protocol HarborPlayerEngine: AnyObject {
+  var onTick: ((Double, Double, Double, Bool) -> Void)? { get set }
+  var onState: ((String, String?) -> Void)? { get set }
+  var onClosed: ((Double, Double) -> Void)? { get set }
+  var onTracks: (([NativeTrackEntry], [NativeTrackEntry]) -> Void)? { get set }
+  func configure(_ args: LoadArgs)
+  func doPlay()
+  func doPause()
+  func doSeek(_ sec: Double)
+  func doStop()
+  func doSetAudioTrack(_ id: String?)
+  func doSetSubtitleTrack(_ id: String?)
+  func enterPip()
+}
+
 class HarborPlayerPlugin: Plugin {
-  private var controller: HarborPlayerViewController?
+  private var controller: (UIViewController & HarborPlayerEngine)?
+
+  // AVPlayer keeps the containers it is genuinely good at; mpv takes everything
+  // else, including extensionless URLs. Reasoning in ios/README.md.
+  private static let avPlayerExtensions: Set<String> = ["m3u8", "mp4", "m4v", "mov"]
+
+  private static func routesToMpv(_ url: String) -> Bool {
+    guard let parsed = URL(string: url) else { return false }
+    return !avPlayerExtensions.contains(parsed.pathExtension.lowercased())
+  }
 
   @objc public func load(_ invoke: Invoke) throws {
     let args = try invoke.parseArgs(LoadArgs.self)
     DispatchQueue.main.async {
-      let vc: HarborPlayerViewController
+      let wantsMpv = HarborPlayerPlugin.routesToMpv(args.url)
+      if let existing = self.controller, (existing is HarborMpvViewController) != wantsMpv {
+        // Cross-engine source switch: replace the surface with no closed event,
+        // the same contract as the in-place swap. Silencing every callback keeps
+        // the outgoing engine's dismissal-driven teardown from popping the JS
+        // view and its last ticks from interleaving with the new engine's.
+        existing.onTick = nil
+        existing.onState = nil
+        existing.onTracks = nil
+        existing.onClosed = nil
+        self.controller = nil
+      }
+      let vc: UIViewController & HarborPlayerEngine
       if let existing = self.controller {
         vc = existing
       } else {
-        vc = HarborPlayerViewController()
+        if wantsMpv {
+          vc = HarborMpvViewController()
+        } else {
+          vc = HarborPlayerViewController()
+        }
         self.controller = vc
         vc.onTick = { [weak self] pos, dur, buf, playing in
           self?.sendTick(pos, dur, buf, playing)
@@ -87,7 +129,16 @@ class HarborPlayerPlugin: Plugin {
           return
         }
         vc.modalPresentationStyle = .fullScreen
-        root.present(vc, animated: true)
+        if let replaced = root.presentedViewController {
+          // Cross-engine swap: the outgoing engine is still on screen. Presenting
+          // during its dismissal fails, so present from the completion; the
+          // dismissal itself drives the old controller's teardown.
+          replaced.dismiss(animated: false) {
+            root.present(vc, animated: true)
+          }
+        } else {
+          root.present(vc, animated: true)
+        }
       }
       // A live controller swaps the stream in place with no closed event, mirroring
       // the Android singleTask onNewIntent path.
@@ -172,9 +223,10 @@ class HarborPlayerPlugin: Plugin {
   private func sendTracks(_ audio: [NativeTrackEntry], _ subtitle: [NativeTrackEntry]) {
     func rows(_ entries: [NativeTrackEntry]) -> JSArray {
       entries.map { entry -> JSValue in
-        let row: JSObject = [
+        var row: JSObject = [
           "id": entry.id, "lang": entry.lang, "label": entry.label, "selected": entry.selected,
         ]
+        if let channelCount = entry.channelCount { row["channelCount"] = channelCount }
         return row
       }
     }
