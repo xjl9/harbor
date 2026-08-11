@@ -4,6 +4,7 @@ import { useDebridClients } from "@/lib/debrid/registry";
 import type { PipelineResult } from "@/lib/streams/pipeline";
 import type { Stream } from "@/lib/streams/types";
 import { hasCachedMarker } from "@/lib/streams/cached";
+import { isPhoneShell } from "./picker-utils";
 
 export function SourceDiagnostic({
   result,
@@ -12,6 +13,7 @@ export function SourceDiagnostic({
   result: PipelineResult;
   debrids: ReturnType<typeof useDebridClients>;
 }) {
+  const phone = isPhoneShell();
   const [expanded, setExpanded] = useState(false);
   const counts = useMemo(() => {
     const fromRaw: Stream[] = [...result.raw.library, ...result.raw.addon];
@@ -36,7 +38,7 @@ export function SourceDiagnostic({
       <button
         type="button"
         onClick={() => setExpanded((v) => !v)}
-        className="flex items-center gap-2 self-start text-[12px] text-ink-subtle/80 transition-colors hover:text-ink-muted"
+        className={`flex items-center gap-2 self-start text-[12px] text-ink-subtle/80 transition-colors hover:text-ink-muted${phone ? " -my-2 min-h-11 py-2" : ""}`}
       >
         <span className="font-semibold text-ink-muted">{cachedTotal} cached</span>
         <span className="text-ink-subtle/40">·</span>

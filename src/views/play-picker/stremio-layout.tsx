@@ -5,7 +5,7 @@ import type { Addon } from "@/lib/addons";
 import type { ScoredStream } from "@/lib/streams/types";
 import { StremioRow } from "./stremio-row";
 import { FACET_DIMS, facetOptions, matchesFacets, type FacetState } from "./stream-facets";
-import { addonInstanceKey, buildAddonOptions } from "./picker-utils";
+import { addonInstanceKey, buildAddonOptions, isPhoneShell } from "./picker-utils";
 import { useSettings } from "@/lib/settings";
 import type { CustomStreamFilter } from "@/lib/streams/custom-filters";
 import { FacetMenuRow } from "./facet-menu-row";
@@ -23,6 +23,7 @@ export function StremioLayout({
   download = false,
   downloadStateFor,
   isAnime = false,
+  cachedFor,
 }: {
   streams: ScoredStream[];
   addons: Addon[] | null;
@@ -35,7 +36,9 @@ export function StremioLayout({
   download?: boolean;
   downloadStateFor?: (stream: ScoredStream) => "idle" | "preparing" | "queued";
   isAnime?: boolean;
+  cachedFor?: (stream: ScoredStream) => boolean;
 }) {
+  const phone = isPhoneShell();
   const [filter, setFilter] = useState<string>("all");
   const [filterOpen, setFilterOpen] = useState(false);
   const [facet, setFacet] = useState<FacetState>({});
@@ -145,7 +148,7 @@ export function StremioLayout({
               }}
               className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-start text-[14px] transition-colors hover:bg-raised ${
                 filter === "all" ? "text-ink font-semibold" : "text-ink-muted"
-              }`}
+              }${phone ? " min-h-11" : ""}`}
             >
               <CircleLogo addonId={null} addonName="All" logo={null} />
               <span className="flex-1 truncate">All sources</span>
@@ -160,7 +163,7 @@ export function StremioLayout({
                 }}
                 className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-start text-[14px] transition-colors hover:bg-raised ${
                   filter === opt.id ? "text-ink font-semibold" : "text-ink-muted"
-                }`}
+                }${phone ? " min-h-11" : ""}`}
               >
                 <CircleLogo
                   addonId={opt.id}
@@ -201,6 +204,7 @@ export function StremioLayout({
             download={download}
             downloadState={downloadStateFor?.(s)}
             isAnime={isAnime}
+            cached={phone && cachedFor ? cachedFor(s) : false}
           />
         ))}
       </div>
@@ -214,7 +218,7 @@ export function StremioLayout({
               setFilter("all");
               setFacet({});
             }}
-            className="rounded-full bg-accent-soft px-4 py-2 text-[13px] font-semibold text-accent ring-1 ring-edge-soft transition-transform hover:scale-[1.02] active:scale-[0.98] motion-reduce:transition-none motion-reduce:hover:scale-100"
+            className={`rounded-full bg-accent-soft px-4 py-2 text-[13px] font-semibold text-accent ring-1 ring-edge-soft transition-transform hover:scale-[1.02] active:scale-[0.98] motion-reduce:transition-none motion-reduce:hover:scale-100${phone ? " min-h-11" : ""}`}
           >
             Clear filters
           </button>
@@ -262,6 +266,7 @@ function PendingAddonsPill({
   streams: ScoredStream[];
   fallbackCount: number;
 }) {
+  const phone = isPhoneShell();
   const pending = useMemo(() => {
     if (!addons || addons.length === 0) return [] as Addon[];
     const returned = new Set(streams.map((s) => s.addonId));
@@ -284,10 +289,13 @@ function PendingAddonsPill({
   if (pending.length === 0 && fallbackCount === 0) return null;
   const current = pending.length > 0 ? pending[tick % pending.length] : null;
   return (
-    <div className="pointer-events-none sticky bottom-3 z-10 mt-3 flex justify-center">
+    <div
+      className={`pointer-events-none sticky z-10 mt-3 flex justify-center${phone ? "" : " bottom-3"}`}
+      style={phone ? { bottom: "calc(env(safe-area-inset-bottom, 0px) + 12px)" } : undefined}
+    >
       <div
         key={current?.manifest?.id ?? "fallback"}
-        className="pointer-events-auto inline-flex items-center gap-2.5 rounded-full border border-edge-soft bg-elevated/95 px-3 py-1.5 shadow-[0_8px_24px_-12px_rgba(0,0,0,0.6)] backdrop-blur-md animate-in fade-in slide-in-from-bottom-1 duration-200"
+        className={`pointer-events-auto inline-flex items-center gap-2.5 rounded-full border border-edge-soft bg-elevated/95 px-3 py-1.5 shadow-[0_8px_24px_-12px_rgba(0,0,0,0.6)] backdrop-blur-md animate-in fade-in slide-in-from-bottom-1 duration-200${phone ? " min-h-9" : ""}`}
       >
         <Spinner />
         {current ? (

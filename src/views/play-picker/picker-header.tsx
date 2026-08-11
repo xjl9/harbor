@@ -4,6 +4,7 @@ import type { Meta } from "@/lib/cinemeta";
 import { useT } from "@/lib/i18n";
 import { useSettings } from "@/lib/settings";
 import type { PlayEpisode } from "@/lib/view";
+import { isPhoneShell, PHONE_FOCUS, PHONE_KICKER } from "./picker-utils";
 
 const IS_TAURI = typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
 
@@ -18,8 +19,34 @@ export function PickerNav({
 }) {
   const t = useT();
   const { settings } = useSettings();
+  const phone = isPhoneShell();
   const controlsInBar = IS_TAURI && !settings.useNativeTitleBar && !settings.hybridTitleBar;
   const groupLeft = controlsInBar || settings.pickerRefreshNextToBack;
+  if (phone) {
+    return (
+      <div className="flex items-center justify-between gap-3">
+        <button
+          type="button"
+          onClick={onBack}
+          aria-label={t("Back")}
+          className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-elevated/70 text-ink-muted ring-1 ring-edge-soft ${PHONE_FOCUS}`}
+        >
+          <ChevronLeft size={26} strokeWidth={2.4} className="dir-icon" />
+        </button>
+        {onRefresh && (
+          <button
+            type="button"
+            onClick={onRefresh}
+            disabled={refreshing}
+            aria-label={t("Refresh sources")}
+            className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-elevated/70 text-ink-muted ring-1 ring-edge-soft disabled:cursor-not-allowed disabled:opacity-60 ${PHONE_FOCUS}`}
+          >
+            <RefreshCw size={20} strokeWidth={2.4} className={refreshing ? "animate-spin" : ""} />
+          </button>
+        )}
+      </div>
+    );
+  }
   return (
     <div className="-mb-9">
       <div
@@ -63,14 +90,27 @@ export function PickerHeader({
   meta: Meta;
   episode?: PlayEpisode;
 }) {
+  const phone = isPhoneShell();
+  const phoneH1 =
+    "font-display text-[clamp(30px,8.5vw,40px)] font-medium leading-[1.04] tracking-[-0.02em] text-ink [overflow-wrap:break-word]";
   return (
     <header className="flex flex-col gap-3">
       {episode ? (
         <>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.32em] text-ink-subtle">
+          <p
+            className={
+              phone
+                ? `line-clamp-1 ${PHONE_KICKER}`
+                : "text-[11px] font-semibold uppercase tracking-[0.32em] text-ink-subtle"
+            }
+          >
             {meta.name} · Season {episode.imdbSeason ?? episode.season} · Episode {String(episode.imdbEpisode ?? episode.episode).padStart(2, "0")}
           </p>
-          <h1 className="font-display text-[64px] font-medium leading-[0.96] tracking-tight text-ink">
+          <h1
+            className={
+              phone ? phoneH1 : "font-display text-[64px] font-medium leading-[0.96] tracking-tight text-ink"
+            }
+          >
             {episode.name || `Episode ${episode.episode}`}
           </h1>
           {episode.overview && <CollapsibleOverview text={episode.overview} />}
@@ -78,12 +118,22 @@ export function PickerHeader({
       ) : (
         <>
           {meta.releaseInfo && (
-            <p className="text-[11px] font-semibold uppercase tracking-[0.32em] text-ink-subtle">
+            <p
+              className={
+                phone
+                  ? `line-clamp-1 ${PHONE_KICKER}`
+                  : "text-[11px] font-semibold uppercase tracking-[0.32em] text-ink-subtle"
+              }
+            >
               {meta.releaseInfo}
               {meta.genres?.length ? ` · ${meta.genres.slice(0, 2).join(" · ")}` : ""}
             </p>
           )}
-          <h1 className="font-display text-[68px] font-medium leading-[0.96] tracking-tight text-ink">
+          <h1
+            className={
+              phone ? phoneH1 : "font-display text-[68px] font-medium leading-[0.96] tracking-tight text-ink"
+            }
+          >
             {meta.name}
           </h1>
         </>
@@ -94,6 +144,7 @@ export function PickerHeader({
 
 function CollapsibleOverview({ text }: { text: string }) {
   const t = useT();
+  const phone = isPhoneShell();
   const [expanded, setExpanded] = useState(false);
   const [truncated, setTruncated] = useState(false);
   const ref = useRef<HTMLParagraphElement>(null);
@@ -117,7 +168,7 @@ function CollapsibleOverview({ text }: { text: string }) {
         <button
           type="button"
           onClick={() => setExpanded((v) => !v)}
-          className="mt-1.5 inline-flex items-center gap-1 text-[13px] font-semibold text-ink-subtle transition-colors hover:text-ink"
+          className={`mt-1.5 inline-flex items-center gap-1 text-[13px] font-semibold text-ink-subtle transition-colors hover:text-ink${phone ? " -my-2 min-h-11 py-2" : ""}`}
         >
           {expanded ? t("Show less") : t("View more")}
           <ChevronDown

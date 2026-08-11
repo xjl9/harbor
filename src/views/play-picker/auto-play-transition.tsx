@@ -5,7 +5,20 @@ import { consumeRecentStubEvent } from "@/lib/dead-streams";
 import { useActiveKid } from "@/lib/profiles";
 import { type PlayEpisode } from "@/lib/view";
 import { LogoOrText } from "./logo-or-text";
+import { isPhoneShell } from "./picker-utils";
 import { useT } from "@/lib/i18n";
+
+// Indeterminate settle shimmer: signals "committing now, the escape is live"
+// without faking a countdown the auto-fire grace timing cannot honor.
+const SETTLE_SWEEP_CSS = `
+@keyframes harbor-settle-sweep {
+  from { transform: translateX(-120%); }
+  to { transform: translateX(420%); }
+}
+.harbor-settle-sweep {
+  animation: harbor-settle-sweep 1.1s var(--ease-out) infinite;
+}
+`;
 
 export function AutoPlayTransition({
   meta,
@@ -22,9 +35,9 @@ export function AutoPlayTransition({
   onCancel: () => void;
   download?: boolean;
 }) {
-  void resolving;
   const kid = useActiveKid();
   const t = useT();
+  const phone = isPhoneShell();
   const backdrop = episode?.still || meta.background || meta.poster;
   const [stubNotice, setStubNotice] = useState<string | null>(null);
   useEffect(() => {
@@ -36,7 +49,7 @@ export function AutoPlayTransition({
   }, [t]);
   return (
     <main className={`fixed inset-0 z-[120] overflow-hidden ${kid ? "bg-[#0c4a6e]" : "bg-black"}`}>
-      <div data-tauri-drag-region className="absolute inset-x-0 top-0 z-20 h-16" />
+      <div data-tauri-drag-region className={`absolute inset-x-0 top-0 z-20 h-16${phone ? " hidden" : ""}`} />
       {backdrop && (
         <img
           src={backdrop}
@@ -92,11 +105,20 @@ export function AutoPlayTransition({
         </div>
       )}
       <div className="relative flex h-full flex-col items-center justify-center gap-7 px-8 text-center">
+        {phone && (
+          <p className="text-[11px] font-semibold uppercase tracking-[0.32em] text-white/55">
+            {t("Now showing")}
+          </p>
+        )}
         <LogoOrText
           logo={meta.logo ?? null}
           fallbackText={meta.name}
           imgClass="max-h-44 w-auto max-w-[72%] animate-loader-pulse object-contain drop-shadow-[0_24px_60px_rgba(0,0,0,0.65)]"
-          textClass="animate-loader-pulse font-display text-[64px] font-medium leading-[0.96] tracking-tight text-white drop-shadow-[0_18px_45px_rgba(0,0,0,0.7)]"
+          textClass={
+            phone
+              ? "animate-loader-pulse font-display text-[clamp(30px,9vw,44px)] font-medium leading-[0.96] tracking-tight text-white drop-shadow-[0_18px_45px_rgba(0,0,0,0.7)]"
+              : "animate-loader-pulse font-display text-[64px] font-medium leading-[0.96] tracking-tight text-white drop-shadow-[0_18px_45px_rgba(0,0,0,0.7)]"
+          }
         />
         {episode && (
           <p className="text-[12.5px] font-semibold uppercase tracking-[0.32em] text-white/70">
@@ -121,9 +143,26 @@ export function AutoPlayTransition({
           </p>
         )}
       </div>
+      {phone && (
+        <>
+          <style>{SETTLE_SWEEP_CSS}</style>
+          <div
+            aria-hidden
+            className="absolute left-1/2 z-10 h-0.5 w-[min(320px,60%)] -translate-x-1/2 overflow-hidden rounded-full bg-white/15 motion-reduce:hidden"
+            style={{ bottom: "calc(env(safe-area-inset-bottom, 0px) + 76px)" }}
+          >
+            <span className="harbor-settle-sweep block h-full w-1/3 rounded-full bg-accent/70" />
+          </div>
+        </>
+      )}
       <button
         onClick={onCancel}
-        className="absolute bottom-10 left-1/2 z-10 flex h-11 -translate-x-1/2 cursor-pointer items-center gap-2 rounded-full border border-white/15 bg-black/45 px-6 text-[13.5px] font-medium text-white/75 backdrop-blur-md transition-colors hover:border-white/30 hover:bg-black/60 hover:text-white"
+        className={
+          phone
+            ? "absolute left-1/2 z-10 flex h-12 w-[min(320px,calc(100%-80px))] -translate-x-1/2 cursor-pointer items-center justify-center gap-2 rounded-full border border-white/15 bg-black/45 px-6 text-[13.5px] font-medium text-white backdrop-blur-md transition-colors hover:border-white/30 hover:bg-black/60"
+            : "absolute bottom-10 left-1/2 z-10 flex h-11 -translate-x-1/2 cursor-pointer items-center gap-2 rounded-full border border-white/15 bg-black/45 px-6 text-[13.5px] font-medium text-white/75 backdrop-blur-md transition-colors hover:border-white/30 hover:bg-black/60 hover:text-white"
+        }
+        style={phone ? { bottom: "calc(env(safe-area-inset-bottom, 0px) + 20px)" } : undefined}
       >
         <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden>
           <path
@@ -133,7 +172,7 @@ export function AutoPlayTransition({
             strokeLinecap="round"
           />
         </svg>
-        {t("Cancel")}
+        {phone && !resolving ? t("Choose yourself") : t("Cancel")}
       </button>
     </main>
   );

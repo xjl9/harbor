@@ -8,10 +8,9 @@ import type { Meta } from "@/lib/cinemeta";
 import { useDebridClients } from "@/lib/debrid/registry";
 import { useSettings } from "@/lib/settings";
 import type { ScoredStream } from "@/lib/streams/types";
-import { directStreamAvailable } from "@/lib/torrent/stremio-stream";
 import type { PlayEpisode } from "@/lib/view";
 import { EditionChip } from "./edition-chip";
-import { anyStreamCached, confirmationLabel, displayTitle, hasUncachedMarker, streamSummaryParts, torrentFilename } from "./picker-utils";
+import { confirmationLabel, displayTitle, isPhoneShell, primaryLadder, streamSummaryParts, torrentFilename } from "./picker-utils";
 import { PlayProvenance } from "./play-provenance";
 
 export function PrimaryCard({
@@ -42,19 +41,11 @@ export function PrimaryCard({
   match?: "same" | "close" | null;
 }) {
   const { settings } = useSettings();
-  const cachedDebrids = debrids.filter((d) => stream.cached[d.slug]);
+  const phone = isPhoneShell();
+  const { cachedDebrids, cachedDebrid, externalOnly, addonCached, isCached, queueTarget, canStream } =
+    primaryLadder(stream, debrids, isPreviouslyPlayed);
   const libraryDebrids = debrids.filter((d) => stream.inLibrary[d.slug]);
-  const cachedDebrid = cachedDebrids[0] ?? null;
-  const externalOnly = !stream.url && !stream.infoHash && !!(stream.externalUrl || stream.ytId);
   const link = resolveStreamLink(stream);
-  const addonCached = anyStreamCached(stream);
-  const isCached =
-    (stream.url != null && !stream.infoHash && !hasUncachedMarker(stream)) ||
-    cachedDebrid != null ||
-    addonCached ||
-    isPreviouslyPlayed;
-  const queueTarget = debrids.find((d) => d.queueCache);
-  const canStream = !isCached && directStreamAvailable(stream);
   const summary = streamSummaryParts(stream);
   const title = displayTitle(stream, meta.name, episode);
   const fname = settings.pickerShowFilename ? torrentFilename(stream) : "";
@@ -69,17 +60,31 @@ export function PrimaryCard({
     <section className="relative overflow-hidden rounded-[24px] bg-canvas/70">
       <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-ink/12 to-transparent" />
 
-      <div className={`grid gap-7 p-7 ${isLandscape ? "grid-cols-[320px_1fr] items-center" : "grid-cols-[224px_1fr]"}`}>
+      <div
+        className={
+          phone
+            ? "flex flex-col gap-5 p-5"
+            : `grid gap-7 p-7 ${isLandscape ? "grid-cols-[320px_1fr] items-center" : "grid-cols-[224px_1fr]"}`
+        }
+      >
         <div
-          className={`relative overflow-hidden rounded-[16px] bg-canvas/50 ring-1 ring-edge-soft/60 ${
-            isLandscape ? "aspect-video self-center" : "aspect-[2/3]"
-          }`}
+          className={
+            phone
+              ? "relative aspect-video w-full overflow-hidden rounded-[16px] bg-canvas/50 ring-1 ring-edge-soft/60"
+              : `relative overflow-hidden rounded-[16px] bg-canvas/50 ring-1 ring-edge-soft/60 ${
+                  isLandscape ? "aspect-video self-center" : "aspect-[2/3]"
+                }`
+          }
         >
           {heroImage ? (
             <img
               src={heroImage}
               alt=""
-              className="h-full w-full object-cover"
+              className={
+                phone && !isLandscape
+                  ? "h-full w-full object-cover object-top"
+                  : "h-full w-full object-cover"
+              }
               draggable={false}
             />
           ) : (
@@ -147,17 +152,35 @@ export function PrimaryCard({
               </p>
             )}
             <HostMatchChip match={match} long />
-            <p className="break-all font-mono text-[15.5px] leading-relaxed text-ink">
+            <p
+              className={
+                phone
+                  ? "break-all font-mono text-[14px] leading-relaxed text-ink"
+                  : "break-all font-mono text-[15.5px] leading-relaxed text-ink"
+              }
+            >
               {title}
             </p>
             {fname && fname !== title && (
-              <p className="break-all font-mono text-[12.5px] leading-relaxed text-ink-subtle/80">
+              <p
+                className={
+                  phone
+                    ? "break-all font-mono text-[11.5px] leading-relaxed text-ink-subtle/80"
+                    : "break-all font-mono text-[12.5px] leading-relaxed text-ink-subtle/80"
+                }
+              >
                 {fname}
               </p>
             )}
 
             {summary.length > 0 && (
-              <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-[13px] font-semibold uppercase tracking-[0.16em] text-ink-muted">
+              <div
+                className={
+                  phone
+                    ? "flex flex-wrap items-center gap-x-2.5 gap-y-2 text-[12px] font-semibold uppercase tracking-[0.16em] text-ink-muted"
+                    : "flex flex-wrap items-center gap-x-3 gap-y-2 text-[13px] font-semibold uppercase tracking-[0.16em] text-ink-muted"
+                }
+              >
                 {summary.map((part, i) => (
                   <span key={`${part}-${i}`} className="flex items-center gap-3">
                     {i > 0 && <span aria-hidden className="h-1 w-1 rounded-full bg-ink-subtle/40" />}
@@ -185,7 +208,13 @@ export function PrimaryCard({
                     Cached
                   </span>
                 ) : queued ? (
-                  <span className="inline-flex items-center gap-1.5 text-[12.5px] font-semibold tracking-[0.04em] text-emerald-300">
+                  <span
+                    className={
+                      phone
+                        ? "inline-flex items-center gap-1.5 text-[12.5px] font-semibold tracking-[0.04em] text-accent"
+                        : "inline-flex items-center gap-1.5 text-[12.5px] font-semibold tracking-[0.04em] text-emerald-300"
+                    }
+                  >
                     <Check size={13} strokeWidth={2.5} />
                     Queued on {queueTarget?.name ?? "debrid"}
                   </span>
@@ -210,11 +239,15 @@ export function PrimaryCard({
             )}
           </div>
 
-          <div className="flex flex-wrap items-center gap-5">
+          <div
+            className={
+              phone ? "flex flex-col items-stretch gap-2.5" : "flex flex-wrap items-center gap-5"
+            }
+          >
             {externalOnly ? (
               <button
                 onClick={onPlay}
-                className="group flex h-14 items-center gap-3 rounded-full border border-ink/30 bg-ink/[0.04] px-7 text-[14.5px] font-semibold tracking-[0.04em] text-ink transition-[transform,background-color,opacity] duration-200 hover:scale-[1.02] hover:bg-ink/[0.08] active:scale-[0.98]"
+                className={`group flex h-14 items-center gap-3 rounded-full border border-ink/30 bg-ink/[0.04] px-7 text-[14.5px] font-semibold tracking-[0.04em] text-ink transition-[transform,background-color,opacity] duration-200 hover:scale-[1.02] hover:bg-ink/[0.08] active:scale-[0.98]${phone ? " w-full justify-center" : ""}`}
               >
                 <ExternalLink size={18} strokeWidth={2.2} />
                 Open in browser
@@ -223,7 +256,7 @@ export function PrimaryCard({
               <button
                 onClick={onPlay}
                 disabled={resolving}
-                className="group flex h-14 items-center gap-3 rounded-full bg-ink px-9 text-[15px] font-semibold tracking-[0.04em] text-canvas shadow-[0_12px_36px_rgba(0,0,0,0.45)] transition-[transform,opacity] duration-200 hover:scale-[1.02] active:scale-[0.98] disabled:cursor-wait disabled:opacity-60"
+                className={`group flex h-14 items-center gap-3 rounded-full bg-ink px-9 text-[15px] font-semibold tracking-[0.04em] text-canvas shadow-[0_12px_36px_rgba(0,0,0,0.45)] transition-[transform,opacity] duration-200 hover:scale-[1.02] active:scale-[0.98] disabled:cursor-wait disabled:opacity-60${phone ? " w-full justify-center" : ""}`}
               >
                 {resolving ? (
                   <Loader2 size={20} className="animate-spin" />
@@ -240,7 +273,11 @@ export function PrimaryCard({
             ) : queued ? (
               <button
                 disabled
-                className="flex h-14 items-center gap-3 rounded-full bg-emerald-400/15 px-7 text-[14px] font-semibold tracking-[0.04em] text-emerald-300 ring-1 ring-emerald-400/40"
+                className={
+                  phone
+                    ? "flex h-14 w-full items-center justify-center gap-3 rounded-full border border-accent/25 bg-accent-soft px-7 text-[14px] font-semibold tracking-[0.04em] text-accent"
+                    : "flex h-14 items-center gap-3 rounded-full bg-emerald-400/15 px-7 text-[14px] font-semibold tracking-[0.04em] text-emerald-300 ring-1 ring-emerald-400/40"
+                }
               >
                 <Check size={18} strokeWidth={2.5} />
                 Queued on {queueTarget?.name ?? "debrid"}
@@ -249,7 +286,7 @@ export function PrimaryCard({
               <button
                 onClick={onCache}
                 disabled={resolving}
-                className="group flex h-14 items-center gap-3 rounded-full border border-accent/55 bg-accent/12 px-7 text-[14.5px] font-semibold tracking-[0.04em] text-accent transition-[transform,background-color,opacity] duration-200 hover:scale-[1.02] hover:bg-accent/20 active:scale-[0.98] disabled:cursor-wait disabled:opacity-60"
+                className={`group flex h-14 items-center gap-3 rounded-full border border-accent/55 bg-accent/12 px-7 text-[14.5px] font-semibold tracking-[0.04em] text-accent transition-[transform,background-color,opacity] duration-200 hover:scale-[1.02] hover:bg-accent/20 active:scale-[0.98] disabled:cursor-wait disabled:opacity-60${phone ? " w-full justify-center" : ""}`}
               >
                 {resolving ? (
                   <Loader2 size={18} className="animate-spin" />
@@ -262,7 +299,7 @@ export function PrimaryCard({
               <button
                 onClick={onPlay}
                 disabled={resolving}
-                className="group flex h-14 items-center gap-3 rounded-full bg-ink px-9 text-[15px] font-semibold tracking-[0.04em] text-canvas shadow-[0_12px_36px_rgba(0,0,0,0.45)] transition-[transform,opacity] duration-200 hover:scale-[1.02] active:scale-[0.98] disabled:cursor-wait disabled:opacity-60"
+                className={`group flex h-14 items-center gap-3 rounded-full bg-ink px-9 text-[15px] font-semibold tracking-[0.04em] text-canvas shadow-[0_12px_36px_rgba(0,0,0,0.45)] transition-[transform,opacity] duration-200 hover:scale-[1.02] active:scale-[0.98] disabled:cursor-wait disabled:opacity-60${phone ? " w-full justify-center" : ""}`}
               >
                 {resolving ? (
                   <Loader2 size={20} className="animate-spin" />
@@ -279,7 +316,7 @@ export function PrimaryCard({
             ) : (
               <button
                 disabled
-                className="flex h-14 items-center gap-3 rounded-full bg-canvas/60 px-7 text-[14px] font-semibold tracking-[0.04em] text-ink-subtle ring-1 ring-edge-soft"
+                className={`flex h-14 items-center gap-3 rounded-full bg-canvas/60 px-7 text-[14px] font-semibold tracking-[0.04em] text-ink-subtle ring-1 ring-edge-soft${phone ? " w-full justify-center" : ""}`}
               >
                 Not cached
               </button>
@@ -289,7 +326,7 @@ export function PrimaryCard({
               <CopyLinkButton
                 url={link}
                 size={15}
-                className="h-9 w-9 ring-1 ring-edge-soft/60"
+                className={phone ? "h-11 w-11 self-end ring-1 ring-edge-soft/60" : "h-9 w-9 ring-1 ring-edge-soft/60"}
               />
             )}
           </div>

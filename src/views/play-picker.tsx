@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowUp, ChevronLeft, Filter, Loader2, PackageX, RefreshCw, X } from "lucide-react";
+import { ArrowUp, ChevronLeft, Download, Filter, Loader2, PackageX, Play, RefreshCw, X, Zap } from "lucide-react";
 import { useT } from "@/lib/i18n";
 import { resolveAddonLogo } from "@/components/addon-logo";
+import { FormatBadge } from "@/components/format-badge";
 import { torrentEngineStatus } from "@/lib/torrent/local-engine";
 import { torrentsDisabled } from "@/lib/torrent/stremio-stream";
 import { useAuth } from "@/lib/auth";
@@ -45,9 +46,13 @@ import {
   hasUncachedMarker,
   humanError,
   isEngineWarmingError,
+  isPhoneShell,
   normalizeLangCode,
   orderByAddonNative,
+  PHONE_FOCUS,
+  primaryLadder,
   streamIdentity,
+  streamLeadBadge,
   streamMatchesLangs,
 } from "./play-picker/picker-utils";
 import { PickerHeader, PickerNav } from "./play-picker/picker-header";
@@ -97,6 +102,7 @@ export function PlayPicker({
   playerActive?: boolean;
 }) {
   const t = useT();
+  const phone = isPhoneShell();
   const isDownload = intent === "download";
   const isSeasonDownload = isDownload && (seasonEpisodes?.length ?? 0) > 0;
   const { openPlayer, openSettings, exitPickerToDetail } = useView();
@@ -403,6 +409,7 @@ export function PlayPicker({
 
   const autoFiredRef = useRef(false);
   const mainRef = useRef<HTMLElement>(null);
+  const drawerAnchorRef = useRef<HTMLDivElement>(null);
   const [autoAttemptIdx, setAutoAttemptIdx] = useState(0);
   const [autoExhausted, setAutoExhausted] = useState(false);
   const [autoCancelled, setAutoCancelled] = useState(false);
@@ -748,17 +755,59 @@ export function PlayPicker({
     );
   }
 
+  const marqueeVisible =
+    phone &&
+    !isDownload &&
+    settings.pickerLayout !== "stremio" &&
+    !loading &&
+    currentPick != null &&
+    !resolveError &&
+    !stubBanner;
+
   return (
-    <main ref={mainRef} className="absolute inset-0 z-50 overflow-y-auto bg-canvas">
+    <main
+      ref={mainRef}
+      className={`absolute inset-0 z-50 overflow-y-auto bg-canvas${phone ? " overscroll-y-contain [overflow-x:clip]" : ""}`}
+    >
       <BackdropLayer src={backdropSrc} />
+
+      {phone && (
+        // Grain parity with MobileShell: the picker overlay (z-80) escapes the
+        // shell's z-60 grain layer, so the texture is restored here. Fixed, not
+        // absolute: an absolute child of this scroll container would cover one
+        // viewport and scroll away.
+        <div
+          aria-hidden
+          className="pointer-events-none fixed inset-0 z-[60] opacity-[0.06] mix-blend-overlay motion-reduce:hidden"
+          style={{
+            backgroundImage:
+              "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='hg'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.82' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23hg)'/%3E%3C/svg%3E\")",
+            backgroundSize: "140px 140px",
+          }}
+        />
+      )}
 
       <div
         aria-hidden
         data-tauri-drag-region={fs ? "false" : "true"}
-        className="absolute start-0 end-6 top-0 z-10 h-20"
+        className={`absolute start-0 end-6 top-0 z-10 h-20${phone ? " hidden" : ""}`}
       />
 
-      <div className="relative mx-auto flex min-h-full w-full max-w-5xl flex-col gap-12 px-12 pb-32 pt-32">
+      <div
+        className={
+          phone
+            ? "relative mx-auto flex min-h-full w-full flex-col gap-7 px-5"
+            : "relative mx-auto flex min-h-full w-full max-w-5xl flex-col gap-12 px-12 pb-32 pt-32"
+        }
+        style={
+          phone
+            ? {
+                paddingTop: "max(calc(env(safe-area-inset-top, 0px) + 12px), 52px)",
+                paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 96px)",
+              }
+            : undefined
+        }
+      >
         <PickerNav onBack={backToDetail} onRefresh={refresh} refreshing={loading} />
         <PickerHeader meta={metaForDisplay} episode={episode} />
 
@@ -781,14 +830,20 @@ export function PlayPicker({
           </div>
         )}
 
-        {stubBanner && (
+        {!phone && stubBanner && (
           <div className="rounded-2xl border border-amber-300/30 bg-amber-400/10 px-5 py-4 text-[13.5px] text-amber-100">
             {stubBanner}
           </div>
         )}
 
         {torrentsDisabled() && (
-          <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-amber-300/30 bg-amber-400/10 px-5 py-3.5 text-[13px] text-amber-100">
+          <div
+            className={
+              phone
+                ? "flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-accent/30 bg-accent/10 px-5 py-3.5 text-[13px] text-ink"
+                : "flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-amber-300/30 bg-amber-400/10 px-5 py-3.5 text-[13px] text-amber-100"
+            }
+          >
             <span>
               Torrents are disabled in settings. Uncached streams will not play unless they come
               from a debrid service or a direct link.
@@ -796,7 +851,11 @@ export function PlayPicker({
             <button
               type="button"
               onClick={() => openSettings("player")}
-              className="rounded-md border border-amber-300/40 px-3 py-1 text-[12px] font-semibold text-amber-100 transition-colors hover:bg-amber-300/10"
+              className={
+                phone
+                  ? "min-h-11 rounded-md border border-accent/40 px-3 py-1 text-[12px] font-semibold text-accent transition-colors hover:bg-accent/10"
+                  : "rounded-md border border-amber-300/40 px-3 py-1 text-[12px] font-semibold text-amber-100 transition-colors hover:bg-amber-300/10"
+              }
             >
               Open Settings
             </button>
@@ -804,7 +863,10 @@ export function PlayPicker({
         )}
 
         {!addonsSettled && (!filteredPicker || filteredPicker.all.length === 0) && (
-          <CinematicLoader meta={metaForDisplay} />
+          <>
+            <CinematicLoader meta={metaForDisplay} quorum={addonQuorum} />
+            {phone && <MarqueeSkeleton />}
+          </>
         )}
 
         {result?.debridErrors && result.debridErrors.length > 0 && (
@@ -821,7 +883,7 @@ export function PlayPicker({
             <button
               onClick={refresh}
               disabled={loading}
-              className="shrink-0 rounded-full bg-elevated px-4 py-2 text-[12.5px] font-semibold text-ink ring-1 ring-edge-soft transition-transform hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 motion-reduce:transition-none motion-reduce:hover:scale-100"
+              className={`shrink-0 rounded-full bg-elevated px-4 py-2 text-[12.5px] font-semibold text-ink ring-1 ring-edge-soft transition-transform hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 motion-reduce:transition-none motion-reduce:hover:scale-100${phone ? " min-h-11" : ""}`}
             >
               Recheck
             </button>
@@ -884,6 +946,7 @@ export function PlayPicker({
             preserveOrder={addonOrderMode || !!hostMatch}
             matchFor={hostMatch ? matchFor : undefined}
             onPlay={playManually}
+            cachedFor={isCached}
             download={isDownload}
             downloadStateFor={(stream) =>
               resolving?.stream === stream
@@ -923,11 +986,26 @@ export function PlayPicker({
                 byTier={filteredPicker.byTier}
                 debrids={debrids}
                 langFilterSlot={
-                  <div className="ml-auto flex items-center gap-2">
-                    <StreamModeToggle
-                      mode={settings.streamMode}
-                      onChange={(m) => update({ streamMode: m })}
-                    />
+                  <div
+                    className={
+                      phone
+                        ? "order-last ml-0 flex w-full flex-wrap items-center gap-2"
+                        : "ml-auto flex items-center gap-2"
+                    }
+                  >
+                    {phone ? (
+                      <span className="[&_button]:min-h-11 [&_button]:px-4 [&_button]:text-[13px]">
+                        <StreamModeToggle
+                          mode={settings.streamMode}
+                          onChange={(m) => update({ streamMode: m })}
+                        />
+                      </span>
+                    ) : (
+                      <StreamModeToggle
+                        mode={settings.streamMode}
+                        onChange={(m) => update({ streamMode: m })}
+                      />
+                    )}
                     {uncachedHiddenCount > 0 && (
                       <CachedFilterPill
                         on={cachedOnly}
@@ -950,38 +1028,75 @@ export function PlayPicker({
             )}
 
             {!loading && allCount > 0 && filteredPicker && (
-              <SourceDrawer
-                open={drawerOpen}
-                onToggle={() => setDrawerOpen((o) => !o)}
-                count={allCount}
-                addonCount={addonCount}
-                usedAddons={usedAddons}
-                streams={displayStreams}
-                debrids={debrids}
-                getAddonLogo={lookupLogo}
-                matchFor={hostMatch ? matchFor : undefined}
-                onPlay={playManually}
-                resolvingId={resolving?.stream.infoHash ?? null}
-                showName={meta.name}
-                episode={episode}
-              />
+              <div ref={drawerAnchorRef} className={phone ? undefined : "contents"}>
+                <SourceDrawer
+                  open={drawerOpen}
+                  onToggle={() => setDrawerOpen((o) => !o)}
+                  count={allCount}
+                  addonCount={addonCount}
+                  usedAddons={usedAddons}
+                  streams={displayStreams}
+                  debrids={debrids}
+                  getAddonLogo={lookupLogo}
+                  matchFor={hostMatch ? matchFor : undefined}
+                  onPlay={playManually}
+                  resolvingId={resolving?.stream.infoHash ?? null}
+                  showName={meta.name}
+                  episode={episode}
+                  failedStreams={failedStreams}
+                />
+              </div>
             )}
           </>
         )}
 
-        {resolveError && engineWarming && (
+        {!phone && resolveError && engineWarming && (
           <div className="flex items-center gap-3 rounded-2xl border border-edge-soft/60 bg-elevated/40 px-5 py-4 text-[13.5px] text-ink-muted">
             <Loader2 size={16} className="shrink-0 animate-spin text-ink-subtle" />
             <span>{resolveError}</span>
           </div>
         )}
-        {resolveError && !engineWarming && (
+        {!phone && resolveError && !engineWarming && (
           <div className="rounded-2xl border border-danger/30 bg-danger/15 px-5 py-4 text-[13.5px] text-ink">
             {resolveError}
           </div>
         )}
       </div>
-      {(settings.pickerLayout === "stremio" || isDownload) &&
+      {phone && (resolveError || stubBanner) && (
+        // Errors surface where the thumb already is: the MarqueeBar slot.
+        <div
+          role="status"
+          aria-live="polite"
+          className={`harbor-rise fixed inset-x-5 z-[70] flex items-center gap-3 rounded-2xl border px-5 py-4 text-[13.5px] backdrop-blur ${
+            resolveError && !engineWarming
+              ? "border-danger/30 bg-canvas/95 text-ink"
+              : "border-edge-soft/60 bg-elevated/95 text-ink-muted"
+          }`}
+          style={{ bottom: "calc(env(safe-area-inset-bottom, 0px) + 16px)" }}
+        >
+          {engineWarming && resolveError && (
+            <Loader2 size={16} className="shrink-0 animate-spin text-ink-subtle" />
+          )}
+          <span>{resolveError ?? stubBanner}</span>
+        </div>
+      )}
+      {marqueeVisible && currentPick && (
+        <MarqueeBar
+          pick={currentPick}
+          debrids={debrids}
+          resolving={resolving?.stream === currentPick}
+          queued={currentPick.infoHash != null && queuedHash === currentPick.infoHash}
+          isPreviouslyPlayed={previousMatch === currentPick}
+          allCount={allCount}
+          onPlay={() => playManually(currentPick)}
+          onCache={() => onCache(currentPick)}
+          onOpenSources={() => {
+            setDrawerOpen(true);
+            drawerAnchorRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+          }}
+        />
+      )}
+      {(settings.pickerLayout === "stremio" || isDownload || (phone && drawerOpen)) &&
         filteredPicker &&
         filteredPicker.all.length > 0 && (
           <PickerScrollTop
@@ -989,9 +1104,117 @@ export function PlayPicker({
             onBack={backToDetail}
             onRefresh={refresh}
             refreshing={loading}
+            phone={phone}
+            raised={marqueeVisible}
           />
         )}
     </main>
+  );
+}
+
+// Phone-only ticket window: a fixed dock mirroring the PrimaryCard commitment
+// (via the shared primaryLadder helper, so they can never disagree) with a
+// one-tap jump to the full source drawer.
+function MarqueeBar({
+  pick,
+  debrids,
+  resolving,
+  queued,
+  isPreviouslyPlayed,
+  allCount,
+  onPlay,
+  onCache,
+  onOpenSources,
+}: {
+  pick: ScoredStream;
+  debrids: ReturnType<typeof useDebridClients>;
+  resolving: boolean;
+  queued: boolean;
+  isPreviouslyPlayed: boolean;
+  allCount: number;
+  onPlay: () => void;
+  onCache: () => void;
+  onOpenSources: () => void;
+}) {
+  const t = useT();
+  const ladder = primaryLadder(pick, debrids, isPreviouslyPlayed);
+  // TierStrip's exact status predicates, so the dock caption matches the chips.
+  const cachedHere = debrids.some((d) => pick.cached[d.slug]) || hasCachedMarker(pick);
+  const trulyInstantHere =
+    (pick.url != null && !pick.infoHash && !hasUncachedMarker(pick)) ||
+    debrids.some((d) => pick.inLibrary[d.slug]);
+  const statusLabel = trulyInstantHere ? t("Instant") : cachedHere ? t("Cached") : t("Not cached");
+  const playable = ladder.externalOnly || ladder.isCached || ladder.canStream;
+  const showCache = !playable && !queued && ladder.queueTarget != null;
+  const disabled = resolving || queued || (!playable && !showCache);
+  const label = resolving
+    ? t("Connecting")
+    : queued
+      ? t("Queued")
+      : showCache
+        ? t("Cache")
+        : playable
+          ? ladder.isCached || ladder.externalOnly
+            ? t("Play")
+            : t("Stream")
+          : t("Not cached");
+  return (
+    <div
+      className="fixed inset-x-0 z-[60] px-5"
+      style={{ bottom: "max(calc(env(safe-area-inset-bottom, 0px) + 16px), 24px)" }}
+    >
+      <div className="harbor-rise flex items-center gap-2 rounded-2xl border border-edge-soft/60 bg-elevated/85 p-2 pe-2 shadow-[0_10px_30px_-10px_rgba(0,0,0,0.6)] backdrop-blur-2xl">
+        <button
+          type="button"
+          onClick={onOpenSources}
+          className={`flex min-h-11 min-w-0 flex-1 items-center gap-2.5 rounded-xl px-2 py-1 text-start ${PHONE_FOCUS}`}
+        >
+          <FormatBadge kind={streamLeadBadge(pick, pick.tier)} size="md" />
+          <span className="flex min-w-0 flex-1 flex-col">
+            <span className="flex items-center gap-1 text-[11.5px] font-semibold text-ink">
+              {trulyInstantHere && (
+                <Zap size={11} fill="currentColor" strokeWidth={0} className="shrink-0 text-accent" />
+              )}
+              <span className="truncate">{statusLabel}</span>
+            </span>
+            <span className="truncate text-[11px] text-ink-subtle">
+              {t("{n} sources", { n: allCount })}
+            </span>
+          </span>
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            if (disabled) return;
+            if (showCache) onCache();
+            else onPlay();
+          }}
+          aria-disabled={disabled}
+          className={`flex h-12 min-w-[112px] shrink-0 items-center justify-center gap-2 rounded-full bg-ink px-5 text-[15px] font-semibold text-canvas transition-transform active:scale-[0.98] aria-disabled:opacity-60 aria-disabled:active:scale-100 motion-reduce:transition-none ${PHONE_FOCUS}`}
+        >
+          {resolving ? (
+            <Loader2 size={18} className="animate-spin" />
+          ) : showCache ? (
+            <Download size={17} strokeWidth={2.4} />
+          ) : playable ? (
+            <Play size={18} fill="currentColor" strokeWidth={0} />
+          ) : null}
+          {label}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// Reserved-height placeholders under the loader so results replace this space
+// with no layout shift: hero card, tier chip row, drawer bar.
+function MarqueeSkeleton() {
+  return (
+    <div aria-hidden className="harbor-rise flex flex-col gap-5 motion-reduce:animate-none">
+      <div className="aspect-video w-full animate-pulse rounded-[24px] bg-elevated/50" />
+      <div className="h-[56px] animate-pulse rounded-[14px] bg-elevated/50" style={{ animationDelay: "55ms" }} />
+      <div className="h-12 animate-pulse rounded-2xl bg-elevated/50" style={{ animationDelay: "110ms" }} />
+    </div>
   );
 }
 
@@ -1071,6 +1294,7 @@ function ActiveFilterHint({
   onManage: () => void;
 }) {
   const t = useT();
+  const phone = isPhoneShell();
   return (
     <div
       className={`flex items-center gap-2.5 rounded-2xl px-4 py-2.5 text-[13px] ring-1 ${
@@ -1087,14 +1311,14 @@ function ActiveFilterHint({
       </span>
       <button
         onClick={onManage}
-        className="shrink-0 rounded-full px-2 py-1 text-[12px] font-medium text-ink-muted transition-colors hover:bg-canvas/60 hover:text-ink"
+        className={`shrink-0 rounded-full px-2 py-1 text-[12px] font-medium text-ink-muted transition-colors hover:bg-canvas/60 hover:text-ink${phone ? " min-h-11" : ""}`}
       >
         {t("Manage")}
       </button>
       <button
         onClick={onClear}
         aria-label={t("Clear filter")}
-        className="shrink-0 rounded-full p-1 text-ink-subtle transition-colors hover:bg-canvas/60 hover:text-ink"
+        className={`shrink-0 rounded-full p-1 text-ink-subtle transition-colors hover:bg-canvas/60 hover:text-ink${phone ? " flex min-h-11 min-w-11 items-center justify-center" : ""}`}
       >
         <X size={14} strokeWidth={2.2} />
       </button>
@@ -1107,11 +1331,15 @@ function PickerScrollTop({
   onBack,
   onRefresh,
   refreshing = false,
+  phone = false,
+  raised = false,
 }: {
   scrollRef: React.RefObject<HTMLElement | null>;
   onBack: () => void;
   onRefresh?: () => void;
   refreshing?: boolean;
+  phone?: boolean;
+  raised?: boolean;
 }) {
   const t = useT();
   const [show, setShow] = useState(false);
@@ -1126,12 +1354,16 @@ function PickerScrollTop({
   if (!show) return null;
   const circle =
     "flex h-14 w-14 items-center justify-center rounded-full bg-canvas/80 text-ink shadow-[0_14px_36px_-12px_rgba(0,0,0,0.7)] ring-1 ring-edge-soft backdrop-blur-md transition-transform duration-200 hover:scale-105 active:scale-95";
+  // When the MarqueeBar occupies the bottom edge, both clusters float above it.
+  const bottomOffset = raised
+    ? "calc(env(safe-area-inset-bottom, 0px) + 1.75rem + 72px)"
+    : "calc(env(safe-area-inset-bottom, 0px) + 1.75rem)";
   return (
     <>
       <div
         className="animate-in fade-in slide-in-from-bottom-3 fixed z-[60]"
         style={{
-          bottom: "calc(env(safe-area-inset-bottom, 0px) + 1.75rem)",
+          bottom: bottomOffset,
           insetInlineStart: "calc(env(safe-area-inset-left, 0px) + 1.75rem)",
         }}
       >
@@ -1144,7 +1376,7 @@ function PickerScrollTop({
       <div
         className="animate-in fade-in slide-in-from-bottom-3 fixed z-[60] flex items-center gap-3"
         style={{
-          bottom: "calc(env(safe-area-inset-bottom, 0px) + 1.75rem)",
+          bottom: bottomOffset,
           insetInlineEnd: "calc(env(safe-area-inset-right, 0px) + 1.75rem)",
         }}
       >
@@ -1165,7 +1397,11 @@ function PickerScrollTop({
           type="button"
           onClick={() => scrollRef.current?.scrollTo({ top: 0, behavior: "smooth" })}
           aria-label={t("Scroll to top")}
-          className="flex h-14 items-center gap-2.5 rounded-full bg-accent px-6 text-canvas shadow-[0_16px_40px_-10px_rgba(0,0,0,0.7)] transition-transform duration-200 hover:scale-105 active:scale-95"
+          className={
+            phone
+              ? "flex h-14 items-center gap-2.5 rounded-full bg-elevated px-6 text-ink ring-1 ring-edge-soft shadow-[0_16px_40px_-10px_rgba(0,0,0,0.7)] transition-transform duration-200 hover:scale-105 active:scale-95"
+              : "flex h-14 items-center gap-2.5 rounded-full bg-accent px-6 text-canvas shadow-[0_16px_40px_-10px_rgba(0,0,0,0.7)] transition-transform duration-200 hover:scale-105 active:scale-95"
+          }
         >
           <ArrowUp size={24} strokeWidth={2.6} />
           <span className="text-[16px] font-bold">{t("Top")}</span>

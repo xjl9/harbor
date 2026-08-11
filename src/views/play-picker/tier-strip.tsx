@@ -4,7 +4,7 @@ import { createPortal } from "react-dom";
 import { FormatBadge } from "@/components/format-badge";
 import { useDebridClients } from "@/lib/debrid/registry";
 import type { ScoredStream, Tier } from "@/lib/streams/types";
-import { formatSize, hasCachedMarker, hasUncachedMarker, streamLeadBadge, streamLeadLabel } from "./picker-utils";
+import { formatSize, hasCachedMarker, hasUncachedMarker, isPhoneShell, streamLeadBadge, streamLeadLabel } from "./picker-utils";
 
 export function TierStrip({
   tiers,
@@ -21,16 +21,23 @@ export function TierStrip({
   debrids: ReturnType<typeof useDebridClients>;
   langFilterSlot?: React.ReactNode;
 }) {
+  const phone = isPhoneShell();
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex items-center gap-2">
+      <div className={phone ? "flex flex-wrap items-center gap-x-2 gap-y-3" : "flex items-center gap-2"}>
         <p className="text-[12px] font-bold uppercase tracking-[0.32em] text-ink-subtle">
           Switch quality
         </p>
         <QualityDisclaimer />
         {langFilterSlot}
       </div>
-      <div className="flex flex-wrap gap-2.5">
+      <div
+        className={
+          phone
+            ? "-mx-5 flex flex-nowrap gap-2.5 overflow-x-auto overscroll-x-contain px-5 pb-1 [scrollbar-width:none]"
+            : "flex flex-wrap gap-2.5"
+        }
+      >
         {tiers.map((t) => {
           const stream = byTier[t]!;
           const isActive = selected === t;
@@ -51,7 +58,7 @@ export function TierStrip({
                 isActive
                   ? "border-ink/35 bg-ink/[0.05]"
                   : "border-edge-soft hover:border-edge hover:bg-canvas/60"
-              } ${cachedHere ? "" : "opacity-65 hover:opacity-90"}`}
+              } ${cachedHere ? "" : "opacity-65 hover:opacity-90"}${phone ? " shrink-0" : ""}`}
             >
               <FormatBadge kind={badgeKind} size="lg" />
               <div className="flex flex-col items-start gap-0.5">
@@ -81,6 +88,7 @@ export function TierStrip({
 
 function QualityDisclaimer() {
   const wrapRef = useRef<HTMLSpanElement>(null);
+  const phone = isPhoneShell();
   const [open, setOpen] = useState(false);
   const [pos, setPos] = useState<{ top: number; left: number; place: "above" | "below" } | null>(null);
 
@@ -110,19 +118,30 @@ function QualityDisclaimer() {
   return (
     <span
       ref={wrapRef}
-      onMouseEnter={() => setOpen(true)}
-      onMouseLeave={() => setOpen(false)}
-      onFocus={() => setOpen(true)}
-      onBlur={() => setOpen(false)}
+      onMouseEnter={() => !phone && setOpen(true)}
+      onMouseLeave={() => !phone && setOpen(false)}
+      onFocus={() => !phone && setOpen(true)}
+      onBlur={() => !phone && setOpen(false)}
+      onClick={() => phone && setOpen((o) => !o)}
       tabIndex={0}
-      className="inline-flex shrink-0 items-center text-ink-subtle/70 transition-colors hover:text-ink-muted cursor-help outline-none"
+      className={`inline-flex shrink-0 items-center text-ink-subtle/70 transition-colors hover:text-ink-muted cursor-help outline-none${phone ? " -m-3 p-3" : ""}`}
     >
       <Info size={13} strokeWidth={2.2} />
+      {open && pos && phone &&
+        createPortal(
+          <button
+            type="button"
+            aria-label="Close menu"
+            onClick={() => setOpen(false)}
+            className="fixed inset-0 z-[144] cursor-default"
+          />,
+          document.body,
+        )}
       {open && pos &&
         createPortal(
           <div
             style={{ top: pos.top, left: pos.left, width: 320 }}
-            className="pointer-events-none fixed z-[145] flex flex-col gap-2 rounded-xl border border-edge bg-elevated/97 px-4 py-3.5 text-start shadow-[0_18px_50px_-15px_rgba(0,0,0,0.7)] animate-popover-in"
+            className={`${phone ? "pointer-events-auto" : "pointer-events-none"} fixed z-[145] flex flex-col gap-2 rounded-xl border border-edge bg-elevated/97 px-4 py-3.5 text-start shadow-[0_18px_50px_-15px_rgba(0,0,0,0.7)] animate-popover-in`}
           >
             <span className="flex items-center gap-1.5 text-[10.5px] font-semibold uppercase tracking-[0.18em] text-accent">
               <Info size={11} strokeWidth={2.4} />

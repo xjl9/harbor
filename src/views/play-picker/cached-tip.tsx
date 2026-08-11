@@ -1,16 +1,18 @@
 import { HelpCircle } from "lucide-react";
 import { useState } from "react";
 import { useT } from "@/lib/i18n";
+import { isPhoneShell } from "./picker-utils";
 
 export function CachedTip() {
   const t = useT();
+  const phone = isPhoneShell();
   const [open, setOpen] = useState(false);
   return (
     <div className="flex flex-col gap-1.5 self-start">
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex items-center gap-1 self-start text-[11.5px] font-medium text-ink-subtle/70 transition-colors hover:text-ink-muted"
+        className={`flex items-center gap-1 self-start text-[11.5px] font-medium text-ink-subtle/70 transition-colors hover:text-ink-muted${phone ? " -my-2 min-h-11 py-2" : ""}`}
       >
         <HelpCircle size={12} strokeWidth={2} />
         {t("Says “cached” but won’t play?")}

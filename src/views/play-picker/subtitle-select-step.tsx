@@ -10,6 +10,7 @@ import type { PlayEpisode, PlayerSrc } from "@/lib/view";
 import { useWindowFullscreen } from "@/lib/use-window-fullscreen";
 import { BackdropLayer } from "./backdrop-layer";
 import { useSubtitleChoices } from "./hooks/use-subtitle-choices";
+import { isPhoneShell } from "./picker-utils";
 
 type Selection = string | "off" | null;
 
@@ -24,6 +25,7 @@ export function SubtitleSelectStep({
 }) {
   const t = useT();
   const fs = useWindowFullscreen();
+  const phone = isPhoneShell();
   const { loading, error, results, groups, bestId } = useSubtitleChoices(src);
   const [selected, setSelected] = useState<Selection>(null);
   const [activeLang, setActiveLang] = useState<string>("all");
@@ -73,9 +75,23 @@ export function SubtitleSelectStep({
   return (
     <main className="absolute inset-0 z-50 flex flex-col overflow-hidden bg-canvas">
       <BackdropLayer src={src.episode?.still || src.meta.background || src.meta.poster} />
-      <div aria-hidden data-tauri-drag-region={fs ? "false" : "true"} className="absolute inset-x-0 top-0 z-10 h-20" />
+      <div aria-hidden data-tauri-drag-region={fs ? "false" : "true"} className={`absolute inset-x-0 top-0 z-10 h-20${phone ? " hidden" : ""}`} />
 
-      <div className="relative mx-auto flex min-h-0 w-full max-w-4xl flex-1 flex-col gap-6 px-10 pb-10 pt-24">
+      <div
+        className={
+          phone
+            ? "relative mx-auto flex min-h-0 w-full flex-1 flex-col gap-4 px-5"
+            : "relative mx-auto flex min-h-0 w-full max-w-4xl flex-1 flex-col gap-6 px-10 pb-10 pt-24"
+        }
+        style={
+          phone
+            ? {
+                paddingTop: "max(calc(env(safe-area-inset-top, 0px) + 12px), 52px)",
+                paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 16px)",
+              }
+            : undefined
+        }
+      >
         <header className="flex items-start gap-4">
           <button
             type="button"
@@ -94,12 +110,24 @@ export function SubtitleSelectStep({
           </div>
         </header>
 
-        <div className="flex min-h-0 flex-1 overflow-hidden rounded-3xl border border-edge-soft bg-elevated/50 shadow-[0_24px_60px_-24px_rgba(0,0,0,0.75)] backdrop-blur-xl">
+        <div
+          className={
+            phone
+              ? "flex min-h-0 flex-1 flex-col overflow-hidden rounded-3xl border border-edge-soft bg-elevated/50 shadow-[0_24px_60px_-24px_rgba(0,0,0,0.75)] backdrop-blur-xl"
+              : "flex min-h-0 flex-1 overflow-hidden rounded-3xl border border-edge-soft bg-elevated/50 shadow-[0_24px_60px_-24px_rgba(0,0,0,0.75)] backdrop-blur-xl"
+          }
+        >
           {loading ? (
             <LoadingSkeleton />
           ) : (
             <>
-              <aside className="flex w-[190px] shrink-0 flex-col gap-1 overflow-y-auto border-e border-edge-soft bg-canvas/30 p-3">
+              <aside
+                className={
+                  phone
+                    ? "flex w-full shrink-0 flex-row gap-1.5 overflow-x-auto border-b border-e-0 border-edge-soft bg-canvas/30 p-2 [scrollbar-width:none]"
+                    : "flex w-[190px] shrink-0 flex-col gap-1 overflow-y-auto border-e border-edge-soft bg-canvas/30 p-3"
+                }
+              >
                 <SidebarItem
                   active={activeLang === "all"}
                   onClick={() => setActiveLang("all")}
@@ -108,7 +136,7 @@ export function SubtitleSelectStep({
                   count={total}
                 />
                 {groups.length > 0 && (
-                  <div className="mt-2 mb-1 px-2.5 text-[10.5px] font-bold uppercase tracking-[0.16em] text-ink-subtle">
+                  <div className={`mt-2 mb-1 px-2.5 text-[10.5px] font-bold uppercase tracking-[0.16em] text-ink-subtle${phone ? " hidden" : ""}`}>
                     {t("Languages")}
                   </div>
                 )}
@@ -159,11 +187,17 @@ export function SubtitleSelectStep({
           )}
         </div>
 
-        <div className="flex shrink-0 items-center justify-between gap-4">
+        <div
+          className={
+            phone
+              ? "flex shrink-0 flex-col-reverse items-stretch gap-2.5"
+              : "flex shrink-0 items-center justify-between gap-4"
+          }
+        >
           <button
             type="button"
             onClick={() => onStart(src)}
-            className="h-12 rounded-full px-6 text-[15px] font-semibold text-ink-muted transition-colors hover:text-ink"
+            className={`h-12 rounded-full px-6 text-[15px] font-semibold text-ink-muted transition-colors hover:text-ink${phone ? " min-h-11 w-full" : ""}`}
           >
             {t("Skip, let Harbor choose")}
           </button>
@@ -171,7 +205,7 @@ export function SubtitleSelectStep({
             type="button"
             onClick={start}
             disabled={loading}
-            className="flex h-12 items-center gap-2.5 rounded-full bg-accent px-8 text-[16px] font-bold text-canvas shadow-[0_16px_40px_-12px_var(--color-accent)] transition-transform duration-150 hover:scale-[1.03] active:scale-[0.98] disabled:opacity-50"
+            className={`flex h-12 items-center gap-2.5 rounded-full bg-accent px-8 text-[16px] font-bold text-canvas shadow-[0_16px_40px_-12px_var(--color-accent)] transition-transform duration-150 hover:scale-[1.03] active:scale-[0.98] disabled:opacity-50${phone ? " w-full justify-center" : ""}`}
           >
             <Play size={20} strokeWidth={2.6} fill="currentColor" />
             {t("Start playback")}
@@ -203,10 +237,11 @@ function SidebarItem({
   count: number;
   dot?: boolean;
 }) {
+  const phone = isPhoneShell();
   return (
     <button
       onClick={onClick}
-      className={`flex min-h-[44px] items-center gap-2.5 rounded-xl px-3 text-start text-[13.5px] transition-colors ${
+      className={`flex min-h-[44px] items-center gap-2.5 ${phone ? "shrink-0 rounded-full px-3.5" : "rounded-xl px-3"} text-start text-[13.5px] transition-colors ${
         active ? "bg-elevated text-ink ring-1 ring-edge" : "text-ink-muted hover:bg-elevated/60 hover:text-ink"
       }`}
     >
@@ -246,6 +281,7 @@ function TrackRow({
 }) {
   const t = useT();
   const { open } = useContextMenu();
+  const phone = isPhoneShell();
   const title = result.title || languageName(result.lang);
   return (
     <button
@@ -288,12 +324,24 @@ function TrackRow({
             </>
           )}
           {result.hearingImpaired && (
-            <span className="rounded bg-amber-400/15 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.12em] text-amber-200">
+            <span
+              className={
+                phone
+                  ? "rounded bg-raised px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.12em] text-ink-muted"
+                  : "rounded bg-amber-400/15 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.12em] text-amber-200"
+              }
+            >
               {t("HI/SDH")}
             </span>
           )}
           {result.forced && (
-            <span className="rounded bg-sky-400/15 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.12em] text-sky-200">
+            <span
+              className={
+                phone
+                  ? "rounded bg-accent-soft px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.12em] text-accent"
+                  : "rounded bg-sky-400/15 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.12em] text-sky-200"
+              }
+            >
               {t("Forced")}
             </span>
           )}
@@ -318,10 +366,11 @@ function SelectDot({ selected }: { selected: boolean }) {
 
 function LoadingSkeleton() {
   const t = useT();
+  const phone = isPhoneShell();
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="flex flex-1">
-        <div className="flex w-[190px] shrink-0 flex-col gap-1.5 border-e border-edge-soft bg-canvas/30 p-3">
+        <div className={`flex w-[190px] shrink-0 flex-col gap-1.5 border-e border-edge-soft bg-canvas/30 p-3${phone ? " hidden" : ""}`}>
           {[0, 1, 2, 3, 4].map((i) => (
             <div key={i} className="h-11 animate-pulse rounded-xl bg-elevated/60" style={{ opacity: 1 - i * 0.15 }} />
           ))}

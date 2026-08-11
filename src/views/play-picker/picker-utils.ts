@@ -7,11 +7,59 @@ import {
   type BadgeKind,
 } from "@/components/format-badge";
 import type { Meta } from "@/lib/cinemeta";
+import type { DebridStore } from "@/lib/debrid/types";
+import { isMobileNative, isMobileWeb, isRemoteRoute } from "@/lib/platform";
 import type { Rejection } from "@/lib/streams/trust";
 import type { Addon } from "@/lib/addons";
 import type { ScoredStream, Stream, Tier } from "@/lib/streams/types";
-import { hasCachedMarker } from "@/lib/streams/cached";
+import { hasCachedMarker, hasUncachedMarker } from "@/lib/streams/cached";
+import { directStreamAvailable } from "@/lib/torrent/stremio-stream";
 import type { PlayEpisode } from "@/lib/view";
+
+// True exactly when this picker renders inside MobileShell. Mirrors the
+// App.tsx mount condition verbatim. Function (not module const) so
+// isRemoteRoute() reads the live location; the other two legs are cached.
+export function isPhoneShell(): boolean {
+  return isMobileWeb() || isMobileNative() || isRemoteRoute();
+}
+
+// Shared phone class fragments so every picker file styles identically and
+// strings cannot drift between components.
+export const PHONE_KICKER =
+  "text-[11px] font-sans font-semibold uppercase tracking-[0.22em] text-ink-subtle";
+export const PHONE_TAP = "min-h-11"; // 44px shell floor
+export const PHONE_FOCUS =
+  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-canvas";
+
+// Single source of truth for the primary commitment ladder. PrimaryCard's
+// button chain and the phone MarqueeBar both consume these booleans, so the
+// dock can never disagree with the card.
+export function primaryLadder(
+  stream: ScoredStream,
+  debrids: DebridStore[],
+  isPreviouslyPlayed: boolean,
+): {
+  cachedDebrids: DebridStore[];
+  cachedDebrid: DebridStore | null;
+  externalOnly: boolean;
+  addonCached: boolean;
+  isCached: boolean;
+  queueTarget: DebridStore | undefined;
+  canStream: boolean;
+} {
+  const cachedDebrids = debrids.filter((d) => stream.cached[d.slug]);
+  const cachedDebrid = cachedDebrids[0] ?? null;
+  const externalOnly = !stream.url && !stream.infoHash && !!(stream.externalUrl || stream.ytId);
+  const addonCached = anyStreamCached(stream);
+  const isCached =
+    (stream.url != null && !stream.infoHash && !hasUncachedMarker(stream)) ||
+    cachedDebrid != null ||
+    addonCached ||
+    isPreviouslyPlayed;
+  const queueTarget = debrids.find((d) => d.queueCache);
+  const canStream = !isCached && directStreamAvailable(stream);
+  return { cachedDebrids, cachedDebrid, externalOnly, addonCached, isCached, queueTarget, canStream };
+}
 
 export async function cinemetaImdbFallback(
   name: string,

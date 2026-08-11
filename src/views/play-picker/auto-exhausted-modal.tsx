@@ -1,6 +1,7 @@
 import type { Meta } from "@/lib/cinemeta";
 import { useView, type PlayEpisode } from "@/lib/view";
 import { openUrl } from "@/lib/window";
+import { isPhoneShell } from "./picker-utils";
 
 export function AutoExhaustedModal({
   meta,
@@ -14,6 +15,7 @@ export function AutoExhaustedModal({
   onBrowseManually: () => void;
 }) {
   const { goBack } = useView();
+  const phone = isPhoneShell();
   const title = meta.name ?? "this title";
   const epSuffix = episode
     ? ` S${episode.imdbSeason ?? episode.season}E${String(episode.imdbEpisode ?? episode.episode).padStart(2, "0")}`
@@ -27,8 +29,14 @@ export function AutoExhaustedModal({
     `\n(Add any extra detail here)`;
   const mailto = `mailto:bugs@harbor.site?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
   return (
-    <main className="fixed inset-0 z-[120] flex items-center justify-center overflow-hidden bg-black px-6">
-      <div className="w-full max-w-md rounded-2xl bg-elevated p-8 ring-1 ring-edge-soft">
+    <main
+      className={
+        phone
+          ? "fixed inset-0 z-[120] flex items-center justify-center overflow-y-auto bg-black px-5 py-12"
+          : "fixed inset-0 z-[120] flex items-center justify-center overflow-hidden bg-black px-6"
+      }
+    >
+      <div className={`w-full max-w-md rounded-2xl bg-elevated p-8 ring-1 ring-edge-soft${phone ? " my-auto" : ""}`}>
         <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-ink-subtle">
           Harbor
         </p>
@@ -59,7 +67,7 @@ export function AutoExhaustedModal({
           </button>
           <button
             onClick={goBack}
-            className="mt-1 text-[12.5px] text-ink-subtle transition-colors hover:text-ink-muted"
+            className={`mt-1 text-[12.5px] text-ink-subtle transition-colors hover:text-ink-muted${phone ? " min-h-11" : ""}`}
           >
             Back
           </button>

@@ -1,12 +1,14 @@
-import { Check, Download, Play } from "lucide-react";
+import { Check, Download, Play, Zap } from "lucide-react";
 import { AddonLogo } from "@/components/addon-logo";
 import { CopyLinkButton, resolveStreamLink } from "@/components/player/copy-link-button";
 import { DubSubPill, streamDubSub } from "@/components/dub-sub-pill";
 import { FormatBadge, RuleBadges, streamBadges } from "@/components/format-badge";
 import { HostMatchChip } from "@/components/host-match-chip";
+import { useT } from "@/lib/i18n";
 import { useSettings } from "@/lib/settings";
 import type { ScoredStream } from "@/lib/streams/types";
 import { EditionChip } from "./edition-chip";
+import { formatSize, isPhoneShell } from "./picker-utils";
 
 export function StremioRow({
   stream,
@@ -17,6 +19,7 @@ export function StremioRow({
   download = false,
   downloadState = "idle",
   isAnime = false,
+  cached = false,
 }: {
   stream: ScoredStream;
   failed: boolean;
@@ -26,8 +29,11 @@ export function StremioRow({
   download?: boolean;
   downloadState?: "idle" | "preparing" | "queued";
   isAnime?: boolean;
+  cached?: boolean;
 }) {
   const { settings } = useSettings();
+  const t = useT();
+  const phone = isPhoneShell();
   const full = settings.fullStreamDescription;
   const addonName = stream.addonName ?? "Source";
   const headline = stream.name?.trim() || addonName;
@@ -45,11 +51,11 @@ export function StremioRow({
       : "Download";
   return (
     <div
-      className={`flex items-stretch gap-5 rounded-2xl bg-elevated/40 p-5 ring-1 transition-colors ${
+      className={`${phone ? "flex items-center gap-3 rounded-2xl bg-elevated/40 p-4 ring-1 transition-colors" : "flex items-stretch gap-5 rounded-2xl bg-elevated/40 p-5 ring-1 transition-colors"} ${
         failed ? "ring-danger/40 bg-danger/5" : "ring-edge-soft/50"
       }`}
     >
-      <div className="flex w-[68px] shrink-0 flex-col items-center justify-center">
+      <div className={`flex w-[68px] shrink-0 flex-col items-center justify-center${phone ? " hidden" : ""}`}>
         <AddonLogo
           addonId={stream.addonId}
           addonName={addonName}
@@ -58,11 +64,43 @@ export function StremioRow({
         />
       </div>
       <div className="flex min-w-0 flex-1 flex-col justify-center gap-1.5">
-        <p className="whitespace-pre-line text-[16px] font-semibold leading-snug text-ink [overflow-wrap:anywhere]">
+        {phone && (
+          <span className="flex min-h-4 items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.22em] text-ink-subtle">
+            <AddonLogo
+              addonId={stream.addonId}
+              addonName={addonName}
+              manifestLogo={addonLogo}
+              size="sm"
+            />
+            <span className="truncate">{addonName}</span>
+            {stream.size != null && (
+              <span className="shrink-0 text-ink-subtle/70">{formatSize(stream.size)}</span>
+            )}
+            {cached && (
+              <span className="flex shrink-0 items-center gap-1 text-accent">
+                <Zap size={11} fill="currentColor" strokeWidth={0} />
+                {t("Instant")}
+              </span>
+            )}
+          </span>
+        )}
+        <p
+          className={
+            phone
+              ? "whitespace-pre-line text-[13.5px] font-semibold leading-snug text-ink [overflow-wrap:anywhere] line-clamp-3"
+              : "whitespace-pre-line text-[16px] font-semibold leading-snug text-ink [overflow-wrap:anywhere]"
+          }
+        >
           {headline}
         </p>
         {description && (
-          <p className="whitespace-pre-line text-[14px] leading-snug text-ink-muted [overflow-wrap:anywhere]">
+          <p
+            className={
+              phone
+                ? `whitespace-pre-line text-[12px] leading-snug text-ink-muted [overflow-wrap:anywhere]${full ? "" : " line-clamp-2"}`
+                : "whitespace-pre-line text-[14px] leading-snug text-ink-muted [overflow-wrap:anywhere]"
+            }
+          >
             {description}
           </p>
         )}
@@ -80,7 +118,9 @@ export function StremioRow({
         {failed && <p className="text-[13px] font-medium text-danger">Unavailable, try another.</p>}
       </div>
       <div className="flex shrink-0 items-center gap-2 self-center">
-        {link && <CopyLinkButton url={link} size={16} className="h-9 w-9" />}
+        {link && (
+          <CopyLinkButton url={link} size={16} className={phone ? "h-11 w-11" : "h-9 w-9"} />
+        )}
         <button
           type="button"
           onClick={() => {
@@ -90,12 +130,14 @@ export function StremioRow({
           aria-label={download ? downloadLabel : "Play"}
           className={
             download
-              ? `source-download-button flex h-9 min-w-[116px] shrink-0 items-center justify-center gap-2.5 rounded-full border px-5 text-[13px] font-medium tracking-tight transition-[transform,background-color,border-color,color] duration-150 ease-out active:scale-[0.96] active:duration-100 aria-disabled:cursor-default aria-disabled:active:scale-100 motion-reduce:transition-none ${
+              ? `source-download-button flex ${phone ? "min-h-11" : "h-9"} min-w-[116px] shrink-0 items-center justify-center gap-2.5 rounded-full border px-5 text-[13px] font-medium tracking-tight transition-[transform,background-color,border-color,color] duration-150 ease-out active:scale-[0.96] active:duration-100 aria-disabled:cursor-default aria-disabled:active:scale-100 motion-reduce:transition-none ${
                   queued
                     ? "border-accent/25 bg-accent-soft text-accent"
                     : "border-ink/[0.06] bg-ink/[0.04] text-ink hover:scale-[1.02] hover:bg-ink/[0.07] aria-disabled:hover:scale-100"
                 }`
-              : "flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-accent text-canvas shadow-[0_2px_6px_rgba(0,0,0,0.2),inset_0_1px_0_rgba(255,255,255,0.18)] transition-[transform,box-shadow,background-color,color] duration-150 ease-out hover:shadow-[0_5px_14px_rgba(0,0,0,0.24),inset_0_1px_0_rgba(255,255,255,0.18)] active:scale-[0.96] active:duration-100"
+              : phone
+                ? `flex h-14 w-14 shrink-0 items-center justify-center rounded-full ${cached ? "bg-accent" : "bg-ink"} text-canvas shadow-[0_2px_6px_rgba(0,0,0,0.2),inset_0_1px_0_rgba(255,255,255,0.18)] transition-[transform,box-shadow,background-color,color] duration-150 ease-out active:scale-[0.96] active:duration-100`
+                : "flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-accent text-canvas shadow-[0_2px_6px_rgba(0,0,0,0.2),inset_0_1px_0_rgba(255,255,255,0.18)] transition-[transform,box-shadow,background-color,color] duration-150 ease-out hover:shadow-[0_5px_14px_rgba(0,0,0,0.24),inset_0_1px_0_rgba(255,255,255,0.18)] active:scale-[0.96] active:duration-100"
           }
         >
           {preparing ? (

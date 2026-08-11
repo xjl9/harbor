@@ -3,6 +3,7 @@ import type { LocalEntry } from "@/lib/local-library";
 import { episodeLabel } from "@/lib/local-library/player-src";
 import { LocalVersionBadges } from "@/components/local-version-badges";
 import { useT } from "@/lib/i18n";
+import { isPhoneShell } from "./picker-utils";
 
 export function LocalStreamCard({
   entry,
@@ -14,13 +15,24 @@ export function LocalStreamCard({
   showBadges?: boolean;
 }) {
   const t = useT();
+  const phone = isPhoneShell();
   const ep = episodeLabel(entry);
   return (
     <button
       onClick={onPlay}
-      className="group flex items-center gap-4 rounded-2xl border border-accent/40 bg-accent/10 px-5 py-4 text-start transition-colors hover:bg-accent/15"
+      className={
+        phone
+          ? "group flex items-center gap-4 rounded-2xl border border-edge-soft bg-elevated/40 px-5 py-4 text-start transition-colors"
+          : "group flex items-center gap-4 rounded-2xl border border-accent/40 bg-accent/10 px-5 py-4 text-start transition-colors hover:bg-accent/15"
+      }
     >
-      <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-accent/20 text-accent">
+      <span
+        className={
+          phone
+            ? "flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-raised text-ink-muted"
+            : "flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-accent/20 text-accent"
+        }
+      >
         <HardDrive size={19} strokeWidth={2} />
       </span>
       <span className="flex min-w-0 flex-1 flex-col gap-0.5">
@@ -35,7 +47,13 @@ export function LocalStreamCard({
         <span className="truncate text-[14.5px] font-semibold text-ink">{entry.filename}</span>
         {showBadges && <LocalVersionBadges entry={entry} className="mt-1" />}
       </span>
-      <span className="flex h-10 shrink-0 items-center gap-2 rounded-full bg-accent px-4 text-[13.5px] font-semibold text-canvas transition-opacity group-hover:opacity-90">
+      <span
+        className={
+          phone
+            ? "flex h-11 shrink-0 items-center gap-2 rounded-full bg-ink px-4 text-[13.5px] font-semibold text-canvas transition-opacity group-hover:opacity-90"
+            : "flex h-10 shrink-0 items-center gap-2 rounded-full bg-accent px-4 text-[13.5px] font-semibold text-canvas transition-opacity group-hover:opacity-90"
+        }
+      >
         <Play size={15} fill="currentColor" />
         {t("Play")}
       </span>

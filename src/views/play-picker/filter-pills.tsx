@@ -1,5 +1,5 @@
 import { Languages, Zap } from "lucide-react";
-import { abbreviateLanguages, normalizeLangCode } from "./picker-utils";
+import { abbreviateLanguages, isPhoneShell, normalizeLangCode } from "./picker-utils";
 
 export function CachedFilterPill({
   on,
@@ -10,10 +10,11 @@ export function CachedFilterPill({
   hiddenCount: number;
   onToggle: () => void;
 }) {
+  const phone = isPhoneShell();
   return (
     <button
       onClick={onToggle}
-      className={`flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10.5px] font-semibold uppercase tracking-[0.18em] transition-colors ${
+      className={`flex items-center gap-1.5 rounded-full ${phone ? "min-h-11 px-4 py-2 text-[12px]" : "px-2.5 py-1 text-[10.5px]"} font-semibold uppercase tracking-[0.18em] transition-colors ${
         on
           ? "bg-accent/15 text-accent hover:bg-accent/22"
           : "text-ink-subtle/80 hover:bg-canvas/60 hover:text-ink-muted"
@@ -39,6 +40,7 @@ export function LanguageFilterPill({
   onToggle: () => void;
   isAnime: boolean;
 }) {
+  const phone = isPhoneShell();
   const display = isAnime
     ? languages
     : languages.filter((l) => normalizeLangCode(l) !== "ja");
@@ -46,7 +48,7 @@ export function LanguageFilterPill({
   return (
     <button
       onClick={onToggle}
-      className={`flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10.5px] font-semibold uppercase tracking-[0.18em] transition-colors ${
+      className={`flex items-center gap-1.5 rounded-full ${phone ? "min-h-11 px-4 py-2 text-[12px]" : "px-2.5 py-1 text-[10.5px]"} font-semibold uppercase tracking-[0.18em] transition-colors ${
         on
           ? "bg-ink/8 text-ink-muted hover:bg-ink/14 hover:text-ink"
           : "text-ink-subtle/80 hover:bg-canvas/60 hover:text-ink-muted"

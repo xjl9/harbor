@@ -3,6 +3,7 @@ import { useState } from "react";
 import { FormatBadge, type BadgeKind } from "@/components/format-badge";
 import { summarizeFilter, type CustomStreamFilter } from "@/lib/streams/custom-filters";
 import { facetBadge } from "./filter-builder/badge-maps";
+import { isPhoneShell } from "./picker-utils";
 import type { FacetDim, FacetOption } from "./stream-facets";
 
 export type FacetRowEntry = {
@@ -29,6 +30,7 @@ export function FacetMenuRow({
   onNewFilter: () => void;
   onEditFilter: (filter: CustomStreamFilter) => void;
 }) {
+  const phone = isPhoneShell();
   const [openKey, setOpenKey] = useState<string | null>(null);
   const visible = facets.filter((f) => f.options.length >= 2 || f.value !== "all");
   const narrowed = facets.some((f) => f.value !== "all") || activeFilterId !== null;
@@ -66,7 +68,7 @@ export function FacetMenuRow({
         type="button"
         onClick={onNewFilter}
         title={filters.length > 0 ? "New filter" : "Create a custom filter"}
-        className="flex items-center gap-1 rounded-full bg-elevated/50 px-2.5 py-1.5 text-[12.5px] font-semibold text-ink-muted ring-1 ring-edge-soft/60 transition-colors hover:bg-elevated hover:text-ink"
+        className={`flex items-center gap-1 rounded-full bg-elevated/50 ${phone ? "min-h-11 px-3.5 py-2 text-[13px]" : "px-2.5 py-1.5 text-[12.5px]"} font-semibold text-ink-muted ring-1 ring-edge-soft/60 transition-colors hover:bg-elevated hover:text-ink`}
       >
         <Plus size={13} strokeWidth={2.6} />
         {filters.length === 0 && "Filter"}
@@ -75,7 +77,7 @@ export function FacetMenuRow({
         <button
           type="button"
           onClick={reset}
-          className="px-2 py-1.5 text-[11.5px] font-semibold text-ink-subtle transition-colors hover:text-ink"
+          className={`${phone ? "min-h-11 px-3 py-2 text-[12px]" : "px-2 py-1.5 text-[11.5px]"} font-semibold text-ink-subtle transition-colors hover:text-ink`}
         >
           Reset
         </button>
@@ -97,6 +99,7 @@ function FacetMenu({
   onClose: () => void;
   onPick: (value: string) => void;
 }) {
+  const phone = isPhoneShell();
   const active = entry.value !== "all";
   const badgeSlot = entry.options.some((o) => facetBadge(entry.dim.key, o.key) !== null);
   return (
@@ -105,7 +108,7 @@ function FacetMenu({
         type="button"
         onClick={onToggle}
         aria-expanded={open}
-        className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[12.5px] font-semibold transition-colors ${
+        className={`flex items-center gap-1.5 rounded-full ${phone ? "min-h-11 px-3.5 py-2 text-[13px]" : "px-3 py-1.5 text-[12.5px]"} font-semibold transition-colors ${
           active
             ? "bg-ink text-canvas"
             : "bg-elevated/50 text-ink-muted ring-1 ring-edge-soft/60 hover:bg-elevated hover:text-ink"
@@ -128,7 +131,7 @@ function FacetMenu({
             onClick={onClose}
             className="fixed inset-0 z-10 cursor-default"
           />
-          <div className="absolute start-0 top-full z-20 mt-1 min-w-[176px] rounded-xl bg-elevated p-1 ring-1 ring-edge shadow-[0_18px_44px_-14px_rgba(0,0,0,0.7)]">
+          <div className={`absolute start-0 top-full z-20 mt-1 min-w-[176px] rounded-xl bg-elevated p-1 ring-1 ring-edge shadow-[0_18px_44px_-14px_rgba(0,0,0,0.7)]${phone ? " max-w-[calc(100vw-40px)]" : ""}`}>
             <MenuItem
               label="All"
               count={entry.total}
@@ -170,13 +173,14 @@ function MenuItem({
   badgeSlot: boolean;
   onClick: () => void;
 }) {
+  const phone = isPhoneShell();
   return (
     <button
       type="button"
       onClick={onClick}
       className={`flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-start text-[13px] transition-colors hover:bg-raised ${
         selected ? "font-semibold text-ink" : "text-ink-muted"
-      }`}
+      }${phone ? " min-h-11" : ""}`}
     >
       {badgeSlot && (
         <span className="flex h-4 w-9 shrink-0 items-center overflow-hidden [&_img]:!h-4 [&_img]:!max-h-4 [&_img]:!w-auto">
@@ -205,9 +209,10 @@ function SavedChip({
   onToggle: () => void;
   onEdit: () => void;
 }) {
+  const phone = isPhoneShell();
   return (
     <span
-      className={`group flex items-center rounded-full text-[12.5px] font-semibold transition-colors ${
+      className={`group flex items-center rounded-full ${phone ? "text-[13px]" : "text-[12.5px]"} font-semibold transition-colors ${
         active
           ? "bg-ink text-canvas"
           : "bg-elevated/50 text-ink-muted ring-1 ring-edge-soft/60 hover:bg-elevated hover:text-ink"
@@ -218,7 +223,7 @@ function SavedChip({
         onClick={onToggle}
         aria-pressed={active}
         title={summarizeFilter(filter)}
-        className="max-w-[180px] truncate py-1.5 pe-1 ps-3"
+        className={phone ? "max-w-[180px] min-h-11 truncate py-2 pe-1 ps-3.5" : "max-w-[180px] truncate py-1.5 pe-1 ps-3"}
       >
         {filter.name}
       </button>
@@ -226,7 +231,7 @@ function SavedChip({
         type="button"
         onClick={onEdit}
         aria-label={`Edit ${filter.name}`}
-        className={`flex h-[26px] w-6 items-center justify-center rounded-full pe-1 transition-colors ${
+        className={`flex ${phone ? "h-11 w-9" : "h-[26px] w-6"} items-center justify-center rounded-full pe-1 transition-colors ${
           active ? "text-canvas/70 hover:text-canvas" : "text-ink-subtle hover:text-ink"
         }`}
       >

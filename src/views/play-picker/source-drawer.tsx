@@ -6,6 +6,7 @@ import { FlagStack } from "@/components/flag";
 import { FormatBadge, RuleBadges } from "@/components/format-badge";
 import { HostMatchChip } from "@/components/host-match-chip";
 import { useDebridClients } from "@/lib/debrid/registry";
+import { useT } from "@/lib/i18n";
 import { useSettings } from "@/lib/settings";
 import type { ScoredStream } from "@/lib/streams/types";
 import type { PlayEpisode } from "@/lib/view";
@@ -16,6 +17,9 @@ import {
   buildAddonOptions,
   contributorLabel,
   displayTitle,
+  isPhoneShell,
+  PHONE_FOCUS,
+  PHONE_KICKER,
   streamSummaryParts,
   tierChipBadges,
   torrentFilename,
@@ -35,6 +39,7 @@ export function SourceDrawer({
   resolvingId,
   showName,
   episode,
+  failedStreams,
 }: {
   open: boolean;
   onToggle: () => void;
@@ -49,7 +54,10 @@ export function SourceDrawer({
   resolvingId: string | null;
   showName: string;
   episode?: PlayEpisode;
+  failedStreams?: Set<ScoredStream>;
 }) {
+  const t = useT();
+  const phone = isPhoneShell();
   const [addonFilter, setAddonFilter] = useState("all");
   const addonOptions = useMemo(() => buildAddonOptions(streams), [streams]);
   const shown = useMemo(
@@ -63,13 +71,19 @@ export function SourceDrawer({
     <div className="flex flex-col gap-4">
       <button
         onClick={onToggle}
-        className="group flex w-fit items-center gap-3 rounded-full border border-edge-soft/70 bg-canvas/70 px-4 py-2 text-[11.5px] font-semibold uppercase tracking-[0.22em] text-ink-muted transition-all hover:border-edge hover:bg-canvas/90 hover:text-ink"
+        className={
+          phone
+            ? `group flex min-h-12 w-full items-center gap-3 rounded-2xl border border-edge-soft bg-elevated/40 px-5 text-[11px] font-semibold uppercase tracking-[0.22em] text-ink-muted transition-all hover:border-edge hover:text-ink ${PHONE_FOCUS}`
+            : "group flex w-fit items-center gap-3 rounded-full border border-edge-soft/70 bg-canvas/70 px-4 py-2 text-[11.5px] font-semibold uppercase tracking-[0.22em] text-ink-muted transition-all hover:border-edge hover:bg-canvas/90 hover:text-ink"
+        }
       >
         <ChevronDown
           size={14}
-          className={`transition-transform duration-300 ${open ? "rotate-180" : ""}`}
+          className={`transition-transform duration-300 ${open ? "rotate-180" : ""}${phone ? " order-last shrink-0" : ""}`}
         />
-        <span>{open ? "Hide all sources" : "All sources"}</span>
+        <span className={phone ? "me-auto text-start" : undefined}>
+          {open ? "Hide all sources" : "All sources"}
+        </span>
         <span className="text-ink-subtle/80">{count}</span>
         {usedAddons.length > 0 && (
           <span className="flex items-center gap-2">
@@ -108,8 +122,14 @@ export function SourceDrawer({
               divider={i > 0}
               showName={showName}
               episode={episode}
+              failed={failedStreams?.has(s) ?? false}
             />
           ))}
+          {phone && shown.length > 80 && (
+            <li className={`border-t border-edge-soft/30 px-5 py-3.5 ${PHONE_KICKER}`}>
+              {t("Showing 80 of {n}", { n: shown.length })}
+            </li>
+          )}
         </ul>
       )}
     </div>
@@ -127,10 +147,11 @@ function AddonPill({
   label: string;
   count: number;
 }) {
+  const phone = isPhoneShell();
   return (
     <button
       onClick={onClick}
-      className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[12px] font-semibold transition-colors ${
+      className={`flex items-center gap-1.5 rounded-full ${phone ? "min-h-11 px-3.5 py-2 text-[13px]" : "px-3 py-1.5 text-[12px]"} font-semibold transition-colors ${
         active
           ? "bg-ink text-canvas"
           : "bg-elevated/50 text-ink-muted ring-1 ring-edge-soft/60 hover:bg-elevated hover:text-ink"
@@ -152,6 +173,7 @@ function SourceRow({
   divider,
   showName,
   episode,
+  failed = false,
 }: {
   stream: ScoredStream;
   debrids: ReturnType<typeof useDebridClients>;
@@ -162,8 +184,11 @@ function SourceRow({
   divider: boolean;
   showName: string;
   episode?: PlayEpisode;
+  failed?: boolean;
 }) {
   const { settings } = useSettings();
+  const t = useT();
+  const phone = isPhoneShell();
   const cachedDebrids = debrids.filter((d) => stream.cached[d.slug]);
   const libraryDebrids = debrids.filter((d) => stream.inLibrary[d.slug]);
   const addonCached = anyStreamCached(stream);
@@ -177,13 +202,32 @@ function SourceRow({
       <button
         onClick={onPlay}
         disabled={resolving}
-        className="group flex w-full items-start gap-4 px-5 py-4 text-start transition-colors hover:bg-ink/5 disabled:cursor-wait disabled:opacity-60"
+        className={
+          phone
+            ? `group flex w-full flex-col items-stretch gap-2 px-5 py-4 text-start transition-colors disabled:cursor-wait disabled:opacity-60 ${
+                failed ? "bg-danger/5 ring-1 ring-danger/40" : ""
+              } ${PHONE_FOCUS}`
+            : "group flex w-full items-start gap-4 px-5 py-4 text-start transition-colors hover:bg-ink/5 disabled:cursor-wait disabled:opacity-60"
+        }
       >
         <div className="flex min-w-0 flex-1 flex-col gap-1.5">
           <div className="flex min-w-0 items-center gap-2">
-            <p className="min-w-0 truncate font-mono text-[14px] text-ink">{title}</p>
+            <p
+              className={
+                phone
+                  ? "min-w-0 font-mono text-[13px] text-ink [overflow-wrap:anywhere] line-clamp-2"
+                  : "min-w-0 truncate font-mono text-[14px] text-ink"
+              }
+            >
+              {title}
+            </p>
             <EditionChip stream={stream} />
           </div>
+          {phone && failed && (
+            <p className="text-[12.5px] font-medium text-danger">
+              {t("Unavailable, try another.")}
+            </p>
+          )}
           {fname && fname !== title && (
             <p className="min-w-0 break-all font-mono text-[11px] leading-snug text-ink-subtle/75 line-clamp-2">
               {fname}
@@ -202,7 +246,13 @@ function SourceRow({
             </span>
           </p>
         </div>
-        <div className="flex shrink-0 flex-col items-end gap-2 pt-0.5">
+        <div
+          className={
+            phone
+              ? "flex w-full flex-row flex-wrap items-center justify-between gap-x-3 gap-y-1.5 pt-1"
+              : "flex shrink-0 flex-col items-end gap-2 pt-0.5"
+          }
+        >
           <div className="flex items-center gap-3">
           {link && <CopyLinkButton url={link} />}
           <HostMatchChip match={match} />
@@ -214,14 +264,30 @@ function SourceRow({
             />
           )}
           {libraryDebrids.length > 0 ? (
-            <span className="inline-flex items-center gap-1.5 text-[12px] font-bold uppercase tracking-[0.14em] text-accent">
+            <span
+              className={
+                phone
+                  ? "inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.08em] text-accent"
+                  : "inline-flex items-center gap-1.5 text-[12px] font-bold uppercase tracking-[0.14em] text-accent"
+              }
+            >
               <Zap size={12} fill="currentColor" strokeWidth={0} />
-              In {libraryDebrids.map((d) => d.name).join(" + ")}
+              {phone
+                ? `In · ${libraryDebrids.map((d) => d.slug.toUpperCase()).join("+")}`
+                : `In ${libraryDebrids.map((d) => d.name).join(" + ")}`}
             </span>
           ) : cachedDebrids.length > 0 ? (
-            <span className="inline-flex items-center gap-1.5 text-[12px] font-semibold uppercase tracking-[0.14em] text-ink-muted">
+            <span
+              className={
+                phone
+                  ? "inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-muted"
+                  : "inline-flex items-center gap-1.5 text-[12px] font-semibold uppercase tracking-[0.14em] text-ink-muted"
+              }
+            >
               <Zap size={11} strokeWidth={2} />
-              Cached on {cachedDebrids.map((d) => d.name).join(" + ")}
+              {phone
+                ? `Cached · ${cachedDebrids.map((d) => d.slug.toUpperCase()).join("+")}`
+                : `Cached on ${cachedDebrids.map((d) => d.name).join(" + ")}`}
             </span>
           ) : addonCached ? (
             <span className="inline-flex items-center gap-1.5 text-[12px] font-semibold uppercase tracking-[0.14em] text-ink-muted">
@@ -245,19 +311,31 @@ function SourceRow({
             <ExternalLink
               size={14}
               strokeWidth={2.2}
-              className="text-ink-muted/50 transition-all group-hover:text-ink"
+              className={
+                phone ? "text-ink-muted" : "text-ink-muted/50 transition-all group-hover:text-ink"
+              }
             />
           ) : (
             <Play
               size={15}
               fill="currentColor"
               strokeWidth={0}
-              className="text-ink-muted/50 transition-all group-hover:translate-x-0.5 group-hover:text-ink"
+              className={
+                phone
+                  ? "text-ink-muted"
+                  : "text-ink-muted/50 transition-all group-hover:translate-x-0.5 group-hover:text-ink"
+              }
             />
           )}
           </div>
           {tierChipBadges(stream).length > 0 && (
-            <div className="flex max-w-[320px] flex-wrap items-center justify-end gap-1.5">
+            <div
+              className={
+                phone
+                  ? "flex max-w-full flex-wrap items-center justify-start gap-1.5"
+                  : "flex max-w-[320px] flex-wrap items-center justify-end gap-1.5"
+              }
+            >
               {tierChipBadges(stream).map((k) => (
                 <FormatBadge key={k} kind={k} size="sm" />
               ))}
