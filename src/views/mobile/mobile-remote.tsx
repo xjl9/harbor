@@ -79,7 +79,7 @@ export function MobileRemoteProvider({ children }: { children: ReactNode }) {
           (opts?.season != null && opts?.episode != null
             ? { season: opts.season, episode: opts.episode }
             : undefined);
-        view.openPicker(meta, episode, { autoPlay: true, resume: opts?.resume ?? true });
+        view.openPicker(meta, episode, { autoPlay: settings.instantPlay, resume: opts?.resume ?? true });
         return;
       }
       const sent = sendCommand({
@@ -94,7 +94,7 @@ export function MobileRemoteProvider({ children }: { children: ReactNode }) {
       });
       showFlash(sent, sent ? `Playing on your computer` : "Not connected to a computer");
     },
-    [native, view, sendCommand, showFlash],
+    [native, view, sendCommand, showFlash, settings.instantPlay],
   );
 
   const openOnHost = useCallback(
