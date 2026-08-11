@@ -78,9 +78,19 @@ class HarborPlayerPlugin: Plugin {
   // else, including extensionless URLs. Reasoning in ios/README.md.
   private static let avPlayerExtensions: Set<String> = ["m3u8", "mp4", "m4v", "mov"]
 
+  // Plain string inspection, not Foundation URL parsing: Foundation rejects
+  // strings Android happily plays (unencoded spaces, some IPv6/userinfo
+  // shapes), and routing must never be the reason a stream fails. mpv does its
+  // own URL handling, so the default engine needs no parseable URL at all.
   private static func routesToMpv(_ url: String) -> Bool {
-    guard let parsed = URL(string: url) else { return false }
-    return !avPlayerExtensions.contains(parsed.pathExtension.lowercased())
+    var base = url
+    if let cut = base.firstIndex(where: { $0 == "?" || $0 == "#" }) {
+      base = String(base[..<cut])
+    }
+    base = base.lowercased()
+    let segment = base.components(separatedBy: "/").last ?? base
+    guard let dot = segment.lastIndex(of: ".") else { return true }
+    return !avPlayerExtensions.contains(String(segment[segment.index(after: dot)...]))
   }
 
   @objc public func load(_ invoke: Invoke) throws {

@@ -6,10 +6,12 @@
 /// both engines speak the same wire contract through HarborPlayerEngine.
 ///
 /// Threading doctrine (client.h): the client API is thread-safe, so commands run on
-/// the main queue; events drain on a serial queue kicked by mpv_set_wakeup_callback,
-/// which itself never calls the client API. Teardown is unobserve, then the quit
-/// command, then MPV_EVENT_SHUTDOWN on the event queue where mpv_terminate_destroy
-/// runs; shuttingDown fences every main-queue entry point once quit is issued.
+/// the main queue (sidecar sub-adds run sequentially on the event queue instead, so
+/// a slow subtitle host never blocks main); events drain on a serial queue kicked by
+/// mpv_set_wakeup_callback, which itself never calls the client API. Teardown is
+/// unobserve, then the quit command, then MPV_EVENT_SHUTDOWN on the event queue
+/// where mpv_terminate_destroy runs; shuttingDown fences every main-queue entry
+/// point once quit is issued.
 import AVFoundation
 import Libmpv
 import UIKit
@@ -52,6 +54,12 @@ final class HarborMpvViewController: UIViewController, HarborPlayerEngine {
   private var resumeOnForeground = false
   private var resumeAfterInterruption = false
   private var notificationTokens: [NSObjectProtocol] = []
+  // Bumped per configure; drain-to-main hops carry the generation they were
+  // drained under and drop themselves once it moves on, standing in for the
+  // full teardown Android's onNewIntent path gets for free.
+  private var loadGeneration = 0
+  // Last user seek target, for the EOF shortfall heuristic.
+  private var lastSeekTargetSec: Double?
 
   // Latest observed values; the tick timer reads these instead of polling the core
   // (mpv coalesces observation events, so this matches the 500 ms cadence).
@@ -60,9 +68,11 @@ final class HarborMpvViewController: UIViewController, HarborPlayerEngine {
   private var cachedBuffered = 0.0
   private var cachedPaused = false
   private var cachedPausedForCache = false
+  private var cachedEofReached = false
 
   // Only touched on eventQueue.
   private var eventLoopEnded = false
+  private var drainGeneration = 0
 
   override func viewDidLoad() {
     super.viewDidLoad()
@@ -131,22 +141,26 @@ final class HarborMpvViewController: UIViewController, HarborPlayerEngine {
   /// and Android's singleTask onNewIntent path.
   func configure(_ args: LoadArgs) {
     loadViewIfNeeded()
+    loadGeneration += 1
+    let generation = loadGeneration
+    // Mirror the generation onto the event queue: events drained before this
+    // lands carry the previous value and their main hops drop themselves,
+    // without any cross-thread read of main-queue state.
+    eventQueue.async { [weak self] in self?.drainGeneration = generation }
     closedReported = false
     lastStatus = nil
     fileLoaded = false
     currentTitle = args.title
     pendingSubtitles = args.subtitles
+    lastSeekTargetSec = nil
     cachedPosition = 0
     cachedDuration = 0
     cachedBuffered = 0
     cachedPaused = false
     cachedPausedForCache = false
+    cachedEofReached = false
     emitState("loading")
 
-    guard let url = URL(string: args.url) else {
-      emitState("error", "SOURCE_URL_INVALID")
-      return
-    }
     ensureMpv()
     guard mpv != nil, !shuttingDown else {
       emitState("error", "ERROR_CODE_UNSPECIFIED")
@@ -154,7 +168,9 @@ final class HarborMpvViewController: UIViewController, HarborPlayerEngine {
     }
 
     applyHeaders(args.headers)
-    var commandArgs = [url.absoluteString, "replace", "-1"]
+    // The raw string goes to mpv, which does its own URL handling; Foundation's
+    // stricter grammar must not reject what Android plays.
+    var commandArgs = [args.url, "replace", "-1"]
     if args.startAtSec > 0 {
       // Per-file option in the loadfile options slot (input.rst 0.41): reverts
       // automatically at end of playback. The 0.38+ arg order requires index -1
@@ -171,10 +187,19 @@ final class HarborMpvViewController: UIViewController, HarborPlayerEngine {
     updateNowPlaying()
   }
 
-  func doPlay() { setFlag("pause", false) }
+  func doPlay() {
+    // Revive from the keep-open end screen: the playhead is parked on the last
+    // frame, so unpausing alone would hit EOF again immediately. Seeking back
+    // plus pause=no is the documented resume (options.rst 0.41 keep-open and
+    // keep-open-pause).
+    if cachedEofReached { doSeek(0) }
+    setFlag("pause", false)
+  }
+
   func doPause() { setFlag("pause", true) }
 
   func doSeek(_ sec: Double) {
+    lastSeekTargetSec = sec
     runCommand("seek", [String(format: "%.3f", sec), "absolute"])
   }
 
@@ -226,6 +251,11 @@ final class HarborMpvViewController: UIViewController, HarborPlayerEngine {
     // avfoundation first: the audiounit AO goes silent on multichannel HDMI and
     // AirPlay routes (MPVKit issue #67, AO shipped fixed in MPVKit 1.0.0).
     mpv_set_option_string(handle, "ao", "avfoundation,audiounit")
+    // keep-open holds the last file open and paused at EOF instead of
+    // unloading it (options.rst 0.41), so the end screen stays seekable;
+    // normal completion is then signaled by the eof-reached property, not
+    // MPV_EVENT_END_FILE, which only fires when a file is unloaded (client.h).
+    mpv_set_option_string(handle, "keep-open", "yes")
     // mpv reads the CAMetalLayer object pointer back out of the int64 wid option
     // (context_moltenvk patch); the layer is retained by this controller's view
     // for the core's whole lifetime.
@@ -244,6 +274,7 @@ final class HarborMpvViewController: UIViewController, HarborPlayerEngine {
     mpv_observe_property(handle, 0, "demuxer-cache-time", MPV_FORMAT_DOUBLE)
     mpv_observe_property(handle, 0, "pause", MPV_FORMAT_FLAG)
     mpv_observe_property(handle, 0, "paused-for-cache", MPV_FORMAT_FLAG)
+    mpv_observe_property(handle, 0, "eof-reached", MPV_FORMAT_FLAG)
     mpv_observe_property(handle, 0, "track-list", MPV_FORMAT_NONE)
 
     // The wakeup context holds a retain on self until mpv_terminate_destroy has
@@ -317,13 +348,17 @@ final class HarborMpvViewController: UIViewController, HarborPlayerEngine {
       guard let data = event.data else { return }
       handlePropertyEvent(data.assumingMemoryBound(to: mpv_event_property.self).pointee)
     case MPV_EVENT_FILE_LOADED:
-      DispatchQueue.main.async { self.handleFileLoaded() }
+      let generation = drainGeneration
+      DispatchQueue.main.async { self.handleFileLoaded(generation: generation) }
     case MPV_EVENT_END_FILE:
       guard let data = event.data else { return }
       let end = data.assumingMemoryBound(to: mpv_event_end_file.self).pointee
       let reason = end.reason
       let mpvError = end.error
-      DispatchQueue.main.async { self.handleEndFile(reason: reason, mpvError: mpvError) }
+      let generation = drainGeneration
+      DispatchQueue.main.async {
+        self.handleEndFile(reason: reason, mpvError: mpvError, generation: generation)
+      }
     case MPV_EVENT_LOG_MESSAGE:
       guard let data = event.data else { return }
       let message = data.assumingMemoryBound(to: mpv_event_log_message.self).pointee
@@ -357,15 +392,16 @@ final class HarborMpvViewController: UIViewController, HarborPlayerEngine {
     } else if property.format == MPV_FORMAT_FLAG, let data = property.data {
       flagValue = data.assumingMemoryBound(to: CInt.self).pointee != 0
     }
+    let generation = drainGeneration
     DispatchQueue.main.async {
-      self.applyPropertyChange(name, double: doubleValue, flag: flagValue)
+      self.applyPropertyChange(name, double: doubleValue, flag: flagValue, generation: generation)
     }
   }
 
   // MARK: - Event handling (main queue)
 
-  private func applyPropertyChange(_ name: String, double: Double?, flag: Bool?) {
-    guard !shuttingDown else { return }
+  private func applyPropertyChange(_ name: String, double: Double?, flag: Bool?, generation: Int) {
+    guard !shuttingDown, generation == loadGeneration else { return }
     switch name {
     case "time-pos":
       // Unavailable (idle, post-EOF) keeps the last value so closed reports a
@@ -383,6 +419,19 @@ final class HarborMpvViewController: UIViewController, HarborPlayerEngine {
       // Mirror media3: buffering drops to loading, recovery returns to ready.
       // fileLoaded gates the initial pre-load notification.
       if fileLoaded { emitState(value ? "loading" : "ready") }
+    case "eof-reached":
+      guard let value = flag else { return }
+      let wasEof = cachedEofReached
+      cachedEofReached = value
+      guard fileLoaded else { return }
+      if value {
+        emitEofOutcome()
+      } else if wasEof {
+        // Seeking off the end screen resumes the session; media3 reports
+        // READY again after a post-ended seek, and JS needs the flip to
+        // leave the end screen.
+        emitState("ready")
+      }
     case "track-list":
       // Covers late-appearing tracks and selection changes from any source.
       if fileLoaded { emitTracks() }
@@ -391,8 +440,8 @@ final class HarborMpvViewController: UIViewController, HarborPlayerEngine {
     }
   }
 
-  private func handleFileLoaded() {
-    guard !shuttingDown, mpv != nil else { return }
+  private func handleFileLoaded(generation: Int) {
+    guard !shuttingDown, mpv != nil, generation == loadGeneration else { return }
     fileLoaded = true
     addSidecarSubtitles()
     emitState("ready")
@@ -400,24 +449,36 @@ final class HarborMpvViewController: UIViewController, HarborPlayerEngine {
     updateNowPlaying()
   }
 
-  private func handleEndFile(reason: mpv_end_file_reason, mpvError: Int32) {
-    guard !shuttingDown else { return }
+  private func handleEndFile(reason: mpv_end_file_reason, mpvError: Int32, generation: Int) {
+    guard !shuttingDown, generation == loadGeneration else { return }
     fileLoaded = false
     switch reason {
     case MPV_END_FILE_REASON_EOF:
-      // client.h: EOF also fires on truncated files and dropped connections. A
-      // playhead nowhere near a known duration is a broken stream, not a finish.
-      if cachedDuration > 0 && cachedPosition < cachedDuration - 10 {
-        emitState("error", "ERROR_CODE_IO_NETWORK_CONNECTION_FAILED")
-      } else {
-        emitState("ended")
-      }
+      // keep-open holds a normal finish open, so this reason survives only in
+      // the corner cases where mpv unloads the file anyway (options.rst: "if
+      // errors or unusual circumstances happen"); classify it like eof-reached.
+      emitEofOutcome()
     case MPV_END_FILE_REASON_ERROR:
       emitState("error", media3ErrorCode(mpvError))
     default:
       // STOP and QUIT come from our own swap or teardown; REDIRECT is playlist
       // bookkeeping. None of them is a JS-visible state change.
       break
+    }
+  }
+
+  // Shared by the eof-reached observer and the residual END_FILE EOF path.
+  // client.h: EOF "may also happen on incomplete or corrupted files, or if the
+  // network connection was interrupted", so a playhead well short of a known
+  // duration reports an error. The exception is a user seek into the final
+  // stretch, where a keyframe landing plus demuxer EOF is a legitimate finish.
+  private func emitEofOutcome() {
+    let shortfall = cachedDuration > 0 && cachedPosition < cachedDuration - 10
+    let seekedNearEnd = lastSeekTargetSec.map { $0 >= cachedDuration - 15 } ?? false
+    if shortfall && !seekedNearEnd {
+      emitState("error", "ERROR_CODE_IO_NETWORK_CONNECTION_FAILED")
+    } else {
+      emitState("ended")
     }
   }
 
@@ -466,18 +527,48 @@ final class HarborMpvViewController: UIViewController, HarborPlayerEngine {
     // Android flags every sidecar SELECTION_FLAG_DEFAULT and lets media3 pick
     // one; the mpv equivalent: leave a container-selected subtitle alone,
     // otherwise the first sidecar gets the select flag (input.rst 0.41 sub-add).
-    // Async because a slow subtitle host must not block the main thread; a
-    // failed add is logged by mpv and the track simply never appears.
     var selectFirst = !hasSelectedSubtitle()
+    var batch: [[String]] = []
     for subtitle in pendingSubtitles {
-      guard URL(string: subtitle.url) != nil else { continue }
+      guard !subtitle.url.isEmpty else { continue }
       var args = [subtitle.url, selectFirst ? "select" : "auto"]
       if let title = subtitle.label ?? subtitle.lang {
         args.append(title)
         if let lang = subtitle.lang { args.append(lang) }
       }
-      runCommandAsync("sub-add", args)
+      batch.append(args)
       selectFirst = false
+    }
+    runSubtitleBatch(batch)
+  }
+
+  // Sequential synchronous sub-adds on the event queue: tracks appear in
+  // payload order like Android (an async batch completes in arbitrary order)
+  // while a slow subtitle host still never blocks the main thread. Commands
+  // off the main queue are fine, the client API serializes everything through
+  // one lock (client.h Multithreading). A sync sub-add parks only its calling
+  // thread: the caller blocks "even if the core continues playback" (input.rst
+  // Synchronous vs. Asynchronous), and the command runs on an mpv worker that
+  // unlocks the core around the network open (mp_add_external_file), so
+  // main-queue client calls never wait out a slow fetch; the stall is confined
+  // to event draining on this queue. A failed add is logged and the track
+  // simply never appears. The handle can only die on this same serial queue
+  // (SHUTDOWN), so it cannot be destroyed mid-batch.
+  private func runSubtitleBatch(_ batch: [[String]]) {
+    guard !batch.isEmpty else { return }
+    let generation = loadGeneration
+    eventQueue.async { [weak self] in
+      guard let self = self, !self.eventLoopEnded, self.drainGeneration == generation,
+        let handle = self.mpv
+      else { return }
+      for args in batch {
+        let status = self.withCommandArgv("sub-add", args) { argv in mpv_command(handle, argv) }
+        if status < 0 {
+          NSLog(
+            "%@",
+            "[harbor-player] mpv sub-add failed: \(String(cString: mpv_error_string(status)))")
+        }
+      }
     }
   }
 
@@ -498,7 +589,11 @@ final class HarborMpvViewController: UIViewController, HarborPlayerEngine {
   }
 
   private func tick() {
-    onTick?(cachedPosition, cachedDuration, cachedBuffered, isPlayingNow)
+    // keep-open parks the playhead on the last frame, which can sit a hair off
+    // the reported duration; media3 reports position == duration at ENDED, so
+    // clamp for parity while the end screen is up.
+    let position = cachedEofReached && cachedDuration > 0 ? cachedDuration : cachedPosition
+    onTick?(position, cachedDuration, cachedBuffered, isPlayingNow)
     updateNowPlaying()
   }
 
@@ -684,7 +779,7 @@ final class HarborMpvViewController: UIViewController, HarborPlayerEngine {
     if cachedPaused { doPlay() } else { doPause() }
   }
 
-  // MARK: - Client API helpers (main queue)
+  // MARK: - Client API helpers (main queue; withCommandArgv itself is queue-agnostic)
 
   private func withCommandArgv(
     _ name: String, _ args: [String],
@@ -713,16 +808,6 @@ final class HarborMpvViewController: UIViewController, HarborPlayerEngine {
       NSLog("%@", "[harbor-player] mpv \(name) failed: \(String(cString: mpv_error_string(status)))")
     }
     return status
-  }
-
-  private func runCommandAsync(_ name: String, _ args: [String]) {
-    guard let handle = mpv, !shuttingDown else { return }
-    // mpv copies the argv before returning (client.h); replies arrive as
-    // COMMAND_REPLY events, which the drain ignores.
-    let status = withCommandArgv(name, args) { argv in mpv_command_async(handle, 0, argv) }
-    if status < 0 {
-      NSLog("%@", "[harbor-player] mpv \(name) failed: \(String(cString: mpv_error_string(status)))")
-    }
   }
 
   private func setString(_ name: String, _ value: String) {

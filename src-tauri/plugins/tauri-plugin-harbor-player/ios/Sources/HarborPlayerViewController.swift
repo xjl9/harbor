@@ -58,7 +58,7 @@ final class HarborPlayerViewController: AVPlayerViewController, AVPlayerViewCont
     activateAudioSession()
     detachObservers()
 
-    guard let url = URL(string: args.url) else {
+    guard let url = Self.foundationURL(args.url) else {
       onState?("error", "SOURCE_URL_INVALID")
       return
     }
@@ -93,6 +93,18 @@ final class HarborPlayerViewController: AVPlayerViewController, AVPlayerViewCont
     player?.play()
     startTicking()
     updateNowPlaying()
+  }
+
+  // Routing no longer pre-validates with Foundation (mpv needs no parseable
+  // URL), so this leg recovers what it can: retry with percent-encoding for
+  // strings Android plays but URL(string:) rejects, such as unencoded spaces.
+  // Only reached when the raw parse failed, so valid URLs never re-encode.
+  private static func foundationURL(_ raw: String) -> URL? {
+    if let url = URL(string: raw) { return url }
+    guard let encoded = raw.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) else {
+      return nil
+    }
+    return URL(string: encoded)
   }
 
   func doPlay() { player?.play() }

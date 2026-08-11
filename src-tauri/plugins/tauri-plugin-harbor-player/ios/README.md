@@ -19,9 +19,11 @@ the sideloaded build is where it runs.
 
 ## Engine routing
 
-One function, `HarborPlayerPlugin.routesToMpv`, decides per `load`:
-AVPlayer for URL path extensions `.m3u8`, `.mp4`, `.m4v`, `.mov`; mpv for
-everything else, including extensionless URLs. Reasoning:
+One function, `HarborPlayerPlugin.routesToMpv`, decides per `load`: AVPlayer
+for extensions `.m3u8`, `.mp4`, `.m4v`, `.mov`; mpv for everything else,
+including extensionless URLs. The rule is plain string inspection: lowercase
+the part before any `?` or `#`, then take what follows the last `.` of the
+last `/`-segment. Reasoning:
 
 - Misrouting an MKV to AVPlayer is a hard failure (the container will not open).
   Misrouting an MP4 to mpv still plays; it only loses PiP and the system UI. So
@@ -29,7 +31,14 @@ everything else, including extensionless URLs. Reasoning:
   unambiguously good at.
 - Extensionless URLs (most debrid and torrent stream links) are overwhelmingly
   MKV-family, so they go to mpv.
-- `URL.pathExtension` ignores query strings, so signed URLs route correctly.
+- String inspection, not Foundation URL parsing: Foundation rejects strings
+  Android happily plays (unencoded spaces, some IPv6/userinfo shapes), and no
+  stream may fail purely because Foundation is stricter than Android. mpv gets
+  the raw string and does its own loading. The AVPlayer leg still needs a
+  Foundation `URL`, so it retries `URL(string:)` once with percent-encoding
+  (`.urlQueryAllowed`) and only then rejects with `SOURCE_URL_INVALID`.
+- Cutting at `?`/`#` keeps query strings out of the extension, so signed URLs
+  route correctly.
 - A `load` that lands on the other engine while a player is presented swaps
   surfaces with no `closed` event (the old controller's `onClosed` is silenced,
   it is dismissed without animation, and the new engine presents from the
@@ -55,9 +64,10 @@ Events (via the base class `trigger`, listened to with
 - `tick` `{positionSec, durationSec, bufferedSec, playing}`: 500 ms wall-clock
   `Timer` on the main RunLoop in `.common` mode on both engines. `durationSec`
   is 0 until known. mpv feeds the tick from cached property observations
-  (`time-pos`, `duration`, `demuxer-cache-time`, `pause`, `paused-for-cache`);
-  mpv coalesces observation events, so the cache is always current without
-  polling the core.
+  (`time-pos`, `duration`, `demuxer-cache-time`, `pause`, `paused-for-cache`,
+  `eof-reached`); mpv coalesces observation events, so the cache is always
+  current without polling the core. On the keep-open end screen `positionSec`
+  clamps to `durationSec` (media3 reports position == duration at ENDED).
 - `state` `{status, errorCode?}`: `loading|ready|ended|error`. Error codes are
   media3-style names on both engines, never raw NSError domains or mpv error
   strings: the JS `mapError` substring-matches and would misclassify raw values.
@@ -79,9 +89,9 @@ parity target being Android's MediaSession.
 
 MPVKit's iOS stack, mirrored from its demo: `vo=gpu-next`, `gpu-api=vulkan`,
 `gpu-context=moltenvk` (an MPVKit patch, not upstream mpv), `hwdec=videotoolbox`,
-log level `warn`. The render target is a `CAMetalLayer` sublayer whose object
-pointer is passed as the `wid` option (`MPV_FORMAT_INT64`) before
-`mpv_initialize`. `ao=avfoundation,audiounit` because audiounit goes silent on
+log level `warn`, plus `keep-open=yes` (see the state machine). The render
+target is a `CAMetalLayer` sublayer whose object pointer is passed as the
+`wid` option (`MPV_FORMAT_INT64`) before `mpv_initialize`. `ao=avfoundation,audiounit` because audiounit goes silent on
 multichannel HDMI/AirPlay routes (MPVKit #67). The layer subclass rejects
 MoltenVK's forced 1x1 drawableSize (mpv PR #13651).
 
@@ -103,6 +113,11 @@ The order here is load-bearing; deviations crash in mpv's shutdown path.
    destroy.
 5. The wakeup context holds a retain on the controller until after
    `mpv_terminate_destroy`, so the C callback can never see a dangling pointer.
+6. Every drain-to-main hop carries a load generation captured on the event
+   queue; `configure` bumps the counter (and mirrors it onto the event queue),
+   so stale hops from the previous stream drop themselves on arrival. This is
+   the in-place-swap analogue of the teardown Android's onNewIntent path gets
+   for free.
 
 ### Loading
 
@@ -123,9 +138,12 @@ The order here is load-bearing; deviations crash in mpv's shutdown path.
   `MPV_EVENT_FILE_LOADED`, each payload subtitle is `sub-add`-ed with its
   title/lang. If the container did not select a subtitle on its own, the first
   sidecar gets the `select` flag, mirroring Android's SELECTION_FLAG_DEFAULT
-  behavior. Adds run through `mpv_command_async` so a slow subtitle host never
-  blocks the main thread; a failed add is logged by mpv and the track simply
-  never appears. Payload mime hints are unnecessary here, mpv sniffs the format.
+  behavior. Adds run sequentially on the event queue with synchronous
+  `mpv_command` (the client API is thread-safe, client.h Multithreading), so
+  tracks appear in payload order like Android and a slow subtitle host still
+  never blocks the main thread; a failed add is logged by mpv and the track
+  simply never appears. Payload mime hints are unnecessary here, mpv sniffs
+  the format.
 
 ### State machine
 
@@ -133,14 +151,30 @@ The order here is load-bearing; deviations crash in mpv's shutdown path.
 load()                          -> loading
 MPV_EVENT_FILE_LOADED           -> ready (+ sub-add batch + tracks)
 paused-for-cache true/false     -> loading / ready (buffer stall + recovery)
-MPV_EVENT_END_FILE  EOF         -> ended, EXCEPT: position more than 10 s short
+eof-reached true                -> ended, EXCEPT: position more than 10 s short
                                    of a known duration reports
                                    ERROR_CODE_IO_NETWORK_CONNECTION_FAILED
                                    (client.h: EOF also fires on truncated files
-                                   and dropped connections)
+                                   and dropped connections), UNLESS the last
+                                   user seek targeted the final 15 s, where a
+                                   keyframe landing plus demuxer EOF is a
+                                   legitimate finish
+eof-reached false after ended   -> ready (a seek left the end screen)
+MPV_EVENT_END_FILE  EOF         -> same classification as eof-reached; with
+                                   keep-open this fires only in corner cases
+                                   where mpv unloads the file anyway
 MPV_EVENT_END_FILE  ERROR       -> error, mpv code mapped to media3 names
 MPV_EVENT_END_FILE  STOP/QUIT   -> nothing (our own swap/teardown)
 ```
+
+End-screen liveness: `keep-open=yes` (set before `mpv_initialize`) keeps the
+file open and paused at EOF instead of unloading it (options.rst 0.41), and
+`MPV_EVENT_END_FILE` only fires when a file is unloaded (client.h), so `ended`
+comes from observing the `eof-reached` property. The end screen stays live:
+position/duration keep ticking (position clamps to duration), seeking works,
+and `play` revives playback by seeking to 0 before `pause=no` (unpausing alone
+would immediately hit EOF again; seek back plus unpause is the documented
+resume, options.rst keep-open/keep-open-pause).
 
 mpv error mapping: `MPV_ERROR_LOADING_FAILED` ->
 `ERROR_CODE_IO_NETWORK_CONNECTION_FAILED`; `MPV_ERROR_UNKNOWN_FORMAT` and
