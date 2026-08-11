@@ -131,13 +131,18 @@ jobs:
       # options server) and aborts under raw xcodebuild. Build the staticlib
       # directly instead; this also compiles the plugin's Swift package via
       # swift-rs, so Swift errors surface here with readable diagnostics.
+      # cargo rustc --crate-type staticlib: the crate also declares cdylib,
+      # and building that forces a full link that cannot resolve mpv_* symbols
+      # (MPVKit's static frameworks are linked by Xcode via SPM, not by cargo).
+      # A staticlib legitimately carries undefined symbols for the final link.
       - name: Build Rust static library (iOS)
         env:
           IPHONEOS_DEPLOYMENT_TARGET: "15.0"
         run: |
           set -euo pipefail
-          cargo build --manifest-path src-tauri/Cargo.toml --lib --release \
-            --target aarch64-apple-ios --features tauri/custom-protocol
+          cargo rustc --manifest-path src-tauri/Cargo.toml --lib --release \
+            --target aarch64-apple-ios --features tauri/custom-protocol \
+            --crate-type staticlib
 
       # Stage the lib where the project links it (Externals/arm64/<config>)
       # and no-op the xcode-script phase so the archive just compiles Swift
