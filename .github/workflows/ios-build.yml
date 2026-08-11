@@ -55,9 +55,36 @@ jobs:
       - name: Fetch bundled fonts
         run: pnpm run setup:fonts
 
+      # MPVKit ships static xcframeworks; the plugin's Swift package needs the
+      # Libmpv slice on disk because swift-rs compiles it with `swift build`,
+      # which cannot process SPM binary targets (the Package.swift feeds the
+      # slice in via -F). The checksum asset is the SwiftPM checksum, which is
+      # the plain SHA-256 of the zip. This must run before cargo check: build
+      # scripts execute under check too, so the Swift compile happens there.
+      - name: Fetch Libmpv xcframework (MPVKit 1.0.0)
+        run: |
+          set -euo pipefail
+          DIR=src-tauri/plugins/tauri-plugin-harbor-player/ios/.frameworks
+          mkdir -p "$DIR"
+          curl -fsSL --retry 3 -o /tmp/Libmpv.xcframework.zip \
+            https://github.com/mpvkit/MPVKit/releases/download/1.0.0/Libmpv.xcframework.zip
+          curl -fsSL --retry 3 -o /tmp/Libmpv.xcframework.checksum.txt \
+            https://github.com/mpvkit/MPVKit/releases/download/1.0.0/Libmpv.xcframework.checksum.txt
+          EXPECTED=$(tr -d '[:space:]' < /tmp/Libmpv.xcframework.checksum.txt)
+          ACTUAL=$(shasum -a 256 /tmp/Libmpv.xcframework.zip | awk '{print $1}')
+          echo "expected: $EXPECTED"
+          echo "actual:   $ACTUAL"
+          test "$EXPECTED" = "$ACTUAL"
+          unzip -q /tmp/Libmpv.xcframework.zip -d "$DIR"
+          test -d "$DIR/Libmpv.xcframework/ios-arm64/Libmpv.framework"
+
       # Fast-fail diagnostic: surfaces Rust compile errors for the iOS target
-      # before the Xcode machinery can obscure them.
+      # before the Xcode machinery can obscure them. The deployment target must
+      # match the build step below; swift-rs falls back to ios13.0 without it,
+      # which breaks unguarded iOS 15 API use in the plugin.
       - name: cargo check (aarch64-apple-ios)
+        env:
+          IPHONEOS_DEPLOYMENT_TARGET: "15.0"
         run: cargo check --manifest-path src-tauri/Cargo.toml --target aarch64-apple-ios
 
       - name: Generate Xcode project
@@ -106,7 +133,7 @@ jobs:
       # swift-rs, so Swift errors surface here with readable diagnostics.
       - name: Build Rust static library (iOS)
         env:
-          IPHONEOS_DEPLOYMENT_TARGET: "14.0"
+          IPHONEOS_DEPLOYMENT_TARGET: "15.0"
         run: |
           set -euo pipefail
           cargo build --manifest-path src-tauri/Cargo.toml --lib --release \
@@ -140,6 +167,16 @@ jobs:
           echo "project=$XCODEPROJ" >> "$GITHUB_OUTPUT"
           echo "scheme=$SCHEME" >> "$GITHUB_OUTPUT"
 
+      # Resolve the MPVKit package graph up front so SPM failures surface in
+      # their own log instead of dying inside the archive output.
+      - name: Resolve Swift package dependencies
+        run: |
+          set -euo pipefail
+          xcodebuild -resolvePackageDependencies \
+            -project "${{ steps.xc.outputs.project }}" \
+            -scheme "${{ steps.xc.outputs.scheme }}" \
+            2>&1 | tee spm-resolve.log
+
       # Unsigned archive for the sideload flow (AltStore or Sideloadly re-sign
       # on install). The Rust staticlib is prebuilt and staged above; the
       # archive compiles the thin Xcode Sources and links.
@@ -156,6 +193,32 @@ jobs:
             -skipPackagePluginValidation -skipMacroValidation \
             CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO \
             archive 2>&1 | tee xcodebuild-archive.log
+
+      # MPVKit 1.0.0 xcframeworks are static archives, so all mpv/ffmpeg code
+      # must land inside the single app binary. A Frameworks/ directory in the
+      # .app means a dynamic slice slipped in (bloat, and AltStore/Sideloadly
+      # would have to re-sign nested binaries); missing mpv_ symbols mean
+      # Libmpv never linked.
+      - name: Verify static link (no Frameworks dir, mpv symbols present)
+        run: |
+          set -euo pipefail
+          APP=$(find build/harbor-unsigned.xcarchive/Products/Applications -maxdepth 1 -name '*.app' | head -1)
+          test -n "$APP"
+          if [ -d "$APP/Frameworks" ]; then
+            echo "unexpected Frameworks directory in the app bundle:" >&2
+            ls -la "$APP/Frameworks" >&2
+            exit 1
+          fi
+          BIN="$APP/$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$APP/Info.plist")"
+          test -f "$BIN"
+          echo "--- linked dylibs ---"
+          otool -L "$BIN"
+          nm -gU "$BIN" > /tmp/defined-symbols.txt
+          grep ' _mpv_' /tmp/defined-symbols.txt > /tmp/mpv-symbols.txt || true
+          MPV_SYMS=$(wc -l < /tmp/mpv-symbols.txt | tr -d ' ')
+          echo "defined mpv_ symbols: $MPV_SYMS"
+          head -12 /tmp/mpv-symbols.txt
+          test "$MPV_SYMS" -gt 0
 
       - name: Package unsigned IPA
         run: |
@@ -182,6 +245,7 @@ jobs:
           name: ios-build-diagnostics
           path: |
             xcodebuild-archive.log
+            spm-resolve.log
             src-tauri/gen/apple/project.yml
             src-tauri/gen/apple/*.xcodeproj/project.pbxproj
             src-tauri/gen/apple/*_iOS/Info.plist

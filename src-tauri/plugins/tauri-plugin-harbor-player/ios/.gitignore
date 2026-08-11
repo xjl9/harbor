@@ -1,3 +1,6 @@
 # SwiftPM build artifacts
 .build/
 Package.resolved
+
+# xcframeworks extracted by CI for the swift-rs compile (see Package.swift)
+.frameworks/
