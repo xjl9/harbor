@@ -25,7 +25,9 @@ let package = Package(
     ],
     dependencies: [
         .package(name: "Tauri", path: "../.tauri/tauri-api"),
-        .package(url: "https://github.com/mpvkit/MPVKit.git", exact: "1.0.0")
+        // Version moves in lockstep with the pin in src-tauri/ios-template/project.yml
+    // and the Libmpv download URL in .github/workflows/ios-build.yml.
+    .package(url: "https://github.com/mpvkit/MPVKit.git", exact: "1.0.0")
     ],
     targets: [
         .target(

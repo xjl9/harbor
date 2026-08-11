@@ -61,6 +61,8 @@ jobs:
       # slice in via -F). The checksum asset is the SwiftPM checksum, which is
       # the plain SHA-256 of the zip. This must run before cargo check: build
       # scripts execute under check too, so the Swift compile happens there.
+      # Version moves in lockstep with the pins in the plugin ios/Package.swift
+      # and src-tauri/ios-template/project.yml.
       - name: Fetch Libmpv xcframework (MPVKit 1.0.0)
         run: |
           set -euo pipefail

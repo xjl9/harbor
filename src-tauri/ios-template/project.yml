@@ -10,6 +10,8 @@ configs:
 packages:
   MPVKit:
     url: https://github.com/mpvkit/MPVKit
+    # Lockstep with the pin in the plugin ios/Package.swift and the Libmpv
+    # download URL in .github/workflows/ios-build.yml.
     exactVersion: 1.0.0
 settingGroups:
   app:
