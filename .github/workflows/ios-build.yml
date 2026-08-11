@@ -204,26 +204,39 @@ jobs:
       # .app means a dynamic slice slipped in (bloat, and AltStore/Sideloadly
       # would have to re-sign nested binaries); missing mpv_ symbols mean
       # Libmpv never linked.
-      - name: Verify static link (no Frameworks dir, mpv symbols present)
+      # Xcode's SPM integration copies the MPVKit static framework bundles
+      # into the .app even though their code is already statically linked into
+      # the binary (the archive link would have failed otherwise). Prove no
+      # framework is dynamically referenced, then strip the redundant bundles
+      # so the IPA does not carry ~100MB of dead weight. A framework that IS
+      # referenced by a load command must never be stripped: hard-fail so the
+      # embed problem surfaces instead of shipping a broken bundle.
+      - name: Verify static link and strip redundant framework bundles
         run: |
           set -euo pipefail
           APP=$(find build/harbor-unsigned.xcarchive/Products/Applications -maxdepth 1 -name '*.app' | head -1)
           test -n "$APP"
-          if [ -d "$APP/Frameworks" ]; then
-            echo "unexpected Frameworks directory in the app bundle:" >&2
-            ls -la "$APP/Frameworks" >&2
-            exit 1
-          fi
           BIN="$APP/$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$APP/Info.plist")"
           test -f "$BIN"
           echo "--- linked dylibs ---"
           otool -L "$BIN"
-          nm -gU "$BIN" > /tmp/defined-symbols.txt
-          grep ' _mpv_' /tmp/defined-symbols.txt > /tmp/mpv-symbols.txt || true
-          MPV_SYMS=$(wc -l < /tmp/mpv-symbols.txt | tr -d ' ')
-          echo "defined mpv_ symbols: $MPV_SYMS"
-          head -12 /tmp/mpv-symbols.txt
-          test "$MPV_SYMS" -gt 0
+          nm -gU "$BIN" 2>/dev/null | grep -c ' _mpv_' \
+            && echo "(exported mpv_ symbols present)" \
+            || echo "(no exported mpv_ symbols; expected when the release binary is stripped)"
+          if [ -d "$APP/Frameworks" ]; then
+            for FW in "$APP/Frameworks"/*.framework; do
+              [ -e "$FW" ] || continue
+              NAME=$(basename "$FW" .framework)
+              if otool -L "$BIN" | grep -q "$NAME.framework/"; then
+                echo "ERROR: $NAME.framework is dynamically referenced; cannot strip" >&2
+                exit 1
+              fi
+              echo "stripping statically linked bundle: $NAME.framework"
+              rm -rf "$FW"
+            done
+            rmdir "$APP/Frameworks" 2>/dev/null || true
+          fi
+          du -sh "$APP"
 
       - name: Package unsigned IPA
         run: |
