@@ -9,6 +9,11 @@ use crate::models::*;
 #[cfg(target_os = "android")]
 const PLUGIN_IDENTIFIER: &str = "app.harbor.player";
 
+// Binds the @_cdecl("init_plugin_harbor_player") entry point exported by
+// ios/Sources/HarborPlayerPlugin.swift.
+#[cfg(target_os = "ios")]
+tauri::ios_plugin_binding!(init_plugin_harbor_player);
+
 pub fn init<R: Runtime, C: DeserializeOwned>(
     _app: &AppHandle<R>,
     api: PluginApi<R, C>,

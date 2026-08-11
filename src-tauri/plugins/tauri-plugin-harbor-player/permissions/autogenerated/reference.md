@@ -14,6 +14,7 @@ Allows the Harbor native player commands.
 - `allow-enter-pip`
 - `allow-registerListener`
 - `allow-removeListener`
+- `allow-remove-listener`
 
 ## Permission Table
 
@@ -176,6 +177,32 @@ Enables the removeListener command without any pre-configured scope.
 <td>
 
 Denies the removeListener command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`harbor-player:allow-remove-listener`
+
+</td>
+<td>
+
+Enables the remove_listener command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`harbor-player:deny-remove-listener`
+
+</td>
+<td>
+
+Denies the remove_listener command without any pre-configured scope.
 
 </td>
 </tr>

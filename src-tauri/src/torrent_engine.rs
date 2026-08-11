@@ -380,6 +380,13 @@ async fn ensure_session(app: &AppHandle) -> Result<Arc<Session>, String> {
 }
 
 pub fn ensure_started_on_setup(app: &AppHandle) {
+    // Policy, not a compile gate: the engine and its commands still build on iOS,
+    // but launch-time DHT/socket churn is a battery and background-execution problem
+    // there, so the engine only starts on first explicit use (ensure_session).
+    if cfg!(target_os = "ios") {
+        eprintln!("[torrent-engine] deferred on iOS by policy: starting on first use instead of at launch");
+        return;
+    }
     if crate::settings_store::read_defer_torrent_engine(app) {
         eprintln!("[torrent-engine] deferred: starting on first use instead of at launch");
         return;

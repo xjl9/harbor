@@ -1,0 +1,3 @@
+# SwiftPM build artifacts
+.build/
+Package.resolved

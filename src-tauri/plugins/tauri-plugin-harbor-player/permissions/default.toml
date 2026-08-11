@@ -13,4 +13,5 @@ permissions = [
     "allow-enter-pip",
     "allow-registerListener",
     "allow-removeListener",
+    "allow-remove-listener",
 ]

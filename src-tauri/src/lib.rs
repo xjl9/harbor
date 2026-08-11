@@ -543,9 +543,10 @@ pub fn run() {
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_deep_link::init())
         .plugin(tauri_plugin_process::init());
-    // Native media3/ExoPlayer player — Android only (desktop uses libmpv, and the
-    // crate's desktop impl is a no-op). Handles MKV/HEVC the webview can't decode.
-    #[cfg(target_os = "android")]
+    // Native player, mobile only: media3/ExoPlayer on Android, AVPlayer on iOS
+    // (desktop uses libmpv, and the crate's desktop impl is a no-op). Handles
+    // MKV/HEVC the webview can't decode.
+    #[cfg(mobile)]
     let app_builder = app_builder.plugin(tauri_plugin_harbor_player::init());
     #[cfg(desktop)]
     let app_builder = app_builder
