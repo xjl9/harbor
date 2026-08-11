@@ -99,6 +99,32 @@ jobs:
       - name: Build frontend
         run: pnpm build
 
+      # The generated project's "Build Rust Code" phase runs tauri ios
+      # xcode-script, which requires a live parent tauri CLI process (its
+      # options server) and aborts under raw xcodebuild. Build the staticlib
+      # directly instead; this also compiles the plugin's Swift package via
+      # swift-rs, so Swift errors surface here with readable diagnostics.
+      - name: Build Rust static library (iOS)
+        env:
+          IPHONEOS_DEPLOYMENT_TARGET: "14.0"
+        run: |
+          set -euo pipefail
+          cargo build --manifest-path src-tauri/Cargo.toml --lib --release \
+            --target aarch64-apple-ios --features tauri/custom-protocol
+
+      # Stage the lib where the project links it (Externals/arm64/<config>)
+      # and no-op the xcode-script phase so the archive just compiles Swift
+      # sources and links.
+      - name: Stage libapp.a and bypass the xcode-script phase
+        run: |
+          set -euo pipefail
+          mkdir -p src-tauri/gen/apple/Externals/arm64/release
+          cp src-tauri/target/aarch64-apple-ios/release/libharbor_lib.a \
+            src-tauri/gen/apple/Externals/arm64/release/libapp.a
+          PBXPROJ=$(find src-tauri/gen/apple -name project.pbxproj | head -1)
+          sed -i '' 's|shellScript = "pnpm tauri ios xcode-script.*|shellScript = "exit 0";|' "$PBXPROJ"
+          grep -c 'shellScript = "exit 0";' "$PBXPROJ"
+
       # The plain -list output includes the configuration names; cargo-mobile2
       # projects use lowercase debug/release, so a case mismatch against the
       # -configuration flag below is diagnosable from this listing.
@@ -115,8 +141,8 @@ jobs:
           echo "scheme=$SCHEME" >> "$GITHUB_OUTPUT"
 
       # Unsigned archive for the sideload flow (AltStore or Sideloadly re-sign
-      # on install). The project's "Build Rust Code" phase compiles the Rust
-      # staticlib during the archive.
+      # on install). The Rust staticlib is prebuilt and staged above; the
+      # archive compiles the thin Xcode Sources and links.
       - name: xcodebuild archive (unsigned)
         run: |
           set -euo pipefail
