@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useSettings } from "@/lib/settings";
 import type { ContentCategory } from "@/lib/settings/types";
 import { useRegisterSheet } from "./mobile-sheet-lock";
+import { useKeyboardInset } from "./use-keyboard-inset";
 
 // Only settings the mobile shell actually reads are surfaced here, so every
 // control changes something real on the device — no decorative toggles.
@@ -361,6 +362,7 @@ function RegionSheet({
   onClose: () => void;
 }) {
   useRegisterSheet(true);
+  const keyboardInset = useKeyboardInset();
   const [entered, setEntered] = useState(false);
   const [leaving, setLeaving] = useState(false);
   const [pending, setPending] = useState<string | null>(null);
@@ -399,7 +401,10 @@ function RegionSheet({
   const open = entered && !leaving;
 
   return (
-    <div className="fixed inset-0 z-[80] flex items-end justify-center">
+    <div
+      className="fixed inset-0 z-[80] flex items-end justify-center transition-[padding] duration-150"
+      style={{ paddingBottom: keyboardInset }}
+    >
       <button
         type="button"
         aria-label="Close"
@@ -428,7 +433,7 @@ function RegionSheet({
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search regions"
             aria-label="Search regions"
-            className={`mt-3 w-full rounded-xl border border-edge-soft bg-canvas/60 px-3.5 py-2.5 text-[14px] text-ink placeholder:text-ink-subtle ${FOCUS}`}
+            className={`mt-3 w-full rounded-xl border border-edge-soft bg-canvas/60 px-3.5 py-2.5 text-[16px] text-ink placeholder:text-ink-subtle ${FOCUS}`}
           />
         </div>
         <div className="mt-2 overflow-y-auto px-3">

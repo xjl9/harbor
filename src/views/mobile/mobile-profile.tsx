@@ -290,7 +290,7 @@ function EditSheet({
           autoCorrect="off"
           spellCheck={false}
           inputMode={field.key === "remoteHostAddress" ? "decimal" : "text"}
-          className="mt-4 w-full rounded-xl border border-edge-soft/70 bg-canvas/70 px-4 py-3 text-[15px] text-ink placeholder:text-ink-subtle focus:border-accent focus:outline-none"
+          className="mt-4 w-full rounded-xl border border-edge-soft/70 bg-canvas/70 px-4 py-3 text-[16px] text-ink placeholder:text-ink-subtle focus:border-accent focus:outline-none"
           onKeyDown={(e) => {
             if (e.key === "Enter") onSave(value);
           }}

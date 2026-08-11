@@ -1128,14 +1128,26 @@ function PickerScrollTop({
     "flex h-14 w-14 items-center justify-center rounded-full bg-canvas/80 text-ink shadow-[0_14px_36px_-12px_rgba(0,0,0,0.7)] ring-1 ring-edge-soft backdrop-blur-md transition-transform duration-200 hover:scale-105 active:scale-95";
   return (
     <>
-      <div className="animate-in fade-in slide-in-from-bottom-3 fixed bottom-7 start-7 z-[60]">
+      <div
+        className="animate-in fade-in slide-in-from-bottom-3 fixed z-[60]"
+        style={{
+          bottom: "calc(env(safe-area-inset-bottom, 0px) + 1.75rem)",
+          insetInlineStart: "calc(env(safe-area-inset-left, 0px) + 1.75rem)",
+        }}
+      >
         <HoverTooltip label={t("Back")} side="top" align="center">
           <button type="button" onClick={onBack} aria-label={t("Back")} className={circle}>
             <ChevronLeft size={26} strokeWidth={2.4} className="dir-icon" />
           </button>
         </HoverTooltip>
       </div>
-      <div className="animate-in fade-in slide-in-from-bottom-3 fixed bottom-7 end-7 z-[60] flex items-center gap-3">
+      <div
+        className="animate-in fade-in slide-in-from-bottom-3 fixed z-[60] flex items-center gap-3"
+        style={{
+          bottom: "calc(env(safe-area-inset-bottom, 0px) + 1.75rem)",
+          insetInlineEnd: "calc(env(safe-area-inset-right, 0px) + 1.75rem)",
+        }}
+      >
         {onRefresh && (
           <HoverTooltip label={t("Refresh sources")} side="top" align="center">
             <button

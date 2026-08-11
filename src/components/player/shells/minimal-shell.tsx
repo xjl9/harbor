@@ -37,9 +37,14 @@ export function MinimalShell({
         </div>
       )}
       <div
-        className={`pointer-events-none absolute inset-x-0 bottom-0 z-20 flex flex-col gap-2 bg-gradient-to-t from-black/70 to-transparent px-8 pb-5 pt-12 transition-opacity duration-300 ${
+        className={`pointer-events-none absolute inset-x-0 bottom-0 z-20 flex flex-col gap-2 bg-gradient-to-t from-black/70 to-transparent pt-12 transition-opacity duration-300 ${
           visible ? "opacity-100" : "opacity-0"
         }`}
+        style={{
+          paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 1.25rem)",
+          paddingLeft: "calc(env(safe-area-inset-left, 0px) + 2rem)",
+          paddingRight: "calc(env(safe-area-inset-right, 0px) + 2rem)",
+        }}
       >
         <div className="pointer-events-auto flex items-center gap-4">
           <button

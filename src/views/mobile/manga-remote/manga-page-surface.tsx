@@ -17,7 +17,7 @@ export function MangaPageSurface({ chapterLabel, displayPage, pageCount, spreadL
   const atEnd = displayPage >= pageCount - 1 && !gestures.canNext;
 
   return (
-    <div ref={surfaceRef} {...handlers} className="relative min-h-0 flex-1 select-none overflow-hidden">
+    <div ref={surfaceRef} {...handlers} className="relative min-h-0 flex-1 touch-none select-none overflow-hidden">
       <div className="pointer-events-none absolute inset-0 flex items-center justify-center px-6">
         <div
           className="relative flex aspect-[2/3] w-[min(78%,320px)] flex-col items-center justify-center gap-2.5 rounded-[22px] border border-edge-soft/70 bg-elevated shadow-[0_24px_60px_-24px_rgba(0,0,0,0.7)]"

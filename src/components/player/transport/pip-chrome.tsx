@@ -95,9 +95,14 @@ export function PipChrome({
       </div>
 
       <div
-        className={`pointer-events-none absolute inset-x-0 bottom-0 z-20 flex flex-col gap-2 bg-gradient-to-t from-black/85 via-black/40 to-transparent px-3 pt-8 pb-3 transition-opacity duration-200 ${
+        className={`pointer-events-none absolute inset-x-0 bottom-0 z-20 flex flex-col gap-2 bg-gradient-to-t from-black/85 via-black/40 to-transparent pt-8 transition-opacity duration-200 ${
           visible ? "opacity-100" : "opacity-0"
         }`}
+        style={{
+          paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 0.75rem)",
+          paddingLeft: "calc(env(safe-area-inset-left, 0px) + 0.75rem)",
+          paddingRight: "calc(env(safe-area-inset-right, 0px) + 0.75rem)",
+        }}
       >
         <PipSeekBar durationSec={snap.durationSec} onSeek={onSeek} />
         <div className="pointer-events-auto flex items-center justify-center gap-1">

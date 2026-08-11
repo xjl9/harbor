@@ -72,6 +72,20 @@ body,
   overflow: hidden;
 }
 
+/* iOS WebKit: stop text inflation on rotate, the gray tap flash, and the
+   long-press callout sheet; all inherited, all inert elsewhere. */
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+}
+
+html,
+body {
+  overscroll-behavior: none;
+}
+
 html[data-mpv-embed="1"],
 html[data-mpv-embed="1"] body,
 html[data-mpv-embed="1"] #root {
@@ -383,6 +397,7 @@ main[data-kids="on"]::-webkit-scrollbar-thumb:hover {
     border: 0;
     padding: 0;
     cursor: pointer;
+    touch-action: manipulation;
     transition: scale 90ms var(--ease-out);
   }
 
@@ -396,6 +411,14 @@ main[data-kids="on"]::-webkit-scrollbar-thumb:hover {
     background: none;
     border: 0;
     outline: none;
+  }
+
+  /* body sets user-select: none; iOS WebKit needs fields opted back in or
+     long-press selection and the paste callout break inside them. */
+  input,
+  textarea {
+    user-select: text;
+    -webkit-user-select: text;
   }
 
   img {

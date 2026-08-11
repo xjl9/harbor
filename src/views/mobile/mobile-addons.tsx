@@ -104,7 +104,7 @@ export function MobileAddons({ onClose }: { onClose: () => void }) {
               autoCapitalize="none"
               autoCorrect="off"
               spellCheck={false}
-              className="min-w-0 flex-1 bg-transparent py-1.5 text-[15px] text-ink placeholder:text-ink-subtle focus:outline-none"
+              className="min-w-0 flex-1 bg-transparent py-1.5 text-[16px] text-ink placeholder:text-ink-subtle focus:outline-none"
               onKeyDown={(e) => {
                 if (e.key === "Enter") install(url, "url");
               }}

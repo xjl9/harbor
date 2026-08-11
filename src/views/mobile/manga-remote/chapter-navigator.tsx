@@ -140,7 +140,7 @@ export function ChapterNavigator({
             inputMode="search"
             enterKeyHint="search"
             placeholder="Search chapters"
-            className="min-w-0 flex-1 bg-transparent text-[15px] text-ink placeholder:text-ink-subtle focus:outline-none"
+            className="min-w-0 flex-1 bg-transparent text-[16px] text-ink placeholder:text-ink-subtle focus:outline-none"
           />
         </div>
       </div>
