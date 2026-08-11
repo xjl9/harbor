@@ -2,7 +2,7 @@ import { createHtml5Bridge } from "@/lib/player/html5";
 import { createMpvBridge, probeMpv, type MpvRect } from "@/lib/player/mpv";
 import { createNativeBridge } from "@/lib/player/android-native";
 import type { PlayerBridge } from "@/lib/player/bridge";
-import { isLinuxDesktop, isMacDesktop, isMobileNative, isWindowsDesktop } from "@/lib/platform";
+import { isLinuxDesktop, isMacDesktop, isMobileNative, isWindowsDesktop, osClass } from "@/lib/platform";
 
 export const SYNC_DRIFT_TOLERANCE_S = 0.6;
 export const SYNC_SUPPRESS_MS = 1400;
@@ -54,6 +54,7 @@ export function formatNames(names: string[]): string {
 
 export async function pickBridge(
   want: "auto" | "html5" | "mpv" | "native",
+  engineSetting: "auto" | "html5" | "mpv" | "native",
   notWebReady: boolean,
   mpvOpts: {
     anime4k: boolean;
@@ -69,8 +70,17 @@ export async function pickBridge(
     getEmbedRect?: () => Promise<MpvRect | null> | MpvRect | null;
   },
 ): Promise<{ bridge: PlayerBridge; engine: "html5" | "mpv" | "native" }> {
-  // Native Android build: media3/ExoPlayer decodes MKV/HEVC the webview can't.
+  // Native mobile build: the native player (media3/ExoPlayer on Android,
+  // AVPlayer on iOS) decodes MKV/HEVC the webview can't, so it stays the
+  // default. On iOS an explicit html5 engine setting is honored as a
+  // deliberate escape hatch to the in-webview player. The hatch checks the raw
+  // setting, not `want`: live content force-computes `want` to html5 for the
+  // desktop/web path and must still get the native surface here (Android
+  // already ignores `want` entirely).
   if (isMobileNative()) {
+    if (osClass() === "ios" && engineSetting === "html5") {
+      return { bridge: createHtml5Bridge(), engine: "html5" };
+    }
     return { bridge: createNativeBridge(), engine: "native" };
   }
   if (want === "html5") return { bridge: createHtml5Bridge(), engine: "html5" };

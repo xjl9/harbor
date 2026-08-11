@@ -17,6 +17,27 @@ import { mountCustomPip } from "./pip";
 
 let DOCUMENT_PIP_KNOWN_BROKEN = false;
 
+// WebKit ships the prefixed presentation-mode API instead of the standard
+// requestPictureInPicture, so iOS WKWebView PiP goes through these members.
+type WebkitVideo = HTMLVideoElement & {
+  webkitSupportsPresentationMode?: (mode: string) => boolean;
+  webkitSetPresentationMode?: (mode: "inline" | "picture-in-picture" | "fullscreen") => void;
+  webkitPresentationMode?: "inline" | "picture-in-picture" | "fullscreen";
+};
+
+let WEBKIT_PIP_SUPPORTED: boolean | null = null;
+
+function supportsWebkitPip(): boolean {
+  if (WEBKIT_PIP_SUPPORTED === null) {
+    const probe = document.createElement("video") as WebkitVideo;
+    WEBKIT_PIP_SUPPORTED =
+      typeof probe.webkitSupportsPresentationMode === "function" &&
+      typeof probe.webkitSetPresentationMode === "function" &&
+      probe.webkitSupportsPresentationMode("picture-in-picture");
+  }
+  return WEBKIT_PIP_SUPPORTED;
+}
+
 export function createHtml5Bridge(): PlayerBridge {
   let video: HTMLVideoElement | null = null;
   let host: HTMLElement | null = null;
@@ -254,6 +275,9 @@ export function createHtml5Bridge(): PlayerBridge {
     video.addEventListener("error", onError);
     video.addEventListener("waiting", onAny);
     video.addEventListener("canplay", onAny);
+    // WebKit-only; keeps the snapshot and controls in sync when the system
+    // exits PiP (lock screen, PiP window close) rather than the app.
+    video.addEventListener("webkitpresentationmodechanged", onAny);
     videoAudio(video)?.addEventListener?.("change", onAny);
     video.textTracks?.addEventListener?.("change", onAny);
   };
@@ -325,6 +349,7 @@ export function createHtml5Bridge(): PlayerBridge {
     video.removeEventListener("error", onError);
     video.removeEventListener("waiting", onAny);
     video.removeEventListener("canplay", onAny);
+    video.removeEventListener("webkitpresentationmodechanged", onAny);
     videoAudio(video)?.removeEventListener?.("change", onAny);
     video.textTracks?.removeEventListener?.("change", onAny);
   };
@@ -446,6 +471,9 @@ export function createHtml5Bridge(): PlayerBridge {
     },
     async play() {
       if (!video) return;
+      // Bind on first playback, not first PiP entry, so iOS lock-screen and
+      // control-center handlers work without the user ever touching PiP.
+      bindMediaSession();
       const v = video;
       if (pendingStart != null && v.readyState < 1) {
         await new Promise<void>((resolve) => {
@@ -659,6 +687,11 @@ export function createHtml5Bridge(): PlayerBridge {
     async requestPiP() {
       if (!video || !host) return;
       if (pipWindow) return;
+      const wk = video as WebkitVideo;
+      if (wk.webkitPresentationMode === "picture-in-picture") {
+        wk.webkitSetPresentationMode?.("inline");
+        return;
+      }
       bindMediaSession();
       const dpip = (window as Window & { documentPictureInPicture?: { requestWindow: (o: { width: number; height: number }) => Promise<Window> } }).documentPictureInPicture;
       const tryDocumentPip = async (): Promise<boolean> => {
@@ -726,6 +759,14 @@ export function createHtml5Bridge(): PlayerBridge {
         } catch (e) {
           console.warn("[html5] native PiP failed", e);
         }
+        return;
+      }
+      if (supportsWebkitPip()) {
+        try {
+          wk.webkitSetPresentationMode?.("picture-in-picture");
+        } catch (e) {
+          console.warn("[html5] webkit PiP failed", e);
+        }
       }
     },
     async exitPiP() {
@@ -734,6 +775,13 @@ export function createHtml5Bridge(): PlayerBridge {
           pipWindow.close();
         } catch {}
         if (pipCleanup) pipCleanup();
+      }
+      const wk = video as WebkitVideo | null;
+      if (wk && wk.webkitPresentationMode === "picture-in-picture") {
+        try {
+          wk.webkitSetPresentationMode?.("inline");
+        } catch {}
+        return;
       }
       const d = document as Document & { exitPictureInPicture?: () => Promise<void> };
       if (typeof d.exitPictureInPicture === "function") {
@@ -756,7 +804,7 @@ export function createHtml5Bridge(): PlayerBridge {
       const docPiP = "documentPictureInPicture" in window;
       return {
         engine: "html5",
-        pictureInPicture: !!nativePiP || docPiP,
+        pictureInPicture: !!nativePiP || docPiP || supportsWebkitPip(),
         airplay: typeof (window as { WebKitPlaybackTargetAvailabilityEvent?: unknown }).WebKitPlaybackTargetAvailabilityEvent !== "undefined",
         chromecast: false,
         hdrPassthrough: false,

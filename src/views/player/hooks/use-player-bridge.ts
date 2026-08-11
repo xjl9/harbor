@@ -112,7 +112,7 @@ export function usePlayerBridge(params: {
           cssViewH: document.documentElement.clientHeight,
         };
       };
-      const { bridge: choose, engine: chosen } = await pickBridge(want, src.notWebReady === true, {
+      const { bridge: choose, engine: chosen } = await pickBridge(want, settings.playerEngine, src.notWebReady === true, {
         anime4k: anime4kOn,
         hdrToSdr: settings.playerHdrToSdr,
         rtxHdr: settings.playerRtxHdr && !settings.playerHdrToSdr && !svpOn,

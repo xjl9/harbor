@@ -78,8 +78,8 @@ export function usePipMode(params: {
 
   const togglePipMode = useCallback(async () => {
     const isTauri = "__TAURI__" in window || "__TAURI_INTERNALS__" in window;
-    // Mobile native (Android) uses the ExoPlayer activity's own PiP, not the
-    // desktop window_pip_* commands.
+    // Mobile native uses the player surface's own PiP (Android Activity or
+    // iOS view controller), not the desktop window_pip_* commands.
     if (!isTauri || isMobileNative()) {
       bridgeRef.current?.requestPiP();
       return;

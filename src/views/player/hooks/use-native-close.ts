@@ -1,17 +1,18 @@
 import { useEffect, useRef } from "react";
 
 /**
- * Native mobile only. The player runs in a separate Android Activity layered on
- * top of the webview; the webview PlayerView stays mounted underneath purely to
- * drive the bridge (load/play) and mirror position for resume + scrobble. When
- * that Activity is torn down for good (user backs out / finishes), the native
- * bridge flags snap.nativeClosed. Pop the now-empty webview player view back to
- * the detail page so it does not linger under the closed native surface.
+ * Native mobile only. The player runs in a separate native surface (Android
+ * Activity or iOS view controller) layered on top of the webview; the webview
+ * PlayerView stays mounted underneath purely to drive the bridge (load/play)
+ * and mirror position for resume + scrobble. When that surface is torn down for
+ * good (user backs out / finishes), the native bridge flags snap.nativeClosed.
+ * Pop the now-empty webview player view back to the detail page so it does not
+ * linger under the closed native surface.
  *
- * Stream swaps (auto-retry, live reload, next episode) reuse the singleTask
- * Activity via onNewIntent and deliberately do NOT emit a native "closed" event,
- * so ordinary playback transitions never trigger this and auto-next / auto-retry
- * are unaffected.
+ * Stream swaps (auto-retry, live reload, next episode) reuse the existing
+ * surface (on Android via the singleTask Activity's onNewIntent) and
+ * deliberately do NOT emit a native "closed" event, so ordinary playback
+ * transitions never trigger this and auto-next / auto-retry are unaffected.
  */
 export function useNativeClose(params: {
   engine: "html5" | "mpv" | "native";

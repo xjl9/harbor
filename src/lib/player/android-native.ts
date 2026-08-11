@@ -31,16 +31,23 @@ const CAPS: PlayerCapabilities = {
 };
 
 /**
- * PlayerBridge backed by the native Android media3/ExoPlayer plugin
- * (tauri-plugin-harbor-player). The native player runs in its own fullscreen
- * Activity; this bridge forwards load/transport commands and mirrors the
- * player's position/state into a PlayerSnapshot so resume + scrobble work.
+ * PlayerBridge backed by the native mobile plugin (tauri-plugin-harbor-player):
+ * media3/ExoPlayer in its own fullscreen Android Activity, AVPlayer in its own
+ * fullscreen iOS view controller. This bridge forwards load/transport commands
+ * and mirrors the player's position/state into a PlayerSnapshot so resume +
+ * scrobble work.
  */
 export function createNativeBridge(): PlayerBridge {
   let snap: PlayerSnapshot = { ...emptySnapshot };
   const listeners = new Set<(s: PlayerSnapshot) => void>();
   const pluginListeners: PluginListener[] = [];
   let disposed = false;
+  // The native players take metadata with the load itself (iOS Now Playing /
+  // lock screen), so setMediaInfo stashes the title for the next load rather
+  // than pushing it live. use-player-media calls setMediaInfo synchronously in
+  // its effect while useBridgeLoad's load fires after an await, so the stash is
+  // populated in time, and it survives auto-retry / stream-switch reloads.
+  let mediaTitle: string | undefined;
 
   const emit = () => {
     const s = snap;
@@ -113,6 +120,8 @@ export function createNativeBridge(): PlayerBridge {
       await ensureListeners();
       snap = { ...emptySnapshot, status: "loading" };
       emit();
+      // Undefined title is dropped by JSON serialization, and the Rust
+      // LoadRequest treats a missing title as None.
       await invoke("plugin:harbor-player|load", {
         payload: {
           url: src.url,
@@ -123,6 +132,7 @@ export function createNativeBridge(): PlayerBridge {
             label: s.lang ?? s.id,
           })),
           startAtSec: src.startAtSec ?? 0,
+          title: mediaTitle,
         },
       });
     },
@@ -164,6 +174,9 @@ export function createNativeBridge(): PlayerBridge {
       return null;
     },
     setAudioNormalize: noop,
+    setMediaInfo(info) {
+      mediaTitle = info.title || undefined;
+    },
     async screenshot() {
       return { ok: false, error: "not supported" };
     },
