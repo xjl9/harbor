@@ -1,4 +1,5 @@
 import { Suspense, lazy, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { Pause, Play } from "lucide-react";
 import { isMangaReaderRoute } from "@/lib/platform";
 import { useView } from "@/lib/view";
@@ -129,8 +130,12 @@ function LocalPlayback() {
   const playerActive = !!player;
   return (
     <>
-      {picker && (
-        <div className="absolute inset-0 z-[80] bg-canvas">
+      {/* Portaled to body: the mobile detail page is a fixed z-50 sibling of
+          the shell, so an overlay inside the shell's z-30 context can never
+          cover it no matter its own z-index. */}
+      {picker &&
+        createPortal(
+          <div className="fixed inset-0 z-[80] bg-canvas">
           <Suspense fallback={<FullLoader />}>
             <PlayPicker
               key={`picker-${picker.meta.id}-${picker.episode?.season ?? ""}-${picker.episode?.episode ?? ""}-${picker.attempt ?? 0}`}
@@ -144,18 +149,21 @@ function LocalPlayback() {
               playerActive={playerActive}
             />
           </Suspense>
-        </div>
-      )}
-      {player && (
-        <div className="absolute inset-0 z-[90] bg-black">
+          </div>,
+          document.body,
+        )}
+      {player &&
+        createPortal(
+          <div className="fixed inset-0 z-[90] bg-black">
           <Suspense fallback={<FullLoader />}>
             <PlayerView
               key={player.meta.id.startsWith("iptv:") ? "player-live" : `player-${player.meta.id}`}
               src={player}
             />
           </Suspense>
-        </div>
-      )}
+          </div>,
+          document.body,
+        )}
     </>
   );
 }
