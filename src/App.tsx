@@ -50,6 +50,11 @@ import { OfflineBanner } from "@/chrome/offline-banner";
 const MobileShell = lazy(() =>
   import("@/views/mobile/mobile-shell").then((m) => ({ default: m.MobileShell })),
 );
+const MobileOnboarding = lazy(() =>
+  import("@/views/mobile/onboarding/mobile-onboarding").then((m) => ({
+    default: m.MobileOnboarding,
+  })),
+);
 import { WebhookLoopMount } from "@/components/webhook-loop-mount";
 import { ListToastHost } from "@/components/lists/list-toast";
 import { DiagnosticsConsentHost } from "@/components/diagnostics/diagnostics-consent-host";
@@ -353,6 +358,11 @@ export function App({ onReady }: { onReady?: () => void }) {
                                                       <Suspense fallback={null}>
                                                         <MobileShell />
                                                       </Suspense>
+                                                      {!isRemoteRoute() && (
+                                                        <Suspense fallback={null}>
+                                                          <MobileOnboarding />
+                                                        </Suspense>
+                                                      )}
                                                       <RevealOnMount onReady={onReady} />
                                                     </>
                                                   ) : (
