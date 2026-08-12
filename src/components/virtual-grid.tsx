@@ -13,6 +13,7 @@ export function VirtualGrid<T>({
   gapX = 16,
   gapY = 32,
   overscan = 3,
+  scrollMargin = 0,
   renderItem,
   className = "",
   getKey,
@@ -24,6 +25,8 @@ export function VirtualGrid<T>({
   gapX?: number;
   gapY?: number;
   overscan?: number;
+  /** Offset of the grid from the top of the scroll element, when content sits above it. */
+  scrollMargin?: number;
   renderItem: (item: T, index: number) => ReactNode;
   className?: string;
   getKey?: (item: T, index: number) => string | number;
@@ -58,6 +61,7 @@ export function VirtualGrid<T>({
     // as well as the estimate, otherwise measured rows stack flush together.
     measureElement: (element) => element.getBoundingClientRect().height + gapY,
     overscan,
+    scrollMargin,
   });
 
   if (items.length === 0) return null;
@@ -75,7 +79,9 @@ export function VirtualGrid<T>({
               ref={rowVirtualizer.measureElement}
               className="absolute start-0 grid w-full"
               style={{
-                transform: `translateY(${row.start}px)`,
+                // Virtual item positions are in scroller coordinates; subtract the
+                // margin to place rows relative to the grid's own top.
+                transform: `translateY(${row.start - scrollMargin}px)`,
                 gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`,
                 columnGap: gapX,
               }}

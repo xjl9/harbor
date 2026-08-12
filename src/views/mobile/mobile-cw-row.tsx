@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Play, X } from "lucide-react";
 import type { Meta } from "@/lib/cinemeta";
 import { useAuth } from "@/lib/auth";
@@ -98,6 +98,50 @@ export function useMobileCw(limit = 14): LibraryItem[] {
   }, [items, localVersion, dismissVersion, limit, hideAnime, cwPerProfile]);
 }
 
+// Same windowing Poster's lazy="release" does, for the card's raw <img>s: mount
+// the bitmaps only near the viewport and drop them again after lingering far
+// offscreen, so parked cards don't pin decoded snapshots/backdrops in memory.
+function useImgRelease(): { ref: React.RefObject<HTMLDivElement | null>; show: boolean } {
+  const ref = useRef<HTMLDivElement | null>(null);
+  const [show, setShow] = useState(false);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    let timer = 0;
+    const near = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((e) => e.isIntersecting)) setShow(true);
+      },
+      { rootMargin: "600px" },
+    );
+    const far = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((e) => e.isIntersecting)) {
+          if (timer) {
+            window.clearTimeout(timer);
+            timer = 0;
+          }
+          return;
+        }
+        if (timer) return;
+        timer = window.setTimeout(() => {
+          timer = 0;
+          setShow(false);
+        }, 1500);
+      },
+      { rootMargin: "2400px" },
+    );
+    near.observe(el);
+    far.observe(el);
+    return () => {
+      near.disconnect();
+      far.disconnect();
+      if (timer) window.clearTimeout(timer);
+    };
+  }, []);
+  return { ref, show };
+}
+
 function toMeta(item: LibraryItem): Meta {
   return {
     id: item._id,
@@ -124,7 +168,7 @@ export function MobileCwRow({
   if (items.length === 0) return null;
 
   return (
-    <section className="flex flex-col gap-3">
+    <section className="flex flex-col gap-3 [content-visibility:auto] [contain-intrinsic-size:auto_215px]">
       <h2 className="px-4 font-display text-[19px] font-medium tracking-[-0.01em] text-ink">Continue watching</h2>
       <div className="flex gap-3 overflow-x-auto px-4 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {items.map((item) => (
@@ -153,6 +197,7 @@ function MobileCwCard({
   onDismiss: () => void;
 }) {
   const meta = toMeta(item);
+  const { ref, show } = useImgRelease();
   const dur = item.state?.duration ?? 0;
   const off = item.state?.timeOffset ?? 0;
   const progress = dur > 0 ? Math.min(1, off / dur) : 0;
@@ -168,14 +213,14 @@ function MobileCwCard({
   const bg = downscaleTmdb(readSnapshot(item._id) ?? item.background ?? item.poster);
 
   return (
-    <div className="w-[260px] shrink-0">
+    <div ref={ref} className="w-[260px] shrink-0 [content-visibility:auto] [contain-intrinsic-size:auto_172px]">
       <div className="relative">
         <button
           type="button"
           onClick={() => onOpenDetail(meta)}
           className="relative block aspect-[16/9] w-full overflow-hidden rounded-[16px] bg-surface text-start ring-1 ring-edge-soft/50 transition-transform duration-150 active:scale-[0.97]"
         >
-          {bg && (
+          {bg && show && (
             <img
               src={bg}
               alt=""
@@ -185,7 +230,7 @@ function MobileCwCard({
             />
           )}
           <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/5 to-black/15" />
-          {logo && (
+          {logo && show && (
             <div className="pointer-events-none absolute inset-0 flex items-center justify-center px-5 pb-7">
               <img
                 src={logo}

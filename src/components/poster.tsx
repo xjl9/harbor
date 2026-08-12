@@ -13,8 +13,14 @@ import { tmdbLocalizedPoster } from "@/lib/providers/tmdb/tmdb-images";
 import { sizeImageUrl, qualityMultiplier } from "@/lib/img-size";
 import { shouldLocalizePosters } from "@/lib/providers/tmdb/tmdb-image-lang";
 import { useProxiedImageSrc } from "@/lib/remote-image-proxy";
+import { isMobileNative } from "@/lib/platform";
 
 type Ratio = "portrait" | "landscape" | "wide";
+
+// Phone tiles never need more than w500: the "high"/"max" quality multipliers were
+// tuned for desktop DPR 1 and on a DPR-3 phone they push 124px rail tiles to w780+
+// decodes, which is what drives the WKWebView content process into jetsam range.
+const MOBILE_TILE_MAX_PX = 500;
 
 export function useLocalizedPoster(metaId: string): string | undefined {
   const { settings } = useSettings();
@@ -209,7 +215,8 @@ export function Poster({
   const [inView, setInView] = useState(!lazy);
   const [eager, setEager] = useState(!lazy);
   const [targetPx, setTargetPx] = useState(0);
-  const qMult = qualityMultiplier(settings.posterQuality);
+  const mobileNative = isMobileNative();
+  const qMult = mobileNative ? 1 : qualityMultiplier(settings.posterQuality);
   useEffect(() => {
     if (inView) return;
     const el = rootRef.current;
@@ -223,11 +230,13 @@ export function Poster({
         setInView(true);
         obs.disconnect();
       },
-      { rootMargin: "1200px" },
+      // 1200px is ~3 viewports of lookahead on a phone; 600px keeps the same
+      // smooth-scroll headroom without prefetching two extra screens of tiles.
+      { rootMargin: mobileNative ? "600px" : "1200px" },
     );
     obs.observe(el);
     return () => obs.disconnect();
-  }, [inView]);
+  }, [inView, mobileNative]);
   useEffect(() => {
     if (!lazy || eager || !inView) return;
     const el = rootRef.current;
@@ -251,9 +260,10 @@ export function Poster({
     const box = el.getBoundingClientRect();
     if (box.width <= 0) return;
     const need = Math.max(box.width, box.height * RATIO_AR[ratio]);
-    const t = Math.ceil(need * (window.devicePixelRatio || 1) * qMult);
+    let t = Math.ceil(need * (window.devicePixelRatio || 1) * qMult);
+    if (mobileNative) t = Math.min(t, MOBILE_TILE_MAX_PX);
     setTargetPx((prev) => (t > prev ? t : prev));
-  }, [inView, qMult, ratio]);
+  }, [inView, qMult, ratio, mobileNative]);
   const rawCandidates = [src, ...(fallbacks ?? [])].filter((u): u is string => !!u);
   const candidates =
     qMult === 0 || targetPx <= 0

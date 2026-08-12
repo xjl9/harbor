@@ -9,6 +9,12 @@ import { useMobileRemote } from "./mobile-remote";
 
 type OpenDetail = (m: Meta) => void;
 
+// Offscreen rails and tiles skip layout/paint entirely; the intrinsic-size
+// estimates hold scroll geometry steady while skipped (`auto` re-uses the last
+// rendered size once seen). Rails: title + tallest tile; tiles: their own height.
+const RAIL_CULL = "[content-visibility:auto] [contain-intrinsic-size:auto_280px]";
+const TILE_CULL = "[content-visibility:auto]";
+
 export function MobileRail({
   title,
   metas,
@@ -24,7 +30,7 @@ export function MobileRail({
 }) {
   if (metas.length === 0) return null;
   return (
-    <section className="flex flex-col gap-3">
+    <section className={`flex flex-col gap-3 ${RAIL_CULL}`}>
       <button
         type="button"
         onClick={onSeeAll}
@@ -60,7 +66,7 @@ export function MobileRankRail({
 }) {
   if (metas.length === 0) return null;
   return (
-    <section className="flex flex-col gap-3">
+    <section className={`flex flex-col gap-3 ${RAIL_CULL}`}>
       <button
         type="button"
         onClick={onSeeAll}
@@ -97,7 +103,7 @@ function RankTile({ meta, rank, onOpenDetail }: { meta: Meta; rank: number; onOp
     <button
       type="button"
       onClick={() => open(meta)}
-      className="w-[164px] shrink-0 text-start transition-transform duration-150 active:scale-[0.97]"
+      className={`w-[164px] shrink-0 text-start transition-transform duration-150 active:scale-[0.97] ${TILE_CULL} [contain-intrinsic-size:auto_210px]`}
     >
       <div className="relative w-full" style={{ aspectRatio: "164 / 184" }}>
         {/* Confident solid serif numeral — editorial ranked-list, not Netflix's ghost outline. */}
@@ -118,7 +124,7 @@ function RankTile({ meta, rank, onOpenDetail }: { meta: Meta; rank: number; onOp
             onError={onError}
             seed={meta.id}
             ratio="portrait"
-            lazy
+            lazy="release"
             className="rounded-[12px] shadow-[0_14px_32px_-16px_rgba(0,0,0,0.85)] ring-1 ring-white/[0.07]"
           />
         </div>
@@ -142,9 +148,9 @@ export function PosterTile({ meta, onOpenDetail }: { meta: Meta; onOpenDetail?: 
     <button
       type="button"
       onClick={() => open(meta)}
-      className="w-[124px] shrink-0 text-start transition-transform duration-150 active:scale-[0.96]"
+      className={`w-[124px] shrink-0 text-start transition-transform duration-150 active:scale-[0.96] ${TILE_CULL} [contain-intrinsic-size:auto_235px]`}
     >
-      <Poster src={src} onError={onError} seed={meta.id} ratio="portrait" lazy className="rounded-[14px] ring-1 ring-white/[0.06]">
+      <Poster src={src} onError={onError} seed={meta.id} ratio="portrait" lazy="release" className="rounded-[14px] ring-1 ring-white/[0.06]">
         {award && <AwardCorner award={award} />}
         {!settings.rpdbKey && meta.imdbRating && (
           <span className="pointer-events-none absolute bottom-1.5 end-1.5 flex items-center gap-0.5 rounded-md bg-black/70 px-1.5 py-0.5 text-[10.5px] font-bold text-white backdrop-blur-sm">
@@ -186,13 +192,17 @@ function LandscapeTile({ meta, onOpenDetail }: { meta: Meta; onOpenDetail?: Open
     <button
       type="button"
       onClick={() => open(meta)}
-      className="w-[240px] shrink-0 text-start transition-transform duration-150 active:scale-[0.97]"
+      className={`w-[240px] shrink-0 text-start transition-transform duration-150 active:scale-[0.97] ${TILE_CULL} [contain-intrinsic-size:auto_160px]`}
     >
-      <div className="relative aspect-[16/9] w-full overflow-hidden rounded-[14px] bg-surface ring-1 ring-edge-soft/50">
-        {bg && (
-          <img src={bg} alt="" loading="lazy" decoding="async" className="absolute inset-0 h-full w-full object-cover" />
-        )}
-      </div>
+      {/* Poster (not a raw img) so backdrops get tier right-sizing plus release-mode
+          unload; the raw w1280 img here was a top offender in the rail decode weight. */}
+      <Poster
+        src={bg}
+        seed={meta.id}
+        ratio="landscape"
+        lazy="release"
+        className="rounded-[14px] ring-1 ring-edge-soft/50"
+      />
       <p className="mt-1.5 line-clamp-1 text-[13px] font-medium text-ink-muted">{meta.name}</p>
     </button>
   );

@@ -48,7 +48,8 @@ export async function tmdbWatchProviders(
     out.push({
       id: p.provider_id,
       name: p.provider_name,
-      logo: `${IMG}/original${p.logo_path}`,
+      // Logos render at ~28px chips; w92 covers 3x DPR, /original was ~500KB each.
+      logo: `${IMG}/w92${p.logo_path}`,
       link,
     });
     if (out.length >= 8) break;

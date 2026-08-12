@@ -11,7 +11,7 @@ import { useSettings } from "@/lib/settings";
 import { effectiveOrderProvider } from "@/lib/settings/episode-order";
 import { getViewedSeason, setViewedSeason } from "@/lib/season-view-pref";
 import { useMobileRemote } from "../mobile-remote";
-import { HIDE_SCROLL, prefersReducedMotion, stillFrom, tmdbTvId, type Ep, type SeasonOption } from "./data";
+import { HIDE_SCROLL, prefersReducedMotion, stillFrom, tmdbTvId, useEpisodeWindow, type Ep, type SeasonOption } from "./data";
 import { Line, SectionTitle } from "./ui";
 import { OrderStyleSwitch, type OrderOption } from "./order-switch";
 
@@ -169,6 +169,11 @@ export function EpisodeSection({
     return [...byNum.values()].sort((a, b) => a.episode - b.episode);
   }, [ordering, season, full?.videos, tmdbEps]);
 
+  const { renderCount, hasMore, sentinelRef } = useEpisodeWindow(
+    episodes.length,
+    `${meta.id}|${season}|${effProvider}|${effSeasonType}`,
+  );
+
   if (seasonOptions.length === 0) return null;
 
   const activeLabel = seasonOptions.find((o) => o.number === season)?.label ?? `Season ${season}`;
@@ -193,11 +198,14 @@ export function EpisodeSection({
       ) : episodes.length === 0 ? (
         <p className="text-[13.5px] text-ink-subtle">No episodes to show here yet.</p>
       ) : (
-        <div className="flex flex-col gap-1.5">
-          {episodes.map((ep) => (
-            <EpisodeItem key={ep.episode} ep={ep} onPlay={onPlay} />
-          ))}
-        </div>
+        <>
+          <div className="flex flex-col gap-1.5">
+            {episodes.slice(0, renderCount).map((ep) => (
+              <EpisodeItem key={ep.episode} ep={ep} onPlay={onPlay} />
+            ))}
+          </div>
+          {hasMore && <div ref={sentinelRef} aria-hidden className="h-1" />}
+        </>
       )}
     </section>
   );
@@ -315,7 +323,7 @@ function EpisodeItem({ ep, onPlay }: { ep: Ep; onPlay: (ep: Ep) => void }) {
     >
       <div className="relative w-[128px] shrink-0 overflow-hidden rounded-xl">
         <div className={upcoming ? "opacity-70" : undefined}>
-          <Poster src={ep.still} seed={`${ep.season}-${ep.episode}`} ratio="landscape" lazy />
+          <Poster src={ep.still} seed={`${ep.season}-${ep.episode}`} ratio="landscape" lazy="release" />
         </div>
         <span className="absolute start-1.5 top-1.5 rounded-md bg-black/70 px-1.5 py-0.5 text-[11px] font-semibold text-white">
           {ep.episode}

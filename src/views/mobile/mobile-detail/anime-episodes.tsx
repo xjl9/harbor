@@ -4,6 +4,7 @@ import { Poster } from "@/components/poster";
 import { formatAirDate } from "@/lib/dates";
 import type { KitsuEpisode } from "@/lib/providers/kitsu";
 import type { PlayEpisode } from "@/lib/view";
+import { useEpisodeWindow } from "./data";
 import { SectionTitle } from "./ui";
 
 function seasonKey(ep: KitsuEpisode): number {
@@ -65,6 +66,12 @@ export function AnimeEpisodeSection({
         .sort((a, b) => a.number - b.number),
     [episodes, activeSeason],
   );
+  // The One Piece case: seasonless Kitsu listings fold 1000+ episodes into
+  // season 1, so the list must window instead of mounting every row.
+  const { renderCount, hasMore, sentinelRef } = useEpisodeWindow(
+    shown.length,
+    `${activeSeason}|${episodes.length}`,
+  );
 
   if (loading && episodes.length === 0) {
     return (
@@ -94,10 +101,11 @@ export function AnimeEpisodeSection({
         )}
       </div>
       <div className="flex flex-col gap-1.5">
-        {shown.map((ep) => (
+        {shown.slice(0, renderCount).map((ep) => (
           <AnimeEpisodeItem key={ep.id} ep={ep} onPlay={onPlay} />
         ))}
       </div>
+      {hasMore && <div ref={sentinelRef} aria-hidden className="h-1" />}
     </section>
   );
 }
@@ -128,7 +136,7 @@ function AnimeEpisodeItem({
           src={ep.thumbnail ?? ep.thumbnailFallback ?? undefined}
           seed={`${ep.id}`}
           ratio="landscape"
-          lazy
+          lazy="release"
         />
         <span className="absolute start-1.5 top-1.5 rounded-md bg-black/70 px-1.5 py-0.5 text-[11px] font-semibold text-white">
           {ep.number}

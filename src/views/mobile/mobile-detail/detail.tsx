@@ -5,6 +5,7 @@ import { awardSummary, pickHeroAwards, useAwards } from "@/lib/providers/wikidat
 import { mergeBundledAwards } from "@/lib/awards-history";
 import { useSettings } from "@/lib/settings";
 import { useHideAnimeMetas } from "@/lib/anime-hide";
+import { sizeImageUrl } from "@/lib/img-size";
 import { useMobileRemote } from "../mobile-remote";
 import {
   DETAIL_CSS,
@@ -127,7 +128,10 @@ function DetailBody({
   const isSeries = !isAnime && (detail?.kind === "tv" || meta.type === "series");
   const title = detail?.title || meta.name;
   const logo = detail?.logo || meta.logo;
-  const backdrop = detail?.backdrop || full?.background || meta.background || meta.poster;
+  // TMDB details hand back /original here (up to ~4K, tens of MB decoded); w1280
+  // already exceeds any phone-width hero box. Non-TMDB URLs pass through untouched.
+  const backdropSrc = detail?.backdrop || full?.background || meta.background || meta.poster;
+  const backdrop = backdropSrc ? sizeImageUrl(backdropSrc, 1280) : undefined;
   const year = (detail?.year || meta.releaseInfo || "").slice(0, 4);
   const imdbRating = meta.imdbRating || full?.imdbRating;
   const rating = isAnime ? malRating : imdbRating || detail?.rating;

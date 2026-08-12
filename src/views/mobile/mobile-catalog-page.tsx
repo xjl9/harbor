@@ -1,7 +1,9 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useContext, useEffect, useRef, useState } from "react";
 import { Star } from "lucide-react";
 import type { Meta } from "@/lib/cinemeta";
 import { Poster, usePosterChain } from "@/components/poster";
+import { ScrollRootContext } from "@/components/row";
+import { VirtualGrid } from "@/components/virtual-grid";
 import { useSettings } from "@/lib/settings";
 
 export const TMDB_PAGE_SIZE = 20;
@@ -47,6 +49,37 @@ export function MobileCatalogGrid({
   const loadingRef = useRef(false);
   const fetchRef = useRef(fetchPage);
   fetchRef.current = fetchPage;
+
+  // Row-virtualize against the hosting scroller (BrowseScroll/ViewScroll) so a
+  // fully paged grid (12 pages x 20) keeps ~2 screens of tiles mounted instead
+  // of 240. The scroller arrives via ScrollRootContext; without one (unexpected
+  // host) the plain grid below still works.
+  const scrollEl = useContext(ScrollRootContext);
+  const scrollElRef = useRef<HTMLElement | null>(null);
+  scrollElRef.current = scrollEl;
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const [gridMargin, setGridMargin] = useState(0);
+  const gridReady = status === "ready" && items.length > 0 && !!scrollEl;
+  useEffect(() => {
+    if (!gridReady) return;
+    const el = wrapRef.current;
+    const root = scrollEl;
+    if (!el || !root) return;
+    const measure = () => {
+      const m = el.getBoundingClientRect().top - root.getBoundingClientRect().top + root.scrollTop;
+      setGridMargin(Math.max(0, Math.round(m)));
+    };
+    measure();
+    // Remeasure after the page's 320ms entrance animation settles; the transform
+    // skews the first getBoundingClientRect by up to 14px.
+    const timer = window.setTimeout(measure, 400);
+    const ro = new ResizeObserver(measure);
+    ro.observe(root);
+    return () => {
+      ro.disconnect();
+      window.clearTimeout(timer);
+    };
+  }, [gridReady, scrollEl, resetKey]);
 
   useEffect(() => {
     reqRef.current += 1;
@@ -100,11 +133,27 @@ export function MobileCatalogGrid({
 
   return (
     <>
-      <div className="grid grid-cols-[repeat(auto-fill,minmax(102px,1fr))] gap-x-3 gap-y-5 px-4">
-        {items.map((m) => (
-          <GridPoster key={m.id} meta={m} onOpen={onOpenDetail} />
-        ))}
-      </div>
+      {scrollEl ? (
+        <div ref={wrapRef} className="px-4">
+          <VirtualGrid
+            items={items}
+            scrollRef={scrollElRef}
+            scrollMargin={gridMargin}
+            estimateRowHeight={208}
+            minColumnWidth={102}
+            gapX={12}
+            gapY={20}
+            getKey={(m) => m.id}
+            renderItem={(m) => <GridPoster meta={m} onOpen={onOpenDetail} />}
+          />
+        </div>
+      ) : (
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(102px,1fr))] gap-x-3 gap-y-5 px-4">
+          {items.map((m) => (
+            <GridPoster key={m.id} meta={m} onOpen={onOpenDetail} />
+          ))}
+        </div>
+      )}
       {!exhausted && <LoadMoreSentinel onLoadMore={loadMore} />}
       {loadingMore && <MoreSpinner />}
     </>
@@ -123,9 +172,9 @@ function GridPoster({ meta, onOpen }: { meta: Meta; onOpen: (m: Meta) => void })
     <button
       type="button"
       onClick={() => onOpen(meta)}
-      className="text-start transition-transform duration-150 active:scale-[0.96]"
+      className="w-full text-start transition-transform duration-150 active:scale-[0.96]"
     >
-      <Poster src={src} onError={onError} seed={meta.id} ratio="portrait" lazy className="rounded-[14px]">
+      <Poster src={src} onError={onError} seed={meta.id} ratio="portrait" lazy="release" className="rounded-[14px]">
         {!settings.rpdbKey && meta.imdbRating && (
           <span className="pointer-events-none absolute bottom-1.5 end-1.5 flex items-center gap-0.5 rounded-md bg-black/70 px-1.5 py-0.5 text-[10.5px] font-bold text-white backdrop-blur-sm">
             <Star size={9} strokeWidth={0} fill="#f5c518" className="text-[#f5c518]" />

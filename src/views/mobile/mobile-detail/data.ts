@@ -1,6 +1,36 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { meta as fetchCinemetaMeta, narrowMediaType, type Meta } from "@/lib/cinemeta";
 import { tmdbDetails, type TmdbDetail } from "@/lib/providers/tmdb";
+
+// Same incremental windowing as desktop anime-episodes: long seasons (absolute
+// orderings can fold 1000+ episodes into one list) mount in steps instead of
+// all at once, growing as an offscreen sentinel nears the viewport.
+const WINDOW_STEP = 60;
+
+export function useEpisodeWindow(total: number, resetSig: string) {
+  const [renderCount, setRenderCount] = useState(WINDOW_STEP);
+  useEffect(() => {
+    setRenderCount(WINDOW_STEP);
+  }, [resetSig]);
+  const hasMore = renderCount < total;
+  const sentinelRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!hasMore) return;
+    const el = sentinelRef.current;
+    if (!el) return;
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((e) => e.isIntersecting)) {
+          setRenderCount((c) => (c >= total ? c : Math.min(total, c + WINDOW_STEP)));
+        }
+      },
+      { rootMargin: "1200px 0px" },
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, [hasMore, total]);
+  return { renderCount, hasMore, sentinelRef };
+}
 
 export const prefersReducedMotion = () =>
   typeof window !== "undefined" &&

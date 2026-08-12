@@ -55,6 +55,9 @@ export function useExitSnapshot(params: {
         const v = videoMountRef.current?.querySelector("video") as HTMLVideoElement | null;
         return v ? captureFrame(v, full) : null;
       }
+      // Mobile native engine (ExoPlayer/AVPlayer): no mpv process exists, so the
+      // screenshot invoke can only fail; go straight to the trickplay fallback.
+      if (eng === "native") return allowTrick && seek ? trickplayGet(getPlaybackPosition()) : null;
       const mpvImg = await captureMpvFrame(full);
       if (mpvImg) return mpvImg;
       if (allowTrick && seek) return trickplayGet(getPlaybackPosition());
@@ -96,7 +99,10 @@ export function useExitSnapshot(params: {
   }, [grabFrame]);
 
   useEffect(() => {
-    if (status !== "playing") return;
+    // No periodic tick on the mobile native engine: every 12s it would only fetch
+    // a trickplay frame and synchronously rewrite localStorage during playback.
+    // The exit capture still grabs a frame when the player closes.
+    if (status !== "playing" || engine === "native") return;
     const tick = async () => {
       const { src: s, durationSec: dur, resolvedImdbId: resolved, resolvedImdbVerified: verified } = latest.current;
       const id = snapshotId(s, resolved, verified);
@@ -117,7 +123,7 @@ export function useExitSnapshot(params: {
       window.clearTimeout(warm);
       window.clearInterval(id);
     };
-  }, [status, grabFrame]);
+  }, [status, engine, grabFrame]);
 
   useEffect(() => {
     const flush = () => persist(lastGoodRef.current);
