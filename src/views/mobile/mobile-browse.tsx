@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { ScrollRootContext } from "@/components/row";
 import { MobileHome } from "./mobile-home";
 import { MobileMovies } from "./mobile-movies";
 import { MobileShows } from "./mobile-shows";
@@ -7,6 +8,8 @@ import { MobileDiscover } from "./mobile-discover";
 import { MobileViewSwitcher } from "./mobile-view-switcher";
 import { MobileDeviceSwitcher } from "./mobile-device-switcher";
 import { ScrollToTop } from "./scroll-to-top";
+import { LayerActiveContext, useLayerActive, useLayerParked } from "./layer-active";
+import { noteScroll, noteView, restoredView, restoreScroll } from "./reload-restore";
 
 export type View = "home" | "movies" | "shows" | "anime" | "discover";
 
@@ -24,6 +27,10 @@ const VIEW_TRANSITION_CSS = `
   transform: translate3d(0, 0, 0);
   pointer-events: auto;
 }
+.harbor-view-layer.is-parked {
+  visibility: hidden;
+  content-visibility: hidden;
+}
 @media (prefers-reduced-motion: reduce) {
   .harbor-view-layer {
     transition: none;
@@ -32,12 +39,17 @@ const VIEW_TRANSITION_CSS = `
 }
 `;
 
+const VIEW_IDS: readonly View[] = ["home", "movies", "shows", "anime", "discover"];
+
 export function MobileBrowse() {
-  const [view, setView] = useState<View>("home");
-  const [seen, setSeen] = useState<Set<View>>(() => new Set<View>(["home"]));
+  const [view, setView] = useState<View>(() => restoredView(VIEW_IDS) ?? "home");
+  const [seen, setSeen] = useState<Set<View>>(
+    () => new Set<View>([restoredView(VIEW_IDS) ?? "home"]),
+  );
 
   const selectView = (next: View) => {
     setView(next);
+    noteView(next);
     setSeen((prev) => (prev.has(next) ? prev : new Set(prev).add(next)));
   };
 
@@ -46,35 +58,35 @@ export function MobileBrowse() {
       <style>{VIEW_TRANSITION_CSS}</style>
       <ViewLayer active={view === "home"}>
         {seen.has("home") && (
-          <ViewScroll>
+          <ViewScroll restoreKey="view-home">
             <MobileHome />
           </ViewScroll>
         )}
       </ViewLayer>
       <ViewLayer active={view === "movies"}>
         {seen.has("movies") && (
-          <ViewScroll>
+          <ViewScroll restoreKey="view-movies">
             <MobileMovies />
           </ViewScroll>
         )}
       </ViewLayer>
       <ViewLayer active={view === "shows"}>
         {seen.has("shows") && (
-          <ViewScroll>
+          <ViewScroll restoreKey="view-shows">
             <MobileShows />
           </ViewScroll>
         )}
       </ViewLayer>
       <ViewLayer active={view === "anime"}>
         {seen.has("anime") && (
-          <ViewScroll>
+          <ViewScroll restoreKey="view-anime">
             <MobileAnime />
           </ViewScroll>
         )}
       </ViewLayer>
       <ViewLayer active={view === "discover"}>
         {seen.has("discover") && (
-          <ViewScroll>
+          <ViewScroll restoreKey="view-discover">
             <MobileDiscover />
           </ViewScroll>
         )}
@@ -97,28 +109,41 @@ export function MobileBrowse() {
 }
 
 function ViewLayer({ active, children }: { active: boolean; children: ReactNode }) {
+  const tabActive = useLayerActive();
+  const parked = useLayerParked(active);
   return (
-    <div
-      className={`harbor-view-layer flex flex-col${active ? " is-active" : ""}`}
-      aria-hidden={active ? undefined : true}
-    >
-      {children}
-    </div>
+    <LayerActiveContext.Provider value={tabActive && active}>
+      <div
+        className={`harbor-view-layer flex flex-col${active ? " is-active" : ""}${parked ? " is-parked" : ""}`}
+        aria-hidden={active ? undefined : true}
+      >
+        {children}
+      </div>
+    </LayerActiveContext.Provider>
   );
 }
 
-function ViewScroll({ children }: { children: ReactNode }) {
+function ViewScroll({ restoreKey, children }: { restoreKey: string; children: ReactNode }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [showTop, setShowTop] = useState(false);
+  // Published so descendants (MobileCatalogGrid's VirtualGrid) can virtualize
+  // against this scroller; state, not the ref, so consumers render once it exists.
+  const [scrollEl, setScrollEl] = useState<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    setScrollEl(scrollRef.current);
+  }, []);
 
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
+    const cancelRestore = restoreScroll(el, restoreKey);
     let raf = 0;
     const update = () => {
       raf = 0;
       const vh = el.clientHeight || 1;
       setShowTop(el.scrollTop > vh);
+      noteScroll(restoreKey, el.scrollTop);
     };
     const onScroll = () => {
       if (raf) return;
@@ -126,10 +151,11 @@ function ViewScroll({ children }: { children: ReactNode }) {
     };
     el.addEventListener("scroll", onScroll, { passive: true });
     return () => {
+      cancelRestore();
       el.removeEventListener("scroll", onScroll);
       if (raf) cancelAnimationFrame(raf);
     };
-  }, []);
+  }, [restoreKey]);
 
   return (
     <>
@@ -138,7 +164,7 @@ function ViewScroll({ children }: { children: ReactNode }) {
         className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain"
         style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 84px)" }}
       >
-        {children}
+        <ScrollRootContext.Provider value={scrollEl}>{children}</ScrollRootContext.Provider>
       </div>
       <ScrollToTop scrollRef={scrollRef} visible={showTop} />
     </>

@@ -1,20 +1,24 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Check, Info, Play, Plus, TrendingUp } from "lucide-react";
 import type { Meta } from "@/lib/cinemeta";
+import { sizeImageUrl } from "@/lib/img-size";
 import { useSettings } from "@/lib/settings";
 import { useHeroLogos } from "@/components/anime-hero/use-hero-logos";
 import { toggleWatchlist, useInWatchlist } from "@/lib/watchlist";
 import { ImdbIcon } from "@/components/icons/imdb-icon";
 import { useMobileRemote } from "./mobile-remote";
+import { useLayerActive } from "./layer-active";
 
 const AUTO_MS = 8000;
 const DISSOLVE_MS = 900;
 const TEXT_MS = 340;
 const PILL_PAUSE_MS = 12000;
+/* w780 is plenty for a phone-width full-bleed hero; wider viewports get w1280. */
+const PHONE_MAX_CSS_PX = 600;
 
 function upsize(url?: string): string | undefined {
   if (!url) return url;
-  return url.replace(/\/t\/p\/w\d+\//, "/t/p/w1280/");
+  return sizeImageUrl(url, window.innerWidth <= PHONE_MAX_CSS_PX ? 780 : 1280);
 }
 
 function kindLabel(t: Meta["type"]): string {
@@ -30,6 +34,7 @@ function prefersReduced(): boolean {
 export function MobileHero({ slides, onOpenDetail }: { slides: Meta[]; onOpenDetail?: (m: Meta) => void }) {
   const { settings } = useSettings();
   const { openOnHost, playOnHost } = useMobileRemote();
+  const layerActive = useLayerActive();
   const shown = useMemo(() => slides.slice(0, 6), [slides]);
   const logos = useHeroLogos(slides, settings);
 
@@ -59,15 +64,20 @@ export function MobileHero({ slides, onOpenDetail }: { slides: Meta[]; onOpenDet
     return () => mq.removeEventListener?.("change", on);
   }, []);
 
+  // Warm only the current and upcoming slide while this layer is visible; the
+  // old preload-all kept six w1280 decodes alive per hidden browse view.
   useEffect(() => {
-    for (const m of shown) {
-      const u = upsize(m.background) ?? m.poster;
+    if (!layerActive || shown.length === 0) return;
+    const cur = slots[front] < shown.length ? slots[front] : 0;
+    for (const i of [cur, (cur + 1) % shown.length]) {
+      const m = shown[i];
+      const u = m ? upsize(m.background) ?? m.poster : undefined;
       if (u) {
         const img = new Image();
         img.src = u;
       }
     }
-  }, [shown]);
+  }, [layerActive, shown, slots, front]);
 
   useEffect(() => {
     const n = shown.length;
@@ -106,14 +116,14 @@ export function MobileHero({ slides, onOpenDetail }: { slides: Meta[]; onOpenDet
   }, []);
 
   useEffect(() => {
-    if (shown.length < 2) return;
+    if (!layerActive || shown.length < 2) return;
     const id = window.setInterval(() => {
       if (reduceRef.current || busyRef.current || Date.now() < pausedUntil.current) return;
       const cur = slotsRef.current[frontRef.current];
       goTo((cur + 1) % shown.length);
     }, AUTO_MS);
     return () => window.clearInterval(id);
-  }, [shown.length, goTo]);
+  }, [layerActive, shown.length, goTo]);
 
   useEffect(() => () => timers.current.forEach((t) => window.clearTimeout(t)), []);
 

@@ -4,6 +4,7 @@ import { Pause, Play } from "lucide-react";
 import { isMangaReaderRoute } from "@/lib/platform";
 import { useView } from "@/lib/view";
 import { HarborLoader } from "@/components/harbor-loader";
+import { ScrollRootContext } from "@/components/row";
 import { MobileBrowse } from "./mobile-browse";
 import { MobileProfile } from "./mobile-profile";
 import { MobileSearch } from "./mobile-search";
@@ -14,6 +15,8 @@ import { MobileRemoteProvider, useMobileRemote } from "./mobile-remote";
 import { SheetLockProvider, useSheetLock } from "./mobile-sheet-lock";
 import { useMobileRemoteStyle } from "./remote-style";
 import { ScrollToTop } from "./scroll-to-top";
+import { LayerActiveContext, useLayerParked } from "./layer-active";
+import { noteScroll, noteTab, restoredTab, restoreScroll } from "./reload-restore";
 import { MangaNowBar } from "./manga-remote/manga-now-bar";
 
 const RemoteApp = lazy(() => import("@/views/remote-app").then((m) => ({ default: m.RemoteApp })));
@@ -47,14 +50,19 @@ function MangaReaderShell() {
   );
 }
 
+const TAB_IDS: readonly MobileTab[] = ["remote", "search", "home", "mystuff", "profile"];
+
 function ShellBody() {
-  const [tab, setTab] = useState<MobileTab>("home");
-  const [seen, setSeen] = useState<Set<MobileTab>>(() => new Set<MobileTab>(["home"]));
+  const [tab, setTab] = useState<MobileTab>(() => restoredTab(TAB_IDS) ?? "home");
+  const [seen, setSeen] = useState<Set<MobileTab>>(
+    () => new Set<MobileTab>([restoredTab(TAB_IDS) ?? "home"]),
+  );
   const showNowPlaying = tab !== "remote";
   const rootRef = useRef<HTMLDivElement>(null);
 
   const selectTab = (next: MobileTab) => {
     setTab(next);
+    noteTab(next);
     setSeen((prev) => (prev.has(next) ? prev : new Set(prev).add(next)));
   };
 
@@ -76,10 +84,12 @@ function ShellBody() {
     <div ref={rootRef} className="absolute inset-0 z-30 flex flex-col bg-canvas">
       <style>{TAB_TRANSITION_CSS}</style>
       {/* Film grain: a whisper of monochrome noise over the whole shell for cinematic
-          depth/texture. Fixed + pointer-events-none + below the picker/player overlays. */}
+          depth/texture. Fixed + pointer-events-none + below the picker/player overlays.
+          Plain alpha blend on purpose: mix-blend-overlay forces the compositor to
+          re-blend the full viewport on every scrolled frame, too costly on phones. */}
       <div
         aria-hidden
-        className="pointer-events-none fixed inset-0 z-[60] opacity-[0.06] mix-blend-overlay motion-reduce:hidden"
+        className="pointer-events-none fixed inset-0 z-[60] opacity-[0.05] motion-reduce:hidden"
         style={{
           backgroundImage:
             "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='hg'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.82' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23hg)'/%3E%3C/svg%3E\")",
@@ -92,21 +102,21 @@ function ShellBody() {
         </TabLayer>
         <TabLayer active={tab === "search"}>
           {seen.has("search") && (
-            <BrowseScroll>
+            <BrowseScroll restoreKey="tab-search">
               <MobileSearch />
             </BrowseScroll>
           )}
         </TabLayer>
         <TabLayer active={tab === "profile"}>
           {seen.has("profile") && (
-            <BrowseScroll>
+            <BrowseScroll restoreKey="tab-profile">
               <MobileProfile onOpenRemote={() => selectTab("remote")} />
             </BrowseScroll>
           )}
         </TabLayer>
         <TabLayer active={tab === "mystuff"}>
           {seen.has("mystuff") && (
-            <BrowseScroll>
+            <BrowseScroll restoreKey="tab-mystuff">
               <MobileLibrary onConnect={() => selectTab("profile")} />
             </BrowseScroll>
           )}
@@ -182,6 +192,10 @@ const TAB_TRANSITION_CSS = `
   transform: translate3d(0, 0, 0);
   pointer-events: auto;
 }
+.harbor-tab-layer.is-parked {
+  visibility: hidden;
+  content-visibility: hidden;
+}
 @media (prefers-reduced-motion: reduce) {
   .harbor-tab-layer {
     transition: none;
@@ -191,28 +205,40 @@ const TAB_TRANSITION_CSS = `
 `;
 
 function TabLayer({ active, children }: { active: boolean; children: React.ReactNode }) {
+  const parked = useLayerParked(active);
   return (
-    <div
-      className={`harbor-tab-layer flex flex-col${active ? " is-active" : ""}`}
-      aria-hidden={active ? undefined : true}
-    >
-      {children}
-    </div>
+    <LayerActiveContext.Provider value={active}>
+      <div
+        className={`harbor-tab-layer flex flex-col${active ? " is-active" : ""}${parked ? " is-parked" : ""}`}
+        aria-hidden={active ? undefined : true}
+      >
+        {children}
+      </div>
+    </LayerActiveContext.Provider>
   );
 }
 
-function BrowseScroll({ children }: { children: React.ReactNode }) {
+function BrowseScroll({ restoreKey, children }: { restoreKey: string; children: React.ReactNode }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [showTop, setShowTop] = useState(false);
+  // Published so descendants (MobileCatalogGrid's VirtualGrid) can virtualize
+  // against this scroller; state, not the ref, so consumers render once it exists.
+  const [scrollEl, setScrollEl] = useState<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    setScrollEl(scrollRef.current);
+  }, []);
 
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
+    const cancelRestore = restoreScroll(el, restoreKey);
     let raf = 0;
     const update = () => {
       raf = 0;
       const vh = el.clientHeight || 1;
       setShowTop(el.scrollTop > vh);
+      noteScroll(restoreKey, el.scrollTop);
     };
     const onScroll = () => {
       if (raf) return;
@@ -220,10 +246,11 @@ function BrowseScroll({ children }: { children: React.ReactNode }) {
     };
     el.addEventListener("scroll", onScroll, { passive: true });
     return () => {
+      cancelRestore();
       el.removeEventListener("scroll", onScroll);
       if (raf) cancelAnimationFrame(raf);
     };
-  }, []);
+  }, [restoreKey]);
 
   return (
     <>
@@ -232,7 +259,7 @@ function BrowseScroll({ children }: { children: React.ReactNode }) {
         className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain"
         style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 84px)" }}
       >
-        {children}
+        <ScrollRootContext.Provider value={scrollEl}>{children}</ScrollRootContext.Provider>
       </div>
       <ScrollToTop scrollRef={scrollRef} visible={showTop} />
     </>
