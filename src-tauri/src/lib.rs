@@ -592,6 +592,16 @@ pub fn run() {
             let _ = webview.window().show();
         }
     });
+    // iOS jetsam can kill the WKWebView content process under memory pressure,
+    // leaving the view permanently black. Installing this handler replaces the
+    // runtime's default auto-reload, so log the kill and reload explicitly.
+    #[cfg(target_os = "ios")]
+    let app_builder = app_builder.on_web_content_process_terminate(|webview| {
+        eprintln!("[harbor::webview] web content process terminated, reloading");
+        if let Err(e) = webview.reload() {
+            eprintln!("[harbor::webview] reload after termination failed: {}", e);
+        }
+    });
     let app_builder = app_builder
         .setup(move |app| {
             if let Err(error) = crash_report::initialize(app.handle()) {
