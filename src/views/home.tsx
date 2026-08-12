@@ -38,23 +38,20 @@ import { useContentDrag } from "@/lib/window-drag";
 import { trackEvent } from "@/lib/discover";
 import { publishResumeStates } from "@/lib/hover-preview/store";
 import { readResumeEntry, saveResumeBatch } from "@/lib/resume";
-import { dismissCw, isCwDismissed, useCwDismissVersion } from "@/lib/cw-dismiss";
-import { clearLocalCw, listLocalCw, localCwVersion, subscribeLocalCw } from "@/lib/local-cw";
-import { dismissManualWatched, manualWatchedLibraryItems, manualWatchedVersion, subscribeManualWatched } from "@/lib/manual-watched";
+import { useCwDismissVersion } from "@/lib/cw-dismiss";
+import {
+  buildCwResurfaceLibrary,
+  dismissCwItem,
+  mergeContinueWatching,
+  useCwFranchiseRootsVersion,
+  useLocalCwLibraryItems,
+} from "@/lib/continue-watching";
+import { manualWatchedVersion, subscribeManualWatched } from "@/lib/manual-watched";
 import { repairLibraryNames } from "@/lib/stremio-repair";
 import { reconcileRemoteWatched } from "@/lib/stremio-watched-pull";
 import { isCorruptAnimeEntry } from "@/lib/anime-cw-repair";
 import { absorbCloudAnimeCw } from "@/lib/anime-cw-absorb";
-import { franchiseRoot, franchiseRootSync } from "@/lib/providers/anime-franchise-root";
-import {
-  ANIME_CLOUD_ID,
-  cwSortKey,
-  episodeFromVideoId,
-  isAnimeCwItem,
-  isCwMember,
-  library,
-  type LibraryItem,
-} from "@/lib/stremio";
+import { episodeFromVideoId, library, type LibraryItem } from "@/lib/stremio";
 import { useTrakt } from "@/lib/trakt/provider";
 import { buildTraktHomeRows } from "@/lib/trakt/home-rails";
 import { fetchWatchedKeySet } from "@/lib/trakt/history";
@@ -120,7 +117,6 @@ export function Home({ active = true, onReady }: { active?: boolean; onReady?: (
   }, [active, heroReady, onReady]);
   const [items, setItems] = useState<LibraryItem[]>([]);
   const cwVersion = useCwDismissVersion();
-  const [cwRootVersion, setCwRootVersion] = useState(0);
   const [tmdbProvidedByAddon, setTmdbProvidedByAddon] = useState(false);
   const [addonsTick, setAddonsTick] = useState(0);
   const [buildTick, setBuildTick] = useState(0);
@@ -490,7 +486,6 @@ export function Home({ active = true, onReady }: { active?: boolean; onReady?: (
     };
   }, [authKey, active, settings.cwPerProfile]);
 
-  const localCwVer = useSyncExternalStore(subscribeLocalCw, localCwVersion);
   const manualWatchedVer = useSyncExternalStore(subscribeManualWatched, manualWatchedVersion);
   const animeDetectVer = useDetectedAnimeVersion();
   const stremioWatchedIds = useMemo(() => {
@@ -498,114 +493,21 @@ export function Home({ active = true, onReady }: { active?: boolean; onReady?: (
     for (const i of items) if ((i.state?.flaggedWatched ?? 0) > 0) s.add(i._id);
     return s;
   }, [items]);
-  const localCwItems = useMemo<LibraryItem[]>(() => {
-    void localCwVer;
-    return listLocalCw().map((e) => ({
-      _id: e.id,
-      type: e.type,
-      name: e.name,
-      poster: e.poster,
-      background: e.background,
-      state: {
-        timeOffset: e.positionMs,
-        duration: e.durationMs,
-        season: e.season,
-        episode: e.episode,
-        video_id:
-          e.videoId ??
-          (e.season != null && e.episode != null ? `${e.id}:${e.season}:${e.episode}` : undefined),
-        flaggedWatched: e.durationMs > 0 && e.positionMs / e.durationMs >= 0.9 ? 1 : 0,
-        lastWatched: new Date(e.t).toISOString(),
-      },
-      removed: false,
-      temp: false,
-      _ctime: new Date(e.t).toISOString(),
-      _mtime: new Date(e.t).toISOString(),
-      local: true,
-    }));
-  }, [localCwVer]);
-  const continueWatching = useMemo(() => {
-    const cwBase = settings.cwPerProfile
-      ? []
-      : [...items.filter((i) => !ANIME_CLOUD_ID.test(i._id)), ...simklCw];
-    const eligible = [...cwBase, ...localCwItems]
-      .filter(
-        (i) =>
-          (i.type as string) !== "other" &&
-          !i._id.startsWith("iptv:") &&
-          !isCwDismissed(i) &&
-          isCwMember(i) &&
-          !((settings.animeOnlyInAnimeRoom || settings.hideContent.anime) && isAnimeCwItem(i)),
-      )
-      .map((i) => ({ i, k: cwSortKey(i) }))
-      .sort((a, b) => b.k - a.k)
-      .map((e) => e.i);
-    const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, "").trim();
-    const lastWatchedOf = (i: LibraryItem) => {
-      const lw = Date.parse(i.state?.lastWatched ?? "");
-      if (Number.isFinite(lw) && lw > 0) return lw;
-      const m = i._mtime as unknown;
-      const mt = typeof m === "number" ? m : Date.parse(String(m ?? ""));
-      return Number.isFinite(mt) ? mt : 0;
-    };
-    const byId = new Map<string, LibraryItem>();
-    const byName = new Map<string, LibraryItem>();
-    for (const i of eligible) {
-      if (byId.has(i._id)) continue;
-      const nm = norm(i.name ?? "");
-      const key = `${i.type}:${nm}`;
-      if (nm) {
-        const held = byName.get(key);
-        if (held) {
-          if (lastWatchedOf(i) > lastWatchedOf(held)) {
-            byId.delete(held._id);
-            byName.set(key, i);
-            byId.set(i._id, i);
-          }
-          continue;
-        }
-        byName.set(key, i);
-      }
-      byId.set(i._id, i);
-      if (byId.size >= 100) break;
-    }
-    const seenRoot = new Set<string>();
-    for (const i of [...byId.values()].sort((a, b) => lastWatchedOf(b) - lastWatchedOf(a))) {
-      const root = franchiseRootSync(i._id);
-      if (root && seenRoot.has(root)) byId.delete(i._id);
-      if (root) seenRoot.add(root);
-    }
-    return [...byId.values()].sort((a, b) => cwSortKey(b) - cwSortKey(a));
-  }, [items, simklCw, localCwItems, cwVersion, cwRootVersion, settings.animeOnlyInAnimeRoom, settings.hideContent.anime, settings.cwPerProfile, animeDetectVer]);
-  useEffect(() => {
-    let cancelled = false;
-    const ids = [...localCwItems, ...simklCw]
-      .filter((i) => isCwMember(i))
-      .map((i) => i._id);
-    if (ids.length === 0) return;
-    if (ids.every((id) => franchiseRootSync(id))) return;
-    const load = async () => {
-      await Promise.allSettled(ids.map((id) => franchiseRoot(id)));
-      if (!cancelled) setCwRootVersion((v) => v + 1);
-    };
-    load();
-    return () => {
-      cancelled = true;
-    };
-  }, [localCwItems, simklCw]);
-  const resurfaceLibrary = useMemo(() => {
-    const pool = [
-      ...items.filter((i) => !ANIME_CLOUD_ID.test(i._id)),
-      ...localCwItems.filter((i) => i.type === "series"),
-    ];
-    const manual = manualWatchedLibraryItems();
-    if (manual.length === 0) return pool;
-    const cwMemberIds = new Set(pool.filter(isCwMember).map((i) => i._id));
-    const usable = manual.filter((i) => !cwMemberIds.has(i._id));
-    if (usable.length === 0) return pool;
-    const overrideIds = new Set(usable.map((i) => i._id));
-    return [...pool.filter((i) => !overrideIds.has(i._id)), ...usable];
-  }, [items, localCwItems, manualWatchedVer]);
+  const localCwItems = useLocalCwLibraryItems();
+  const cwRootSources = useMemo(() => [...localCwItems, ...simklCw], [localCwItems, simklCw]);
+  const cwRootVersion = useCwFranchiseRootsVersion(cwRootSources);
+  const continueWatching = useMemo(
+    () =>
+      mergeContinueWatching(items, simklCw, localCwItems, {
+        cwPerProfile: settings.cwPerProfile,
+        hideAnime: settings.animeOnlyInAnimeRoom || settings.hideContent.anime,
+      }),
+    [items, simklCw, localCwItems, cwVersion, cwRootVersion, settings.animeOnlyInAnimeRoom, settings.hideContent.anime, settings.cwPerProfile, animeDetectVer],
+  );
+  const resurfaceLibrary = useMemo(
+    () => buildCwResurfaceLibrary(items, localCwItems),
+    [items, localCwItems, manualWatchedVer],
+  );
   useEffect(() => {
     if (!anilistConnected) {
       setAnilistWatchedMap((prev) => (prev.size ? new Map() : prev));
@@ -648,18 +550,7 @@ export function Home({ active = true, onReady }: { active?: boolean; onReady?: (
   }, [cwItems]);
 
   const onDismissCw = useCallback(
-    (item: LibraryItem) => {
-      if (item.manualWatched) {
-        dismissManualWatched(item._id);
-        return;
-      }
-      if (item.local) {
-        clearLocalCw(item._id);
-        dismissCw(item, authKey);
-        return;
-      }
-      dismissCw(item, authKey);
-    },
+    (item: LibraryItem) => dismissCwItem(item, authKey),
     [authKey],
   );
 

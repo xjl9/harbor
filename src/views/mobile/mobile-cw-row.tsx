@@ -1,101 +1,160 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { Play, X } from "lucide-react";
 import type { Meta } from "@/lib/cinemeta";
 import { useAuth } from "@/lib/auth";
 import { useHideAnime } from "@/lib/anime-hide";
 import { useHeroLogos } from "@/components/anime-hero/use-hero-logos";
-import { dismissCw, isCwDismissed, useCwDismissVersion } from "@/lib/cw-dismiss";
-import { listLocalCw, subscribeLocalCw, type LocalCwEntry } from "@/lib/local-cw";
+import { detectAnimeForCw, useDetectedAnimeVersion } from "@/lib/anime-detect";
+import { useAnilist } from "@/lib/anilist/provider";
+import { loadAnilistWatchedMap } from "@/lib/anilist/watched-map";
+import {
+  buildCwResurfaceLibrary,
+  dismissCwItem,
+  mergeContinueWatching,
+  useCwCloudLibrary,
+  useCwFranchiseRootsVersion,
+  useLocalCwLibraryItems,
+} from "@/lib/continue-watching";
+import { useCwDismissVersion } from "@/lib/cw-dismiss";
+import { manualWatchedVersion, subscribeManualWatched } from "@/lib/manual-watched";
 import { readSnapshot, useSnapshotVersion } from "@/lib/snapshots";
 import { useSettings } from "@/lib/settings";
-import {
-  ANIME_CLOUD_ID,
-  cwSortKey,
-  episodeFromVideoId,
-  isAnimeCwItem,
-  isCwMember,
-  library,
-  libraryMetaType,
-  type LibraryItem,
-} from "@/lib/stremio";
+import { loadSimklStatusMap, loadSimklWatchedMap, type WatchlistStatus } from "@/lib/simkl/list-status";
+import { useSimkl } from "@/lib/simkl/provider";
+import { fetchWatchedKeySet } from "@/lib/trakt/history";
+import { useTrakt } from "@/lib/trakt/provider";
+import { episodeFromVideoId, isAnimeCwItem, libraryMetaType, type LibraryItem } from "@/lib/stremio";
+import { useCwAdvance } from "@/views/home/hooks/use-cw-advance";
+import { useLayerActive } from "./layer-active";
 
-function localToLibraryItem(e: LocalCwEntry): LibraryItem {
-  return {
-    _id: e.id,
-    type: e.type,
-    name: e.name,
-    poster: e.poster,
-    background: e.background,
-    state: {
-      timeOffset: e.positionMs,
-      duration: e.durationMs,
-      season: e.season,
-      episode: e.episode,
-      video_id: e.videoId,
-      flaggedWatched: e.durationMs > 0 && e.positionMs / e.durationMs >= 0.9 ? 1 : 0,
-      lastWatched: new Date(e.t).toISOString(),
-    },
-    removed: false,
-    temp: false,
-    _ctime: new Date(e.t).toISOString(),
-    _mtime: new Date(e.t).toISOString(),
-    local: true,
-  };
-}
+const NO_SIMKL_CW: LibraryItem[] = [];
 
-export function useMobileCw(limit = 14): LibraryItem[] {
-  const { authKey } = useAuth();
-  const { settings } = useSettings();
-  const cwPerProfile = settings.cwPerProfile;
-  const hideAnime = useHideAnime();
-  const [items, setItems] = useState<LibraryItem[]>([]);
-  const [localVersion, setLocalVersion] = useState(0);
-  const dismissVersion = useCwDismissVersion();
+// External watched sources feeding useCwAdvance's episode-watched checks.
+// Mirrors the loaders desktop home runs; maps stay empty when a service is
+// not connected, matching useCwAdvance's own defaults.
+function useCwWatchedSources(cwItems: LibraryItem[]): {
+  traktWatched: Set<string>;
+  simklWatchedMap: Map<string, Set<string>>;
+  simklStatusMap: Map<string, WatchlistStatus>;
+  anilistWatchedMap: Map<string, Set<string>>;
+} {
+  const { isConnected: traktConnected } = useTrakt();
+  const { isConnected: simklConnected } = useSimkl();
+  const { isConnected: anilistConnected } = useAnilist();
+  const [traktWatched, setTraktWatched] = useState<Set<string>>(() => new Set());
+  const [simklWatchedMap, setSimklWatchedMap] = useState<Map<string, Set<string>>>(() => new Map());
+  const [simklStatusMap, setSimklStatusMap] = useState<Map<string, WatchlistStatus>>(() => new Map());
+  const [anilistWatchedMap, setAnilistWatchedMap] = useState<Map<string, Set<string>>>(() => new Map());
 
   useEffect(() => {
-    if (!authKey) {
-      setItems([]);
+    if (!traktConnected) {
+      setTraktWatched((prev) => (prev.size ? new Set() : prev));
       return;
     }
     let cancelled = false;
-    library(authKey)
-      .then((li) => {
-        if (!cancelled) setItems(li);
+    fetchWatchedKeySet()
+      .then((set) => {
+        if (!cancelled) setTraktWatched(set);
       })
       .catch(() => {});
     return () => {
       cancelled = true;
     };
-  }, [authKey]);
+  }, [traktConnected]);
 
-  useEffect(() => subscribeLocalCw(() => setLocalVersion((v) => v + 1)), []);
-
-  return useMemo(() => {
-    void localVersion;
-    void dismissVersion;
-    const base = cwPerProfile ? [] : items.filter((i) => !ANIME_CLOUD_ID.test(i._id));
-    const merged = [...base, ...listLocalCw().map(localToLibraryItem)]
-      .filter(
-        (i) =>
-          (i.type as string) !== "other" &&
-          !i._id.startsWith("iptv:") &&
-          !isCwDismissed(i) &&
-          isCwMember(i) &&
-          !(hideAnime && isAnimeCwItem(i)),
-      )
-      .map((i) => ({ i, k: cwSortKey(i) }))
-      .sort((a, b) => b.k - a.k)
-      .map((e) => e.i);
-    const seen = new Set<string>();
-    const out: LibraryItem[] = [];
-    for (const i of merged) {
-      if (seen.has(i._id)) continue;
-      seen.add(i._id);
-      out.push(i);
-      if (out.length >= limit) break;
+  useEffect(() => {
+    if (!simklConnected) {
+      setSimklWatchedMap((prev) => (prev.size ? new Map() : prev));
+      setSimklStatusMap((prev) => (prev.size ? new Map() : prev));
+      return;
     }
-    return out;
-  }, [items, localVersion, dismissVersion, limit, hideAnime, cwPerProfile]);
+    let cancelled = false;
+    loadSimklWatchedMap()
+      .then((map) => {
+        if (!cancelled) setSimklWatchedMap(map);
+      })
+      .catch(() => {});
+    loadSimklStatusMap()
+      .then((map) => {
+        if (!cancelled) setSimklStatusMap(map);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [simklConnected]);
+
+  useEffect(() => {
+    if (!anilistConnected) {
+      setAnilistWatchedMap((prev) => (prev.size ? new Map() : prev));
+      return;
+    }
+    let cancelled = false;
+    const ids = cwItems.filter((i) => /^(kitsu|mal|anilist):/.test(i._id)).map((i) => i._id);
+    loadAnilistWatchedMap(ids)
+      .then((m) => {
+        if (!cancelled) setAnilistWatchedMap(m);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [anilistConnected, cwItems]);
+
+  return { traktWatched, simklWatchedMap, simklStatusMap, anilistWatchedMap };
+}
+
+export function useMobileCw(limit = 14): LibraryItem[] {
+  const { authKey } = useAuth();
+  const { settings } = useSettings();
+  const hideAnime = useHideAnime();
+  const layerActive = useLayerActive();
+  const items = useCwCloudLibrary(authKey, layerActive);
+  const localItems = useLocalCwLibraryItems();
+  const dismissVersion = useCwDismissVersion();
+  const manualWatchedVer = useSyncExternalStore(subscribeManualWatched, manualWatchedVersion);
+  const animeDetectVer = useDetectedAnimeVersion();
+  const rootsVersion = useCwFranchiseRootsVersion(localItems);
+
+  useEffect(() => {
+    void detectAnimeForCw(items);
+  }, [items]);
+
+  const merged = useMemo(() => {
+    void dismissVersion;
+    void rootsVersion;
+    void animeDetectVer;
+    return mergeContinueWatching(items, NO_SIMKL_CW, localItems, {
+      cwPerProfile: settings.cwPerProfile,
+      hideAnime,
+    });
+  }, [items, localItems, dismissVersion, rootsVersion, animeDetectVer, hideAnime, settings.cwPerProfile]);
+
+  const resurfaceLibrary = useMemo(() => {
+    void manualWatchedVer;
+    return buildCwResurfaceLibrary(items, localItems);
+  }, [items, localItems, manualWatchedVer]);
+
+  const watched = useCwWatchedSources(merged);
+  const advanced = useCwAdvance(
+    merged,
+    settings.tmdbKey,
+    settings.cwAdvanceNext,
+    resurfaceLibrary,
+    hideAnime ? "exclude" : "all",
+    manualWatchedVer,
+    watched.traktWatched,
+    watched.simklWatchedMap,
+    watched.anilistWatchedMap,
+    watched.simklStatusMap,
+    animeDetectVer,
+    settings.episodeHiding,
+    // Mobile cards have no air-countdown treatment, so never emit
+    // waitingForAir entries regardless of the animeCwEnd setting.
+    "hide",
+  );
+
+  return useMemo(() => advanced.slice(0, limit), [advanced, limit]);
 }
 
 // Same windowing Poster's lazy="release" does, for the card's raw <img>s: mount
@@ -177,7 +236,7 @@ export function MobileCwRow({
             item={item}
             logo={logos[item._id]}
             onOpenDetail={onOpenDetail}
-            onDismiss={() => dismissCw(item, authKey)}
+            onDismiss={() => dismissCwItem(item, authKey)}
           />
         ))}
       </div>
@@ -202,7 +261,9 @@ function MobileCwCard({
   const off = item.state?.timeOffset ?? 0;
   const progress = dur > 0 ? Math.min(1, off / dur) : 0;
   const external = item.external === "simkl";
-  const remaining = dur > 0 && !external ? formatRemaining(dur - off) : "";
+  // Up-next entries carry the previous episode's duration with a reset
+  // offset, so a remaining-time label would be wrong for them.
+  const remaining = dur > 0 && !external && !item.upNext ? formatRemaining(dur - off) : "";
   const ep = episodeInfo(item);
   const sub =
     item.type !== "movie" && ep
