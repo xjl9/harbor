@@ -198,11 +198,18 @@ export function EpisodeSection({
 
   const baseEpisodes = useMemo<Ep[]>(() => {
     if (ordering) {
+      // Cinemeta stills fill the gaps where a TVDB-ordered entry has no image,
+      // matching desktop's ordered rows (which fall back the same way).
+      const videoThumb = new Map<string, string>();
+      for (const v of full?.videos ?? []) {
+        if (typeof v.episode === "number" && v.thumbnail)
+          videoThumb.set(`${v.season}:${v.episode}`, v.thumbnail);
+      }
       return (ordering.bySeason.get(season) ?? []).map((e) => ({
         season: e.seasonNumber,
         episode: e.episodeNumber,
         name: e.name || undefined,
-        still: stillFrom(e.stillPath, e.stillUrl),
+        still: stillFrom(e.stillPath, e.stillUrl) ?? videoThumb.get(`${e.seasonNumber}:${e.episodeNumber}`),
         overview: e.overview || undefined,
         runtime: e.runtime,
         airDate: e.airDate,
