@@ -1,6 +1,8 @@
 import {
   Check,
   ChevronRight,
+  Eye,
+  EyeOff,
   FileText,
   HelpCircle,
   KeyRound,
@@ -12,6 +14,11 @@ import {
   Users,
 } from "lucide-react";
 import { useState, type ReactNode } from "react";
+import allDebridLogo from "@/assets/addon-logos/alldebrid.webp";
+import debridLinkLogo from "@/assets/addon-logos/debridlink.png";
+import premiumizeLogo from "@/assets/addon-logos/premiumize.png";
+import realDebridLogo from "@/assets/addon-logos/realdebrid.png";
+import torboxLogo from "@/assets/addon-logos/torbox.png";
 import { useAuth } from "@/lib/auth";
 import { isMobileNative } from "@/lib/platform";
 import { useProfiles } from "@/lib/profiles";
@@ -26,12 +33,61 @@ import { useKeyboardInset } from "./use-keyboard-inset";
 import { setMobileRemoteStyle, useMobileRemoteStyle, type MobileRemoteStyle } from "./remote-style";
 import { HARBOR_BUGS_BASE } from "@/lib/config/endpoints";
 
+type DebridKey = "rdKey" | "tbKey" | "adKey" | "pmKey" | "dlKey";
+
 type EditField = {
-  key: "remoteHostAddress" | "tmdbKey" | "tvdbKey" | "rpdbKey";
+  key: "remoteHostAddress" | "tmdbKey" | "tvdbKey" | "rpdbKey" | DebridKey;
   label: string;
   placeholder: string;
   hint?: string;
 };
+
+// Same settings keys the stream picker reads via useDebridClients(); order and
+// copy mirror the desktop "Debrid services" section. All five are plain key
+// paste, so the mobile entry writes the key straight through like desktop does.
+const DEBRID_PROVIDERS: Array<{
+  key: DebridKey;
+  label: string;
+  logo: string;
+  placeholder: string;
+  hint: string;
+}> = [
+  {
+    key: "rdKey",
+    label: "Real-Debrid",
+    logo: realDebridLogo,
+    placeholder: "API token",
+    hint: "Get your token at real-debrid.com/apitoken. Cached streams play direct.",
+  },
+  {
+    key: "tbKey",
+    label: "TorBox",
+    logo: torboxLogo,
+    placeholder: "API key",
+    hint: "Get your key at torbox.app/settings. Cached streams play direct.",
+  },
+  {
+    key: "adKey",
+    label: "AllDebrid",
+    logo: allDebridLogo,
+    placeholder: "API key",
+    hint: "Get your key at alldebrid.com/apikeys. Cache shows as unknown until you hit Play.",
+  },
+  {
+    key: "pmKey",
+    label: "Premiumize",
+    logo: premiumizeLogo,
+    placeholder: "API key",
+    hint: "Get your key at premiumize.me/account. Skips queueing for cached files.",
+  },
+  {
+    key: "dlKey",
+    label: "Debrid-Link",
+    logo: debridLinkLogo,
+    placeholder: "API key",
+    hint: "Get your key at debrid-link.com/webapp/apikey. Fast EU-hosted cache check.",
+  },
+];
 
 export function MobileProfile({ onOpenRemote }: { onOpenRemote: () => void }) {
   const { user, signOut } = useAuth();
@@ -195,6 +251,40 @@ export function MobileProfile({ onOpenRemote }: { onOpenRemote: () => void }) {
         </div>
       </section>
 
+      <section className="flex flex-col gap-3">
+        <div className="flex flex-col gap-1.5">
+          <h2 className="px-1 text-[12px] font-bold uppercase tracking-[0.16em] text-ink-subtle">
+            Debrid
+          </h2>
+          <p className="px-1 text-[12.5px] leading-snug text-ink-subtle">
+            Connect a debrid service and cached streams play direct. Keys stay on this device.
+          </p>
+        </div>
+        <div className="overflow-hidden rounded-2xl border border-white/[0.06] bg-elevated/40">
+          {DEBRID_PROVIDERS.map((p, i) => (
+            <div key={p.key}>
+              {i > 0 && <Divider />}
+              <Row
+                icon={<DebridLogo src={p.logo} />}
+                label={p.label}
+                value={keySet(settings[p.key]) ? "••••" : undefined}
+                pending={!keySet(settings[p.key])}
+                pendingLabel="Connect"
+                dot={keySet(settings[p.key]) ? "ok" : null}
+                onClick={() =>
+                  setEditing({
+                    key: p.key,
+                    label: p.label,
+                    placeholder: p.placeholder,
+                    hint: p.hint,
+                  })
+                }
+              />
+            </div>
+          ))}
+        </div>
+      </section>
+
       <section className="overflow-hidden rounded-2xl border border-white/[0.06] bg-elevated/40">
         <Row
           icon={<SlidersHorizontal size={20} strokeWidth={2} />}
@@ -240,7 +330,12 @@ export function MobileProfile({ onOpenRemote }: { onOpenRemote: () => void }) {
             if (editing.key === "remoteHostAddress") update({ remoteHostAddress: v });
             else if (editing.key === "tmdbKey") update({ tmdbKey: v });
             else if (editing.key === "tvdbKey") update({ tvdbKey: v });
-            else update({ rpdbKey: v });
+            else if (editing.key === "rpdbKey") update({ rpdbKey: v });
+            else if (editing.key === "rdKey") update({ rdKey: v });
+            else if (editing.key === "tbKey") update({ tbKey: v });
+            else if (editing.key === "adKey") update({ adKey: v });
+            else if (editing.key === "pmKey") update({ pmKey: v });
+            else update({ dlKey: v });
             setEditing(null);
           }}
           onClose={() => setEditing(null)}
@@ -262,8 +357,12 @@ function EditSheet({
   onClose: () => void;
 }) {
   const [value, setValue] = useState(initial);
+  const [reveal, setReveal] = useState(false);
   const keyboardInset = useKeyboardInset();
   useRegisterSheet(true);
+  // Every field here except the remote host holds a secret (API tokens); mask by
+  // default with a reveal toggle, matching desktop's KeyField.
+  const secret = field.key !== "remoteHostAddress";
   return (
     <div
       className="fixed inset-0 z-[70] flex items-end justify-center transition-[padding] duration-150"
@@ -281,20 +380,34 @@ function EditSheet({
       >
         <h3 className="text-[16px] font-semibold text-ink">{field.label}</h3>
         {field.hint && <p className="mt-1 text-[13px] leading-snug text-ink-muted">{field.hint}</p>}
-        <input
-          autoFocus
-          value={value}
-          onChange={(e) => setValue(e.target.value)}
-          placeholder={field.placeholder}
-          autoCapitalize="none"
-          autoCorrect="off"
-          spellCheck={false}
-          inputMode={field.key === "remoteHostAddress" ? "decimal" : "text"}
-          className="mt-4 w-full rounded-xl border border-edge-soft/70 bg-canvas/70 px-4 py-3 text-[16px] text-ink placeholder:text-ink-subtle focus:border-accent focus:outline-none"
-          onKeyDown={(e) => {
-            if (e.key === "Enter") onSave(value);
-          }}
-        />
+        <div className="relative mt-4">
+          <input
+            autoFocus
+            type={secret && !reveal ? "password" : "text"}
+            value={value}
+            onChange={(e) => setValue(e.target.value)}
+            placeholder={field.placeholder}
+            autoCapitalize="none"
+            autoCorrect="off"
+            autoComplete="off"
+            spellCheck={false}
+            inputMode={field.key === "remoteHostAddress" ? "decimal" : "text"}
+            className={`w-full rounded-xl border border-edge-soft/70 bg-canvas/70 py-3 ps-4 text-[16px] text-ink placeholder:text-ink-subtle focus:border-accent focus:outline-none ${secret ? "pe-12" : "pe-4"}`}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") onSave(value);
+            }}
+          />
+          {secret && (
+            <button
+              type="button"
+              aria-label={reveal ? "Hide" : "Reveal"}
+              onClick={() => setReveal((r) => !r)}
+              className="absolute end-1 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-lg text-ink-subtle transition-colors active:text-ink"
+            >
+              {reveal ? <EyeOff size={18} /> : <Eye size={18} />}
+            </button>
+          )}
+        </div>
         <div className="mt-4 flex gap-3">
           <button
             type="button"
@@ -400,6 +513,14 @@ function Row({
       )}
       {!danger && <ChevronRight size={18} strokeWidth={2.2} className="text-ink-subtle" />}
     </button>
+  );
+}
+
+function DebridLogo({ src }: { src: string }) {
+  return (
+    <span className="flex h-5 w-5 items-center justify-center overflow-hidden rounded-[5px]">
+      <img src={src} alt="" draggable={false} className="h-full w-full object-contain" />
+    </span>
   );
 }
 

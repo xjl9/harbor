@@ -11,6 +11,7 @@ import { ObDone } from "./ob-done";
 import { ObLanguage } from "./ob-language";
 import { ObLayout } from "./ob-layout";
 import { ObSplash } from "./ob-splash";
+import { ObDebrid } from "./ob-debrid";
 import { ObStreaming } from "./ob-streaming";
 import { ObStremio } from "./ob-stremio";
 import { ObSubtitles } from "./ob-subtitles";
@@ -18,8 +19,9 @@ import { ObTaste } from "./ob-taste";
 import { ObTmdb } from "./ob-tmdb";
 import { ObWelcome } from "./ob-welcome";
 
-// Step machine mirrors src/components/onboarding.tsx exactly (same StepId
-// union, order, next/skip/back/finish/toggleTaste); only the chrome is mobile.
+// Step machine mirrors src/components/onboarding.tsx (same next/skip/back/finish/
+// toggleTaste, mobile chrome). The mobile-only "debrid" step slots after streaming
+// so first-party debrid keys are set during setup, not just in profile settings.
 type StepId =
   | "splash"
   | "language"
@@ -28,6 +30,7 @@ type StepId =
   | "tmdb"
   | "stremio"
   | "streaming"
+  | "debrid"
   | "subtitles"
   | "taste"
   | "done";
@@ -39,6 +42,7 @@ const STEPS: StepId[] = [
   "tmdb",
   "stremio",
   "streaming",
+  "debrid",
   "subtitles",
   "taste",
   "done",
@@ -92,6 +96,7 @@ export function MobileOnboarding() {
     step === "tmdb" ||
     step === "stremio" ||
     step === "streaming" ||
+    step === "debrid" ||
     step === "subtitles" ||
     step === "taste";
   const showBack = stepIdx > 1 && stepIdx < STEPS.length - 1;
@@ -139,6 +144,7 @@ export function MobileOnboarding() {
               {step === "tmdb" && <ObTmdb />}
               {step === "stremio" && <ObStremio />}
               {step === "streaming" && <ObStreaming />}
+              {step === "debrid" && <ObDebrid />}
               {step === "subtitles" && <ObSubtitles />}
               {step === "taste" && <ObTaste selected={tastePicks} onToggle={toggleTaste} />}
               {step === "done" && <ObDone />}

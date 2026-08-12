@@ -25,7 +25,7 @@ export function ObSubtitles() {
   return (
     <div className="flex flex-col gap-6">
       <span className="text-[12.5px] font-medium uppercase tracking-[0.16em] text-ink-subtle">
-        {t("Step 4 · Subtitles")}
+        {t("Step 5 · Subtitles")}
       </span>
       <div className="flex flex-col gap-3">
         <h1 className="font-display text-[30px] font-medium leading-[1.08] tracking-tight text-ink">
