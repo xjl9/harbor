@@ -1,11 +1,31 @@
-import { useMemo, useState } from "react";
-import { ChevronDown } from "lucide-react";
+import { useMemo, useState, useSyncExternalStore } from "react";
+import { Check } from "lucide-react";
+import type { Meta } from "@/lib/cinemeta";
 import { Poster } from "@/components/poster";
 import { formatAirDate } from "@/lib/dates";
-import type { KitsuEpisode } from "@/lib/providers/kitsu";
+import { parseKitsuId, type KitsuEpisode } from "@/lib/providers/kitsu";
+import { pickTvdbImage } from "@/lib/providers/tvdb-proxy";
 import type { PlayEpisode } from "@/lib/view";
+import { useSettings } from "@/lib/settings";
+import { effectiveOrderProvider, tvdbPanelEnabled } from "@/lib/settings/episode-order";
+import { formatRelativeWatched, type EpisodeProgress } from "@/lib/episode-progress";
+import { manualWatchedVersion, subscribeManualWatched } from "@/lib/manual-watched";
+import { SPOILER_TEXT_CLASS, SPOILER_THUMB_CLASS, type SpoilerMask } from "@/lib/spoilers";
+import { useTrakt } from "@/lib/trakt/provider";
+import { useAnilistWatched } from "@/lib/anilist/use-anilist-watched";
+import { useMalWatched } from "@/lib/mal/use-mal-watched";
+import { useWatchedSets } from "@/views/detail/series-episodes/use-watched-sets";
+import { useAnimeOrder } from "@/views/detail/anime-episodes/use-anime-order";
+import { useAnimeTvdbPanel } from "@/views/detail/anime-episodes/use-anime-tvdb-panel";
+import { useAnimePreferredSeason } from "@/views/detail/anime-episodes/use-anime-preferred-season";
+import { useAnimeProgressMap } from "@/views/detail/anime-episodes/use-anime-progress-map";
+import { useTvdbProxyImages } from "@/views/detail/anime-episodes/use-tvdb-proxy-images";
+import { useT } from "@/lib/i18n";
+import { useMobileRemote } from "../mobile-remote";
 import { useEpisodeWindow } from "./data";
-import { SectionTitle } from "./ui";
+import { EpisodeRating, SectionTitle } from "./ui";
+import { SeasonPicker, type SeasonSheetItem } from "./season-sheet";
+import { animeSeasonKey } from "@/views/detail/anime-episodes/anime-season-key";
 
 function seasonKey(ep: KitsuEpisode): number {
   return ep.seasonNumber && ep.seasonNumber > 0 ? ep.seasonNumber : 1;
@@ -24,7 +44,10 @@ export function firstAnimeEpisode(episodes: KitsuEpisode[]): KitsuEpisode | null
 // this mirrors the desktop episode-row mapping exactly.
 export function toPlayEpisode(ep: KitsuEpisode): PlayEpisode {
   return {
-    season: seasonKey(ep),
+    // animeSeasonKey (not the 0-folds-to-1 seasonKey) so playback writes the
+    // resume/manual key under the same season the progress overlay reads;
+    // seasonKey stays only for firstAnimeEpisode ordering.
+    season: animeSeasonKey(ep),
     episode: ep.number,
     name: ep.title,
     still: ep.thumbnail ?? ep.thumbnailFallback ?? undefined,
@@ -43,34 +66,130 @@ export function toPlayEpisode(ep: KitsuEpisode): PlayEpisode {
 }
 
 export function AnimeEpisodeSection({
+  meta,
+  imdbId,
   episodes,
   loading,
   onPlay,
 }: {
+  meta: Meta;
+  imdbId: string | null;
   episodes: KitsuEpisode[];
   loading: boolean;
   onPlay: (ep: PlayEpisode) => void;
 }) {
-  const seasons = useMemo(() => {
+  const { settings } = useSettings();
+  const { snapshot } = useMobileRemote();
+  const tvdbKey = settings.tvdbKey || snapshot.tvdbKey || "";
+  const kitsuId = parseKitsuId(meta.id);
+
+  const { isConnected: traktConnected } = useTrakt();
+  const mwVersion = useSyncExternalStore(subscribeManualWatched, manualWatchedVersion);
+  const { traktWatched } = useWatchedSets({
+    traktConnected,
+    simklConnected: false,
+    imdbId,
+    metaId: meta.id,
+  });
+  const { watchedKeys: anilistWatched } = useAnilistWatched(meta.id, episodes);
+  const { watchedKeys: malWatched } = useMalWatched(meta.id, episodes);
+
+  const preferredSeasonKey = useAnimePreferredSeason({
+    episodes,
+    metaId: meta.id,
+    traktWatched,
+    anilistWatched,
+    malWatched,
+    mwVersion,
+  });
+
+  // Real TVDB season structure when it resolves; raw kitsu seasonNumber
+  // grouping stays as the fallback.
+  const order = useAnimeOrder(
+    imdbId,
+    meta.id,
+    episodes,
+    effectiveOrderProvider(settings),
+    settings.tvdbSeasonType,
+    tvdbKey,
+    preferredSeasonKey ?? undefined,
+  );
+  const tvdbPanel = useAnimeTvdbPanel(
+    kitsuId,
+    imdbId,
+    episodes,
+    settings.tvdbSeasonType,
+    tvdbKey,
+    tvdbPanelEnabled(settings) && !!tvdbKey,
+    undefined,
+    preferredSeasonKey ?? undefined,
+  );
+  const panel = tvdbPanel.panel;
+
+  const fallbackSeasons = useMemo(() => {
     const set = new Set<number>();
     for (const ep of episodes) set.add(seasonKey(ep));
     return [...set].sort((a, b) => a - b);
   }, [episodes]);
-
-  const [season, setSeason] = useState<number | null>(null);
-  const activeSeason = season ?? seasons[0] ?? 1;
-  const shown = useMemo(
+  const [fallbackSeason, setFallbackSeason] = useState<number | null>(null);
+  const activeFallback = fallbackSeason ?? fallbackSeasons[0] ?? 1;
+  const fallbackShown = useMemo(
     () =>
       episodes
-        .filter((ep) => seasonKey(ep) === activeSeason)
+        .filter((ep) => seasonKey(ep) === activeFallback)
         .sort((a, b) => a.number - b.number),
-    [episodes, activeSeason],
+    [episodes, activeFallback],
   );
+
+  const baseDisplay = panel ? panel.visibleEpisodes : order ? order.visibleEpisodes : fallbackShown;
+  const proxyImages = useTvdbProxyImages(kitsuId, imdbId, episodes.length, settings.tvdbSeasonType);
+  const displayEpisodes = useMemo(() => {
+    if (Object.keys(proxyImages).length === 0) return baseDisplay;
+    return baseDisplay.map((ep) => {
+      const img = pickTvdbImage(proxyImages, ep);
+      return img ? { ...ep, thumbnail: img } : ep;
+    });
+  }, [baseDisplay, proxyImages]);
+
+  const { progressFor, nextUpId, spoilerFor } = useAnimeProgressMap({
+    episodes,
+    displayEpisodes,
+    metaId: meta.id,
+    traktWatched,
+    anilistWatched,
+    malWatched,
+    mwVersion,
+    settings,
+  });
+
+  const pickerItems = useMemo<SeasonSheetItem[]>(() => {
+    const items = panel?.items ?? order?.items;
+    if (items) {
+      return items.map((i) => ({
+        key: i.key,
+        name: i.name,
+        count: i.count,
+        year: i.year,
+        from: i.from,
+        to: i.to,
+        extra: i.extra,
+        badge: i.badge,
+      }));
+    }
+    return fallbackSeasons.map((n) => ({ key: String(n), name: `Season ${n}` }));
+  }, [panel?.items, order?.items, fallbackSeasons]);
+  const activeKey = panel ? panel.activeKey : order ? order.activeKey : String(activeFallback);
+  const onPickSeason = (k: string) => {
+    if (panel) panel.onSelect(k);
+    else if (order) order.onSelect(k);
+    else setFallbackSeason(Number(k));
+  };
+
   // The One Piece case: seasonless Kitsu listings fold 1000+ episodes into
   // season 1, so the list must window instead of mounting every row.
   const { renderCount, hasMore, sentinelRef } = useEpisodeWindow(
-    shown.length,
-    `${activeSeason}|${episodes.length}`,
+    displayEpisodes.length,
+    `${meta.id}|${activeKey}|${displayEpisodes.length}`,
   );
 
   if (loading && episodes.length === 0) {
@@ -92,17 +211,21 @@ export function AnimeEpisodeSection({
     <section className="flex flex-col gap-4">
       <div className="flex items-center justify-between gap-3">
         <SectionTitle>Episodes</SectionTitle>
-        {seasons.length > 1 && (
-          <SeasonPicker
-            seasons={seasons}
-            value={activeSeason}
-            onChange={setSeason}
-          />
+        {pickerItems.length > 1 && (
+          <SeasonPicker items={pickerItems} activeKey={activeKey} onPick={onPickSeason} />
         )}
       </div>
       <div className="flex flex-col gap-1.5">
-        {shown.slice(0, renderCount).map((ep) => (
-          <AnimeEpisodeItem key={ep.id} ep={ep} onPlay={onPlay} />
+        {displayEpisodes.slice(0, renderCount).map((ep) => (
+          <AnimeEpisodeItem
+            key={ep.id}
+            ep={ep}
+            onPlay={onPlay}
+            progress={progressFor(ep)}
+            spoiler={spoilerFor(ep)}
+            nextUp={ep.id === nextUpId}
+            showRating={settings.showEpisodeRating}
+          />
         ))}
       </div>
       {hasMore && <div ref={sentinelRef} aria-hidden className="h-1" />}
@@ -113,10 +236,20 @@ export function AnimeEpisodeSection({
 function AnimeEpisodeItem({
   ep,
   onPlay,
+  progress,
+  spoiler,
+  nextUp,
+  showRating,
 }: {
   ep: KitsuEpisode;
   onPlay: (ep: PlayEpisode) => void;
+  progress: EpisodeProgress;
+  spoiler: SpoilerMask;
+  nextUp: boolean;
+  showRating: boolean;
 }) {
+  const t = useT();
+  const watchedAgo = progress.startedAt > 0 ? formatRelativeWatched(progress.startedAt) : "";
   const sub = [
     `E${ep.number}`,
     ep.absoluteNumber && ep.absoluteNumber !== ep.number ? `Abs ${ep.absoluteNumber}` : null,
@@ -129,22 +262,48 @@ function AnimeEpisodeItem({
     <button
       type="button"
       onClick={() => onPlay(toPlayEpisode(ep))}
-      className="flex gap-3.5 rounded-2xl p-2 text-start transition-colors active:bg-elevated/50 motion-reduce:transition-none"
+      className="group flex gap-3.5 rounded-2xl p-2 text-start transition-colors active:bg-elevated/50 motion-reduce:transition-none"
     >
-      <div className="relative w-[128px] shrink-0 overflow-hidden rounded-xl">
-        <Poster
-          src={ep.thumbnail ?? ep.thumbnailFallback ?? undefined}
-          seed={`${ep.id}`}
-          ratio="landscape"
-          lazy="release"
-        />
+      <div
+        className={`relative w-[128px] shrink-0 overflow-hidden rounded-xl ${
+          nextUp ? "ring-1 ring-accent/60" : ""
+        }`}
+      >
+        <div className={spoiler.thumb ? SPOILER_THUMB_CLASS : undefined}>
+          <Poster
+            src={ep.thumbnail ?? ep.thumbnailFallback ?? undefined}
+            seed={`${ep.id}`}
+            ratio="landscape"
+            lazy="release"
+          />
+        </div>
         <span className="absolute start-1.5 top-1.5 rounded-md bg-black/70 px-1.5 py-0.5 text-[11px] font-semibold text-white">
           {ep.number}
         </span>
+        {progress.watched && (
+          <span className="absolute end-1.5 top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-emerald-400/22 text-emerald-200 ring-1 ring-emerald-400/40 backdrop-blur-sm">
+            <Check size={11} strokeWidth={3} />
+          </span>
+        )}
+        {showRating && ep.rating != null && ep.rating > 0 && (
+          <EpisodeRating value={ep.rating} isImdb={!!ep.ratingIsImdb} />
+        )}
+        {progress.ratio > 0.01 && (
+          <div className="absolute inset-x-0 bottom-0 h-[3px] bg-black/55">
+            <div
+              className="h-full bg-accent"
+              style={{ width: `${Math.max(2, progress.ratio * 100)}%` }}
+            />
+          </div>
+        )}
       </div>
       <div className="flex min-w-0 flex-1 flex-col gap-1 py-0.5">
         <div className="flex items-center gap-2">
-          <p className="line-clamp-1 min-w-0 text-[14px] font-semibold text-ink">
+          <p
+            className={`line-clamp-1 min-w-0 text-[14px] font-semibold text-ink ${
+              spoiler.title ? SPOILER_TEXT_CLASS : ""
+            }`}
+          >
             {ep.title || `Episode ${ep.number}`}
           </p>
           {ep.filler && (
@@ -153,66 +312,34 @@ function AnimeEpisodeItem({
             </span>
           )}
         </div>
-        {sub && <p className="text-[11.5px] text-ink-subtle">{sub}</p>}
+        {sub && (
+          <p className="text-[11.5px] text-ink-subtle">
+            {sub}
+            {progress.watched && watchedAgo && (
+              <span className="text-emerald-300/85">
+                {"  ·  "}
+                {t("Watched {ago}", { ago: watchedAgo })}
+              </span>
+            )}
+            {!progress.watched && progress.ratio > 0.01 && watchedAgo && (
+              <span className="text-accent/85">
+                {"  ·  "}
+                {t("{pct}% watched", { pct: Math.round(progress.ratio * 100) })}
+              </span>
+            )}
+          </p>
+        )}
         {ep.synopsis && (
-          <p className="line-clamp-2 text-[12px] leading-relaxed text-ink-muted">{ep.synopsis}</p>
+          <p
+            className={`line-clamp-2 text-[12px] leading-relaxed text-ink-muted ${
+              spoiler.desc ? SPOILER_TEXT_CLASS : ""
+            }`}
+          >
+            {ep.synopsis}
+          </p>
         )}
       </div>
     </button>
-  );
-}
-
-function SeasonPicker({
-  seasons,
-  value,
-  onChange,
-}: {
-  seasons: number[];
-  value: number;
-  onChange: (n: number) => void;
-}) {
-  const [open, setOpen] = useState(false);
-  return (
-    <>
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className="flex shrink-0 items-center gap-1.5 rounded-full bg-surface px-3.5 py-2 text-[13px] font-semibold text-ink ring-1 ring-edge-soft transition-transform active:scale-[0.97] motion-reduce:transition-none"
-      >
-        <span>Season {value}</span>
-        <ChevronDown size={15} strokeWidth={2.4} className="shrink-0 text-ink-subtle" />
-      </button>
-      {open && (
-        <div className="fixed inset-0 z-[70] flex items-end justify-center">
-          <button
-            type="button"
-            aria-label="Close"
-            onClick={() => setOpen(false)}
-            className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-fade-in"
-          />
-          <div
-            className="relative z-10 max-h-[60vh] w-full max-w-md overflow-y-auto rounded-t-3xl border border-edge-soft/70 bg-elevated p-3"
-            style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 16px)" }}
-          >
-            {seasons.map((n) => (
-              <button
-                key={n}
-                type="button"
-                onClick={() => {
-                  onChange(n);
-                  setOpen(false);
-                }}
-                className={`flex w-full items-center rounded-xl px-4 py-3 text-start text-[15px] font-medium transition-colors active:bg-raised/60 ${
-                  n === value ? "text-accent" : "text-ink"
-                }`}
-              >
-                Season {n}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-    </>
   );
 }
 

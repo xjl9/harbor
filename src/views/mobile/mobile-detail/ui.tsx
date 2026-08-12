@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { Star } from "lucide-react";
+import { ImdbIcon } from "@/components/icons/imdb-icon";
 
 export function SectionTitle({ children }: { children: React.ReactNode }) {
   return (
@@ -10,6 +12,21 @@ export function Pill({ children }: { children: React.ReactNode }) {
   return (
     <span className="rounded-full bg-surface/90 px-2.5 py-1 text-[12.5px] font-medium text-ink-muted ring-1 ring-edge-soft/70 backdrop-blur-sm">
       {children}
+    </span>
+  );
+}
+
+// Compact overlay rating chip for episode thumbnails (desktop's
+// EpisodeRatingBadge at mobile scale).
+export function EpisodeRating({ value, isImdb }: { value: number; isImdb: boolean }) {
+  return (
+    <span className="pointer-events-none absolute bottom-1.5 start-1.5 z-[5] flex items-center gap-1 rounded-md bg-black/60 px-1.5 py-0.5 backdrop-blur-sm">
+      {isImdb ? (
+        <ImdbIcon className="h-3 w-auto rounded-[2px]" />
+      ) : (
+        <Star className="h-3 w-3 text-amber-400" fill="currentColor" strokeWidth={0} />
+      )}
+      <span className="text-[10.5px] font-bold text-white">{value.toFixed(1)}</span>
     </span>
   );
 }

@@ -224,6 +224,8 @@ function DetailBody({
 
         {isAnime && (
           <AnimeEpisodeSection
+            meta={playMeta}
+            imdbId={imdbId}
             episodes={anime.episodes}
             loading={anime.loading}
             onPlay={(ep) => playOnHost(playMeta, { playEpisode: ep })}

@@ -1,26 +1,31 @@
-import { useEffect, useMemo, useState } from "react";
-import { createPortal } from "react-dom";
-import { Check, ChevronDown } from "lucide-react";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import type { Meta } from "@/lib/cinemeta";
-import { Poster } from "@/components/poster";
-import { daysFromTodayLocal, formatAirDate } from "@/lib/dates";
 import { tmdbSeasonEpisodes, type Episode, type TmdbDetail } from "@/lib/providers/tmdb";
+import { seasonDateRange } from "@/lib/providers/tvdb-order";
 import { useEpisodeOrder } from "@/views/detail/series-episodes/use-episode-order";
+import { useEpisodeEnrich } from "@/views/detail/series-episodes/use-episode-enrich";
+import { useSeriesTvdbStills } from "@/views/detail/series-episodes/use-series-tvdb-stills";
 import { useTvdbSeasonTypes } from "@/views/detail/series-episodes/use-tvdb-season-types";
+import { useWatchedSets } from "@/views/detail/series-episodes/use-watched-sets";
 import { useSettings } from "@/lib/settings";
 import { effectiveOrderProvider } from "@/lib/settings/episode-order";
-import { getViewedSeason, setViewedSeason } from "@/lib/season-view-pref";
+import { setViewedSeason } from "@/lib/season-view-pref";
+import {
+  getEpisodeProgress,
+  resumeDefaultSeason,
+  type EpisodeProgress,
+} from "@/lib/episode-progress";
+import { manualEpisodeKeys, manualWatchedVersion, subscribeManualWatched } from "@/lib/manual-watched";
+import { spoilerMaskFor } from "@/lib/spoilers";
+import { useStremioWatched } from "@/lib/use-stremio-watched";
+import { useTrakt } from "@/lib/trakt/provider";
+import { useSimkl } from "@/lib/simkl/provider";
 import { useMobileRemote } from "../mobile-remote";
-import { HIDE_SCROLL, prefersReducedMotion, stillFrom, tmdbTvId, useEpisodeWindow, type Ep, type SeasonOption } from "./data";
-import { Line, SectionTitle } from "./ui";
+import { stillFrom, tmdbTvId, useEpisodeWindow, type Ep } from "./data";
+import { SectionTitle } from "./ui";
+import { EpisodeItem, EpisodeSkeleton } from "./episode-item";
 import { OrderStyleSwitch, type OrderOption } from "./order-switch";
-
-type SeasonEntry = SeasonOption & { badge?: string };
-
-const isUpcoming = (date?: string | null): boolean => {
-  const d = daysFromTodayLocal(date);
-  return d != null && d > 0;
-};
+import { SeasonPicker, type SeasonSheetItem } from "./season-sheet";
 
 function seasonTypeBadge(seasonNumber: number, label: string): string | undefined {
   const n = label.toLowerCase();
@@ -28,14 +33,6 @@ function seasonTypeBadge(seasonNumber: number, label: string): string | undefine
   if (/movie|film/.test(n)) return "Movie";
   if (seasonNumber <= 0 || /special/.test(n)) return "Special";
   return undefined;
-}
-
-function Badge({ children }: { children: React.ReactNode }) {
-  return (
-    <span className="inline-flex shrink-0 items-center rounded-[5px] border border-edge-soft bg-elevated/40 px-1.5 py-[1px] text-[9px] font-medium uppercase tracking-[0.14em] text-ink-subtle">
-      {children}
-    </span>
-  );
 }
 
 export function EpisodeSection({
@@ -80,26 +77,85 @@ export function EpisodeSection({
     else setOverride({ provider: "tvdb", seasonType: value });
   };
 
-  const seasonOptions = useMemo<SeasonEntry[]>(() => {
+  const seasonItems = useMemo<SeasonSheetItem[]>(() => {
     if (ordering) {
-      return ordering.seasons
-        .filter((s) => s.seasonNumber >= 1)
-        .map((s) => {
-          const label = s.name && s.name.trim() ? s.name : `Season ${s.seasonNumber}`;
-          return { number: s.seasonNumber, label, badge: seasonTypeBadge(s.seasonNumber, label) };
-        });
+      return ordering.seasons.map((s) => {
+        const label = s.name && s.name.trim() ? s.name : `Season ${s.seasonNumber}`;
+        const { from, to } = seasonDateRange(ordering.bySeason.get(s.seasonNumber) ?? []);
+        return {
+          key: String(s.seasonNumber),
+          name: label,
+          count: s.episodeCount,
+          year: s.airDate?.slice(0, 4),
+          from,
+          to,
+          extra: s.seasonNumber <= 0,
+          badge: seasonTypeBadge(s.seasonNumber, label),
+        };
+      });
     }
-    return seasons.map((n) => ({ number: n, label: `Season ${n}` }));
-  }, [ordering, seasons]);
+    return seasons.map((n) => {
+      const s = detail?.seasons?.find((x) => x.seasonNumber === n);
+      const label = s?.name && s.name.trim() ? s.name : `Season ${n}`;
+      return {
+        key: String(n),
+        name: label,
+        count: s?.episodeCount,
+        year: s?.airDate?.slice(0, 4),
+        badge: seasonTypeBadge(n, label),
+      };
+    });
+  }, [ordering, seasons, detail?.seasons]);
 
-  const [season, setSeason] = useState<number>(() => {
-    const v = getViewedSeason(meta.id);
-    return v != null && seasonOptions.some((o) => o.number === v) ? v : seasonOptions[0]?.number ?? 1;
+  const { isConnected: traktConnected } = useTrakt();
+  const { isConnected: simklConnected } = useSimkl();
+  const mwVersion = useSyncExternalStore(subscribeManualWatched, manualWatchedVersion);
+  const { traktWatched, simklWatched } = useWatchedSets({
+    traktConnected,
+    simklConnected,
+    imdbId,
+    metaId: meta.id,
   });
+  const stremioWatched = useStremioWatched(meta.id, detail?.imdbId, full?.videos);
+  const combinedWatched = useMemo(() => {
+    const s = new Set<string>(stremioWatched);
+    for (const k of simklWatched) s.add(k);
+    for (const k of traktWatched) {
+      const e = k.lastIndexOf(":");
+      const se = e > 0 ? k.lastIndexOf(":", e - 1) : -1;
+      if (se >= 0) s.add(k.slice(se + 1));
+    }
+    const manual = manualEpisodeKeys(meta.id);
+    for (const k of manual.watched) s.add(k);
+    for (const k of manual.unwatched) s.delete(k);
+    return s;
+  }, [stremioWatched, simklWatched, traktWatched, meta.id, mwVersion]);
+
+  const [season, setSeason] = useState<number>(() =>
+    resumeDefaultSeason(
+      meta.id,
+      seasons.map((n) => ({ seasonNumber: n, episodeCount: 0 })),
+    ),
+  );
+  const userPickedRef = useRef(false);
   useEffect(() => {
-    setSeason((s) => (seasonOptions.some((o) => o.number === s) ? s : seasonOptions[0]?.number ?? 1));
-  }, [seasonOptions]);
+    userPickedRef.current = false;
+  }, [meta.id]);
+  const seasonMetaList = useMemo(() => {
+    if (ordering) return ordering.seasons;
+    if (detail?.seasons?.length) return detail.seasons;
+    return seasons.map((n) => ({ seasonNumber: n, episodeCount: 0 }));
+  }, [ordering, detail?.seasons, seasons]);
+  useEffect(() => {
+    if (userPickedRef.current) return;
+    const def = resumeDefaultSeason(meta.id, seasonMetaList, combinedWatched);
+    if (seasonItems.some((o) => o.key === String(def))) setSeason(def);
+  }, [meta.id, seasonMetaList, combinedWatched, seasonItems]);
+  useEffect(() => {
+    setSeason((s) => (seasonItems.some((o) => o.key === String(s)) ? s : Number(seasonItems[0]?.key ?? 1)));
+  }, [seasonItems]);
   const pickSeason = (n: number) => {
+    userPickedRef.current = true;
     setViewedSeason(meta.id, n);
     setSeason(n);
   };
@@ -130,7 +186,17 @@ export function EpisodeSection({
     };
   }, [ordering, tmdbKey, tvId, season]);
 
-  const episodes = useMemo<Ep[]>(() => {
+  // TVDB text enrich plus keyless harbor IMDb ratings; OMDb stays off (no key
+  // on mobile, empty key disables that half of the hook).
+  const { episodes: enrichedTmdbEps, imdbRatings } = useEpisodeEnrich({
+    episodes: tmdbEps,
+    active: season,
+    imdbId,
+    tvdbKey,
+    omdbKey: "",
+  });
+
+  const baseEpisodes = useMemo<Ep[]>(() => {
     if (ordering) {
       return (ordering.bySeason.get(season) ?? []).map((e) => ({
         season: e.seasonNumber,
@@ -140,6 +206,7 @@ export function EpisodeSection({
         overview: e.overview || undefined,
         runtime: e.runtime,
         airDate: e.airDate,
+        imdbRating: e.imdbRating ?? undefined,
       }));
     }
     const byNum = new Map<number, Ep>();
@@ -154,7 +221,7 @@ export function EpisodeSection({
         airDate: v.released || v.firstAired,
       });
     }
-    for (const e of tmdbEps) {
+    for (const e of enrichedTmdbEps) {
       const prev = byNum.get(e.episodeNumber);
       byNum.set(e.episodeNumber, {
         season,
@@ -164,26 +231,78 @@ export function EpisodeSection({
         overview: prev?.overview || e.overview || undefined,
         runtime: e.runtime,
         airDate: prev?.airDate || e.airDate,
+        imdbRating: e.imdbRating ?? undefined,
       });
     }
     return [...byNum.values()].sort((a, b) => a.episode - b.episode);
-  }, [ordering, season, full?.videos, tmdbEps]);
+  }, [ordering, season, full?.videos, enrichedTmdbEps]);
+
+  const tvdbStills = useSeriesTvdbStills(imdbId, baseEpisodes.length, settings.tvdbSeasonType);
+  const episodes = useMemo<Ep[]>(() => {
+    const hasStills = Object.keys(tvdbStills).length > 0;
+    if (!hasStills && imdbRatings.size === 0) return baseEpisodes;
+    return baseEpisodes.map((ep) => {
+      let next = ep;
+      if (!next.still && hasStills) {
+        const img = tvdbStills[`s${ep.season}e${ep.episode}`] ?? tvdbStills[`abs${ep.episode}`];
+        if (img) next = { ...next, still: img };
+      }
+      if (next.imdbRating == null) {
+        const r = imdbRatings.get(`${ep.season}:${ep.episode}`);
+        if (r != null && r > 0) next = { ...next, imdbRating: r };
+      }
+      return next;
+    });
+  }, [baseEpisodes, tvdbStills, imdbRatings]);
+
+  // Pair-keyed rather than useEpisodeProgressMap: absolute orderings fold every
+  // canonical season into one list, so episodeNumber alone collides.
+  const traktKey = imdbId ?? meta.id;
+  const progressByKey = useMemo(() => {
+    const m = new Map<string, EpisodeProgress>();
+    for (const ep of episodes) {
+      m.set(
+        `${ep.season}:${ep.episode}`,
+        getEpisodeProgress(
+          meta.id,
+          ep.season,
+          ep.episode,
+          ep.runtime ?? null,
+          traktKey,
+          traktWatched,
+          stremioWatched,
+          undefined,
+          simklWatched,
+        ),
+      );
+    }
+    return m;
+  }, [episodes, meta.id, traktKey, traktWatched, stremioWatched, simklWatched, mwVersion]);
+  const nextUpKey = useMemo(() => {
+    for (const ep of episodes) {
+      const k = `${ep.season}:${ep.episode}`;
+      if (!progressByKey.get(k)?.watched) return k;
+    }
+    return null;
+  }, [episodes, progressByKey]);
 
   const { renderCount, hasMore, sentinelRef } = useEpisodeWindow(
     episodes.length,
     `${meta.id}|${season}|${effProvider}|${effSeasonType}`,
   );
 
-  if (seasonOptions.length === 0) return null;
-
-  const activeLabel = seasonOptions.find((o) => o.number === season)?.label ?? `Season ${season}`;
+  if (seasonItems.length === 0) return null;
 
   return (
     <section className="flex flex-col gap-4">
       <div className="flex items-center justify-between gap-3">
         <SectionTitle>Episodes</SectionTitle>
-        {seasonOptions.length > 1 && (
-          <SeasonPicker options={seasonOptions} value={season} label={activeLabel} onChange={pickSeason} />
+        {seasonItems.length > 1 && (
+          <SeasonPicker
+            items={seasonItems}
+            activeKey={String(season)}
+            onPick={(k) => pickSeason(Number(k))}
+          />
         )}
       </div>
       {orderOptions.length > 1 && (
@@ -200,164 +319,28 @@ export function EpisodeSection({
       ) : (
         <>
           <div className="flex flex-col gap-1.5">
-            {episodes.slice(0, renderCount).map((ep) => (
-              <EpisodeItem key={ep.episode} ep={ep} onPlay={onPlay} />
-            ))}
+            {episodes.slice(0, renderCount).map((ep) => {
+              const key = `${ep.season}:${ep.episode}`;
+              const progress = progressByKey.get(key) ?? { ratio: 0, watched: false, startedAt: 0 };
+              return (
+                <EpisodeItem
+                  key={key}
+                  ep={ep}
+                  onPlay={onPlay}
+                  progress={progress}
+                  spoiler={spoilerMaskFor(settings, {
+                    watched: progress.watched,
+                    isNextUp: key === nextUpKey,
+                  })}
+                  nextUp={key === nextUpKey}
+                  showRating={settings.showEpisodeRating}
+                />
+              );
+            })}
           </div>
           {hasMore && <div ref={sentinelRef} aria-hidden className="h-1" />}
         </>
       )}
     </section>
-  );
-}
-
-function SeasonPicker({
-  options,
-  value,
-  label,
-  onChange,
-}: {
-  options: SeasonEntry[];
-  value: number;
-  label: string;
-  onChange: (n: number) => void;
-}) {
-  const [open, setOpen] = useState(false);
-  return (
-    <>
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className="flex shrink-0 items-center gap-1.5 rounded-full bg-surface px-3.5 py-2 text-[13px] font-semibold text-ink ring-1 ring-edge-soft transition-transform active:scale-[0.97] motion-reduce:transition-none"
-      >
-        <span className="max-w-[42vw] truncate">{label}</span>
-        <ChevronDown size={15} strokeWidth={2.4} className="shrink-0 text-ink-subtle" />
-      </button>
-      {open && (
-        <SeasonSheet
-          options={options}
-          value={value}
-          onPick={(n) => {
-            onChange(n);
-            setOpen(false);
-          }}
-          onClose={() => setOpen(false)}
-        />
-      )}
-    </>
-  );
-}
-
-function SeasonSheet({
-  options,
-  value,
-  onPick,
-  onClose,
-}: {
-  options: SeasonEntry[];
-  value: number;
-  onPick: (n: number) => void;
-  onClose: () => void;
-}) {
-  const [reduced] = useState(prefersReducedMotion);
-  const sheet = (
-    <div className="fixed inset-0 z-[60] flex flex-col justify-end" role="dialog" aria-modal="true">
-      <button
-        type="button"
-        aria-label="Close"
-        onClick={onClose}
-        className={`absolute inset-0 bg-black/50 ${reduced ? "" : "md-sheet-fade"}`}
-      />
-      <div
-        className={`relative max-h-[70vh] overflow-y-auto rounded-t-3xl bg-canvas ${HIDE_SCROLL} ${
-          reduced ? "" : "md-sheet-in"
-        }`}
-        style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 16px)" }}
-      >
-        <div className="sticky top-0 flex items-center justify-center bg-canvas pb-2 pt-3">
-          <span className="h-1 w-9 rounded-full bg-edge" />
-        </div>
-        <div className="flex flex-col px-3 pb-2">
-          <h3 className="px-3 pb-1 text-[12px] font-semibold uppercase tracking-[0.14em] text-ink-subtle">
-            Seasons
-          </h3>
-          {options.map((o) => (
-            <button
-              key={o.number}
-              type="button"
-              onClick={() => onPick(o.number)}
-              className={`flex items-center justify-between gap-3 rounded-xl px-3 py-3 text-start text-[15px] transition-colors active:bg-elevated/50 motion-reduce:transition-none ${
-                o.number === value ? "font-semibold text-ink" : "text-ink-muted"
-              }`}
-            >
-              <span className="flex min-w-0 items-center gap-2">
-                <span className="truncate">{o.label}</span>
-                {o.badge && <Badge>{o.badge}</Badge>}
-              </span>
-              {o.number === value && (
-                <Check size={17} strokeWidth={2.6} className="shrink-0 text-accent" />
-              )}
-            </button>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-  return typeof document !== "undefined" ? createPortal(sheet, document.body) : sheet;
-}
-
-function EpisodeItem({ ep, onPlay }: { ep: Ep; onPlay: (ep: Ep) => void }) {
-  const upcoming = isUpcoming(ep.airDate);
-  const sub = [
-    `S${ep.season} E${ep.episode}`,
-    ep.runtime ? `${ep.runtime} min` : null,
-    formatAirDate(ep.airDate) || null,
-  ]
-    .filter(Boolean)
-    .join("  ·  ");
-  return (
-    <button
-      type="button"
-      onClick={() => onPlay(ep)}
-      className="flex gap-3.5 rounded-2xl p-2 text-start transition-colors active:bg-elevated/50 motion-reduce:transition-none"
-    >
-      <div className="relative w-[128px] shrink-0 overflow-hidden rounded-xl">
-        <div className={upcoming ? "opacity-70" : undefined}>
-          <Poster src={ep.still} seed={`${ep.season}-${ep.episode}`} ratio="landscape" lazy="release" />
-        </div>
-        <span className="absolute start-1.5 top-1.5 rounded-md bg-black/70 px-1.5 py-0.5 text-[11px] font-semibold text-white">
-          {ep.episode}
-        </span>
-      </div>
-      <div className="flex min-w-0 flex-1 flex-col gap-1 py-0.5">
-        <div className="flex items-center gap-2">
-          <p
-            className={`line-clamp-1 min-w-0 text-[14px] font-semibold ${
-              upcoming ? "text-ink-muted" : "text-ink"
-            }`}
-          >
-            {ep.name || `Episode ${ep.episode}`}
-          </p>
-          {upcoming && <Badge>Upcoming</Badge>}
-        </div>
-        {sub && <p className="text-[11.5px] text-ink-subtle">{sub}</p>}
-        {ep.overview && (
-          <p className="line-clamp-2 text-[12px] leading-relaxed text-ink-muted">{ep.overview}</p>
-        )}
-      </div>
-    </button>
-  );
-}
-
-function EpisodeSkeleton() {
-  return (
-    <div className="flex gap-3.5 p-2">
-      <div className="aspect-video w-[128px] shrink-0 animate-pulse rounded-xl bg-elevated/70" />
-      <div className="flex flex-1 flex-col gap-2 py-1">
-        <Line className="w-2/3" />
-        <Line className="w-1/3" />
-        <Line className="w-full" />
-      </div>
-    </div>
   );
 }

@@ -66,6 +66,7 @@ export type Ep = {
   overview?: string;
   runtime?: number | null;
   airDate?: string | null;
+  imdbRating?: number | null;
 };
 
 export type SeasonOption = { number: number; label: string };
