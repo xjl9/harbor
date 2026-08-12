@@ -10,9 +10,16 @@ import { useHideAnimeMetas, useHideAnimeRows } from "@/lib/anime-hide";
 import { usePinnedRows } from "@/views/home/hooks/use-pinned-rows";
 import { useMediaFavorites, type MediaEntry } from "@/lib/media-favorites";
 import { useLocalWatchlist } from "@/lib/local-watchlist";
+import { useTrakt } from "@/lib/trakt/provider";
+import { buildTraktHomeRows } from "@/lib/trakt/home-rails";
+import { useSimkl } from "@/lib/simkl/provider";
+import { buildSimklHomeRows } from "@/lib/simkl/home-rails";
+import { useLetterboxd } from "@/lib/stremboxd/provider";
+import { buildLetterboxdHomeRows } from "@/lib/stremboxd/home-rails";
 import { MobileHero } from "./mobile-hero";
 import { MobileCwRow, useMobileCw } from "./mobile-cw-row";
 import { MobileRail, MobileRankRail } from "./mobile-rail";
+import { MobileCollectionsRail } from "./mobile-collections-rail";
 import { MobileStreamingRail } from "./mobile-streaming-rail";
 import { MobileServicePage } from "./mobile-service-page";
 import { MobileDetail } from "./mobile-detail";
@@ -116,6 +123,99 @@ export function MobileHome() {
     return () => window.removeEventListener("harbor:addons-changed", onChanged);
   }, []);
 
+  // Personal service rails (Trakt / Simkl / Letterboxd) built from the same
+  // platform-agnostic builders desktop home uses. Providers are mounted app-wide,
+  // so the hooks are safe here. Harbor mode only; classic stays addon-only.
+  const { isConnected: traktConnected } = useTrakt();
+  const { isConnected: simklConnected } = useSimkl();
+  const letterboxd = useLetterboxd();
+  const [traktRows, setTraktRows] = useState<HomeRow[]>([]);
+  const [simklRows, setSimklRows] = useState<HomeRow[]>([]);
+  const [letterboxdRows, setLetterboxdRows] = useState<HomeRow[]>([]);
+
+  useEffect(() => {
+    if (isClassic || !traktConnected) {
+      setTraktRows([]);
+      return;
+    }
+    let cancelled = false;
+    buildTraktHomeRows(settings.tmdbKey)
+      .then((rs) => {
+        if (!cancelled) setTraktRows(rs);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [isClassic, traktConnected, settings.tmdbKey]);
+
+  useEffect(() => {
+    if (isClassic || !simklConnected) {
+      setSimklRows([]);
+      return;
+    }
+    let cancelled = false;
+    buildSimklHomeRows(settings)
+      .then((rs) => {
+        if (!cancelled) setSimklRows(rs);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+    // Same gate set desktop watches; the builder honors these settings internally.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    isClassic,
+    simklConnected,
+    settings.tmdbKey,
+    settings.simklHomeRailsEnabled,
+    settings.simklUpNextRailEnabled,
+    settings.simklTrendingRailEnabled,
+    settings.simklGranularFilters,
+  ]);
+
+  useEffect(() => {
+    if (isClassic || !letterboxd.isActive) {
+      setLetterboxdRows([]);
+      return;
+    }
+    if (letterboxd.mode === "full" && !letterboxd.session) {
+      setLetterboxdRows([]);
+      return;
+    }
+    if (letterboxd.mode === "public" && !letterboxd.configSegment) {
+      setLetterboxdRows([]);
+      return;
+    }
+    let cancelled = false;
+    buildLetterboxdHomeRows({
+      configSegment: letterboxd.configSegment,
+      selectedCatalogs: letterboxd.selectedCatalogs,
+      hiddenCatalogs: letterboxd.hiddenCatalogs,
+      catalogOrder: letterboxd.catalogOrder,
+      session: letterboxd.session,
+      listRefs: letterboxd.listRefs,
+    })
+      .then((rs) => {
+        if (!cancelled) setLetterboxdRows(rs);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    isClassic,
+    letterboxd.isActive,
+    letterboxd.mode,
+    letterboxd.configSegment,
+    letterboxd.selectedCatalogs,
+    letterboxd.hiddenCatalogs,
+    letterboxd.catalogOrder,
+    letterboxd.session,
+    letterboxd.listRefs,
+  ]);
+
   const pinnedRows = usePinnedRows();
   const { items: favItems } = useMediaFavorites();
   const { items: localItems } = useLocalWatchlist();
@@ -142,9 +242,14 @@ export function MobileHome() {
     [settings.tmdbKey, settings.streaming],
   );
 
+  const extraRows = useMemo(
+    () => [...traktRows, ...simklRows, ...letterboxdRows],
+    [traktRows, simklRows, letterboxdRows],
+  );
   const shownHero = useHideAnimeMetas(hero);
   const shownRows = useHideAnimeRows(rows);
   const shownPinned = useHideAnimeRows(pinnedRows);
+  const shownExtras = useHideAnimeRows(extraRows);
 
   if (loading && rows.length === 0) {
     return <HomeSkeleton />;
@@ -179,6 +284,19 @@ export function MobileHome() {
     </>
   );
 
+  // Trakt / Simkl / Letterboxd rails. Desktop orders these right after the personal
+  // rows and before the addon catalog rows; empty results render nothing (MobileRail
+  // returns null on an empty list). Cleared to [] in classic mode by the effects above.
+  const harborExtras = (
+    <>
+      {shownExtras.map((r) => (
+        <MobileRail key={r.key} title={r.name} metas={dedupeMetas(r.metas).slice(0, 18)} onOpenDetail={setDetailMeta} />
+      ))}
+    </>
+  );
+  // Collections gets its own row after Top 10, matching desktop home placement.
+  const collectionsRow = isClassic ? null : <MobileCollectionsRail onOpenDetail={setDetailMeta} />;
+
   return (
     <div className="flex flex-col gap-7 pt-3 motion-safe:[animation:harbor-step-in_420ms_var(--ease-out)_both]">
       {!isClassic && <MobileHero slides={shownHero} onOpenDetail={setDetailMeta} />}
@@ -189,7 +307,9 @@ export function MobileHome() {
       {!isClassic && shownRows[0] && shownRows[0].metas.length >= 6 ? (
         <>
           <MobileRankRail title="Top 10 Today" metas={dedupeMetas(shownRows[0].metas)} onOpenDetail={setDetailMeta} />
+          {collectionsRow}
           {personalAndPinned}
+          {harborExtras}
           {shownRows.slice(1).map((r) => (
             <MobileRail key={r.key} title={r.name} metas={dedupeMetas(r.metas).slice(0, 18)} onOpenDetail={setDetailMeta} />
           ))}
@@ -198,7 +318,9 @@ export function MobileHome() {
         // Classic mode, or row 0 too small for the ranked treatment: render every
         // row as a normal rail instead of silently dropping row 0.
         <>
+          {collectionsRow}
           {personalAndPinned}
+          {harborExtras}
           {shownRows.map((r) => (
             <MobileRail key={r.key} title={r.name} metas={dedupeMetas(r.metas).slice(0, 18)} onOpenDetail={setDetailMeta} />
           ))}
