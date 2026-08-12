@@ -78,6 +78,10 @@ jobs:
           echo "actual:   $ACTUAL"
           test "$EXPECTED" = "$ACTUAL"
           unzip -q /tmp/Libmpv.xcframework.zip -d "$DIR"
+          # The Package.swift -F path goes through this symlink so device and
+          # simulator builds can each select their slice (sim: point it at
+          # ios-arm64_x86_64-simulator instead).
+          ln -sfn Libmpv.xcframework/ios-arm64 "$DIR/active"
           test -d "$DIR/Libmpv.xcframework/ios-arm64/Libmpv.framework"
 
       # Fast-fail diagnostic: surfaces Rust compile errors for the iOS target

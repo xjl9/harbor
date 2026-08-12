@@ -46,7 +46,7 @@ let package = Package(
                 // generated Xcode project links MPVKit itself and never sees this
                 // manifest.
                 .unsafeFlags([
-                    "-F", "\(Context.packageDirectory)/.frameworks/Libmpv.xcframework/ios-arm64"
+                    "-F", "\(Context.packageDirectory)/.frameworks/active"
                 ])
             ]
         )
