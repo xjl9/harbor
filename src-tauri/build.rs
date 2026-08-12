@@ -9,6 +9,14 @@ fn main() {
     // `CARGO_CFG_TARGET_OS` is the platform we're actually building for.
     let target_os = std::env::var("CARGO_CFG_TARGET_OS").unwrap_or_default();
 
+    if target_os == "ios" {
+        // The iOS app links libapp.a; the cdylib is an unused side artifact
+        // there, but cargo still links it and cannot resolve the mpv symbols
+        // that Xcode later supplies via the MPVKit SwiftPM frameworks. Let
+        // the unused cdylib link permissively instead of failing the build.
+        println!("cargo:rustc-cdylib-link-arg=-Wl,-undefined,dynamic_lookup");
+    }
+
     if target_os == "windows" {
         let libmpv = manifest.join("libmpv");
         if libmpv.join("mpv.lib").exists() {
