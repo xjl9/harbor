@@ -54,6 +54,17 @@ struct TrackArgs: Decodable {
   let trackId: String?
 }
 
+struct OrientationArgs: Decodable {
+  let mode: String
+}
+
+// Shared with the AppDelegate orientation override injected at iOS build time
+// (see .github/workflows/ios-build.yml "Inject orientation AppDelegate"). The
+// plugin compiles into the Rust staticlib, a separate Swift module from the app
+// target that owns the AppDelegate, so the forced mask travels through
+// UserDefaults rather than a shared symbol. Absent/zero means free rotation.
+let harborOrientationDefaultsKey = "harbor.player.orientationMask"
+
 // One engine at a time behind the single wire contract. The plugin picks the
 // engine per URL in routesToMpv; everything downstream is engine-agnostic.
 protocol HarborPlayerEngine: AnyObject {
@@ -208,6 +219,50 @@ class HarborPlayerPlugin: Plugin {
   @objc public func enterPip(_ invoke: Invoke) {
     DispatchQueue.main.async {
       self.controller?.enterPip()
+      invoke.resolve(JsonObject())
+    }
+  }
+
+  // Forces the whole app (webview connecting screen + presented native player) to
+  // landscape during playback and restores free rotation on exit. requestGeometryUpdate
+  // rotates immediately; the mask written to UserDefaults is what the injected
+  // AppDelegate returns from supportedInterfaceOrientationsFor, which is what keeps
+  // iOS from rotating back when the plist still permits portrait.
+  @objc public func setOrientation(_ invoke: Invoke) throws {
+    let args = try invoke.parseArgs(OrientationArgs.self)
+    DispatchQueue.main.async {
+      let mask: UIInterfaceOrientationMask
+      let preferred: UIInterfaceOrientation
+      switch args.mode {
+      case "landscape":
+        mask = .landscape
+        preferred = .landscapeRight
+      case "portrait":
+        mask = .portrait
+        preferred = .portrait
+      default:
+        mask = .allButUpsideDown
+        preferred = .unknown
+      }
+      UserDefaults.standard.set(Int(mask.rawValue), forKey: harborOrientationDefaultsKey)
+      if #available(iOS 16.0, *) {
+        // Re-query the AppDelegate now that the mask changed. Walk to the topmost
+        // presented controller so a fullscreen native player VC is included.
+        var top = self.manager.viewController
+        while let presented = top?.presentedViewController { top = presented }
+        top?.setNeedsUpdateOfSupportedInterfaceOrientations()
+        let scene = UIApplication.shared.connectedScenes
+          .compactMap { $0 as? UIWindowScene }
+          .first { $0.activationState == .foregroundActive }
+          ?? UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.first
+        if let scene = scene {
+          scene.requestGeometryUpdate(.iOS(interfaceOrientations: mask)) { _ in }
+        }
+      } else if preferred != .unknown {
+        // Pre-16 devices honor the deprecated device-orientation nudge.
+        UIDevice.current.setValue(preferred.rawValue, forKey: "orientation")
+        UIViewController.attemptRotationToDeviceIfNeeded()
+      }
       invoke.resolve(JsonObject())
     }
   }

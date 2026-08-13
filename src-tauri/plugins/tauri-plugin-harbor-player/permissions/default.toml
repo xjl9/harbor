@@ -11,6 +11,7 @@ permissions = [
     "allow-set-audio-track",
     "allow-set-subtitle-track",
     "allow-enter-pip",
+    "allow-set-orientation",
     "allow-registerListener",
     "allow-removeListener",
     "allow-remove-listener",

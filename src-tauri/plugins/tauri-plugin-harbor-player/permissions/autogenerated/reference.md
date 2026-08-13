@@ -12,6 +12,7 @@ Allows the Harbor native player commands.
 - `allow-set-audio-track`
 - `allow-set-subtitle-track`
 - `allow-enter-pip`
+- `allow-set-orientation`
 - `allow-registerListener`
 - `allow-removeListener`
 - `allow-remove-listener`
@@ -255,6 +256,32 @@ Enables the set_audio_track command without any pre-configured scope.
 <td>
 
 Denies the set_audio_track command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`harbor-player:allow-set-orientation`
+
+</td>
+<td>
+
+Enables the set_orientation command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`harbor-player:deny-set-orientation`
+
+</td>
+<td>
+
+Denies the set_orientation command without any pre-configured scope.
 
 </td>
 </tr>

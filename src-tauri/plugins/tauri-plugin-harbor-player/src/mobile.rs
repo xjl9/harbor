@@ -69,4 +69,9 @@ impl<R: Runtime> HarborPlayer<R> {
             .run_mobile_plugin("enterPip", ())
             .map_err(Into::into)
     }
+    pub fn set_orientation(&self, payload: OrientationRequest) -> crate::Result<EmptyResponse> {
+        self.0
+            .run_mobile_plugin("setOrientation", payload)
+            .map_err(Into::into)
+    }
 }

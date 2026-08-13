@@ -2,6 +2,7 @@ package app.harbor.player
 
 import android.app.Activity
 import android.content.Intent
+import android.content.pm.ActivityInfo
 import app.tauri.annotation.Command
 import app.tauri.annotation.InvokeArg
 import app.tauri.annotation.TauriPlugin
@@ -34,6 +35,11 @@ class SeekArgs {
 @InvokeArg
 class TrackArgs {
     var trackId: String? = null
+}
+
+@InvokeArg
+class OrientationArgs {
+    var mode: String = "auto"
 }
 
 /**
@@ -141,6 +147,23 @@ class PlayerPlugin(private val activity: Activity) : Plugin(activity) {
     @Command
     fun enterPip(invoke: Invoke) {
         activity.runOnUiThread { PlayerActivity.instance?.enterPip() }
+        invoke.resolve(JSObject())
+    }
+
+    // Forces the webview host Activity (the connecting screen lives there) to
+    // landscape during playback and back to free rotation on exit. The fullscreen
+    // PlayerActivity forces its own landscape in onCreate, so this covers the
+    // pre-player resolve/loading screen and the restore.
+    @Command
+    fun setOrientation(invoke: Invoke) {
+        val args = invoke.parseArgs(OrientationArgs::class.java)
+        activity.runOnUiThread {
+            activity.requestedOrientation = when (args.mode) {
+                "landscape" -> ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+                "portrait" -> ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+                else -> ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+            }
+        }
         invoke.resolve(JSObject())
     }
 }

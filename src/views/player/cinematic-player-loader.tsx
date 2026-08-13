@@ -3,6 +3,7 @@ import { HarborLoader } from "@/components/harbor-loader";
 import type { PlayerSnapshot } from "@/lib/player/bridge";
 import { getPlaybackPosition, usePlaybackFlag } from "@/lib/player/playback-clock";
 import { isLocalUrl } from "@/lib/player/local-url";
+import { isMobileNative } from "@/lib/platform";
 import type { PlayerSrc } from "@/lib/view";
 import { Topbar } from "@/chrome/topbar";
 import { useT } from "@/lib/i18n";
@@ -89,6 +90,7 @@ export function CinematicPlayerLoader({
     active: showing && isLocalEngine,
   });
   if (!mounted) return null;
+  const mobile = isMobileNative();
   const backdrop = src.episode?.still || src.meta.background || src.meta.poster;
   return (
     <div
@@ -154,7 +156,11 @@ export function CinematicPlayerLoader({
       )}
       <div
         data-tauri-drag-region
-        className="relative flex h-full flex-col items-center justify-center gap-7 px-8 text-center"
+        className={`relative flex h-full flex-col items-center justify-center gap-7 px-8 text-center${mobile ? " landscape:gap-4" : ""}`}
+        style={{
+          paddingLeft: "max(2rem, env(safe-area-inset-left))",
+          paddingRight: "max(2rem, env(safe-area-inset-right))",
+        }}
       >
         <LoaderLogoOrText
           logo={pinnedLogo ?? src.meta.logo ?? null}
@@ -236,7 +242,8 @@ export function CinematicPlayerLoader({
       {!(isLocalEngine && prep.phase === "no-peers") && (
         <button
           onClick={onCancel}
-          className="absolute bottom-10 left-1/2 z-10 flex h-11 -translate-x-1/2 cursor-pointer items-center gap-2 rounded-full border border-white/15 bg-black/45 px-6 text-[13.5px] font-medium text-white/75 backdrop-blur-md transition-colors hover:border-white/30 hover:bg-black/60 hover:text-white"
+          className="absolute left-1/2 z-10 flex h-11 -translate-x-1/2 cursor-pointer items-center gap-2 rounded-full border border-white/15 bg-black/45 px-6 text-[13.5px] font-medium text-white/75 backdrop-blur-md transition-colors hover:border-white/30 hover:bg-black/60 hover:text-white"
+          style={{ bottom: "max(2.5rem, calc(env(safe-area-inset-bottom, 0px) + 1rem))" }}
         >
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden>
             <path

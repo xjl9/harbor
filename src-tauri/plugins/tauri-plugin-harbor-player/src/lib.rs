@@ -43,6 +43,7 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
             commands::set_audio_track,
             commands::set_subtitle_track,
             commands::enter_pip,
+            commands::set_orientation,
         ])
         .setup(|app, api| {
             #[cfg(mobile)]

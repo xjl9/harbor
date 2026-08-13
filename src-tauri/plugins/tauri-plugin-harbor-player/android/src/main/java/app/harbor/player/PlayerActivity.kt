@@ -1,6 +1,7 @@
 package app.harbor.player
 
 import android.app.PictureInPictureParams
+import android.content.pm.ActivityInfo
 import android.content.pm.PackageManager
 import android.content.res.Configuration
 import android.graphics.Rect
@@ -62,6 +63,10 @@ class PlayerActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         instance = this
+        // Fullscreen video is landscape-first (Netflix/YouTube pattern). The manifest
+        // declares configChanges=orientation|screenSize so this does not recreate the
+        // Activity or restart playback.
+        requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
         WindowCompat.setDecorFitsSystemWindows(window, false)
         setContentView(R.layout.activity_player)
         playerView = findViewById(R.id.player_view)

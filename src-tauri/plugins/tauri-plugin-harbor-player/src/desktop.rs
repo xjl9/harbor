@@ -38,4 +38,7 @@ impl<R: Runtime> HarborPlayer<R> {
     pub fn enter_pip(&self) -> crate::Result<EmptyResponse> {
         Ok(EmptyResponse {})
     }
+    pub fn set_orientation(&self, _payload: OrientationRequest) -> crate::Result<EmptyResponse> {
+        Ok(EmptyResponse {})
+    }
 }

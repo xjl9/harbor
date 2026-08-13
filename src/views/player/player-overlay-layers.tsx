@@ -1,5 +1,9 @@
-import { memo, type ComponentProps, type RefObject } from "react";
+import { memo, useEffect, type ComponentProps, type RefObject } from "react";
 import { DrawCanvas, StrokesLayer, type Stroke } from "@/components/player/draw-canvas";
+import { isMobileNative } from "@/lib/platform";
+import { writePlayerVolume } from "@/lib/player-volume";
+import { MobileGestureStage } from "./mobile-gesture-stage";
+import { MOBILE_OPEN_EPISODES_EVENT } from "@/lib/player/mobile-events";
 import { cropTransform } from "./hooks/use-video-fill";
 import { StreamSwitcher } from "@/components/player/stream-switcher";
 import { StreamCheckPill } from "@/components/player/stream-check-pill";
@@ -190,6 +194,16 @@ export type PlayerOverlayLayersProps = {
 };
 
 export const PlayerOverlayLayers = memo(function PlayerOverlayLayers(p: PlayerOverlayLayersProps) {
+  const mobile = isMobileNative();
+  // The mobile shell lives inside ShellLayer and can only fire events; the episode
+  // panel's open state lives up in player.tsx, so bridge the event to it here.
+  const setEpisodePanelOpen = p.setEpisodePanelOpen;
+  useEffect(() => {
+    if (!mobile) return;
+    const onOpen = () => setEpisodePanelOpen(true);
+    window.addEventListener(MOBILE_OPEN_EPISODES_EVENT, onOpen);
+    return () => window.removeEventListener(MOBILE_OPEN_EPISODES_EVENT, onOpen);
+  }, [mobile, setEpisodePanelOpen]);
   return (
     <>
       <StageOverlays
@@ -217,13 +231,31 @@ export const PlayerOverlayLayers = memo(function PlayerOverlayLayers(p: PlayerOv
         hasActiveSub={p.snap.subtitleTracks.some((t) => t.selected)}
         onPickAnother={p.pickAnother}
       />
-      <DragClickStage
-        drawMode={p.drawMode}
-        pipMode={p.pipMode}
-        onClick={p.playPauseToggle}
-        onDoubleClick={p.toggleFullscreen}
-        onWheelVolume={p.onVolumeWheel}
-      />
+      {mobile ? (
+        !p.pipMode && !p.drawMode && (
+          <MobileGestureStage
+            durationSec={p.snap.durationSec}
+            volume={p.snap.volume}
+            onVolume={(v) => {
+              p.bridgeRef.current?.setVolume(v);
+              p.bridgeRef.current?.setMuted(false);
+              writePlayerVolume({ volume: v, muted: false });
+              p.onVolumeFeedback(v, false);
+            }}
+            onSeek={p.seekTo}
+            onPlayPause={p.playPauseToggle}
+            onDismiss={p.closePlayer}
+          />
+        )
+      ) : (
+        <DragClickStage
+          drawMode={p.drawMode}
+          pipMode={p.pipMode}
+          onClick={p.playPauseToggle}
+          onDoubleClick={p.toggleFullscreen}
+          onWheelVolume={p.onVolumeWheel}
+        />
+      )}
 
       <LoaderLayer
         src={p.src}

@@ -54,3 +54,11 @@ pub(crate) async fn set_subtitle_track<R: Runtime>(
 pub(crate) async fn enter_pip<R: Runtime>(app: AppHandle<R>) -> crate::Result<EmptyResponse> {
     app.harbor_player().enter_pip()
 }
+
+#[tauri::command]
+pub(crate) async fn set_orientation<R: Runtime>(
+    app: AppHandle<R>,
+    payload: OrientationRequest,
+) -> crate::Result<EmptyResponse> {
+    app.harbor_player().set_orientation(payload)
+}

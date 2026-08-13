@@ -16,6 +16,7 @@ import { isLocalUrl } from "@/lib/player/local-url";
 import { hasPlaybackStartedForStallCheck, stallWaitMs } from "@/lib/player/stall-wait";
 import { useAuth } from "@/lib/auth";
 import { embedFlags } from "./player/player-utils";
+import { setOrientation } from "@/lib/player/android-native";
 import { useFullscreen } from "./player/hooks/use-fullscreen";
 import { useSvpGuard } from "./player/hooks/use-svp-guard";
 import { usePlayerCast } from "./player/hooks/use-player-cast";
@@ -109,6 +110,14 @@ export function PlayerView({ src }: { src: PlayerSrc }) {
       delete root.dataset.playerBlack;
     };
   }, [settings.playerMenuBlack]);
+  // Landscape for the whole player session; restore free rotation on exit. No-op
+  // off native mobile. Single orientation call site in this view (see task P2).
+  useEffect(() => {
+    void setOrientation("landscape");
+    return () => {
+      void setOrientation("auto");
+    };
+  }, []);
   const {
     avatarsCorner,
     chatCorner,

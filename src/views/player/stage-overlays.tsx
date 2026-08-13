@@ -16,6 +16,7 @@ import type { PlayerSnapshot } from "@/lib/player/bridge";
 import type { ParentalCategory } from "@/lib/providers/harbor-imdb";
 import { ContentAdvisoryToast } from "@/components/player/content-advisory-toast";
 import { useT } from "@/lib/i18n";
+import { isMobileNative } from "@/lib/platform";
 
 export const StageOverlays = memo(function StageOverlays({
   snap,
@@ -92,12 +93,25 @@ export const StageOverlays = memo(function StageOverlays({
           {subDropToast}
         </div>
       )}
-      {!pipMode && (
-        <ContentAdvisoryToast
-          categories={contentAdvisory.categories}
-          playKey={contentAdvisory.playKey}
-        />
-      )}
+      {!pipMode &&
+        // The toast stays mounted (opacity-0) after its hold window with
+        // pointer-events-auto, which would swallow touches meant for the
+        // z-6 MobileGestureStage. Neutralize its pointer capture on mobile
+        // from here rather than editing the centrally owned toast component;
+        // its hover-persist behavior is desktop-only anyway.
+        (isMobileNative() ? (
+          <div className="[&>*]:!pointer-events-none">
+            <ContentAdvisoryToast
+              categories={contentAdvisory.categories}
+              playKey={contentAdvisory.playKey}
+            />
+          </div>
+        ) : (
+          <ContentAdvisoryToast
+            categories={contentAdvisory.categories}
+            playKey={contentAdvisory.playKey}
+          />
+        ))}
       {!pipMode && <SubStyleBar />}
       {!pipMode && <PictureBar />}
       {!pipMode && (

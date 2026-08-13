@@ -38,4 +38,11 @@ pub struct TrackRequest {
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct OrientationRequest {
+    // "landscape" | "portrait" | "auto"; unknown values are treated as "auto" natively.
+    pub mode: String,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct EmptyResponse {}

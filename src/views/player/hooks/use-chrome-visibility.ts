@@ -1,6 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { getSeekHovering, subscribeSeekHovering } from "@/lib/player/playback-clock";
-import { CHROME_HIDE_MS_PAUSED, CHROME_HIDE_MS_PLAYING, CHROME_HIDE_MS_RESUME } from "../player-utils";
+import { isMobileNative } from "@/lib/platform";
+import { MOBILE_CHROME_TOGGLE_EVENT } from "@/lib/player/mobile-events";
+import {
+  CHROME_HIDE_MS_MOBILE,
+  CHROME_HIDE_MS_PAUSED,
+  CHROME_HIDE_MS_PLAYING,
+  CHROME_HIDE_MS_RESUME,
+} from "../player-utils";
 
 const UI_SCALE_ACTIVITY_EVENT = "harbor:ui-scale-activity";
 const UI_SCALE_RESIZE_HOLD_MS = 700;
@@ -33,12 +40,17 @@ export function useChromeVisibility(params: {
   const pipModeRef = useRef(pipMode);
   pipModeRef.current = pipMode;
 
+  const mobile = isMobileNative();
   const wakeChrome = useCallback(() => {
     setChromeVisible(true);
     setChromeHidden(pipModeRef.current);
     if (hideTimer.current) window.clearTimeout(hideTimer.current);
     if (resizingUiRef.current || anyMenuOpenRef.current || getSeekHovering()) return;
+    // On touch, paused means the user is looking: keep controls up until the
+    // next interaction, matching every streaming app. Only auto-hide while playing.
+    if (mobile && !playingRef.current) return;
     let wait = playingRef.current && !drawModeRef.current ? CHROME_HIDE_MS_PLAYING : CHROME_HIDE_MS_PAUSED;
+    if (mobile) wait = CHROME_HIDE_MS_MOBILE;
     if (resumeHideRef.current) {
       resumeHideRef.current = false;
       wait = CHROME_HIDE_MS_RESUME;
@@ -47,7 +59,7 @@ export function useChromeVisibility(params: {
       setChromeVisible(false);
       setChromeHidden(true);
     }, wait);
-  }, [setChromeHidden]);
+  }, [setChromeHidden, mobile]);
   const wakeChromeRef = useRef(wakeChrome);
   wakeChromeRef.current = wakeChrome;
 
@@ -76,19 +88,36 @@ export function useChromeVisibility(params: {
       lastInputKeyboardRef.current = true;
     };
     window.addEventListener("mousemove", onMove);
-    window.addEventListener("touchstart", onMove);
+    // On touch, a bare touchstart must NOT force controls up: the mobile gesture
+    // stage owns the tap-to-toggle model and drives visibility through its own event.
+    if (!mobile) window.addEventListener("touchstart", onMove);
     window.addEventListener("pointerdown", onPointerDown);
     window.addEventListener("keydown", onKeyDown);
     return () => {
       window.removeEventListener("mousemove", onMove);
-      window.removeEventListener("touchstart", onMove);
+      if (!mobile) window.removeEventListener("touchstart", onMove);
       window.removeEventListener("pointerdown", onPointerDown);
       window.removeEventListener("keydown", onKeyDown);
       if (hideTimer.current) window.clearTimeout(hideTimer.current);
       if (resizeTimer.current) window.clearTimeout(resizeTimer.current);
       setChromeHidden(false);
     };
-  }, [wakeChrome, setChromeHidden, playing, keyboardPauseShowsControls]);
+  }, [wakeChrome, setChromeHidden, playing, keyboardPauseShowsControls, mobile]);
+
+  useEffect(() => {
+    if (!mobile) return;
+    const onToggle = () => {
+      if (chromeVisibleRef.current) {
+        if (hideTimer.current) window.clearTimeout(hideTimer.current);
+        setChromeVisible(false);
+        setChromeHidden(true);
+      } else {
+        wakeChromeRef.current();
+      }
+    };
+    window.addEventListener(MOBILE_CHROME_TOGGLE_EVENT, onToggle);
+    return () => window.removeEventListener(MOBILE_CHROME_TOGGLE_EVENT, onToggle);
+  }, [mobile, setChromeHidden]);
 
   useEffect(() => {
     const onScaleActivity = () => {

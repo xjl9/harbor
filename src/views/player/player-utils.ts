@@ -23,6 +23,9 @@ export const MAX_AUTORETRY_ATTEMPTS = 5;
 export const CHROME_HIDE_MS_PLAYING = 1800;
 export const CHROME_HIDE_MS_PAUSED = 4500;
 export const CHROME_HIDE_MS_RESUME = 1000;
+// Touch needs a longer window than a mouse: there is no hover to signal presence,
+// so controls must linger after a reveal tap. Matches the Netflix/YouTube feel.
+export const CHROME_HIDE_MS_MOBILE = 3500;
 
 export function round2(v: number): number {
   return Math.round(v * 100) / 100;

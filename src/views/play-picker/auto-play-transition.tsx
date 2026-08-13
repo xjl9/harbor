@@ -104,7 +104,13 @@ export function AutoPlayTransition({
           />
         </div>
       )}
-      <div className="relative flex h-full flex-col items-center justify-center gap-7 px-8 text-center">
+      <div
+        className={`relative flex h-full flex-col items-center justify-center gap-7 px-8 text-center${phone ? " landscape:gap-5" : ""}`}
+        style={{
+          paddingLeft: "max(2rem, env(safe-area-inset-left))",
+          paddingRight: "max(2rem, env(safe-area-inset-right))",
+        }}
+      >
         {phone && (
           <p className="text-[11px] font-semibold uppercase tracking-[0.32em] text-white/55">
             {t("Now showing")}
@@ -113,7 +119,7 @@ export function AutoPlayTransition({
         <LogoOrText
           logo={meta.logo ?? null}
           fallbackText={meta.name}
-          imgClass="max-h-44 w-auto max-w-[72%] animate-loader-pulse object-contain drop-shadow-[0_24px_60px_rgba(0,0,0,0.65)]"
+          imgClass={`max-h-44 ${phone ? "landscape:max-h-[40vh] " : ""}w-auto max-w-[72%] animate-loader-pulse object-contain drop-shadow-[0_24px_60px_rgba(0,0,0,0.65)]`}
           textClass={
             phone
               ? "animate-loader-pulse font-display text-[clamp(30px,9vw,44px)] font-medium leading-[0.96] tracking-tight text-white drop-shadow-[0_18px_45px_rgba(0,0,0,0.7)]"

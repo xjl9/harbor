@@ -127,6 +127,45 @@ jobs:
           done
           $PB -c "Print" "$PLIST"
 
+      # `tauri ios init` regenerates the Xcode project every build, so the app
+      # target's AppDelegate is recreated from the cargo-mobile2 template and any
+      # orientation override is lost. Re-inject it here (mirrors "Ensure Info.plist
+      # keys"): a file in the app target's Sources adds
+      # application(_:supportedInterfaceOrientationsFor:) via an extension on the
+      # generated AppDelegate. It returns the mask the harbor-player plugin writes
+      # to UserDefaults when playback forces landscape, which is what stops iOS
+      # from rotating back to portrait while the plist still permits it. The plugin
+      # compiles into the Rust staticlib (a separate Swift module), so UserDefaults
+      # is the shared channel rather than a direct symbol reference.
+      - name: Inject orientation AppDelegate
+        run: |
+          set -euo pipefail
+          MAIN_SWIFT=$(find src-tauri/gen/apple/Sources -name main.swift | head -1)
+          test -n "$MAIN_SWIFT"
+          DEST_DIR=$(dirname "$MAIN_SWIFT")
+          grep -q "class AppDelegate" "$MAIN_SWIFT" || { echo "AppDelegate not found in $MAIN_SWIFT" >&2; exit 1; }
+          cat > "$DEST_DIR/HarborOrientation.swift" <<'SWIFT'
+          // Injected by .github/workflows/ios-build.yml. Locks the app's supported
+          // orientations to the mask the harbor-player plugin writes into
+          // UserDefaults when playback forces landscape, and restores free rotation
+          // on exit. Kept out of the plugin package because the plugin compiles into
+          // the Rust staticlib, a separate Swift module from this app target.
+          import UIKit
+
+          extension AppDelegate {
+            @objc func application(
+              _ application: UIApplication,
+              supportedInterfaceOrientationsFor window: UIWindow?
+            ) -> UIInterfaceOrientationMask {
+              let raw = UInt(UserDefaults.standard.integer(forKey: "harbor.player.orientationMask"))
+              guard raw != 0 else { return .allButUpsideDown }
+              return UIInterfaceOrientationMask(rawValue: raw)
+            }
+          }
+          SWIFT
+          echo "Wrote $DEST_DIR/HarborOrientation.swift"
+          cat "$DEST_DIR/HarborOrientation.swift"
+
       # Raw xcodebuild does not run beforeBuildCommand, so build the frontend
       # here; the Rust build embeds ../dist at compile time.
       - name: Build frontend

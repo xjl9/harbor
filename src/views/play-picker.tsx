@@ -28,6 +28,8 @@ import type { ScoredStream, Tier } from "@/lib/streams/types";
 import { isAddonRanked } from "@/lib/streams/addon-detect";
 import { isFilterEmpty, matchesCustomFilter } from "@/lib/streams/custom-filters";
 import { useScrollMemory, useView, type PlayEpisode, type PlayerSrc } from "@/lib/view";
+import { setOrientation } from "@/lib/player/android-native";
+import { isMobileNative } from "@/lib/platform";
 import { prefetchSegments } from "@/lib/skip-intro";
 import { exitWindowFullscreen } from "@/lib/fullscreen-state";
 import { useWindowFullscreen } from "@/lib/use-window-fullscreen";
@@ -684,6 +686,19 @@ export function PlayPicker({
       : `picker:${meta.id}${attemptKey}`;
   }, [attempt, episode, meta.id]);
   useScrollMemory(pickerScrollKey, mainRef, !showAutoTransition);
+
+  // Force landscape the moment the play flow commits (stream resolving / auto-fire),
+  // so the connecting screen is already landscape before the native player mounts.
+  // The player re-locks on its own mount; the deferred restore in setOrientation
+  // keeps the picker->player handoff from flashing portrait. Restore on cancel /
+  // exhausted / back, which unmount this screen without a player following.
+  useEffect(() => {
+    if (!isMobileNative() || !showAutoTransition) return;
+    void setOrientation("landscape");
+    return () => {
+      void setOrientation("auto");
+    };
+  }, [showAutoTransition]);
 
   const noSourcesConfigured = addons !== null && addons.length === 0 && debrids.length === 0;
 
