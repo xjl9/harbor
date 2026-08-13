@@ -25,6 +25,7 @@ import flagTur from "@/assets/flags/flag-tur.svg";
 import flagUkr from "@/assets/flags/flag-ukr.svg";
 import flagVie from "@/assets/flags/flag-vie.svg";
 import flagZho from "@/assets/flags/flag-zho.svg";
+import { bridgeFlagSrc } from "@/lib/flag-map";
 import { regionFlagSrc } from "@/lib/region-flags";
 
 const FLAG: Record<string, string> = {
@@ -76,12 +77,35 @@ const LABEL_SIZE: Record<FlagSize, number> = {
   lg: 15,
 };
 
+const FLAG_RING = "0 0 0 1px rgba(255,255,255,0.06), 0 1px 2px rgba(0,0,0,0.4)";
+
 export function languageHasFlag(language: string): boolean {
   return language in FLAG;
 }
 
 export function flagSrc(language: string): string | null {
   return FLAG[language] ?? null;
+}
+
+// Generic Portuguese is not tied to one country, so it renders as a single tile
+// split on the top-left/bottom-right diagonal: Brazil in the top-right, Portugal
+// in the bottom-left. Regional variants (pt-br / "Portuguese (Brazil)") keep the
+// plain Brazil flag from the FLAG map.
+function isGenericPortuguese(language: string): boolean {
+  return language === "Portuguese" || language === "pt";
+}
+
+// A short monogram chip used when no flag image exists for a language, so a row
+// never renders a blank flag column.
+function MonogramChip({ language, size }: { language: string; size: FlagSize }) {
+  return (
+    <span
+      className="inline-flex items-center justify-center rounded-[3px] bg-canvas/70 px-1 font-bold uppercase tracking-[0.14em] text-ink-subtle ring-1 ring-edge-soft"
+      style={{ height: FLAG_HEIGHT[size] + 2, fontSize: 9, lineHeight: 1 }}
+    >
+      {language.slice(0, 2)}
+    </span>
+  );
 }
 
 export function Flag({
@@ -104,15 +128,28 @@ export function Flag({
     );
   }
 
-  const src = FLAG[language];
   const h = FLAG_HEIGHT[size];
 
+  if (isGenericPortuguese(language)) {
+    return <DiagonalFlag size={size} showLabel={showLabel} label={language} />;
+  }
+
+  const src = FLAG[language] ?? bridgeFlagSrc(language);
+
   if (!src) {
-    return showLabel ? (
-      <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-ink-subtle">
-        {language}
+    return (
+      <span className="inline-flex items-center gap-1.5">
+        <MonogramChip language={language} size={size} />
+        {showLabel && (
+          <span
+            className="font-semibold tracking-[0.01em] text-ink-muted"
+            style={{ fontSize: LABEL_SIZE[size] }}
+          >
+            {language}
+          </span>
+        )}
       </span>
-    ) : null;
+    );
   }
 
   return (
@@ -127,7 +164,7 @@ export function Flag({
           display: "block",
           borderRadius: 2,
           objectFit: "cover",
-          boxShadow: "0 0 0 1px rgba(255,255,255,0.06), 0 1px 2px rgba(0,0,0,0.4)",
+          boxShadow: FLAG_RING,
         }}
         draggable={false}
       />
@@ -137,6 +174,76 @@ export function Flag({
           style={{ fontSize: LABEL_SIZE[size] }}
         >
           {language}
+        </span>
+      )}
+    </span>
+  );
+}
+
+// Two triangles clipped from the existing Brazil and Portugal tiles, meeting on
+// the top-left/bottom-right diagonal, with a hairline seam drawn corner to
+// corner (an SVG line so it tracks the non-square tile exactly).
+function DiagonalFlag({
+  size,
+  showLabel,
+  label,
+}: {
+  size: FlagSize;
+  showLabel: boolean;
+  label: string;
+}) {
+  const h = FLAG_HEIGHT[size];
+  const w = h * 1.5;
+  const tile: React.CSSProperties = {
+    position: "absolute",
+    inset: 0,
+    height: "100%",
+    width: "100%",
+    objectFit: "cover",
+  };
+  return (
+    <span className="inline-flex items-center gap-1.5">
+      <span
+        className="relative block overflow-hidden"
+        style={{ height: h, width: w, borderRadius: 2, boxShadow: FLAG_RING }}
+      >
+        <img
+          src={flagPrt}
+          alt=""
+          aria-hidden
+          draggable={false}
+          style={{ ...tile, clipPath: "polygon(0 0, 100% 100%, 0 100%)" }}
+        />
+        <img
+          src={flagBra}
+          alt=""
+          aria-hidden
+          draggable={false}
+          style={{ ...tile, clipPath: "polygon(0 0, 100% 0, 100% 100%)" }}
+        />
+        <svg
+          viewBox="0 0 3 2"
+          preserveAspectRatio="none"
+          aria-hidden
+          style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }}
+        >
+          <line
+            x1="0"
+            y1="0"
+            x2="3"
+            y2="2"
+            stroke="rgba(255,255,255,0.5)"
+            strokeWidth="1"
+            vectorEffect="non-scaling-stroke"
+          />
+        </svg>
+      </span>
+      {showLabel && (
+        <span
+          className="font-semibold tracking-[0.01em] text-ink-muted"
+          style={{ fontSize: LABEL_SIZE[size] }}
+        >
+          {label}
         </span>
       )}
     </span>

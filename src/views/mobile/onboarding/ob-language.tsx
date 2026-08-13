@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { Flag } from "@/components/flag";
 import { isRtl, LANGUAGES, setUiLanguage, useT, type UiLanguage } from "@/lib/i18n";
 import { useSettings } from "@/lib/settings";
 import { useReducedMotion } from "@/lib/use-reduced-motion";
@@ -93,6 +94,9 @@ export function ObLanguage() {
                 }`}
               >
                 {selected && <span className="h-2.5 w-2.5 rounded-full bg-ink" />}
+              </span>
+              <span className="shrink-0">
+                <Flag language={lang.label} size="lg" showLabel={false} />
               </span>
               <span className="flex min-w-0 flex-1 flex-col gap-0.5">
                 <span
