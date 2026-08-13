@@ -259,9 +259,9 @@ class HarborPlayerPlugin: Plugin {
           scene.requestGeometryUpdate(.iOS(interfaceOrientations: mask)) { _ in }
         }
       } else if preferred != .unknown {
-        // Pre-16 devices honor the deprecated device-orientation nudge.
+        // Pre-16 devices honor the KVC device-orientation nudge; the old
+        // attemptRotationToDeviceIfNeeded() companion is gone from the iOS 26 SDK.
         UIDevice.current.setValue(preferred.rawValue, forKey: "orientation")
-        UIViewController.attemptRotationToDeviceIfNeeded()
       }
       invoke.resolve(JsonObject())
     }
