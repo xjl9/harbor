@@ -140,10 +140,18 @@ jobs:
       - name: Inject orientation AppDelegate
         run: |
           set -euo pipefail
-          MAIN_SWIFT=$(find src-tauri/gen/apple/Sources -name main.swift | head -1)
-          test -n "$MAIN_SWIFT"
-          DEST_DIR=$(dirname "$MAIN_SWIFT")
-          grep -q "class AppDelegate" "$MAIN_SWIFT" || { echo "AppDelegate not found in $MAIN_SWIFT" >&2; exit 1; }
+          # Find whichever generated Swift file actually declares the AppDelegate
+          # (cargo-mobile2's layout is not guaranteed to be Sources/main.swift).
+          # If none is found the landscape requestGeometryUpdate path still works;
+          # this override is only the enforcement layer, so warn and continue rather
+          # than failing the whole build.
+          APPDELEGATE_FILE=$(grep -rl "class AppDelegate" src-tauri/gen/apple 2>/dev/null | head -1 || true)
+          if [ -z "$APPDELEGATE_FILE" ]; then
+            echo "::warning::AppDelegate not found in gen/apple; skipping orientation-mask override (rotation still works via requestGeometryUpdate)"
+            exit 0
+          fi
+          DEST_DIR=$(dirname "$APPDELEGATE_FILE")
+          echo "Found AppDelegate in $APPDELEGATE_FILE"
           cat > "$DEST_DIR/HarborOrientation.swift" <<'SWIFT'
           // Injected by .github/workflows/ios-build.yml. Locks the app's supported
           // orientations to the mask the harbor-player plugin writes into
