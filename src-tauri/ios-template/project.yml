@@ -88,6 +88,12 @@ targets:
         LIBRARY_SEARCH_PATHS[arch=arm64]: $(inherited) $(PROJECT_DIR)/Externals/arm64/$(CONFIGURATION) $(SDKROOT)/usr/lib/swift $(TOOLCHAIN_DIR)/usr/lib/swift/$(PLATFORM_NAME) $(TOOLCHAIN_DIR)/usr/lib/swift-5.0/$(PLATFORM_NAME)
         ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES: true
         EXCLUDED_ARCHS[sdk=iphoneos*]: x86_64
+        # swift-rs compiles the plugin Swift into the Rust staticlib, so its
+        # force-load hint for the Swift 5.6 back-deploy shims is invisible to
+        # Xcode's linker and the compat archives never get auto-linked. On the
+        # simulator SDK that surfaces as undefined __swift_FORCE_LOAD_$_swiftCompatibility56.
+        # Force-link them for the simulator only; the device SDK links clean (CI is green).
+        OTHER_LDFLAGS[sdk=iphonesimulator*]: $(inherited) -L$(DT_TOOLCHAIN_DIR)/usr/lib/swift/iphonesimulator -lswiftCompatibility56 -lswiftCompatibilityConcurrency -lswiftCompatibilityPacks
       groups: [app]
     dependencies:
       - framework: {{ lib-output-file-name }}
