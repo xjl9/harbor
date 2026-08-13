@@ -23,5 +23,17 @@
 		<key>NSAllowsArbitraryLoadsInWebContent</key>
 		<true/>
 	</dict>
+	<!-- Required by iOS 14+ before any local-network access (LAN peers over TCP,
+	     and mDNS browse). Without this string the Local Network privacy prompt
+	     cannot show and access is silently denied. -->
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>Harbor uses your local network to find and control other Harbor apps on your Wi-Fi, such as your computer or TV.</string>
+	<!-- Service types this app browses for over mDNS. iOS 14+ requires every
+	     Bonjour service type to be declared here; _harbor._tcp is Harbor's own
+	     remote-control service advertised by desktop and TV hosts. -->
+	<key>NSBonjourServices</key>
+	<array>
+		<string>_harbor._tcp</string>
+	</array>
 </dict>
 </plist>

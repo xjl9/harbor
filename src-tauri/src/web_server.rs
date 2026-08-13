@@ -1,7 +1,8 @@
-use std::collections::HashSet;
-use std::net::SocketAddr;
+use std::collections::{HashMap, HashSet};
+use std::net::{IpAddr, SocketAddr, UdpSocket};
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, OnceLock};
+use std::time::{Duration, Instant};
 use axum::body::Body;
 use axum::extract::ws::{Message, WebSocket, WebSocketUpgrade};
 use axum::extract::State;
@@ -9,12 +10,25 @@ use axum::http::{header, HeaderMap, HeaderName, HeaderValue, Response, StatusCod
 use axum::response::IntoResponse;
 use axum::routing::get;
 use futures_util::{SinkExt, StreamExt};
+use mdns_sd::{ServiceDaemon, ServiceEvent, ServiceInfo};
+use serde::Serialize;
 use tauri::{AppHandle, Emitter};
 use tokio::net::TcpListener;
 use tokio::sync::{broadcast, oneshot, Mutex as AsyncMutex};
 
 pub const WEB_PORT: u16 = 11471;
 const DEV_FRONTEND: &str = "http://127.0.0.1:1420";
+
+/// mDNS service type Harbor advertises so phones can find a desktop/TV host on
+/// the LAN without the user typing an IP. Mirrors REMOTE_WS_PATH being served at
+/// `:WEB_PORT/api/remote`.
+const HARBOR_SERVICE_TYPE: &str = "_harbor._tcp.local.";
+/// Remote-control wire protocol version, kept in sync with REMOTE_PROTO in
+/// src/lib/remote/protocol.ts. Advertised in the mDNS TXT record.
+const REMOTE_PROTO: u32 = 1;
+/// WebSocket path the host serves the remote-control channel on. Mirrors
+/// REMOTE_WS_PATH in src/lib/remote/protocol.ts. Advertised in the mDNS TXT.
+const REMOTE_WS_PATH: &str = "/api/remote";
 
 /// True when built/run via `tauri dev` (CLI sets `--cfg dev`).
 fn is_tauri_dev() -> bool {
@@ -39,6 +53,204 @@ fn shutdown_slot() -> &'static Mutex<Option<oneshot::Sender<()>>> {
 fn serve_state_slot() -> &'static Mutex<Option<ServeState>> {
     static S: OnceLock<Mutex<Option<ServeState>>> = OnceLock::new();
     S.get_or_init(|| Mutex::new(None))
+}
+
+/// Holds the live mDNS advertisement (daemon + registered fullname) while the web
+/// server is running, so it can be torn down on stop.
+fn mdns_slot() -> &'static Mutex<Option<(ServiceDaemon, String)>> {
+    static S: OnceLock<Mutex<Option<(ServiceDaemon, String)>>> = OnceLock::new();
+    S.get_or_init(|| Mutex::new(None))
+}
+
+/// Enumerate this machine's non-loopback IPv4 addresses by asking the OS which
+/// local interface it would use to reach a few common targets. Same UDP-connect
+/// trick dlna.rs and stream_proxy.rs use, gathering more than one interface.
+fn local_ipv4s() -> Vec<IpAddr> {
+    let mut out: Vec<IpAddr> = Vec::new();
+    for target in ["1.1.1.1:80", "8.8.8.8:80", "192.168.1.1:80"] {
+        if let Ok(sock) = UdpSocket::bind("0.0.0.0:0") {
+            if sock.connect(target).is_ok() {
+                if let Ok(addr) = sock.local_addr() {
+                    let ip = addr.ip();
+                    if let IpAddr::V4(v4) = ip {
+                        if !v4.is_loopback() && !v4.is_unspecified() && !out.contains(&ip) {
+                            out.push(ip);
+                        }
+                    }
+                }
+            }
+        }
+    }
+    out
+}
+
+/// Friendly device label for the advertised service, taken from the OS hostname
+/// with a plain fallback. Shown to the user on the phone's connect list.
+fn device_label() -> String {
+    for key in ["COMPUTERNAME", "HOSTNAME", "HOST"] {
+        if let Ok(v) = std::env::var(key) {
+            let v = v.trim().to_string();
+            if !v.is_empty() {
+                return v;
+            }
+        }
+    }
+    "Harbor".to_string()
+}
+
+/// Turn a free-form label into a DNS-safe host label for the mDNS `.local.` name.
+fn sanitize_hostname(label: &str) -> String {
+    let cleaned: String = label
+        .chars()
+        .map(|c| if c.is_ascii_alphanumeric() || c == '-' { c } else { '-' })
+        .collect();
+    let trimmed = cleaned.trim_matches('-');
+    if trimmed.is_empty() {
+        "harbor".to_string()
+    } else {
+        trimmed.to_lowercase()
+    }
+}
+
+/// Register `_harbor._tcp.local.` on the LAN so phones can auto-discover this
+/// host. Best-effort: if there is no LAN interface or mDNS init fails, discovery
+/// is simply unavailable and the phone's manual-IP path still works.
+fn mdns_advertise_start(app: &AppHandle, port: u16) {
+    let ips = local_ipv4s();
+    if ips.is_empty() {
+        return;
+    }
+    let label = device_label();
+    // Instance names must not contain dots (they delimit the DNS domain); keep
+    // the original label in the TXT `name` for display.
+    let instance_name = label.replace('.', " ");
+    let host_name = format!("{}.local.", sanitize_hostname(&label));
+    let version = app.package_info().version.to_string();
+    let props: Vec<(String, String)> = vec![
+        ("v".to_string(), version),
+        ("name".to_string(), label),
+        ("proto".to_string(), REMOTE_PROTO.to_string()),
+        ("path".to_string(), REMOTE_WS_PATH.to_string()),
+    ];
+    let daemon = match ServiceDaemon::new() {
+        Ok(d) => d,
+        Err(e) => {
+            eprintln!("[web-serve] mDNS daemon init failed: {e}");
+            return;
+        }
+    };
+    let info = match ServiceInfo::new(
+        HARBOR_SERVICE_TYPE,
+        &instance_name,
+        &host_name,
+        ips.as_slice(),
+        port,
+        props.as_slice(),
+    ) {
+        Ok(i) => i,
+        Err(e) => {
+            eprintln!("[web-serve] mDNS service info failed: {e}");
+            let _ = daemon.shutdown();
+            return;
+        }
+    };
+    let fullname = info.get_fullname().to_string();
+    if let Err(e) = daemon.register(info) {
+        eprintln!("[web-serve] mDNS register failed: {e}");
+        let _ = daemon.shutdown();
+        return;
+    }
+    *mdns_slot().lock().unwrap() = Some((daemon, fullname));
+}
+
+/// Tear down the mDNS advertisement, sending a goodbye packet if possible.
+fn mdns_advertise_stop() {
+    if let Some((daemon, fullname)) = mdns_slot().lock().unwrap().take() {
+        // Unregister flushes a goodbye; give it a brief moment before shutdown.
+        if let Ok(receiver) = daemon.unregister(&fullname) {
+            let _ = receiver.recv_timeout(Duration::from_millis(500));
+        }
+        let _ = daemon.shutdown();
+    }
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct DiscoveredHost {
+    pub id: String,
+    pub name: String,
+    pub host: String,
+    pub port: u16,
+    pub version: Option<String>,
+}
+
+fn pick_ipv4(addrs: &HashSet<IpAddr>) -> Option<IpAddr> {
+    addrs.iter().copied().find(|a| a.is_ipv4())
+}
+
+/// Browse the LAN for other Harbor hosts advertising `_harbor._tcp.local.`.
+/// Modeled on cast.rs `discover_chromecasts`: spawn_blocking, browse, collect
+/// resolved services into a dedup map, read TXT for name/version. Returns quickly
+/// (default 2.5s) and never errors on a device with no LAN peers.
+#[tauri::command]
+pub async fn remote_discover(timeout_ms: Option<u64>) -> Result<Vec<DiscoveredHost>, String> {
+    let timeout = timeout_ms.unwrap_or(2500).clamp(500, 10_000);
+    // Skip our own advertisement so a host that is also serving does not list itself.
+    let self_ips: HashSet<String> = local_ipv4s().iter().map(|ip| ip.to_string()).collect();
+    let hosts = tokio::task::spawn_blocking(move || -> Vec<DiscoveredHost> {
+        let Ok(daemon) = ServiceDaemon::new() else {
+            return Vec::new();
+        };
+        let Ok(receiver) = daemon.browse(HARBOR_SERVICE_TYPE) else {
+            return Vec::new();
+        };
+        let deadline = Instant::now() + Duration::from_millis(timeout);
+        let mut found: HashMap<String, DiscoveredHost> = HashMap::new();
+        while Instant::now() < deadline {
+            match receiver.recv_timeout(Duration::from_millis(120)) {
+                Ok(ServiceEvent::ServiceResolved(info)) => {
+                    let Some(addr) = pick_ipv4(info.get_addresses()) else {
+                        continue;
+                    };
+                    let host = addr.to_string();
+                    if self_ips.contains(&host) {
+                        continue;
+                    }
+                    let port = info.get_port();
+                    let props: HashMap<String, String> = info
+                        .get_properties()
+                        .iter()
+                        .map(|p| (p.key().to_string(), p.val_str().to_string()))
+                        .collect();
+                    let name = props
+                        .get("name")
+                        .cloned()
+                        .filter(|s| !s.is_empty())
+                        .unwrap_or_else(|| host.clone());
+                    let version = props.get("v").cloned().filter(|s| !s.is_empty());
+                    let id = format!("{host}:{port}");
+                    found.insert(
+                        id.clone(),
+                        DiscoveredHost {
+                            id,
+                            name,
+                            host,
+                            port,
+                            version,
+                        },
+                    );
+                }
+                Ok(_) => {}
+                Err(_) => {}
+            }
+        }
+        let _ = daemon.shutdown();
+        found.into_values().collect()
+    })
+    .await
+    .unwrap_or_default();
+    let mut out = hosts;
+    out.sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
+    Ok(out)
 }
 
 fn is_spa_path(raw_path: &str) -> bool {
@@ -319,6 +531,10 @@ pub async fn web_serve_start(app: AppHandle) -> Result<u16, String> {
     *serve_state_slot().lock().unwrap() = Some(state.clone());
     RUNNING.store(true, Ordering::SeqCst);
 
+    // Advertise on the LAN so phones can auto-discover this host without the user
+    // typing an IP. Best-effort; failure leaves the manual-IP path intact.
+    mdns_advertise_start(&app, WEB_PORT);
+
     let router = axum::Router::new()
         .route("/api/remote", get(remote_ws_handler))
         .route("/manga-img", get(manga_img_proxy))
@@ -350,6 +566,7 @@ pub async fn web_serve_start(app: AppHandle) -> Result<u16, String> {
 
 #[tauri::command]
 pub fn web_serve_stop() {
+    mdns_advertise_stop();
     if let Some(tx) = shutdown_slot().lock().unwrap().take() {
         let _ = tx.send(());
     }

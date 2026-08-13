@@ -23,6 +23,18 @@ export type RemoteTarget =
   | { kind: "local"; label: string }
   | { kind: "cast"; deviceId: string; label: string; castKind: RemoteCastDevice["kind"] };
 
+/**
+ * A Harbor host (desktop/TV) found on the LAN via mDNS. Returned by the native
+ * `remote_discover` command so the phone can connect without a typed IP.
+ */
+export type DiscoveredHost = {
+  id: string;
+  name: string;
+  host: string;
+  port: number;
+  version: string | null;
+};
+
 export type RemoteSourceInfo = {
   label: string | null;
   resolution: string | null;

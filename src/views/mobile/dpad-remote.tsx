@@ -1,13 +1,16 @@
 import { useEffect, useRef, useState } from "react";
-import { ChevronDown, Monitor, Volume2, VolumeX } from "lucide-react";
-import type { RemoteNavKey, RemoteSnapshot } from "@/lib/remote/protocol";
+import { Check, ChevronDown, Monitor, RefreshCw, Volume2, VolumeX, Wifi } from "lucide-react";
+import type { DiscoveredHost, RemoteNavKey, RemoteSnapshot } from "@/lib/remote/protocol";
+import { useRemoteDiscovery } from "@/lib/remote/use-remote-discovery";
+import { isMobileNative } from "@/lib/platform";
+import { useT } from "@/lib/i18n/translate";
 import { SERVICES } from "@/lib/providers/streaming";
-import type { StreamingService } from "@/lib/settings";
+import { useSettings, type StreamingService } from "@/lib/settings";
 import { useMobileRemote } from "./mobile-remote";
 import { useRegisterSheet } from "./mobile-sheet-lock";
 import { MobileServices } from "./mobile-services";
 import { RendererSheet } from "./renderer-sheet";
-import { KeyboardOverlay, SHEET_EXIT_CSS, SpeedSleepSheet } from "./remote-extras";
+import { KeyboardOverlay, SHEET_EXIT_CSS, SpeedSleepSheet, useSheetPresence } from "./remote-extras";
 import { VoiceSearch, getSpeechRecognition } from "./voice-search";
 
 type Service = (typeof SERVICES)[StreamingService];
@@ -45,12 +48,18 @@ const CHEVRONS: Array<{ dir: Dir; rotate: number; pos: string; nudge: string }> 
 
 export function DpadRemote() {
   const { sendCommand, snapshot, connected } = useMobileRemote();
+  const { settings, update } = useSettings();
+  const t = useT();
+  // Native standalone builds connect to a chosen Harbor host; the web remote is
+  // served by the desktop, so its host is implied and it skips the connect flow.
+  const native = isMobileNative();
   const nav = (key: RemoteNavKey) => sendCommand({ action: "nav", key });
   const playing = snapshot.playing && !snapshot.idle;
   const watching = !!snapshot.mediaId && !snapshot.idle;
   const pagerRef = useRef<HTMLDivElement>(null);
   const [page, setPage] = useState(0);
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [connectOpen, setConnectOpen] = useState(false);
   const [kbOpen, setKbOpen] = useState(false);
   const [speedOpen, setSpeedOpen] = useState(false);
   const [voiceOpen, setVoiceOpen] = useState(false);
@@ -84,6 +93,7 @@ export function DpadRemote() {
 
   useRegisterSheet(speedOpen);
   useRegisterSheet(sheetOpen);
+  useRegisterSheet(connectOpen);
   useRegisterSheet(kbOpen);
   useRegisterSheet(voiceOpen);
   useRegisterSheet(services.open);
@@ -149,24 +159,33 @@ export function DpadRemote() {
     };
   }, []);
 
+  const headerLabel = connected
+    ? snapshot.target.label || t("Your computer")
+    : native && settings.remoteHostAddress
+      ? t("Connecting…")
+      : native
+        ? t("Find a computer")
+        : t("Connecting…");
+
   return (
     <div
-      className="flex h-full flex-col items-center justify-center gap-4 px-5 pt-3"
+      className="flex h-full flex-col items-center justify-center gap-3 px-5 pt-3"
       style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 92px)" }}
     >
       <button
         type="button"
-        onClick={() => setSheetOpen(true)}
-        className="flex items-center gap-2 text-[13.5px] font-semibold transition-opacity active:opacity-60"
+        onClick={() => (native ? setConnectOpen(true) : setSheetOpen(true))}
+        className="flex shrink-0 items-center gap-2 text-[13.5px] font-semibold transition-opacity active:opacity-60"
       >
         <Monitor size={15} strokeWidth={2.2} className={connected ? "text-ink" : "text-ink-subtle"} />
-        <span className="text-ink">
-          {connected ? snapshot.target.label || "Your computer" : "Connecting…"}
-        </span>
+        <span className="text-ink">{headerLabel}</span>
         <ChevronDown size={15} strokeWidth={2.4} className="text-ink-subtle" />
       </button>
 
-      <div className="relative aspect-square w-full max-w-[300px] select-none">
+      <div
+        className="relative aspect-square w-full select-none"
+        style={{ maxWidth: "min(300px, max(160px, calc(100dvh - 460px)))" }}
+      >
         <div className="absolute inset-0 overflow-hidden rounded-full shadow-[inset_0_0_0_1.5px_var(--color-edge-soft)]">
           {SEGMENTS.map(({ dir, clip, fill }) => (
             <button
@@ -251,7 +270,7 @@ export function DpadRemote() {
         </button>
       </div>
 
-      <div className="flex w-full max-w-[352px] items-center justify-between px-2">
+      <div className="flex w-full max-w-[352px] shrink-0 items-center justify-between px-2">
         <Util label="Speed & sleep" onPress={() => setSpeedOpen(true)}>
           <RemoteIcon name="sleep_timer" size={24} />
         </Util>
@@ -276,11 +295,11 @@ export function DpadRemote() {
         </Util>
       </div>
 
-      <div className="h-px w-full max-w-[352px] bg-edge-soft/60" />
+      <div className="h-px w-full max-w-[352px] shrink-0 bg-edge-soft/60" />
 
       <div
         ref={pagerRef}
-        className="flex w-full max-w-[360px] snap-x snap-mandatory overflow-x-auto overflow-y-hidden overscroll-x-contain [scrollbar-width:none] [touch-action:pan-x] [&::-webkit-scrollbar]:hidden"
+        className="flex w-full max-w-[360px] shrink-0 snap-x snap-mandatory overflow-x-auto overflow-y-hidden overscroll-x-contain [scrollbar-width:none] [touch-action:pan-x] [&::-webkit-scrollbar]:hidden"
       >
         <Pane>
           <div className="flex w-full justify-around">
@@ -335,13 +354,28 @@ export function DpadRemote() {
         </Pane>
       </div>
 
-      <div className="flex items-center gap-1.5">
+      <div className="flex shrink-0 items-center gap-1.5">
         {[0, 1, 2].map((i) => (
           <span key={i} className={`h-1.5 rounded-full transition-all ${i === page ? "w-4 bg-ink" : "w-1.5 bg-ink/25"}`} />
         ))}
       </div>
 
       <RendererSheet open={sheetOpen} onClose={() => setSheetOpen(false)} />
+      {native && (
+        <ConnectSheet
+          open={connectOpen}
+          onClose={() => setConnectOpen(false)}
+          configuredHost={(settings.remoteHostAddress ?? "").trim()}
+          connected={connected}
+          connectedLabel={snapshot.target.label}
+          onSelectHost={(host) => update({ remoteHostAddress: host })}
+          onOpenOutputs={() => {
+            setConnectOpen(false);
+            setSheetOpen(true);
+          }}
+          t={t}
+        />
+      )}
       <KeyboardOverlay open={kbOpen} onClose={() => setKbOpen(false)} />
       <SpeedSleepSheet open={speedOpen} onClose={() => setSpeedOpen(false)} />
       {services.open && (
@@ -384,7 +418,7 @@ function RemoteIcon({ name, size = 22, flip = false }: { name: string; size?: nu
 }
 
 function Pane({ children }: { children: React.ReactNode }) {
-  return <div className="flex w-full shrink-0 snap-center flex-col gap-6 px-2">{children}</div>;
+  return <div className="flex w-full shrink-0 snap-center flex-col gap-4 px-2">{children}</div>;
 }
 
 function Util({ label, onPress, accent, children }: { label: string; onPress: () => void; accent?: boolean; children: React.ReactNode }) {
@@ -432,6 +466,186 @@ function ProviderCard({ svc, service, onPress }: { svc: StreamingService; servic
         className="max-h-[24px] max-w-[78%] object-contain"
         style={{ filter: "brightness(0) invert(1)" }}
       />
+    </button>
+  );
+}
+
+function ConnectSheet({
+  open,
+  onClose,
+  configuredHost,
+  connected,
+  connectedLabel,
+  onSelectHost,
+  onOpenOutputs,
+  t,
+}: {
+  open: boolean;
+  onClose: () => void;
+  configuredHost: string;
+  connected: boolean;
+  connectedLabel: string;
+  onSelectHost: (host: string) => void;
+  onOpenOutputs: () => void;
+  t: (key: string, vars?: Record<string, string | number>) => string;
+}) {
+  const { render, leaving } = useSheetPresence(open);
+  const { hosts, scanning, rescan } = useRemoteDiscovery(open);
+  const [draft, setDraft] = useState(configuredHost);
+  const autoPicked = useRef(false);
+
+  // Seed the manual field with the saved host each time the sheet opens.
+  useEffect(() => {
+    if (open) {
+      setDraft(configuredHost);
+      autoPicked.current = false;
+    }
+  }, [open, configuredHost]);
+
+  // One host, nothing configured yet: connect to it without making the user tap.
+  useEffect(() => {
+    if (!open || autoPicked.current) return;
+    if (!configuredHost && hosts.length === 1) {
+      autoPicked.current = true;
+      onSelectHost(hosts[0].host);
+    }
+  }, [open, hosts, configuredHost, onSelectHost]);
+
+  if (!render) return null;
+
+  const pick = (host: string) => {
+    const clean = host.trim();
+    if (!clean) return;
+    onSelectHost(clean);
+    onClose();
+  };
+
+  return (
+    <div
+      className={`fixed inset-0 z-[70] flex flex-col justify-end bg-black/60 backdrop-blur-sm ${leaving ? "harbor-sheet-scrim-out" : "animate-fade-in"}`}
+      onClick={onClose}
+    >
+      <style>{SHEET_EXIT_CSS}</style>
+      <div
+        className={`rounded-t-[28px] border-t border-edge-soft/60 bg-elevated ${leaving ? "harbor-sheet-panel-out" : "animate-in slide-in-from-bottom-4 duration-300"}`}
+        style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 22px)" }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="mx-auto mt-3 h-1 w-10 rounded-full bg-ink/20" />
+        <div className="flex items-center justify-between px-5 pb-2 pt-4">
+          <h3 className="text-[16px] font-semibold text-ink">{t("Connect to a computer")}</h3>
+          <button
+            type="button"
+            onClick={() => void rescan()}
+            className="flex items-center gap-1.5 rounded-full bg-raised px-3 py-1.5 text-[12.5px] font-semibold text-ink-muted transition-transform active:scale-95"
+          >
+            <RefreshCw size={13} strokeWidth={2.4} className={scanning ? "animate-spin" : ""} />
+            {scanning ? t("Scanning…") : t("Scan")}
+          </button>
+        </div>
+
+        <div className="flex flex-col px-2">
+          {hosts.map((h) => (
+            <HostRow
+              key={h.id}
+              host={h}
+              active={configuredHost === h.host && connected}
+              connecting={configuredHost === h.host && !connected}
+              onSelect={() => pick(h.host)}
+            />
+          ))}
+          {hosts.length === 0 && (
+            <p className="px-4 py-5 text-center text-[13px] leading-relaxed text-ink-muted">
+              {scanning
+                ? t("Looking for Harbor on your network…")
+                : t("No Harbor apps found nearby. Make sure the computer is on the same Wi-Fi with Remote turned on, or enter its IP below.")}
+            </p>
+          )}
+        </div>
+
+        <div className="mx-5 mt-1 mb-1 flex items-center gap-2">
+          <input
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            inputMode="decimal"
+            autoCapitalize="off"
+            autoCorrect="off"
+            spellCheck={false}
+            placeholder="192.168.1.20"
+            className="h-11 min-w-0 flex-1 rounded-xl bg-raised px-3.5 text-[15px] text-ink outline-none placeholder:text-ink-subtle focus:ring-1 focus:ring-accent/50"
+            onKeyDown={(e) => {
+              if (e.key === "Enter") pick(draft);
+            }}
+          />
+          <button
+            type="button"
+            onClick={() => pick(draft)}
+            disabled={!draft.trim()}
+            className="h-11 shrink-0 rounded-xl bg-ink px-4 text-[14px] font-semibold text-canvas transition-transform active:scale-95 disabled:opacity-40"
+          >
+            {t("Connect")}
+          </button>
+        </div>
+        <p className="px-5 pt-1 text-[11.5px] leading-relaxed text-ink-subtle">
+          {t("Enter the IP shown in the computer's Harbor Remote settings.")}
+        </p>
+
+        {connected && (
+          <button
+            type="button"
+            onClick={onOpenOutputs}
+            className="mx-2 mt-2 flex items-center gap-3.5 rounded-2xl px-4 py-3 text-start transition-colors active:bg-raised/60"
+          >
+            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-raised text-ink-muted">
+              <Monitor size={20} strokeWidth={2} />
+            </span>
+            <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+              <span className="truncate text-[15px] font-semibold text-ink">{t("Playback output")}</span>
+              <span className="truncate text-[12px] text-ink-subtle">
+                {connectedLabel || t("Your computer")}
+              </span>
+            </span>
+            <ChevronDown size={18} strokeWidth={2.4} className="-rotate-90 text-ink-subtle" />
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function HostRow({
+  host,
+  active,
+  connecting,
+  onSelect,
+}: {
+  host: DiscoveredHost;
+  active: boolean;
+  connecting: boolean;
+  onSelect: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      className="flex items-center gap-3.5 rounded-2xl px-4 py-3 text-start transition-colors active:bg-raised/60"
+    >
+      <span className={`flex h-10 w-10 items-center justify-center rounded-xl ${active ? "bg-accent-soft text-accent" : "bg-raised text-ink-muted"}`}>
+        <Wifi size={20} strokeWidth={2} />
+      </span>
+      <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+        <span className="flex items-center gap-2">
+          <span className={`truncate text-[15px] font-semibold ${active ? "text-accent" : "text-ink"}`}>{host.name}</span>
+          {host.version && (
+            <span className="shrink-0 rounded-md bg-raised px-1.5 py-0.5 text-[10.5px] font-semibold text-ink-subtle">
+              {`Harbor ${host.version}`}
+            </span>
+          )}
+        </span>
+        <span className="truncate text-[12px] text-ink-subtle">{host.host}</span>
+      </span>
+      {active && <Check size={19} strokeWidth={2.6} className="text-accent" />}
+      {connecting && <span className="text-[11.5px] font-semibold text-ink-subtle">…</span>}
     </button>
   );
 }
