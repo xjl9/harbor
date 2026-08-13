@@ -5,7 +5,6 @@ import {
   EyeOff,
   FileText,
   HelpCircle,
-  KeyRound,
   Link2,
   LogOut,
   MonitorSmartphone,
@@ -19,6 +18,9 @@ import debridLinkLogo from "@/assets/addon-logos/debridlink.png";
 import premiumizeLogo from "@/assets/addon-logos/premiumize.png";
 import realDebridLogo from "@/assets/addon-logos/realdebrid.png";
 import torboxLogo from "@/assets/addon-logos/torbox.png";
+import rpdbLogo from "@/assets/addon-logos/rpdb.png";
+import tmdbLogo from "@/assets/addon-logos/tmdb.png";
+import tvdbLogo from "@/assets/addon-logos/tvdb.svg";
 import { useAuth } from "@/lib/auth";
 import { isMobileNative } from "@/lib/platform";
 import { useProfiles } from "@/lib/profiles";
@@ -108,7 +110,10 @@ export function MobileProfile({ onOpenRemote }: { onOpenRemote: () => void }) {
   const keySet = (v: string | undefined) => !!(v && v.trim());
 
   return (
-    <div className="relative flex min-h-full flex-col gap-7 px-5 pb-8 pt-5">
+    <div
+      className="relative flex min-h-full flex-col gap-7 px-5 pb-8"
+      style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 14px)" }}
+    >
       {/* Ambient identity wash: the profile's own color bleeds from the top, same cinematic depth as the home hero. */}
       <div
         aria-hidden
@@ -118,7 +123,7 @@ export function MobileProfile({ onOpenRemote }: { onOpenRemote: () => void }) {
         }}
       />
 
-      <header className="flex flex-col items-center gap-4 pt-2">
+      <header className="flex flex-col items-center gap-4">
         <button
           type="button"
           onClick={() => setSwitching(true)}
@@ -193,7 +198,7 @@ export function MobileProfile({ onOpenRemote }: { onOpenRemote: () => void }) {
             </>
           )}
           <Row
-            icon={<KeyRound size={20} strokeWidth={2} />}
+            icon={<LogoBadge src={tmdbLogo} />}
             label="TMDB API key"
             value={keySet(settings.tmdbKey) ? "••••" : undefined}
             pending={!keySet(settings.tmdbKey)}
@@ -209,7 +214,7 @@ export function MobileProfile({ onOpenRemote }: { onOpenRemote: () => void }) {
           />
           <Divider />
           <Row
-            icon={<KeyRound size={20} strokeWidth={2} />}
+            icon={<LogoBadge src={tvdbLogo} />}
             label="TVDB API key"
             value={keySet(settings.tvdbKey) ? "••••" : undefined}
             pending={!keySet(settings.tvdbKey)}
@@ -225,7 +230,7 @@ export function MobileProfile({ onOpenRemote }: { onOpenRemote: () => void }) {
           />
           <Divider />
           <Row
-            icon={<KeyRound size={20} strokeWidth={2} />}
+            icon={<LogoBadge src={rpdbLogo} />}
             label="RPDB API key"
             value={keySet(settings.rpdbKey) ? "••••" : undefined}
             pending={!keySet(settings.rpdbKey)}
@@ -265,7 +270,7 @@ export function MobileProfile({ onOpenRemote }: { onOpenRemote: () => void }) {
             <div key={p.key}>
               {i > 0 && <Divider />}
               <Row
-                icon={<DebridLogo src={p.logo} />}
+                icon={<LogoBadge src={p.logo} />}
                 label={p.label}
                 value={keySet(settings[p.key]) ? "••••" : undefined}
                 pending={!keySet(settings[p.key])}
@@ -516,7 +521,9 @@ function Row({
   );
 }
 
-function DebridLogo({ src }: { src: string }) {
+// Brand logo badge shared by the Streaming setup (TMDB/TVDB/RPDB) and Debrid
+// rows so both sections read the same premium way instead of a generic icon.
+function LogoBadge({ src }: { src: string }) {
   return (
     <span className="flex h-5 w-5 items-center justify-center overflow-hidden rounded-[5px]">
       <img src={src} alt="" draggable={false} className="h-full w-full object-contain" />

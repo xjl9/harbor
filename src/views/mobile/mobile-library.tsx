@@ -1,9 +1,21 @@
 import { useEffect, useMemo, useState } from "react";
-import { Bookmark, Clock, Link2, MonitorSmartphone, Star } from "lucide-react";
+import { Bookmark, Clock, Link2, Star } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { Meta } from "@/lib/cinemeta";
 import { Poster, usePosterChain } from "@/components/poster";
 import { useSettings } from "@/lib/settings";
+import { useAuth } from "@/lib/auth";
+import { isMobileNative } from "@/lib/platform";
+import { useT } from "@/lib/i18n";
+import { library, libraryMetaType, type LibraryItem } from "@/lib/stremio";
+import { readLocalEntries, subscribeWatchlist, type LocalEntry } from "@/lib/watchlist";
+import { useMediaFavorites, type MediaEntry } from "@/lib/media-favorites";
+import { useLocalCwLibraryItems } from "@/lib/continue-watching";
+import { fetchWatchlist } from "@/lib/trakt/watchlist";
+import { fetchWatchedHistory, type HistoryItem } from "@/lib/trakt/history";
+import { traktItemToMeta } from "@/lib/trakt/to-meta";
+import type { TraktItem } from "@/lib/trakt/types";
+import { useTrakt } from "@/lib/trakt/provider";
 import type { RemoteLibraryItem } from "@/lib/remote/protocol";
 import { useMobileRemote } from "./mobile-remote";
 import { MobileDetail } from "./mobile-detail";
@@ -19,9 +31,21 @@ const SECTIONS: Array<{ id: SectionId; label: string; icon: LucideIcon }> = [
 ];
 
 const EMPTY: Record<SectionId, { icon: LucideIcon; title: string; body: string }> = {
-  watchlist: { icon: Bookmark, title: "Your watchlist is empty", body: "Save a movie or show from any detail page and it lines up here for later." },
-  history: { icon: Clock, title: "Nothing watched yet", body: "Press play on something. It shows up here once you start watching." },
-  favorites: { icon: Star, title: "No favorites yet", body: "Tap the star on any movie or show to keep it close." },
+  watchlist: {
+    icon: Bookmark,
+    title: "Your watchlist is empty",
+    body: "Save a movie or show from any detail page and it lines up here for later.",
+  },
+  history: {
+    icon: Clock,
+    title: "Nothing watched yet",
+    body: "Press play on something. It shows up here once you start watching.",
+  },
+  favorites: {
+    icon: Star,
+    title: "No favorites yet",
+    body: "Tap the star on any movie or show to keep it close.",
+  },
 };
 
 const TAB_KEY = "harbor.mobile.library.tab";
@@ -49,6 +73,7 @@ export function MobileLibrary({ onConnect }: { onConnect?: () => void }) {
   const [tab, setTab] = useState<SectionId>(readSavedTab);
   const [detailMeta, setDetailMeta] = useState<Meta | null>(null);
   const { data, connected } = useLibraryData();
+  const native = isMobileNative();
 
   useEffect(() => {
     try {
@@ -67,33 +92,34 @@ export function MobileLibrary({ onConnect }: { onConnect?: () => void }) {
       <Header />
       <TabStrip tab={tab} onTab={setTab} />
       <div key={tab} className="ml-view-in">
-        <Section
-          state={active}
-          kind={tab}
-          connected={connected}
-          onOpenDetail={setDetailMeta}
-          onConnect={onConnect}
-        />
+        <Section state={active} kind={tab} onOpenDetail={setDetailMeta} />
       </div>
+      {/* A linked desktop is additive, not required: everything above is built on
+          this device. Offer the link only as a way to merge a desktop library. */}
+      {native && !connected && onConnect && active.entries.length > 0 && (
+        <ConnectHint onConnect={onConnect} />
+      )}
       {detailMeta && <MobileDetail meta={detailMeta} onClose={() => setDetailMeta(null)} />}
     </div>
   );
 }
 
 function Header() {
+  const t = useT();
   return (
     <div className="flex flex-col gap-1">
       <span className="text-[11px] font-bold uppercase tracking-[0.24em] text-ink-subtle">
-        My library
+        {t("My library")}
       </span>
       <h1 className="font-display text-[26px] font-medium leading-tight tracking-tight text-ink">
-        Your collection
+        {t("Your collection")}
       </h1>
     </div>
   );
 }
 
 function TabStrip({ tab, onTab }: { tab: SectionId; onTab: (t: SectionId) => void }) {
+  const t = useT();
   return (
     <div className="flex items-center gap-1.5">
       {SECTIONS.map((s) => {
@@ -110,7 +136,7 @@ function TabStrip({ tab, onTab }: { tab: SectionId; onTab: (t: SectionId) => voi
             }`}
           >
             <Icon size={15} strokeWidth={2.3} />
-            {s.label}
+            {t(s.label)}
           </button>
         );
       })}
@@ -121,17 +147,12 @@ function TabStrip({ tab, onTab }: { tab: SectionId; onTab: (t: SectionId) => voi
 function Section({
   state,
   kind,
-  connected,
   onOpenDetail,
-  onConnect,
 }: {
   state: SectionState;
   kind: SectionId;
-  connected: boolean;
   onOpenDetail: (m: Meta) => void;
-  onConnect?: () => void;
 }) {
-  if (!connected && state.entries.length === 0) return <NotConnected onConnect={onConnect} />;
   if (state.loading && state.entries.length === 0) return <SkeletonGrid />;
   if (state.entries.length === 0) return <Empty kind={kind} />;
   return (
@@ -184,6 +205,7 @@ function SkeletonGrid() {
 }
 
 function Empty({ kind }: { kind: SectionId }) {
+  const t = useT();
   const cfg = EMPTY[kind];
   const Icon = cfg.icon;
   return (
@@ -192,43 +214,81 @@ function Empty({ kind }: { kind: SectionId }) {
         <Icon size={26} strokeWidth={1.8} />
       </span>
       <div className="flex flex-col gap-1.5">
-        <h2 className="font-display text-[18px] font-medium tracking-[-0.01em] text-ink">{cfg.title}</h2>
-        <p className="max-w-[270px] text-[13.5px] leading-relaxed text-ink-muted">{cfg.body}</p>
-      </div>
-    </div>
-  );
-}
-
-function NotConnected({ onConnect }: { onConnect?: () => void }) {
-  return (
-    <div className="flex flex-col items-center gap-4 pt-16 text-center">
-      <span className="relative grid h-16 w-16 place-items-center rounded-2xl bg-elevated/40 text-ink-muted ring-1 ring-edge-soft">
-        <MonitorSmartphone size={26} strokeWidth={1.8} />
-      </span>
-      <div className="flex flex-col gap-1.5">
-        <h2 className="font-display text-[19px] font-medium tracking-[-0.01em] text-ink">
-          Not connected to a computer
+        <h2 className="font-display text-[18px] font-medium tracking-[-0.01em] text-ink">
+          {t(cfg.title)}
         </h2>
-        <p className="max-w-[280px] text-[13.5px] leading-relaxed text-ink-muted">
-          Your watchlist, history and favorites live on your desktop Harbor. Link this device and
-          they sync here.
-        </p>
+        <p className="max-w-[270px] text-[13.5px] leading-relaxed text-ink-muted">{t(cfg.body)}</p>
       </div>
-      {onConnect && (
-        <button
-          type="button"
-          onClick={onConnect}
-          className="mt-1 flex items-center gap-2 rounded-full bg-ink px-5 py-2.5 text-[14px] font-semibold text-canvas transition-transform active:scale-[0.97] motion-reduce:transition-none"
-        >
-          <Link2 size={16} strokeWidth={2.4} />
-          Connect a computer
-        </button>
-      )}
     </div>
   );
 }
 
-function toEntries(items?: RemoteLibraryItem[]): Entry[] {
+function ConnectHint({ onConnect }: { onConnect: () => void }) {
+  const t = useT();
+  return (
+    <button
+      type="button"
+      onClick={onConnect}
+      className="flex items-center justify-center gap-2 rounded-full border border-edge-soft bg-surface/60 px-4 py-2.5 text-[12.5px] font-semibold text-ink-muted transition-colors active:bg-raised/60"
+    >
+      <Link2 size={14} strokeWidth={2.4} />
+      {t("Connect a computer to merge its library")}
+    </button>
+  );
+}
+
+function parseDate(v: unknown): number {
+  if (typeof v === "number") return Number.isFinite(v) ? v : 0;
+  if (typeof v === "string") {
+    const t = Date.parse(v);
+    return Number.isFinite(t) ? t : 0;
+  }
+  return 0;
+}
+
+function libToEntry(i: LibraryItem, dateField: "mtime" | "watched"): Entry {
+  return {
+    meta: {
+      id: i._id,
+      type: libraryMetaType(i.type),
+      name: i.name,
+      poster: i.poster,
+      background: i.background,
+    },
+    date: dateField === "watched" ? parseDate(i.state?.lastWatched ?? i._mtime) : parseDate(i._mtime),
+  };
+}
+
+function localToEntry(e: LocalEntry): Entry {
+  return {
+    meta: { id: e.id, type: e.type, name: e.name || e.id, poster: e.poster },
+    date: e.addedAt || 0,
+  };
+}
+
+function favToEntry(e: MediaEntry): Entry {
+  return {
+    meta: { id: e.id, type: e.type, name: e.name || e.id, poster: e.poster },
+    date: e.addedAt || 0,
+  };
+}
+
+function traktWatchlistToEntry(item: TraktItem): Entry | null {
+  const meta = traktItemToMeta(item);
+  if (!meta) return null;
+  return { meta, date: parseDate(item.contextDate) };
+}
+
+function traktHistoryToEntry(h: HistoryItem): Entry | null {
+  const id = h.type === "movie" ? h.imdb : h.showImdb;
+  if (!id) return null;
+  return {
+    meta: { id, type: h.type === "movie" ? "movie" : "series", name: h.title },
+    date: parseDate(h.watchedAt),
+  };
+}
+
+function remoteToEntries(items?: RemoteLibraryItem[]): Entry[] {
   return (items ?? []).map((it) => ({
     meta: {
       id: it.id,
@@ -241,18 +301,180 @@ function toEntries(items?: RemoteLibraryItem[]): Entry[] {
   }));
 }
 
+// Watchlist parity with desktop filterLibrary("watchlist"): drop removed and
+// anything already started or watched so this stays the saved-for-later list.
+function filterWatchlist(items: LibraryItem[], bookmarkedOnly: boolean): LibraryItem[] {
+  return items.filter((i) => {
+    if (i.removed) return false;
+    if (bookmarkedOnly && i.temp) return false;
+    if ((i.state?.flaggedWatched ?? 0) > 0 || (i.state?.timesWatched ?? 0) > 0) return false;
+    if ((i.state?.timeOffset ?? 0) > 0) return false;
+    return true;
+  });
+}
+
+// History parity with desktop filterHistory: keep anything with a watch signal
+// (progress, flagged, or times watched), newest first.
+function filterHistory(items: LibraryItem[]): LibraryItem[] {
+  return items
+    .filter((i) => !i.removed || i.temp)
+    .filter(
+      (i) =>
+        (i.state?.flaggedWatched ?? 0) > 0 ||
+        (i.state?.timesWatched ?? 0) > 0 ||
+        (i.state?.timeOffset ?? 0) > 0,
+    )
+    .sort(
+      (a, b) =>
+        parseDate(b.state?.lastWatched ?? b._mtime) - parseDate(a.state?.lastWatched ?? a._mtime),
+    );
+}
+
+// First-wins dedup across sources: by id, then by normalized type+name so the
+// same title arriving from Stremio, Trakt, local, and a desktop snapshot lands
+// once. Sorted newest first with undated entries last.
+function dedupEntries(groups: Entry[][]): Entry[] {
+  const norm = (s: string) =>
+    s
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "")
+      .trim();
+  const seenId = new Set<string>();
+  const seenName = new Set<string>();
+  const out: Entry[] = [];
+  for (const group of groups) {
+    for (const e of group) {
+      if (!e.meta.id || seenId.has(e.meta.id)) continue;
+      const nameKey = e.meta.name ? `${e.meta.type}:${norm(e.meta.name)}` : "";
+      if (nameKey && seenName.has(nameKey)) continue;
+      seenId.add(e.meta.id);
+      if (nameKey) seenName.add(nameKey);
+      out.push(e);
+    }
+  }
+  return out.sort((a, b) => b.date - a.date);
+}
+
+// Builds all three library sections on-device, 1:1 with the desktop tabs:
+//   watchlist = local saved + Stremio cloud library + Trakt + desktop snapshot
+//   history   = Stremio cloud + local continue-watching + Trakt + snapshot
+//   favorites = local media favorites + snapshot
+// A connected desktop is merged in additively; it is never required.
 function useLibraryData(): { data: Record<SectionId, SectionState>; connected: boolean } {
-  const { connected, snapshot } = useMobileRemote();
-  const lib = snapshot.library;
+  const { authKey } = useAuth();
+  const { settings } = useSettings();
+  const { isConnected: traktConnected } = useTrakt();
+  const { snapshot, connected } = useMobileRemote();
+  const remoteLib = snapshot.library;
+  const { items: favItems } = useMediaFavorites();
+  const localCw = useLocalCwLibraryItems();
+
+  const [localWatch, setLocalWatch] = useState<LocalEntry[]>(() => readLocalEntries());
+  useEffect(() => {
+    const tick = () => setLocalWatch(readLocalEntries());
+    window.addEventListener("storage", tick);
+    const unsub = subscribeWatchlist(tick);
+    return () => {
+      window.removeEventListener("storage", tick);
+      unsub();
+    };
+  }, []);
+
+  const [stremio, setStremio] = useState<LibraryItem[]>([]);
+  const [stremioLoaded, setStremioLoaded] = useState(false);
+  useEffect(() => {
+    if (!authKey) {
+      setStremio([]);
+      setStremioLoaded(true);
+      return;
+    }
+    let cancelled = false;
+    setStremioLoaded(false);
+    library(authKey)
+      .then((items) => {
+        if (!cancelled) setStremio(items);
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) setStremioLoaded(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [authKey]);
+
+  const [traktWl, setTraktWl] = useState<TraktItem[]>([]);
+  const [traktHist, setTraktHist] = useState<HistoryItem[]>([]);
+  const [traktLoaded, setTraktLoaded] = useState(false);
+  useEffect(() => {
+    if (!traktConnected) {
+      setTraktWl([]);
+      setTraktHist([]);
+      setTraktLoaded(true);
+      return;
+    }
+    let cancelled = false;
+    setTraktLoaded(false);
+    Promise.allSettled([fetchWatchlist(), fetchWatchedHistory(200)])
+      .then(([wl, hist]) => {
+        if (cancelled) return;
+        if (wl.status === "fulfilled") setTraktWl(wl.value);
+        if (hist.status === "fulfilled") setTraktHist(hist.value);
+      })
+      .finally(() => {
+        if (!cancelled) setTraktLoaded(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [traktConnected]);
+
   return useMemo(() => {
-    const loading = connected && !lib;
+    const stremioPending = !!authKey && !stremioLoaded;
+    const traktPending = traktConnected && !traktLoaded;
+    const remotePending = connected && !remoteLib;
+    const baseLoading = stremioPending || traktPending || remotePending;
+
+    const watchlist = dedupEntries([
+      filterWatchlist(stremio, !!settings.libraryBookmarkedOnly).map((i) => libToEntry(i, "mtime")),
+      localWatch.map(localToEntry),
+      traktWl.map(traktWatchlistToEntry).filter((e): e is Entry => e !== null),
+      remoteToEntries(remoteLib?.watchlist),
+    ]);
+
+    const history = dedupEntries([
+      filterHistory(stremio).map((i) => libToEntry(i, "watched")),
+      localCw.map((i) => libToEntry(i, "watched")),
+      traktHist.map(traktHistoryToEntry).filter((e): e is Entry => e !== null),
+      remoteToEntries(remoteLib?.history),
+    ]);
+
+    const favorites = dedupEntries([
+      [...favItems.values()].map(favToEntry),
+      remoteToEntries(remoteLib?.favorites),
+    ]);
+
     return {
       connected,
       data: {
-        watchlist: { entries: toEntries(lib?.watchlist), loading },
-        history: { entries: toEntries(lib?.history), loading },
-        favorites: { entries: toEntries(lib?.favorites), loading },
+        watchlist: { entries: watchlist, loading: baseLoading },
+        history: { entries: history, loading: baseLoading },
+        favorites: { entries: favorites, loading: remotePending },
       },
     };
-  }, [connected, lib]);
+  }, [
+    authKey,
+    stremio,
+    stremioLoaded,
+    traktConnected,
+    traktLoaded,
+    traktWl,
+    traktHist,
+    connected,
+    remoteLib,
+    favItems,
+    localCw,
+    localWatch,
+    settings.libraryBookmarkedOnly,
+  ]);
 }
