@@ -144,7 +144,7 @@ export function MobileOnboarding() {
               {step === "tmdb" && <ObTmdb />}
               {step === "stremio" && <ObStremio />}
               {step === "streaming" && <ObStreaming />}
-              {step === "debrid" && <ObDebrid />}
+              {step === "debrid" && <ObDebrid onAdvance={next} />}
               {step === "subtitles" && <ObSubtitles />}
               {step === "taste" && <ObTaste selected={tastePicks} onToggle={toggleTaste} />}
               {step === "done" && <ObDone />}

@@ -13,11 +13,6 @@ import {
   Users,
 } from "lucide-react";
 import { useState, type ReactNode } from "react";
-import allDebridLogo from "@/assets/addon-logos/alldebrid.webp";
-import debridLinkLogo from "@/assets/addon-logos/debridlink.png";
-import premiumizeLogo from "@/assets/addon-logos/premiumize.png";
-import realDebridLogo from "@/assets/addon-logos/realdebrid.png";
-import torboxLogo from "@/assets/addon-logos/torbox.png";
 import rpdbLogo from "@/assets/addon-logos/rpdb.png";
 import tmdbLogo from "@/assets/addon-logos/tmdb.png";
 import tvdbLogo from "@/assets/addon-logos/tvdb.svg";
@@ -30,6 +25,7 @@ import { MobileAddons } from "./mobile-addons";
 import { MobileSettings } from "./mobile-settings";
 import { MobileWhosWatching } from "./mobile-whos-watching";
 import { DebridSheet, type DebridKey, type DebridProvider } from "./mobile-debrid-sheet";
+import { DEBRID_PROVIDERS } from "./debrid-providers";
 import { useMobileRemote } from "./mobile-remote";
 import { useRegisterSheet } from "./mobile-sheet-lock";
 import { useKeyboardInset } from "./use-keyboard-inset";
@@ -42,53 +38,6 @@ type EditField = {
   placeholder: string;
   hint?: string;
 };
-
-// Same settings keys the stream picker reads via useDebridClients(); order and
-// copy mirror the desktop "Debrid services" section. All five are plain key
-// paste; the mobile entry writes the key straight through, with an optional
-// non-blocking Validate step handled inside DebridSheet.
-const DEBRID_PROVIDERS: DebridProvider[] = [
-  {
-    key: "rdKey",
-    label: "Real-Debrid",
-    logo: realDebridLogo,
-    placeholder: "API token",
-    hint: "Get your token at real-debrid.com/apitoken. Cached streams play direct.",
-    apiKeyUrl: "https://real-debrid.com/apitoken",
-  },
-  {
-    key: "tbKey",
-    label: "TorBox",
-    logo: torboxLogo,
-    placeholder: "API key",
-    hint: "Get your key at torbox.app/settings. Cached streams play direct.",
-    apiKeyUrl: "https://torbox.app/settings",
-  },
-  {
-    key: "adKey",
-    label: "AllDebrid",
-    logo: allDebridLogo,
-    placeholder: "API key",
-    hint: "Get your key at alldebrid.com/apikeys. Cache shows as unknown until you hit Play.",
-    apiKeyUrl: "https://alldebrid.com/apikeys",
-  },
-  {
-    key: "pmKey",
-    label: "Premiumize",
-    logo: premiumizeLogo,
-    placeholder: "API key",
-    hint: "Get your key at premiumize.me/account. Skips queueing for cached files.",
-    apiKeyUrl: "https://www.premiumize.me/account",
-  },
-  {
-    key: "dlKey",
-    label: "Debrid-Link",
-    logo: debridLinkLogo,
-    placeholder: "API key",
-    hint: "Get your key at debrid-link.com/webapp/apikey. Fast EU-hosted cache check.",
-    apiKeyUrl: "https://debrid-link.com/webapp/apikey",
-  },
-];
 
 export function MobileProfile({ onOpenRemote }: { onOpenRemote: () => void }) {
   const { user, signOut } = useAuth();
