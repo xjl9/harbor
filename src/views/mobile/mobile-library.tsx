@@ -1,7 +1,17 @@
 import { useEffect, useMemo, useState } from "react";
-import { Bookmark, Clock, Link2, Star } from "lucide-react";
+import { ArrowDown, ArrowUp, Bookmark, Clock, Link2, Star } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { Meta } from "@/lib/cinemeta";
+import {
+  DEFAULT_SORT,
+  defaultDirFor,
+  hasRatings,
+  readSavedSort,
+  sortEntries,
+  writeSavedSort,
+  type SortKey,
+  type SortState,
+} from "@/lib/library/sort";
 import { Poster, usePosterChain } from "@/components/poster";
 import { useSettings } from "@/lib/settings";
 import { useAuth } from "@/lib/auth";
@@ -50,6 +60,12 @@ const EMPTY: Record<SectionId, { icon: LucideIcon; title: string; body: string }
 
 const TAB_KEY = "harbor.mobile.library.tab";
 
+const SORT_OPTIONS: Array<{ key: SortKey; label: string }> = [
+  { key: "recent", label: "Recent" },
+  { key: "title", label: "Title" },
+  { key: "rating", label: "Rating" },
+];
+
 const VIEW_SWAP_CSS = `
 @keyframes ml-view-in {
   from { opacity: 0; transform: translateY(8px); }
@@ -71,6 +87,7 @@ function readSavedTab(): SectionId {
 
 export function MobileLibrary({ onConnect }: { onConnect?: () => void }) {
   const [tab, setTab] = useState<SectionId>(readSavedTab);
+  const [sort, setSort] = useState<SortState>(readSavedSort);
   const [detailMeta, setDetailMeta] = useState<Meta | null>(null);
   const { data, connected } = useLibraryData();
   const native = isMobileNative();
@@ -81,7 +98,19 @@ export function MobileLibrary({ onConnect }: { onConnect?: () => void }) {
     } catch {}
   }, [tab]);
 
-  const active = data[tab];
+  useEffect(() => {
+    writeSavedSort(sort);
+  }, [sort]);
+
+  const base = data[tab];
+  const showRating = useMemo(() => hasRatings(base.entries), [base.entries]);
+  // Fall back to the default key if a stale saved "rating" choice has no
+  // ratings to sort by in the current tab.
+  const effectiveSort = sort.key === "rating" && !showRating ? DEFAULT_SORT : sort;
+  const active = useMemo<SectionState>(
+    () => ({ entries: sortEntries(base.entries, effectiveSort), loading: base.loading }),
+    [base.entries, base.loading, effectiveSort],
+  );
 
   return (
     <div
@@ -91,6 +120,7 @@ export function MobileLibrary({ onConnect }: { onConnect?: () => void }) {
       <style>{VIEW_SWAP_CSS}</style>
       <Header />
       <TabStrip tab={tab} onTab={setTab} />
+      <SortBar sort={effectiveSort} onSort={setSort} showRating={showRating} />
       <div key={tab} className="ml-view-in">
         <Section state={active} kind={tab} onOpenDetail={setDetailMeta} />
       </div>
@@ -140,6 +170,56 @@ function TabStrip({ tab, onTab }: { tab: SectionId; onTab: (t: SectionId) => voi
           </button>
         );
       })}
+    </div>
+  );
+}
+
+function SortBar({
+  sort,
+  onSort,
+  showRating,
+}: {
+  sort: SortState;
+  onSort: (s: SortState) => void;
+  showRating: boolean;
+}) {
+  const t = useT();
+  const options = showRating ? SORT_OPTIONS : SORT_OPTIONS.filter((o) => o.key !== "rating");
+  const asc = sort.dir === "asc";
+  const DirIcon = asc ? ArrowUp : ArrowDown;
+  return (
+    <div className="flex items-center justify-end gap-1.5">
+      <div
+        role="tablist"
+        aria-label={t("Sort by")}
+        className="inline-flex gap-1 rounded-full bg-elevated/60 p-1 ring-1 ring-edge-soft/60"
+      >
+        {options.map((o) => {
+          const on = o.key === sort.key;
+          return (
+            <button
+              key={o.key}
+              type="button"
+              role="tab"
+              aria-selected={on}
+              onClick={() => onSort(on ? sort : { key: o.key, dir: defaultDirFor(o.key) })}
+              className={`h-8 rounded-full px-3.5 text-[12.5px] font-semibold transition-[color,background-color,transform] active:scale-[0.97] motion-reduce:transition-none ${
+                on ? "bg-ink text-canvas" : "text-ink-muted"
+              }`}
+            >
+              {t(o.label)}
+            </button>
+          );
+        })}
+      </div>
+      <button
+        type="button"
+        onClick={() => onSort({ key: sort.key, dir: asc ? "desc" : "asc" })}
+        aria-label={asc ? t("Ascending") : t("Descending")}
+        className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-elevated/60 text-ink-muted ring-1 ring-edge-soft/60 transition-transform active:scale-[0.94] motion-reduce:transition-none"
+      >
+        <DirIcon size={15} strokeWidth={2.4} />
+      </button>
     </div>
   );
 }
