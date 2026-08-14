@@ -1,13 +1,20 @@
 import { useEffect } from "react";
-import { Cast, Check, MonitorSmartphone } from "lucide-react";
+import { Cast, Check, MonitorSmartphone, Wifi } from "lucide-react";
 import { useMobileRemote } from "./mobile-remote";
 import { SHEET_EXIT_CSS, useSheetPresence } from "./remote-extras";
 import { APP_VERSION } from "@/lib/build-info";
+import { isMobileNative } from "@/lib/platform";
+import { useSettings } from "@/lib/settings";
+import { useRemoteDiscovery } from "@/lib/remote/use-remote-discovery";
 
 export function RendererSheet({ open, onClose, title = "Play on" }: { open: boolean; onClose: () => void; title?: string }) {
-  const { snapshot, sendCommand } = useMobileRemote();
+  const { snapshot, sendCommand, connected } = useMobileRemote();
   const { render, leaving } = useSheetPresence(open);
+  const { settings, update } = useSettings();
+  const { hosts } = useRemoteDiscovery(open);
+  const native = isMobileNative();
   const hostVersion = snapshot.hostVersion ?? APP_VERSION;
+  const configuredHost = (settings.remoteHostAddress ?? "").trim();
 
   useEffect(() => {
     if (open) sendCommand({ action: "castDiscover" });
@@ -35,6 +42,26 @@ export function RendererSheet({ open, onClose, title = "Play on" }: { open: bool
           {snapshot.castDiscovering && <span className="text-[12px] text-ink-subtle">Scanning…</span>}
         </div>
         <div className="flex flex-col px-2 pb-2">
+          {native &&
+            hosts.map((h) => {
+              const isHost = connected && configuredHost === h.host;
+              const isConnecting = !connected && configuredHost === h.host;
+              return (
+                <DeviceRow
+                  key={h.id}
+                  name={h.name}
+                  sub={h.host}
+                  badge={h.version ? `Harbor ${h.version}` : undefined}
+                  icon={<Wifi size={20} strokeWidth={2} />}
+                  active={isHost}
+                  connecting={isConnecting}
+                  onSelect={() => {
+                    update({ remoteHostAddress: h.host });
+                    onClose();
+                  }}
+                />
+              );
+            })}
           <DeviceRow
             name="Your computer"
             badge={`Harbor ${hostVersion}`}
@@ -75,6 +102,7 @@ function DeviceRow({
   badge,
   icon,
   active,
+  connecting = false,
   onSelect,
 }: {
   name: string;
@@ -82,6 +110,7 @@ function DeviceRow({
   badge?: string;
   icon: React.ReactNode;
   active: boolean;
+  connecting?: boolean;
   onSelect: () => void;
 }) {
   return (
@@ -105,6 +134,7 @@ function DeviceRow({
         {sub && <span className="truncate text-[12px] text-ink-subtle">{sub}</span>}
       </span>
       {active && <Check size={19} strokeWidth={2.6} className="text-accent" />}
+      {connecting && <span className="text-[11.5px] font-semibold text-ink-subtle">…</span>}
     </button>
   );
 }
