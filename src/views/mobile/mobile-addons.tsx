@@ -1,11 +1,13 @@
 import { AlertCircle, Check, Loader2, Plus, Puzzle, Trash2, X } from "lucide-react";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   installFromUrl,
   loadInstalled,
   uninstallAddon,
   type InstalledAddon,
 } from "@/lib/addon-store";
+import { useSettings } from "@/lib/settings";
+import { MobileAddonDiscover } from "./mobile-addon-discover";
 import { useRegisterSheet } from "./mobile-sheet-lock";
 
 // Well-known free/debrid stream sources offered as one-tap installs so a fresh
@@ -34,6 +36,7 @@ const SUGGESTIONS: Array<{ id: string; name: string; note: string; url: string }
 
 export function MobileAddons({ onClose }: { onClose: () => void }) {
   useRegisterSheet(true);
+  const { settings } = useSettings();
   const [installed, setInstalled] = useState<InstalledAddon[]>(() => loadInstalled());
   const [url, setUrl] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
@@ -41,7 +44,16 @@ export function MobileAddons({ onClose }: { onClose: () => void }) {
 
   const refresh = useCallback(() => setInstalled(loadInstalled()), []);
 
+  // The configure-webview install path (used by configurable Discover addons)
+  // signals completion via this event rather than our own refresh() callback.
+  useEffect(() => {
+    const onChanged = () => refresh();
+    window.addEventListener("harbor:addons-changed", onChanged);
+    return () => window.removeEventListener("harbor:addons-changed", onChanged);
+  }, [refresh]);
+
   const installedUrls = new Set(installed.map((a) => a.transportUrl.replace(/\/$/, "")));
+  const installedIds = new Set(installed.map((a) => a.id));
 
   const install = useCallback(
     async (raw: string, tag: string) => {
@@ -209,6 +221,12 @@ export function MobileAddons({ onClose }: { onClose: () => void }) {
             })}
           </div>
         </section>
+
+        <MobileAddonDiscover
+          installedIds={installedIds}
+          allowAdult={settings.showAdultAddons}
+          onChange={refresh}
+        />
       </div>
     </div>
   );
