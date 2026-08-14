@@ -29,16 +29,15 @@ import { loadInstalled } from "@/lib/addon-store";
 import { MobileAddons } from "./mobile-addons";
 import { MobileSettings } from "./mobile-settings";
 import { MobileWhosWatching } from "./mobile-whos-watching";
+import { DebridSheet, type DebridKey, type DebridProvider } from "./mobile-debrid-sheet";
 import { useMobileRemote } from "./mobile-remote";
 import { useRegisterSheet } from "./mobile-sheet-lock";
 import { useKeyboardInset } from "./use-keyboard-inset";
 import { setMobileRemoteStyle, useMobileRemoteStyle, type MobileRemoteStyle } from "./remote-style";
 import { HARBOR_BUGS_BASE } from "@/lib/config/endpoints";
 
-type DebridKey = "rdKey" | "tbKey" | "adKey" | "pmKey" | "dlKey";
-
 type EditField = {
-  key: "remoteHostAddress" | "tmdbKey" | "tvdbKey" | "rpdbKey" | DebridKey;
+  key: "remoteHostAddress" | "tmdbKey" | "tvdbKey" | "rpdbKey";
   label: string;
   placeholder: string;
   hint?: string;
@@ -46,14 +45,9 @@ type EditField = {
 
 // Same settings keys the stream picker reads via useDebridClients(); order and
 // copy mirror the desktop "Debrid services" section. All five are plain key
-// paste, so the mobile entry writes the key straight through like desktop does.
-const DEBRID_PROVIDERS: Array<{
-  key: DebridKey;
-  label: string;
-  logo: string;
-  placeholder: string;
-  hint: string;
-}> = [
+// paste; the mobile entry writes the key straight through, with an optional
+// non-blocking Validate step handled inside DebridSheet.
+const DEBRID_PROVIDERS: DebridProvider[] = [
   {
     key: "rdKey",
     label: "Real-Debrid",
@@ -102,6 +96,7 @@ export function MobileProfile({ onOpenRemote }: { onOpenRemote: () => void }) {
   const color = remote?.color ?? activeProfile?.color ?? "oklch(0.78 0.13 60)";
   const [switching, setSwitching] = useState(false);
   const [editing, setEditing] = useState<EditField | null>(null);
+  const [debridEditing, setDebridEditing] = useState<DebridProvider | null>(null);
   const [addonsOpen, setAddonsOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const native = isMobileNative();
@@ -276,14 +271,7 @@ export function MobileProfile({ onOpenRemote }: { onOpenRemote: () => void }) {
                 pending={!keySet(settings[p.key])}
                 pendingLabel="Connect"
                 dot={keySet(settings[p.key]) ? "ok" : null}
-                onClick={() =>
-                  setEditing({
-                    key: p.key,
-                    label: p.label,
-                    placeholder: p.placeholder,
-                    hint: p.hint,
-                  })
-                }
+                onClick={() => setDebridEditing(p)}
               />
             </div>
           ))}
@@ -335,15 +323,29 @@ export function MobileProfile({ onOpenRemote }: { onOpenRemote: () => void }) {
             if (editing.key === "remoteHostAddress") update({ remoteHostAddress: v });
             else if (editing.key === "tmdbKey") update({ tmdbKey: v });
             else if (editing.key === "tvdbKey") update({ tvdbKey: v });
-            else if (editing.key === "rpdbKey") update({ rpdbKey: v });
-            else if (editing.key === "rdKey") update({ rdKey: v });
-            else if (editing.key === "tbKey") update({ tbKey: v });
-            else if (editing.key === "adKey") update({ adKey: v });
-            else if (editing.key === "pmKey") update({ pmKey: v });
-            else update({ dlKey: v });
+            else update({ rpdbKey: v });
             setEditing(null);
           }}
           onClose={() => setEditing(null)}
+        />
+      )}
+      {debridEditing && (
+        <DebridSheet
+          provider={debridEditing}
+          initial={String(settings[debridEditing.key] ?? "")}
+          onSave={(next) => {
+            const v = next.trim();
+            // Explicit per-key branches: a computed update({ [k]: v }) widens to a
+            // string index and fails tsc (same rule as onboarding ob-debrid).
+            const k: DebridKey = debridEditing.key;
+            if (k === "rdKey") update({ rdKey: v });
+            else if (k === "tbKey") update({ tbKey: v });
+            else if (k === "adKey") update({ adKey: v });
+            else if (k === "pmKey") update({ pmKey: v });
+            else update({ dlKey: v });
+            setDebridEditing(null);
+          }}
+          onClose={() => setDebridEditing(null)}
         />
       )}
     </div>
