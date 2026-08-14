@@ -219,10 +219,15 @@ avoids MPVKit's black-screen-on-return bug); `willEnterForeground` sets
   resumes on return. Neither emits `closed` on background, and the JS bridge
   tolerates the difference.
 - **On-screen transport**: AVKit supplies the AVPlayer engine's UI. The mpv
-  engine currently has a close button and tap-to-toggle-pause on the video
-  surface; everything else (seek, precise scrubbing) rides the lock-screen /
-  Control Center transport and the JS bridge. A native transport overlay is
-  future work.
+  engine has its own native UIKit transport overlay (`setupTransportOverlay`):
+  a translucent bottom bar with a play/pause button, current/total time labels,
+  a seek slider (scrub updates the label live and seeks on release), and a
+  tracks button that opens an audio/subtitle picker built from the cached
+  `track-list`. A surface tap toggles the chrome (close button + bar) and it
+  auto-hides after a few idle seconds; the lock-screen / Control Center
+  transport still works in parallel. The overlay drives the in-process engine
+  methods directly (no extra plugin commands), so the wire contract and Android
+  parity are unchanged.
 - **Track selections made in AVKit's own menus do not re-emit `tracks`** (no
   reliable KVO hook). The mpv engine does not have this gap: `track-list`
   observation re-emits on every selection change.

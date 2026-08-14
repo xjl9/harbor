@@ -37,6 +37,15 @@ final class HarborMpvViewController: UIViewController, HarborPlayerEngine {
 
   private let metalLayer = HarborMetalLayer()
   private let closeButton = UIButton(type: .system)
+  // Native transport overlay (mpv engine only; the AVPlayer engine uses AVKit's
+  // own chrome). The close button plus this bar form one "chrome" set that shows
+  // and hides together on a surface tap.
+  private let transportBar = UIView()
+  private let playPauseButton = UIButton(type: .system)
+  private let currentTimeLabel = UILabel()
+  private let durationLabel = UILabel()
+  private let seekSlider = UISlider()
+  private let tracksButton = UIButton(type: .system)
   private let nowPlaying = HarborNowPlaying()
   private let eventQueue = DispatchQueue(label: "harbor-player.mpv-events", qos: .userInitiated)
 
@@ -70,6 +79,17 @@ final class HarborMpvViewController: UIViewController, HarborPlayerEngine {
   private var cachedPausedForCache = false
   private var cachedEofReached = false
 
+  // Last track lists handed to onTracks, cached so the overlay's track picker can
+  // read them without re-walking mpv (there is no other stored track array).
+  private var lastAudioTracks: [NativeTrackEntry] = []
+  private var lastSubtitleTracks: [NativeTrackEntry] = []
+  // Overlay state. isScrubbing fences tick from fighting the user's slider drag;
+  // chromeVisible is the source of truth for the show/hide toggle; autoHideTimer
+  // dismisses the chrome after a few idle seconds.
+  private var isScrubbing = false
+  private var chromeVisible = true
+  private var autoHideTimer: Timer?
+
   // Only touched on eventQueue.
   private var eventLoopEnded = false
   private var drainGeneration = 0
@@ -95,6 +115,7 @@ final class HarborMpvViewController: UIViewController, HarborPlayerEngine {
     }
     view.layer.addSublayer(metalLayer)
     setupCloseButton()
+    setupTransportOverlay()
     let tap = UITapGestureRecognizer(target: self, action: #selector(surfaceTapped(_:)))
     // Without this the recognizer cancels the close button's own touch handling.
     tap.cancelsTouchesInView = false
@@ -159,6 +180,9 @@ final class HarborMpvViewController: UIViewController, HarborPlayerEngine {
     cachedPaused = false
     cachedPausedForCache = false
     cachedEofReached = false
+    lastAudioTracks = []
+    lastSubtitleTracks = []
+    isScrubbing = false
     emitState("loading")
 
     ensureMpv()
@@ -297,6 +321,8 @@ final class HarborMpvViewController: UIViewController, HarborPlayerEngine {
   private func teardown() {
     tickTimer?.invalidate()
     tickTimer = nil
+    autoHideTimer?.invalidate()
+    autoHideTimer = nil
     nowPlaying.clear()
     for token in notificationTokens { NotificationCenter.default.removeObserver(token) }
     notificationTokens.removeAll()
@@ -447,6 +473,10 @@ final class HarborMpvViewController: UIViewController, HarborPlayerEngine {
     emitState("ready")
     emitTracks()
     updateNowPlaying()
+    // The overlay controls were inert until now; enable them and start the
+    // idle-hide clock so the chrome fades once playback is underway.
+    setTransportEnabled(true)
+    armAutoHide()
   }
 
   private func handleEndFile(reason: mpv_end_file_reason, mpvError: Int32, generation: Int) {
@@ -595,6 +625,7 @@ final class HarborMpvViewController: UIViewController, HarborPlayerEngine {
     let position = cachedEofReached && cachedDuration > 0 ? cachedDuration : cachedPosition
     onTick?(position, cachedDuration, cachedBuffered, isPlayingNow)
     updateNowPlaying()
+    updateTransport(position: position)
   }
 
   private var isPlayingNow: Bool {
@@ -632,6 +663,10 @@ final class HarborMpvViewController: UIViewController, HarborPlayerEngine {
           NativeTrackEntry(id: "s/\(id)", lang: lang, label: label, selected: selected))
       }
     }
+    // Cache before emitting so the overlay's track picker reflects the same
+    // lists (including selection) the JS bridge just received.
+    lastAudioTracks = audio
+    lastSubtitleTracks = subtitle
     onTracks?(audio, subtitle)
   }
 
@@ -773,10 +808,235 @@ final class HarborMpvViewController: UIViewController, HarborPlayerEngine {
     doStop()
   }
 
+  // A bare-surface tap now toggles the chrome (close button + transport bar)
+  // instead of toggling pause; the dedicated play/pause button owns pause. The
+  // guards keep taps that land on a control from also flipping chrome, and let
+  // any tap re-summon chrome once it has auto-hidden.
   @objc private func surfaceTapped(_ recognizer: UITapGestureRecognizer) {
-    let location = recognizer.location(in: view)
-    guard !closeButton.frame.contains(location), fileLoaded else { return }
+    guard fileLoaded else { return }
+    if chromeVisible {
+      let location = recognizer.location(in: view)
+      if closeButton.frame.contains(location) || transportBar.frame.contains(location) { return }
+      setChromeVisible(false, animated: true)
+    } else {
+      setChromeVisible(true, animated: true)
+    }
+  }
+
+  // MARK: - Transport overlay
+
+  private func setupTransportOverlay() {
+    // Matches the close button's translucent-black, white-symbol styling so the
+    // two read as one chrome set.
+    transportBar.backgroundColor = UIColor(white: 0, alpha: 0.4)
+    transportBar.layer.cornerRadius = 16
+    transportBar.translatesAutoresizingMaskIntoConstraints = false
+    view.addSubview(transportBar)
+
+    playPauseButton.setImage(UIImage(systemName: "play.fill"), for: .normal)
+    playPauseButton.tintColor = .white
+    playPauseButton.translatesAutoresizingMaskIntoConstraints = false
+    playPauseButton.addTarget(self, action: #selector(playPauseTapped), for: .touchUpInside)
+
+    currentTimeLabel.text = "0:00"
+    currentTimeLabel.textColor = .white
+    currentTimeLabel.font = .monospacedDigitSystemFont(ofSize: 13, weight: .regular)
+    currentTimeLabel.translatesAutoresizingMaskIntoConstraints = false
+
+    durationLabel.text = "0:00"
+    durationLabel.textColor = .white
+    durationLabel.font = .monospacedDigitSystemFont(ofSize: 13, weight: .regular)
+    durationLabel.translatesAutoresizingMaskIntoConstraints = false
+
+    seekSlider.minimumValue = 0
+    seekSlider.maximumValue = 1
+    seekSlider.value = 0
+    seekSlider.minimumTrackTintColor = .white
+    // Continuous so valueChanged fires during the drag for live label feedback;
+    // the actual seek waits for touch-up (see seekTouchUp).
+    seekSlider.isContinuous = true
+    seekSlider.translatesAutoresizingMaskIntoConstraints = false
+    seekSlider.addTarget(self, action: #selector(seekTouchDown), for: .touchDown)
+    seekSlider.addTarget(self, action: #selector(seekChanged), for: .valueChanged)
+    seekSlider.addTarget(
+      self, action: #selector(seekTouchUp), for: [.touchUpInside, .touchUpOutside])
+
+    tracksButton.setImage(UIImage(systemName: "captions.bubble"), for: .normal)
+    tracksButton.tintColor = .white
+    tracksButton.translatesAutoresizingMaskIntoConstraints = false
+    tracksButton.addTarget(self, action: #selector(tracksTapped), for: .touchUpInside)
+
+    let stack = UIStackView(arrangedSubviews: [
+      playPauseButton, currentTimeLabel, seekSlider, durationLabel, tracksButton,
+    ])
+    stack.axis = .horizontal
+    stack.alignment = .center
+    stack.spacing = 12
+    stack.translatesAutoresizingMaskIntoConstraints = false
+    transportBar.addSubview(stack)
+
+    NSLayoutConstraint.activate([
+      transportBar.leadingAnchor.constraint(
+        equalTo: view.safeAreaLayoutGuide.leadingAnchor, constant: 12),
+      transportBar.trailingAnchor.constraint(
+        equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -12),
+      transportBar.bottomAnchor.constraint(
+        equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -12),
+      transportBar.heightAnchor.constraint(equalToConstant: 56),
+      stack.leadingAnchor.constraint(equalTo: transportBar.leadingAnchor, constant: 14),
+      stack.trailingAnchor.constraint(equalTo: transportBar.trailingAnchor, constant: -14),
+      stack.centerYAnchor.constraint(equalTo: transportBar.centerYAnchor),
+      playPauseButton.widthAnchor.constraint(equalToConstant: 32),
+      tracksButton.widthAnchor.constraint(equalToConstant: 32),
+    ])
+
+    // The slider takes the slack; the time labels hug their text so digits never
+    // get clipped or stretched.
+    seekSlider.setContentHuggingPriority(.defaultLow, for: .horizontal)
+    currentTimeLabel.setContentHuggingPriority(.required, for: .horizontal)
+    durationLabel.setContentHuggingPriority(.required, for: .horizontal)
+    currentTimeLabel.setContentCompressionResistancePriority(.required, for: .horizontal)
+    durationLabel.setContentCompressionResistancePriority(.required, for: .horizontal)
+
+    // Inert until a file is loaded (handleFileLoaded flips this on).
+    setTransportEnabled(false)
+  }
+
+  private func setTransportEnabled(_ enabled: Bool) {
+    playPauseButton.isEnabled = enabled
+    seekSlider.isEnabled = enabled
+    tracksButton.isEnabled = enabled
+  }
+
+  // Alpha-fades the close button and transport bar together and keeps their hit
+  // testing in step, so a hidden bar cannot swallow the tap meant to re-show it.
+  private func setChromeVisible(_ visible: Bool, animated: Bool) {
+    chromeVisible = visible
+    closeButton.isUserInteractionEnabled = visible
+    transportBar.isUserInteractionEnabled = visible
+    let apply = {
+      self.closeButton.alpha = visible ? 1 : 0
+      self.transportBar.alpha = visible ? 1 : 0
+    }
+    if animated {
+      UIView.animate(withDuration: 0.25, animations: apply)
+    } else {
+      apply()
+    }
+    if visible {
+      armAutoHide()
+    } else {
+      autoHideTimer?.invalidate()
+      autoHideTimer = nil
+    }
+  }
+
+  // Re-arms the idle timer; scrubbing and open sheets invalidate it instead so
+  // the chrome never vanishes mid-interaction.
+  private func armAutoHide() {
+    autoHideTimer?.invalidate()
+    guard fileLoaded, chromeVisible else { return }
+    let timer = Timer(timeInterval: 3.0, repeats: false) { [weak self] _ in
+      self?.setChromeVisible(false, animated: true)
+    }
+    RunLoop.main.add(timer, forMode: .common)
+    autoHideTimer = timer
+  }
+
+  // Driven by tick (500 ms) whenever the user is not scrubbing.
+  private func updateTransport(position: Double) {
+    guard !shuttingDown else { return }
+    if !isScrubbing {
+      if cachedDuration > 0 {
+        seekSlider.maximumValue = Float(cachedDuration)
+        seekSlider.value = Float(position)
+      } else {
+        seekSlider.maximumValue = 1
+        seekSlider.value = 0
+      }
+      currentTimeLabel.text = formatTime(position)
+    }
+    durationLabel.text = formatTime(cachedDuration)
+    playPauseButton.setImage(
+      UIImage(systemName: isPlayingNow ? "pause.fill" : "play.fill"), for: .normal)
+  }
+
+  private func formatTime(_ seconds: Double) -> String {
+    guard seconds.isFinite, seconds > 0 else { return "0:00" }
+    let total = Int(seconds.rounded())
+    let secs = total % 60
+    let mins = (total / 60) % 60
+    let hours = total / 3600
+    if hours > 0 { return String(format: "%d:%02d:%02d", hours, mins, secs) }
+    return String(format: "%d:%02d", mins, secs)
+  }
+
+  // Mirrors the old surface-tap pause toggle (cachedPaused ? play : pause).
+  @objc private func playPauseTapped() {
+    guard !shuttingDown, fileLoaded else { return }
     if cachedPaused { doPlay() } else { doPause() }
+    armAutoHide()
+  }
+
+  @objc private func seekTouchDown() {
+    isScrubbing = true
+    // Keep chrome up for the whole drag.
+    autoHideTimer?.invalidate()
+    autoHideTimer = nil
+  }
+
+  @objc private func seekChanged() {
+    // Live label feedback only; the seek itself is deferred to release so mpv is
+    // not flooded with absolute seeks mid-drag.
+    currentTimeLabel.text = formatTime(Double(seekSlider.value))
+  }
+
+  @objc private func seekTouchUp() {
+    guard isScrubbing else { return }
+    isScrubbing = false
+    if !shuttingDown, fileLoaded { doSeek(Double(seekSlider.value)) }
+    armAutoHide()
+  }
+
+  @objc private func tracksTapped() {
+    guard !shuttingDown, fileLoaded else { return }
+    // Hold the chrome open while the sheet is up; re-arm from each handler.
+    autoHideTimer?.invalidate()
+    autoHideTimer = nil
+    let sheet = UIAlertController(title: "Tracks", message: nil, preferredStyle: .actionSheet)
+    for track in lastAudioTracks {
+      let mark = track.selected ? "\u{2713} " : ""
+      sheet.addAction(
+        UIAlertAction(title: "\(mark)Audio: \(track.label)", style: .default) { [weak self] _ in
+          self?.doSetAudioTrack(track.id)
+          self?.armAutoHide()
+        })
+    }
+    for track in lastSubtitleTracks {
+      let mark = track.selected ? "\u{2713} " : ""
+      sheet.addAction(
+        UIAlertAction(title: "\(mark)Subtitle: \(track.label)", style: .default) { [weak self] _ in
+          self?.doSetSubtitleTrack(track.id)
+          self?.armAutoHide()
+        })
+    }
+    // "Off" is checked when no subtitle track is selected; picking it passes nil,
+    // which doSetSubtitleTrack maps to sid=no.
+    let subsOff = !lastSubtitleTracks.contains { $0.selected }
+    sheet.addAction(
+      UIAlertAction(title: "\(subsOff ? "\u{2713} " : "")Subtitles Off", style: .default) {
+        [weak self] _ in
+        self?.doSetSubtitleTrack(nil)
+        self?.armAutoHide()
+      })
+    sheet.addAction(
+      UIAlertAction(title: "Cancel", style: .cancel) { [weak self] _ in self?.armAutoHide() })
+    // Required on iPad or .actionSheet presentation traps; anchor to the button.
+    if let popover = sheet.popoverPresentationController {
+      popover.sourceView = tracksButton
+      popover.sourceRect = tracksButton.bounds
+    }
+    present(sheet, animated: true)
   }
 
   // MARK: - Client API helpers (main queue; withCommandArgv itself is queue-agnostic)
