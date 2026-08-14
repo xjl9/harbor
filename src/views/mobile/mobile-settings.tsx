@@ -2,6 +2,7 @@ import { Check, ChevronLeft, ChevronRight, Globe } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useSettings } from "@/lib/settings";
 import type { ContentCategory } from "@/lib/settings/types";
+import { osClass } from "@/lib/platform";
 import { useRegisterSheet } from "./mobile-sheet-lock";
 import { useKeyboardInset } from "./use-keyboard-inset";
 
@@ -69,6 +70,12 @@ export function MobileSettings({ onClose }: { onClose: () => void }) {
   const region = REGIONS.find((r) => r.code === settings.region) ?? null;
   const setCategory = (key: ContentCategory, show: boolean) =>
     update({ hideContent: { ...settings.hideContent, [key]: !show } });
+
+  // The in-webview player is only reachable on iOS: pickBridge() honors an html5
+  // engine setting solely on iOS (Android always takes the native surface), so a
+  // toggle elsewhere would be dead. Read the raw OS, not isMobileNative().
+  const isIos = osClass() === "ios";
+  const inAppPlayer = settings.playerEngine === "html5";
 
   return (
     <div
@@ -178,6 +185,24 @@ export function MobileSettings({ onClose }: { onClose: () => void }) {
             <ChevronRight size={18} strokeWidth={2.2} className="shrink-0 text-ink-subtle" />
           </button>
         </Department>
+
+        {isIos && (
+          <Department
+            index={3}
+            kicker="Playback"
+            folio="04"
+            title="How video plays"
+            standfirst="The native player is the default and plays every format. Turn on the in-app player for Harbor's touch controls on direct and HLS streams; MKV, HEVC and AC3 still need the native player."
+          >
+            <div className="overflow-hidden rounded-2xl border border-edge-soft bg-elevated/40">
+              <ToggleRow
+                label="In-app player"
+                on={inAppPlayer}
+                onChange={(v) => update({ playerEngine: v ? "html5" : "auto" })}
+              />
+            </div>
+          </Department>
+        )}
       </div>
 
       {regionOpen && (
