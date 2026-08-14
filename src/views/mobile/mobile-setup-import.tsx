@@ -30,6 +30,7 @@ import {
   SheetShell,
 } from "./mobile-setup-shared";
 import { useKeyboardInset } from "./use-keyboard-inset";
+import { canScanQr, scanQr } from "@/lib/qr/scan-qr";
 
 type ImportPhase =
   | { kind: "idle" }
@@ -137,7 +138,21 @@ export function ImportSetupSheet({ onClose }: { onClose: () => void }) {
           Apply.
         </p>
 
-        <div className="mt-4 flex items-center gap-2 rounded-2xl border border-edge-soft/70 bg-elevated/40 px-3.5 py-2">
+        {canScanQr() && (
+          <button
+            type="button"
+            onClick={async () => {
+              const scanned = await scanQr();
+              if (scanned) setRaw(scanned);
+            }}
+            className="mt-4 flex w-full items-center justify-center gap-2 rounded-full bg-ink py-3 text-[14.5px] font-semibold text-canvas transition-transform active:scale-[0.98]"
+          >
+            <QrCode size={17} strokeWidth={2.4} />
+            Scan QR code
+          </button>
+        )}
+
+        <div className="mt-3 flex items-center gap-2 rounded-2xl border border-edge-soft/70 bg-elevated/40 px-3.5 py-2">
           <ClipboardPaste
             size={18}
             strokeWidth={2.2}

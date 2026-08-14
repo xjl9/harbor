@@ -34,6 +34,7 @@
     "deep-link:default",
     "process:default",
     "harbor-player:default",
+    "barcode-scanner:default",
     {
       "identifier": "fs:allow-write-file",
       "allow": [{ "path": "**" }]

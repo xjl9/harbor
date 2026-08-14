@@ -35,5 +35,10 @@
 	<array>
 		<string>_harbor._tcp</string>
 	</array>
+	<!-- Required before the camera can open. Used only for scanning a pairing or
+	     setup QR code to connect to another Harbor device or import settings;
+	     Harbor never records or uploads camera frames. -->
+	<key>NSCameraUsageDescription</key>
+	<string>Harbor uses the camera to scan a pairing or setup QR code from another Harbor device.</string>
 </dict>
 </plist>

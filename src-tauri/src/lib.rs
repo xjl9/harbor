@@ -548,6 +548,10 @@ pub fn run() {
     // MKV/HEVC the webview can't decode.
     #[cfg(mobile)]
     let app_builder = app_builder.plugin(tauri_plugin_harbor_player::init());
+    // Native camera QR/barcode scanner (AVFoundation on iOS, MLKit on Android)
+    // for scan-to-pair and scan-to-import. Mobile only; no desktop counterpart.
+    #[cfg(mobile)]
+    let app_builder = app_builder.plugin(tauri_plugin_barcode_scanner::init());
     #[cfg(desktop)]
     let app_builder = app_builder
         .plugin(tauri_plugin_updater::Builder::new().build())
