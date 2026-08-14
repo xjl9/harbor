@@ -1,7 +1,6 @@
 import { useState } from "react";
 import type { TrackInfo } from "@/lib/player/bridge";
 import type { SubtitleAddHandler } from "@/lib/player/subtitle-load";
-import { openStyleBar } from "@/lib/player/sub-presets";
 import { useSettings } from "@/lib/settings";
 import { useT } from "@/lib/i18n";
 import { AudioMenuBody } from "../audio-menu";
@@ -28,6 +27,7 @@ export function MobileTracksSheet({
   onSubDelay,
   onAddSubtitle,
   onEnterSync,
+  onOpenSubStyle,
   metaImdbId,
   metaTitle,
   metaReleaseDate,
@@ -48,6 +48,7 @@ export function MobileTracksSheet({
   onSubDelay: (sec: number) => void;
   onAddSubtitle: SubtitleAddHandler;
   onEnterSync?: () => void;
+  onOpenSubStyle: () => void;
   metaImdbId?: string | null;
   metaTitle?: string | null;
   metaReleaseDate?: string | null;
@@ -88,7 +89,7 @@ export function MobileTracksSheet({
             season={season}
             episode={episode}
             preferredLanguages={preferredLanguages}
-            onOpenStyleBar={openStyleBar}
+            onOpenStyleBar={onOpenSubStyle}
             onClose={onClose}
           />
         ) : (

@@ -18,6 +18,7 @@ import { useT } from "@/lib/i18n";
 import { RotatingSeekIcon } from "./mobile-seek-icon";
 import { MobileSeekBar } from "./mobile-seek-bar";
 import { MobileSpeedSheet } from "./mobile-speed-sheet";
+import { MobileSubStyleSheet } from "./mobile-sub-style-sheet";
 import { MobileTracksSheet } from "./mobile-tracks-sheet";
 
 type SheetState = { kind: "none" } | { kind: "tracks"; tab: "subtitles" | "audio" } | { kind: "speed" };
@@ -62,6 +63,10 @@ export function MobileShell(props: PlayerShellProps) {
   const t = useT();
   const { settings } = useSettings();
   const [sheet, setSheet] = useState<SheetState>({ kind: "none" });
+  // Subtitle-style sheet is tracked separately from `sheet` on purpose: the
+  // shared subtitle menu-header fires onOpenStyleBar() then onClose() back to
+  // back, so routing both through setSheet would let the close clobber the open.
+  const [subStyleOpen, setSubStyleOpen] = useState(false);
 
   const playing = snap.status === "playing";
   const buffering = snap.buffering || snap.status === "loading";
@@ -69,12 +74,12 @@ export function MobileShell(props: PlayerShellProps) {
   const rate = snap.rate;
 
   useEffect(() => {
-    onMenuOpenChange?.(sheet.kind !== "none");
-  }, [sheet.kind, onMenuOpenChange]);
+    onMenuOpenChange?.(sheet.kind !== "none" || subStyleOpen);
+  }, [sheet.kind, subStyleOpen, onMenuOpenChange]);
 
   if (pipMode) return null;
 
-  const chromeShown = visible && sheet.kind === "none";
+  const chromeShown = visible && sheet.kind === "none" && !subStyleOpen;
   const interactive = chromeShown ? "pointer-events-auto" : "pointer-events-none";
   const fade = `transition-opacity duration-200 ${chromeShown ? "opacity-100" : "opacity-0"}`;
 
@@ -211,6 +216,7 @@ export function MobileShell(props: PlayerShellProps) {
         onSubDelay={onSubDelay}
         onAddSubtitle={onAddSubtitle}
         onEnterSync={onEnterSync}
+        onOpenSubStyle={() => setSubStyleOpen(true)}
         metaImdbId={metaImdbId}
         metaTitle={metaTitle}
         metaReleaseDate={metaReleaseDate}
@@ -223,6 +229,7 @@ export function MobileShell(props: PlayerShellProps) {
         rate={rate}
         onRate={onRate}
       />
+      <MobileSubStyleSheet open={subStyleOpen} onClose={() => setSubStyleOpen(false)} />
     </>
   );
 }
