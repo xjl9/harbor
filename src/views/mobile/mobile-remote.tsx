@@ -22,6 +22,9 @@ type MobileRemoteValue = {
   snapshot: RemoteSnapshot;
   playOnHost: (meta: Meta, opts?: PlayOpts) => void;
   openOnHost: (meta: Meta) => void;
+  // Explicit "send to my connected computer" actions (host-targeted, flash on send).
+  sendToHost: (meta: Meta) => void;
+  castPlay: (meta: Meta, opts?: PlayOpts) => void;
   sendCommand: (command: RemoteCommand) => boolean;
 };
 
@@ -99,10 +102,30 @@ export function MobileRemoteProvider({ children }: { children: ReactNode }) {
 
   const openOnHost = useCallback(
     (meta: Meta) => {
+      // General navigation (person pages, rail taps): on a native build this opens
+      // the detail locally on the phone. The web remote has no local surface, so it
+      // drives the connected desktop instead. Explicit "send to my computer" lives
+      // in sendToHost, so tapping a poster or an actor never teleports off-device.
       if (native) {
         view.openMeta(meta);
         return;
       }
+      sendCommand({
+        action: "openMeta",
+        metaId: meta.id,
+        metaType: meta.type,
+        name: meta.name,
+        poster: meta.poster,
+      });
+    },
+    [native, view, sendCommand],
+  );
+
+  // Explicit cross-device sends. Unlike openOnHost these always target the
+  // connected Harbor instance and surface a flash; the detail sheet only offers
+  // them while `connected`, so they never promise a send that can't happen.
+  const sendToHost = useCallback(
+    (meta: Meta) => {
       const sent = sendCommand({
         action: "openMeta",
         metaId: meta.id,
@@ -110,14 +133,34 @@ export function MobileRemoteProvider({ children }: { children: ReactNode }) {
         name: meta.name,
         poster: meta.poster,
       });
-      showFlash(sent, sent ? `Opened on your computer` : "Not connected to a computer");
+      showFlash(sent, sent ? "Opened on your computer" : "Not connected to a computer");
     },
-    [native, view, sendCommand, showFlash],
+    [sendCommand, showFlash],
+  );
+
+  // The real cast: send the title to the connected host's player. Reuses the
+  // proven playMeta command the web remote already drives; the host resolves the
+  // stream and starts playback exactly as its own Play would.
+  const castPlay = useCallback(
+    (meta: Meta, opts?: PlayOpts) => {
+      const sent = sendCommand({
+        action: "playMeta",
+        metaId: meta.id,
+        metaType: meta.type,
+        name: meta.name,
+        poster: meta.poster,
+        season: opts?.season,
+        episode: opts?.episode,
+        resume: opts?.resume ?? true,
+      });
+      showFlash(sent, sent ? "Playing on your computer" : "Not connected to a computer");
+    },
+    [sendCommand, showFlash],
   );
 
   const value = useMemo<MobileRemoteValue>(
-    () => ({ connected, snapshot, playOnHost, openOnHost, sendCommand }),
-    [connected, snapshot, playOnHost, openOnHost, sendCommand],
+    () => ({ connected, snapshot, playOnHost, openOnHost, sendToHost, castPlay, sendCommand }),
+    [connected, snapshot, playOnHost, openOnHost, sendToHost, castPlay, sendCommand],
   );
 
   return (

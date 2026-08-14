@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { Bookmark, Check, Eye, Film, Monitor, MoreHorizontal, Play } from "lucide-react";
+import { Bookmark, Check, Eye, Film, Monitor, MonitorPlay, MoreHorizontal, Play } from "lucide-react";
 import type { Meta } from "@/lib/cinemeta";
 import type { TmdbDetail } from "@/lib/providers/tmdb";
 import type { RemoteLibraryAction, RemoteLibraryItem, RemoteTrackers } from "@/lib/remote/protocol";
@@ -119,7 +119,7 @@ function ActionsSheet({
   onClose: () => void;
 }) {
   const [reduced] = useState(prefersReducedMotion);
-  const { openOnHost, sendCommand, connected, snapshot } = useMobileRemote();
+  const { sendToHost, castPlay, sendCommand, connected, snapshot } = useMobileRemote();
   const poster = meta.poster ?? detail?.poster;
   const imdbId = detail?.imdbId;
   const library = snapshot.library;
@@ -180,15 +180,30 @@ function ActionsSheet({
           {trailerId && (
             <SheetRow icon={<Film size={20} strokeWidth={2} />} label="Play trailer" onClick={onPlayTrailer} />
           )}
-          <SheetRow
-            icon={<Monitor size={20} strokeWidth={2} />}
-            label="Open on computer"
-            sublabel="Send this title to your Harbor app"
-            onClick={() => {
-              onClose();
-              openOnHost(meta);
-            }}
-          />
+          {connected && (
+            // Only offer cross-device actions when a computer is actually
+            // connected — otherwise a row promises a send that can't happen.
+            <>
+              <SheetRow
+                icon={<MonitorPlay size={20} strokeWidth={2} />}
+                label="Play on computer"
+                sublabel="Start this title on your connected Harbor app"
+                onClick={() => {
+                  onClose();
+                  castPlay(meta);
+                }}
+              />
+              <SheetRow
+                icon={<Monitor size={20} strokeWidth={2} />}
+                label="Open on computer"
+                sublabel="Send this title to your Harbor app"
+                onClick={() => {
+                  onClose();
+                  sendToHost(meta);
+                }}
+              />
+            </>
+          )}
         </div>
 
         <Group label="Your library">
