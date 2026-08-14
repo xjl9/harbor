@@ -54,6 +54,7 @@ const DEBRID_PROVIDERS: DebridProvider[] = [
     logo: realDebridLogo,
     placeholder: "API token",
     hint: "Get your token at real-debrid.com/apitoken. Cached streams play direct.",
+    apiKeyUrl: "https://real-debrid.com/apitoken",
   },
   {
     key: "tbKey",
@@ -61,6 +62,7 @@ const DEBRID_PROVIDERS: DebridProvider[] = [
     logo: torboxLogo,
     placeholder: "API key",
     hint: "Get your key at torbox.app/settings. Cached streams play direct.",
+    apiKeyUrl: "https://torbox.app/settings",
   },
   {
     key: "adKey",
@@ -68,6 +70,7 @@ const DEBRID_PROVIDERS: DebridProvider[] = [
     logo: allDebridLogo,
     placeholder: "API key",
     hint: "Get your key at alldebrid.com/apikeys. Cache shows as unknown until you hit Play.",
+    apiKeyUrl: "https://alldebrid.com/apikeys",
   },
   {
     key: "pmKey",
@@ -75,6 +78,7 @@ const DEBRID_PROVIDERS: DebridProvider[] = [
     logo: premiumizeLogo,
     placeholder: "API key",
     hint: "Get your key at premiumize.me/account. Skips queueing for cached files.",
+    apiKeyUrl: "https://www.premiumize.me/account",
   },
   {
     key: "dlKey",
@@ -82,6 +86,7 @@ const DEBRID_PROVIDERS: DebridProvider[] = [
     logo: debridLinkLogo,
     placeholder: "API key",
     hint: "Get your key at debrid-link.com/webapp/apikey. Fast EU-hosted cache check.",
+    apiKeyUrl: "https://debrid-link.com/webapp/apikey",
   },
 ];
 
@@ -103,6 +108,13 @@ export function MobileProfile({ onOpenRemote }: { onOpenRemote: () => void }) {
   const installedAddonCount = loadInstalled().length;
 
   const keySet = (v: string | undefined) => !!(v && v.trim());
+
+  // Connected providers (a key is saved) float to the top so the user's active
+  // services lead; the original DEBRID_PROVIDERS order holds within each group.
+  const debridProviders = [
+    ...DEBRID_PROVIDERS.filter((p) => keySet(settings[p.key])),
+    ...DEBRID_PROVIDERS.filter((p) => !keySet(settings[p.key])),
+  ];
 
   return (
     <div
@@ -261,7 +273,7 @@ export function MobileProfile({ onOpenRemote }: { onOpenRemote: () => void }) {
           </p>
         </div>
         <div className="overflow-hidden rounded-2xl border border-white/[0.06] bg-elevated/40">
-          {DEBRID_PROVIDERS.map((p, i) => (
+          {debridProviders.map((p, i) => (
             <div key={p.key}>
               {i > 0 && <Divider />}
               <Row

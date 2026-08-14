@@ -1,7 +1,8 @@
-import { AlertCircle, Check, Eye, EyeOff, Loader2 } from "lucide-react";
+import { AlertCircle, Check, Eye, EyeOff, ExternalLink, Loader2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { buildDebridClients, type DebridKeys } from "@/lib/debrid/registry";
 import type { Account } from "@/lib/debrid/types";
+import { openUrl } from "@/lib/window";
 import { useRegisterSheet } from "./mobile-sheet-lock";
 import { useKeyboardInset } from "./use-keyboard-inset";
 
@@ -15,6 +16,8 @@ export type DebridProvider = {
   logo: string;
   placeholder: string;
   hint: string;
+  // Provider's official API-key page, opened in the system browser from the sheet.
+  apiKeyUrl: string;
 };
 
 // idle before a check; checking while account() is in flight; valid/warn/invalid
@@ -77,6 +80,19 @@ export function DebridSheet({
   useRegisterSheet(true);
 
   useEffect(() => () => abortRef.current?.abort(), []);
+
+  // Never leave a revealed key on screen: re-mask when the app backgrounds
+  // (app switcher, lock) and on unmount, so the secret is hidden by default.
+  useEffect(() => {
+    const onVisibility = () => {
+      if (document.visibilityState !== "visible") setReveal(false);
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisibility);
+      setReveal(false);
+    };
+  }, []);
 
   const trimmed = value.trim();
   const checking = verdict === "checking";
@@ -157,6 +173,18 @@ export function DebridSheet({
             type={reveal ? "text" : "password"}
             value={value}
             onChange={(e) => reset(e.target.value)}
+            onPaste={(e) => {
+              // Trim a pasted token immediately so a stray leading/trailing space
+              // never lingers in the field (validate/save trim too, as a backstop).
+              const pasted = e.clipboardData.getData("text");
+              if (pasted !== pasted.trim()) {
+                e.preventDefault();
+                const el = e.currentTarget;
+                const start = el.selectionStart ?? value.length;
+                const end = el.selectionEnd ?? value.length;
+                reset((value.slice(0, start) + pasted.trim() + value.slice(end)).trim());
+              }
+            }}
             placeholder={provider.placeholder}
             autoCapitalize="none"
             autoCorrect="off"
@@ -176,6 +204,15 @@ export function DebridSheet({
             {reveal ? <EyeOff size={18} /> : <Eye size={18} />}
           </button>
         </div>
+
+        <button
+          type="button"
+          onClick={() => openUrl(provider.apiKeyUrl)}
+          className="-my-1 mt-1.5 flex items-center gap-1.5 py-2 ps-1 text-[12.5px] font-medium text-ink-subtle transition-colors active:text-ink"
+        >
+          Where do I find this?
+          <ExternalLink size={13} strokeWidth={2.2} />
+        </button>
 
         {verdict !== "idle" && (
           <div
