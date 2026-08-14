@@ -1,11 +1,14 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { Bookmark, Check, Eye, Film, Monitor, MonitorPlay, MoreHorizontal, Play } from "lucide-react";
+import { Bookmark, Check, Download, Eye, Film, Monitor, MonitorPlay, MoreHorizontal, Play } from "lucide-react";
 import type { Meta } from "@/lib/cinemeta";
 import type { TmdbDetail } from "@/lib/providers/tmdb";
 import type { RemoteLibraryAction, RemoteLibraryItem, RemoteTrackers } from "@/lib/remote/protocol";
 import { resolveTrailerId } from "@/lib/trailer";
+import { isMobileNative } from "@/lib/platform";
 import { useSettings } from "@/lib/settings";
+import { useView } from "@/lib/view";
+import { useDownloads } from "@/lib/download/downloads-store";
 import { useMobileRemote } from "../mobile-remote";
 import { HIDE_SCROLL, prefersReducedMotion } from "./data";
 import { MobileTrailerOverlay } from "./trailer";
@@ -120,6 +123,8 @@ function ActionsSheet({
 }) {
   const [reduced] = useState(prefersReducedMotion);
   const { sendToHost, castPlay, sendCommand, connected, snapshot } = useMobileRemote();
+  const { openPicker } = useView();
+  const downloads = useDownloads();
   const poster = meta.poster ?? detail?.poster;
   const imdbId = detail?.imdbId;
   const library = snapshot.library;
@@ -128,6 +133,14 @@ function ActionsSheet({
   const online = connected && (!snapshot.idle || !!library || !!trackers);
   const isAnime = /^(kitsu|mal|anilist|anidb):/.test(meta.id);
   const isSeriesLike = meta.type === "series" || detail?.kind === "tv";
+  // Offline downloads run through the same on-device engine the desktop uses;
+  // it needs the native filesystem, so the affordance is native-only. Series
+  // download per episode (in the episode list), so the sheet-level row is for
+  // single-file titles (movies) only.
+  const canDownload = isMobileNative() && !isSeriesLike && !isAnime;
+  const movieDownload = canDownload
+    ? downloads.find((d) => d.metaId === meta.id && d.season == null)
+    : undefined;
 
   const favBase = inList(library?.favorites, meta.id, imdbId);
   const watchlistBase = inList(library?.watchlist, meta.id, imdbId);
@@ -157,6 +170,35 @@ function ActionsSheet({
 
   const sync = online ? syncHint(trackers) : undefined;
 
+  const dlStatus = movieDownload?.status;
+  const dlActive = dlStatus === "downloading" || dlStatus === "paused";
+  const dlDone = dlStatus === "done";
+  const dlFailed = dlStatus === "error" || dlStatus === "interrupted";
+  const dlLabel = dlDone
+    ? "Saved offline"
+    : dlStatus === "paused"
+      ? "Download paused"
+      : dlStatus === "downloading"
+        ? "Downloading…"
+        : "Download";
+  const dlSub = dlDone
+    ? "Available without internet"
+    : dlStatus === "paused"
+      ? "Resume it from Downloads"
+      : dlStatus === "downloading"
+        ? `${Math.round((movieDownload?.ratio ?? 0) * 100)}%`
+        : dlFailed
+          ? "Didn't finish · tap to try again"
+          : "Save this movie to watch offline";
+  const onDownload = () => {
+    if (dlActive || dlDone) {
+      onClose();
+      return;
+    }
+    openPicker(meta, undefined, { intent: "download" });
+    onClose();
+  };
+
   const sheet = (
     <div className="fixed inset-0 z-[70] flex flex-col justify-end" role="dialog" aria-modal="true">
       <button
@@ -179,6 +221,18 @@ function ActionsSheet({
         <div className="flex flex-col px-3 pb-1">
           {trailerId && (
             <SheetRow icon={<Film size={20} strokeWidth={2} />} label="Play trailer" onClick={onPlayTrailer} />
+          )}
+          {canDownload && (
+            <SheetRow
+              icon={<Download size={20} strokeWidth={2} />}
+              label={dlLabel}
+              sublabel={dlSub}
+              active={dlDone}
+              trailing={
+                dlDone ? <Check size={18} strokeWidth={2.6} className="text-accent" /> : undefined
+              }
+              onClick={onDownload}
+            />
           )}
           {connected && (
             // Only offer cross-device actions when a computer is actually

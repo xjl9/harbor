@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { Check } from "lucide-react";
 import { Poster } from "@/components/poster";
 import { daysFromTodayLocal, formatAirDate } from "@/lib/dates";
@@ -19,6 +20,7 @@ export function EpisodeItem({
   spoiler,
   nextUp,
   showRating,
+  download,
 }: {
   ep: Ep;
   onPlay: (ep: Ep) => void;
@@ -26,6 +28,9 @@ export function EpisodeItem({
   spoiler: SpoilerMask;
   nextUp: boolean;
   showRating: boolean;
+  // Optional trailing control (offline download button). Rendered as a sibling
+  // of the play button so it stays a valid, separately-focusable target.
+  download?: ReactNode;
 }) {
   const t = useT();
   const upcoming = isUpcoming(ep.airDate);
@@ -38,11 +43,12 @@ export function EpisodeItem({
     .filter(Boolean)
     .join("  ·  ");
   return (
-    <button
-      type="button"
-      onClick={() => onPlay(ep)}
-      className="group flex gap-3.5 rounded-2xl p-2 text-start transition-colors active:bg-elevated/50 motion-reduce:transition-none"
-    >
+    <div className="group flex items-center gap-1">
+      <button
+        type="button"
+        onClick={() => onPlay(ep)}
+        className="flex min-w-0 flex-1 gap-3.5 rounded-2xl p-2 text-start transition-colors active:bg-elevated/50 motion-reduce:transition-none"
+      >
       <div
         className={`relative w-[128px] shrink-0 overflow-hidden rounded-xl ${
           nextUp ? "ring-1 ring-accent/60" : ""
@@ -113,7 +119,9 @@ export function EpisodeItem({
           </p>
         )}
       </div>
-    </button>
+      </button>
+      {download && <div className="shrink-0 pe-1">{download}</div>}
+    </div>
   );
 }
 

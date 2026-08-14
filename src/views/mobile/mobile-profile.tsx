@@ -1,6 +1,7 @@
 import {
   Check,
   ChevronRight,
+  Download,
   Eye,
   EyeOff,
   FileText,
@@ -21,7 +22,9 @@ import { isMobileNative } from "@/lib/platform";
 import { useProfiles } from "@/lib/profiles";
 import { useSettings } from "@/lib/settings";
 import { loadInstalled } from "@/lib/addon-store";
+import { useActiveDownloadCount } from "@/lib/download/downloads-store";
 import { MobileAddons } from "./mobile-addons";
+import { MobileDownloads } from "./mobile-downloads";
 import { MobileSettings } from "./mobile-settings";
 import { MobileWhosWatching } from "./mobile-whos-watching";
 import { DebridSheet, type DebridKey, type DebridProvider } from "./mobile-debrid-sheet";
@@ -53,7 +56,9 @@ export function MobileProfile({ onOpenRemote }: { onOpenRemote: () => void }) {
   const [debridEditing, setDebridEditing] = useState<DebridProvider | null>(null);
   const [addonsOpen, setAddonsOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [downloadsOpen, setDownloadsOpen] = useState(false);
   const native = isMobileNative();
+  const activeDownloads = useActiveDownloadCount();
   const installedAddonCount = loadInstalled().length;
 
   const keySet = (v: string | undefined) => !!(v && v.trim());
@@ -240,6 +245,17 @@ export function MobileProfile({ onOpenRemote }: { onOpenRemote: () => void }) {
       </section>
 
       <section className="overflow-hidden rounded-2xl border border-white/[0.06] bg-elevated/40">
+        {native && (
+          <>
+            <Row
+              icon={<Download size={20} strokeWidth={2} />}
+              label="Downloads"
+              badge={activeDownloads > 0 ? String(activeDownloads) : undefined}
+              onClick={() => setDownloadsOpen(true)}
+            />
+            <Divider />
+          </>
+        )}
         <Row
           icon={<SlidersHorizontal size={20} strokeWidth={2} />}
           label="Settings"
@@ -275,6 +291,7 @@ export function MobileProfile({ onOpenRemote }: { onOpenRemote: () => void }) {
       {switching && <MobileWhosWatching onClose={() => setSwitching(false)} />}
       {addonsOpen && <MobileAddons onClose={() => setAddonsOpen(false)} />}
       {settingsOpen && <MobileSettings onClose={() => setSettingsOpen(false)} />}
+      {downloadsOpen && <MobileDownloads onClose={() => setDownloadsOpen(false)} />}
       {editing && (
         <EditSheet
           field={editing}
@@ -450,6 +467,7 @@ function Row({
   dot,
   pending,
   pendingLabel = "Set up",
+  badge,
   onClick,
   danger,
 }: {
@@ -459,6 +477,7 @@ function Row({
   dot?: "ok" | null;
   pending?: boolean;
   pendingLabel?: string;
+  badge?: string;
   onClick: () => void;
   danger?: boolean;
 }) {
@@ -474,6 +493,11 @@ function Row({
       </span>
       {dot === "ok" && <span className="h-2 w-2 rounded-full bg-success" />}
       {value && <span className="max-w-[40%] truncate text-[13.5px] text-ink-subtle">{value}</span>}
+      {badge && (
+        <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-accent px-1.5 text-[11px] font-bold tabular-nums text-canvas">
+          {badge}
+        </span>
+      )}
       {pending && (
         <span className="rounded-full bg-accent/10 px-2.5 py-1 text-[11.5px] font-semibold text-accent">
           {pendingLabel}

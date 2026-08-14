@@ -1,4 +1,4 @@
-import { downloadDir as systemDownloadDir } from "@tauri-apps/api/path";
+import { appDataDir, downloadDir as systemDownloadDir, join } from "@tauri-apps/api/path";
 import { exists, mkdir, remove } from "@tauri-apps/plugin-fs";
 import { revealItemInDir } from "@tauri-apps/plugin-opener";
 import { useSyncExternalStore } from "react";
@@ -6,7 +6,7 @@ import type { Meta } from "@/lib/cinemeta";
 import type { PlayEpisode } from "@/lib/view";
 import { buildDefaultFilename, sanitizeName } from "./filename";
 import { startDownload, type DownloadHandle } from "./video-download";
-import { isWindowsDesktop } from "@/lib/platform";
+import { isMobileNative, isWindowsDesktop } from "@/lib/platform";
 
 export type DownloadItem = {
   id: string;
@@ -94,6 +94,19 @@ function sep(): string {
 }
 
 async function resolveDir(): Promise<string> {
+  // Native mobile (iOS/Android) has no user-facing Downloads folder, and
+  // downloadDir() has no iOS equivalent (it throws). Save into an app-writable
+  // directory instead — the same appDataDir the manga/subtitle caches use. The
+  // desktop/web path below is left byte-for-byte identical.
+  if (isMobileNative()) {
+    try {
+      const dir = await join(await appDataDir(), "Downloads");
+      await mkdir(dir, { recursive: true }).catch(() => {});
+      return dir;
+    } catch {
+      return "";
+    }
+  }
   try {
     const raw = localStorage.getItem("harbor.settings");
     const fromSettings = raw

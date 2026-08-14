@@ -20,7 +20,11 @@ import { spoilerMaskFor } from "@/lib/spoilers";
 import { useStremioWatched } from "@/lib/use-stremio-watched";
 import { useTrakt } from "@/lib/trakt/provider";
 import { useSimkl } from "@/lib/simkl/provider";
+import { isMobileNative } from "@/lib/platform";
+import { useView } from "@/lib/view";
+import { useDownloads } from "@/lib/download/downloads-store";
 import { useMobileRemote } from "../mobile-remote";
+import { EpisodeDownloadButton } from "../mobile-download-row";
 import { stillFrom, tmdbTvId, useEpisodeWindow, type Ep } from "./data";
 import { SectionTitle } from "./ui";
 import { EpisodeItem, EpisodeSkeleton } from "./episode-item";
@@ -52,6 +56,9 @@ export function EpisodeSection({
 }) {
   const { settings } = useSettings();
   const { snapshot } = useMobileRemote();
+  const { openPicker } = useView();
+  const downloads = useDownloads();
+  const canDownload = isMobileNative();
   const tvdbKey = settings.tvdbKey || snapshot.tvdbKey || "";
   const imdbId = detail?.imdbId ?? (meta.id.startsWith("tt") ? meta.id : null);
 
@@ -329,6 +336,11 @@ export function EpisodeSection({
             {episodes.slice(0, renderCount).map((ep) => {
               const key = `${ep.season}:${ep.episode}`;
               const progress = progressByKey.get(key) ?? { ratio: 0, watched: false, startedAt: 0 };
+              const dl = canDownload
+                ? downloads.find(
+                    (d) => d.metaId === meta.id && d.season === ep.season && d.episode === ep.episode,
+                  )
+                : undefined;
               return (
                 <EpisodeItem
                   key={key}
@@ -341,6 +353,20 @@ export function EpisodeSection({
                   })}
                   nextUp={key === nextUpKey}
                   showRating={settings.showEpisodeRating}
+                  download={
+                    canDownload ? (
+                      <EpisodeDownloadButton
+                        status={dl?.status}
+                        onDownload={() =>
+                          openPicker(
+                            meta,
+                            { season: ep.season, episode: ep.episode },
+                            { intent: "download" },
+                          )
+                        }
+                      />
+                    ) : undefined
+                  }
                 />
               );
             })}
