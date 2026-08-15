@@ -119,7 +119,7 @@ function CollectionCardTile({
       ref={ref}
       type="button"
       onClick={() => resolvedId > 0 && onOpen(resolvedId)}
-      className="relative aspect-[16/9] w-[240px] shrink-0 overflow-hidden rounded-[16px] text-start ring-1 ring-edge-soft/50 transition-transform duration-150 active:scale-[0.97]"
+      className="relative aspect-[16/9] w-[240px] shrink-0 overflow-hidden rounded-[16px] text-start ring-1 ring-edge-soft/50"
       style={{ background: `linear-gradient(140deg, ${from}, ${to})` }}
     >
       {backdrop && (
@@ -185,7 +185,7 @@ function CollectionMembersSheet({
       <button
         type="button"
         onClick={onClose}
-        className="mb-5 flex items-center gap-1 self-start rounded-full bg-surface py-2 pe-4 ps-2.5 text-[14px] font-semibold text-ink ring-1 ring-edge-soft transition-transform duration-150 active:scale-[0.97]"
+        className="mb-5 flex items-center gap-1 self-start rounded-full bg-surface py-2 pe-4 ps-2.5 text-[14px] font-semibold text-ink ring-1 ring-edge-soft"
       >
         <ChevronRight size={17} strokeWidth={2.6} className="rotate-180 text-ink-subtle" />
         <span className="line-clamp-1 max-w-[70vw]">{name}</span>
@@ -228,7 +228,7 @@ function MemberTile({ meta, onOpenDetail }: { meta: Meta; onOpenDetail: (m: Meta
     <button
       type="button"
       onClick={() => onOpenDetail(meta)}
-      className="text-start transition-transform duration-150 active:scale-[0.96]"
+      className="text-start"
     >
       <Poster src={src} onError={onError} seed={meta.id} ratio="portrait" lazy className="rounded-[12px] ring-1 ring-white/[0.06]" />
       <p className="mt-1.5 line-clamp-2 min-h-[2.7em] text-[12px] font-medium leading-snug text-ink-muted">

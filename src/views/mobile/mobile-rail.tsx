@@ -15,6 +15,11 @@ type OpenDetail = (m: Meta) => void;
 const RAIL_CULL = "[content-visibility:auto] [contain-intrinsic-size:auto_280px]";
 const TILE_CULL = "[content-visibility:auto]";
 
+// Press feedback is deliberately absent here. Every <button> already presses at
+// one shared scale and speed (see the base layer in index.css); tiles used to
+// override it with a slower duration and their own scale target, which is why a
+// poster felt different under the finger than the button beside it.
+
 export function MobileRail({
   title,
   metas,
@@ -103,7 +108,7 @@ function RankTile({ meta, rank, onOpenDetail }: { meta: Meta; rank: number; onOp
     <button
       type="button"
       onClick={() => open(meta)}
-      className={`w-[164px] shrink-0 text-start transition-transform duration-150 active:scale-[0.97] ${TILE_CULL} [contain-intrinsic-size:auto_210px]`}
+      className={`w-[164px] shrink-0 text-start ${TILE_CULL} [contain-intrinsic-size:auto_210px]`}
     >
       <div className="relative w-full" style={{ aspectRatio: "164 / 184" }}>
         {/* Confident solid serif numeral — editorial ranked-list, not Netflix's ghost outline. */}
@@ -148,7 +153,7 @@ export function PosterTile({ meta, onOpenDetail }: { meta: Meta; onOpenDetail?: 
     <button
       type="button"
       onClick={() => open(meta)}
-      className={`w-[124px] shrink-0 text-start transition-transform duration-150 active:scale-[0.96] ${TILE_CULL} [contain-intrinsic-size:auto_235px]`}
+      className={`w-[124px] shrink-0 text-start ${TILE_CULL} [contain-intrinsic-size:auto_235px]`}
     >
       <Poster src={src} onError={onError} seed={meta.id} ratio="portrait" lazy="release" className="rounded-[14px] ring-1 ring-white/[0.06]">
         {award && <AwardCorner award={award} />}
@@ -192,7 +197,7 @@ function LandscapeTile({ meta, onOpenDetail }: { meta: Meta; onOpenDetail?: Open
     <button
       type="button"
       onClick={() => open(meta)}
-      className={`w-[240px] shrink-0 text-start transition-transform duration-150 active:scale-[0.97] ${TILE_CULL} [contain-intrinsic-size:auto_160px]`}
+      className={`w-[240px] shrink-0 text-start ${TILE_CULL} [contain-intrinsic-size:auto_160px]`}
     >
       {/* Poster (not a raw img) so backdrops get tier right-sizing plus release-mode
           unload; the raw w1280 img here was a top offender in the rail decode weight. */}

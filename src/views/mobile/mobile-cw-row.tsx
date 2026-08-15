@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "reac
 import { Play, X } from "lucide-react";
 import type { Meta } from "@/lib/cinemeta";
 import { useAuth } from "@/lib/auth";
+import { FLIP_ORIGIN_ATTR } from "@/lib/motion";
 import { useHideAnime } from "@/lib/anime-hide";
 import { useHeroLogos } from "@/components/anime-hero/use-hero-logos";
 import { detectAnimeForCw, useDetectedAnimeVersion } from "@/lib/anime-detect";
@@ -279,7 +280,8 @@ function MobileCwCard({
         <button
           type="button"
           onClick={() => onOpenDetail(meta)}
-          className="relative block aspect-[16/9] w-full overflow-hidden rounded-[16px] bg-surface text-start ring-1 ring-edge-soft/50 transition-transform duration-150 active:scale-[0.97]"
+          {...{ [FLIP_ORIGIN_ATTR]: "" }}
+          className="relative block aspect-[16/9] w-full overflow-hidden rounded-[16px] bg-surface text-start ring-1 ring-edge-soft/50"
         >
           {bg && show && (
             <img
@@ -329,7 +331,7 @@ function MobileCwCard({
             onDismiss();
           }}
           aria-label="Remove from Continue watching"
-          className="absolute end-1.5 top-1.5 flex h-9 w-9 items-center justify-center rounded-full bg-black/55 text-white/90 backdrop-blur-sm transition-transform duration-150 active:scale-90"
+          className="absolute end-1.5 top-1.5 flex h-9 w-9 items-center justify-center rounded-full bg-black/55 text-white/90 backdrop-blur-sm"
         >
           <X size={17} strokeWidth={2.4} />
         </button>

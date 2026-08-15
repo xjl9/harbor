@@ -1,5 +1,15 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import {
+  claimOrigin,
+  flipIn,
+  flipOut,
+  resetFlip,
+  FLIP_TARGET_ATTR,
+  MOTION,
+  type OriginHandle,
+  type Rect,
+} from "@/lib/motion";
 import type { Meta } from "@/lib/cinemeta";
 import { awardSummary, pickHeroAwards, useAwards } from "@/lib/providers/wikidata";
 import { mergeBundledAwards } from "@/lib/awards-history";
@@ -10,9 +20,9 @@ import { useMobileRemote } from "../mobile-remote";
 import {
   DETAIL_CSS,
   firstEpisode,
-  prefersReducedMotion,
   seasonList,
   useCinemetaFull,
+  useReducedMotion,
   useTmdbDetail,
 } from "./data";
 import { Hero } from "./hero";
@@ -38,34 +48,140 @@ import { useAnimeCharacters } from "@/views/detail/use-anime-characters";
 import { useMalRating } from "@/lib/mal-rating";
 
 export function MobileDetail({ meta, onClose }: { meta: Meta; onClose: () => void }) {
-  const [reduced] = useState(prefersReducedMotion);
+  const reduced = useReducedMotion();
   const [closing, setClosing] = useState(false);
   const [stack, setStack] = useState<Meta[]>([meta]);
   const scrollRef = useRef<HTMLDivElement>(null);
+  // The tile this screen was opened from: the flight home, and the artwork we
+  // owe it back. Only the root entry owns one: after in-stack navigation the
+  // source tile belongs to a body that no longer exists, and closing falls back
+  // to a plain fade.
+  const rootOrigin = useRef<OriginHandle | null>(null);
+  // Where the next flight starts. Written by the only two things that can
+  // legitimately start one (opening the screen, tapping a related poster) and
+  // read (never consumed) by the layout effect, so StrictMode's second
+  // invocation replays the same flight instead of finding nothing left.
+  const flight = useRef<{ from: Rect; origin: OriginHandle | null } | null>(null);
+  const openedFor = useRef<string | null>(null);
+  const finished = useRef(false);
 
+  // Hosts mount this unkeyed, so opening a second title reuses the instance that
+  // just finished closing. Reset the whole exit state machine with the stack, or
+  // the new screen renders in the exiting state and dismisses itself.
   useEffect(() => {
     setStack([meta]);
+    setClosing(false);
+    finished.current = false;
   }, [meta.id]);
 
   const current = stack[stack.length - 1] ?? meta;
+  const isRoot = stack.length === 1;
 
-  useEffect(() => {
+  const heroPoster = useCallback(
+    () => scrollRef.current?.querySelector<HTMLElement>(`[${FLIP_TARGET_ATTR}]`) ?? null,
+    [],
+  );
+
+  // The single exit path. Guarded, because two clocks race to call it (the exit
+  // animation and the timer that exists in case the animation never fires) and
+  // because a second tap must not close the screen twice.
+  const finish = useCallback(() => {
+    if (finished.current) return;
+    finished.current = true;
+    rootOrigin.current?.show();
+    onClose();
+  }, [onClose]);
+
+  // Whatever happens to this screen (close, an error boundary, the tab going
+  // away), the tile we borrowed gets its artwork back.
+  useEffect(() => () => rootOrigin.current?.show(), []);
+
+  // Fires on open and on every in-stack navigation, so a "More Like This"
+  // poster flies up into the hero exactly the way a home rail poster does.
+  useLayoutEffect(() => {
+    // Scroll first, measure second. The reset used to live in a passive effect,
+    // which ran *after* the transform was written and moved the landing site
+    // out from under a flight that was already running toward it.
     scrollRef.current?.scrollTo({ top: 0 });
-  }, [current.id]);
+
+    if (isRoot && openedFor.current !== current.id) {
+      openedFor.current = current.id;
+      rootOrigin.current?.show();
+      const origin = reduced ? null : claimOrigin();
+      const from = origin?.rect() ?? null;
+      rootOrigin.current = origin;
+      flight.current = from ? { from, origin } : null;
+    }
+
+    const el = heroPoster();
+    const next = reduced ? null : flight.current;
+    if (!el || !next) return;
+    // Hide the source only if there really is a flight: the whole point is that
+    // one object moves, so the tile stays hidden until the screen gives it back
+    // (finish(), or the unmount cleanup above, whichever comes first).
+    if (!flipIn(el, next.from)) return () => resetFlip(el);
+    const handoff = window.setTimeout(() => next.origin?.hide(), MOTION.handoff);
+    return () => {
+      window.clearTimeout(handoff);
+      resetFlip(el);
+    };
+  }, [current.id, isRoot, reduced, heroPoster]);
+
+  // Unmount is driven by this clock, not by the exit animation's event. Reduced
+  // motion collapses the animation, and a collapsed or cancelled animation can
+  // fire no event at all; onAnimationEnd below is only the fast path.
+  //
+  // The timer depends on `closing` alone. Callers hand us a fresh onClose on
+  // every render of the host screen, and a timer keyed on that identity would
+  // be torn down and restarted by unrelated re-renders. An exit that never
+  // arrives is exactly the failure this clock exists to prevent.
+  const finishRef = useRef(finish);
+  finishRef.current = finish;
+  useEffect(() => {
+    if (!closing) return;
+    const t = window.setTimeout(() => finishRef.current(), MOTION.exit + MOTION.exitGrace);
+    return () => window.clearTimeout(t);
+  }, [closing]);
 
   const close = useCallback(() => {
-    if (reduced) onClose();
-    else setClosing(true);
-  }, [reduced, onClose]);
+    if (closing) return;
+    if (reduced) {
+      finish();
+      return;
+    }
+    const el = heroPoster();
+    const home = isRoot ? (rootOrigin.current?.rect() ?? null) : null;
+    const flying = !!el && !!home && flipOut(el, home);
+    // No flight home (deep link, in-stack entry, tile scrolled out of the rail):
+    // give the artwork back now and let the screen simply fade off it.
+    if (!flying) rootOrigin.current?.show();
+    setClosing(true);
+  }, [closing, reduced, finish, isRoot, heroPoster]);
 
   const back = useCallback(() => {
-    if (stack.length > 1) setStack((s) => s.slice(0, -1));
-    else close();
-  }, [stack.length, close]);
+    if (closing) return;
+    if (stack.length > 1) {
+      // Popping is not a flight: the tile we flew up from went away with the
+      // body that owned it, so the hero simply appears.
+      flight.current = null;
+      setStack((s) => s.slice(0, -1));
+    } else close();
+  }, [closing, stack.length, close]);
 
-  const openMeta = useCallback((m: Meta) => {
-    setStack((s) => (s[s.length - 1]?.id === m.id ? s : [...s, m]));
-  }, []);
+  const openMeta = useCallback(
+    (m: Meta) => {
+      if (closing || current.id === m.id) return;
+      // Measured here, in the tap handler, while the tapped tile is still
+      // mounted: by the time the layout effect runs, React has already replaced
+      // the body that owned it and there is nothing left to measure.
+      const from = (reduced ? null : claimOrigin()?.rect()) ?? null;
+      // No origin handle: the tile unmounts in the same commit the flight
+      // starts, which is the handoff, so there is nothing to hide or restore.
+      flight.current = from ? { from, origin: null } : null;
+      setStack((s) => (s[s.length - 1]?.id === m.id ? s : [...s, m]));
+    },
+    [closing, reduced, current.id],
+  );
 
   const node = (
     <div
@@ -74,14 +190,20 @@ export function MobileDetail({ meta, onClose }: { meta: Meta; onClose: () => voi
       aria-modal="true"
       aria-label={current.name}
       onAnimationEnd={(e) => {
-        if (closing && e.target === e.currentTarget) onClose();
+        if (closing && e.target === e.currentTarget) finish();
       }}
       className={`fixed inset-0 z-50 overflow-y-auto overscroll-contain bg-canvas ${
         closing ? "md-detail-out" : "md-detail-in"
       }`}
     >
       <style>{DETAIL_CSS}</style>
-      <DetailBody key={current.id} meta={current} onBack={back} onOpenMeta={openMeta} />
+      {/* While leaving, the screen keeps swallowing taps (pointer-events-none on
+          the overlay would let them fall through to the rail behind and open
+          something else) but its own controls go inert, so a tap can neither
+          close twice nor navigate into a body the pending unmount destroys. */}
+      <div className={closing ? "pointer-events-none contents" : "contents"}>
+        <DetailBody key={current.id} meta={current} onBack={back} onOpenMeta={openMeta} />
+      </div>
     </div>
   );
 
@@ -179,7 +301,7 @@ function DetailBody({
   };
 
   return (
-    <div className="md-body-in">
+    <div>
       <Hero
         meta={meta}
         detail={detail}
@@ -196,7 +318,7 @@ function DetailBody({
       />
 
       <div
-        className="flex flex-col gap-8 px-5 pt-5"
+        className="md-rise-in flex flex-col gap-8 px-5 pt-5"
         style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 44px)" }}
       >
         <DetailActions meta={meta} detail={detail} title={title} trailerId={trailerId} onPlay={onPlay} />

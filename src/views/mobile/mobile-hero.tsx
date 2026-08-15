@@ -217,7 +217,7 @@ export function MobileHero({ slides, onOpenDetail }: { slides: Meta[]; onOpenDet
             <button
               type="button"
               onClick={() => playOnHost(current)}
-              className="flex h-[54px] flex-1 items-center justify-center gap-2.5 rounded-full bg-white text-[16px] font-semibold text-black shadow-[0_8px_24px_-8px_rgba(0,0,0,0.6)] transition-transform duration-150 active:scale-[0.97]"
+              className="flex h-[54px] flex-1 items-center justify-center gap-2.5 rounded-full bg-white text-[16px] font-semibold text-black shadow-[0_8px_24px_-8px_rgba(0,0,0,0.6)]"
             >
               <Play size={19} strokeWidth={0} fill="currentColor" />
               Play
@@ -228,7 +228,7 @@ export function MobileHero({ slides, onOpenDetail }: { slides: Meta[]; onOpenDet
               onClick={() =>
                 toggleWatchlist({ id: current.id, type: current.type, name: current.name, poster: current.poster })
               }
-              className="flex h-[54px] w-[54px] shrink-0 items-center justify-center rounded-full border border-white/15 bg-white/10 text-white backdrop-blur-md transition-transform duration-150 active:scale-[0.94]"
+              className="flex h-[54px] w-[54px] shrink-0 items-center justify-center rounded-full border border-white/15 bg-white/10 text-white backdrop-blur-md"
             >
               {inWl ? <Check size={20} strokeWidth={2.6} className="text-accent" /> : <Plus size={21} strokeWidth={2.2} />}
             </button>
@@ -236,7 +236,7 @@ export function MobileHero({ slides, onOpenDetail }: { slides: Meta[]; onOpenDet
               type="button"
               aria-label="More info"
               onClick={open}
-              className="flex h-[54px] w-[54px] shrink-0 items-center justify-center rounded-full border border-white/15 bg-white/10 text-white backdrop-blur-md transition-transform duration-150 active:scale-[0.94]"
+              className="flex h-[54px] w-[54px] shrink-0 items-center justify-center rounded-full border border-white/15 bg-white/10 text-white backdrop-blur-md"
             >
               <Info size={21} strokeWidth={2.2} />
             </button>
