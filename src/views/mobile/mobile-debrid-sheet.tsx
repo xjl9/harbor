@@ -155,117 +155,132 @@ export function DebridSheet({
         onClick={onClose}
         className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-fade-in"
       />
+      {/* Height is bounded against the container's content box, which the keyboard
+          inset above already shrinks, so the header and the Save row stay on
+          screen with the keyboard up and the middle scrolls instead. */}
       <div
-        className="relative z-10 w-full max-w-md rounded-t-3xl border border-edge-soft/70 bg-elevated p-5 shadow-[0_-12px_40px_-12px_rgba(0,0,0,0.7)]"
-        style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 20px)" }}
+        className="relative z-10 flex w-full max-w-md min-h-0 flex-col rounded-t-3xl border border-edge-soft/70 bg-elevated shadow-[0_-12px_40px_-12px_rgba(0,0,0,0.7)]"
+        style={{
+          maxHeight: "calc(100% - env(safe-area-inset-top, 0px) - 12px)",
+          paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 20px)",
+        }}
       >
-        <div className="flex items-center gap-3">
-          <span className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-lg bg-canvas/60">
+        <div className="flex shrink-0 items-center gap-3 px-5 pt-5">
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-canvas/60">
             <img src={provider.logo} alt="" draggable={false} className="h-5 w-5 object-contain" />
           </span>
-          <h3 className="text-[16px] font-semibold text-ink">{provider.label}</h3>
-        </div>
-        <p className="mt-2 text-[13px] leading-snug text-ink-muted">{provider.hint}</p>
-
-        <div className="relative mt-4">
-          <input
-            autoFocus
-            type={reveal ? "text" : "password"}
-            value={value}
-            onChange={(e) => reset(e.target.value)}
-            onPaste={(e) => {
-              // Trim a pasted token immediately so a stray leading/trailing space
-              // never lingers in the field (validate/save trim too, as a backstop).
-              const pasted = e.clipboardData.getData("text");
-              if (pasted !== pasted.trim()) {
-                e.preventDefault();
-                const el = e.currentTarget;
-                const start = el.selectionStart ?? value.length;
-                const end = el.selectionEnd ?? value.length;
-                reset((value.slice(0, start) + pasted.trim() + value.slice(end)).trim());
-              }
-            }}
-            placeholder={provider.placeholder}
-            autoCapitalize="none"
-            autoCorrect="off"
-            autoComplete="off"
-            spellCheck={false}
-            className="w-full rounded-xl border border-edge-soft/70 bg-canvas/70 py-3 pe-12 ps-4 text-[16px] text-ink placeholder:text-ink-subtle focus:border-accent focus:outline-none"
-            onKeyDown={(e) => {
-              if (e.key === "Enter") onSave(value);
-            }}
-          />
-          <button
-            type="button"
-            aria-label={reveal ? "Hide" : "Reveal"}
-            onClick={() => setReveal((r) => !r)}
-            className="absolute end-1 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-lg text-ink-subtle transition-colors active:text-ink"
-          >
-            {reveal ? <EyeOff size={18} /> : <Eye size={18} />}
-          </button>
+          <h3 className="min-w-0 flex-1 text-[16px] font-semibold text-ink">{provider.label}</h3>
         </div>
 
-        <button
-          type="button"
-          onClick={() => openUrl(provider.apiKeyUrl)}
-          className="-my-1 mt-1.5 flex items-center gap-1.5 py-2 ps-1 text-[12.5px] font-medium text-ink-subtle transition-colors active:text-ink"
-        >
-          Where do I find this?
-          <ExternalLink size={13} strokeWidth={2.2} />
-        </button>
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pb-1">
+          <p className="mt-2 text-[13px] leading-snug text-ink-muted">{provider.hint}</p>
 
-        {verdict !== "idle" && (
-          <div
-            className={`mt-3 flex items-start gap-2 rounded-xl px-3 py-2.5 text-[12.5px] leading-snug ${
-              verdict === "valid"
-                ? "bg-success/10 text-success"
-                : verdict === "warn"
-                  ? "bg-accent/10 text-accent"
-                  : verdict === "invalid"
-                    ? "bg-danger/10 text-danger"
-                    : "bg-white/[0.05] text-ink-muted"
-            }`}
-          >
-            <span className="mt-px shrink-0">
-              {verdict === "checking" ? (
-                <Loader2 size={15} className="animate-spin" />
-              ) : verdict === "valid" ? (
-                <Check size={15} strokeWidth={2.6} />
-              ) : (
-                <AlertCircle size={15} />
-              )}
-            </span>
-            <span className="flex-1">
-              {verdict === "checking" ? "Checking key with the provider…" : detail}
-            </span>
+          <div className="relative mt-4">
+            <input
+              autoFocus
+              type={reveal ? "text" : "password"}
+              value={value}
+              onChange={(e) => reset(e.target.value)}
+              onPaste={(e) => {
+                // Trim a pasted token immediately so a stray leading/trailing space
+                // never lingers in the field (validate/save trim too, as a backstop).
+                const pasted = e.clipboardData.getData("text");
+                if (pasted !== pasted.trim()) {
+                  e.preventDefault();
+                  const el = e.currentTarget;
+                  const start = el.selectionStart ?? value.length;
+                  const end = el.selectionEnd ?? value.length;
+                  reset((value.slice(0, start) + pasted.trim() + value.slice(end)).trim());
+                }
+              }}
+              placeholder={provider.placeholder}
+              autoCapitalize="none"
+              autoCorrect="off"
+              autoComplete="off"
+              spellCheck={false}
+              className="w-full rounded-xl border border-edge-soft/70 bg-canvas/70 py-3 pe-12 ps-4 text-[16px] text-ink placeholder:text-ink-subtle focus:border-accent focus:outline-none"
+              onKeyDown={(e) => {
+                if (e.key === "Enter") onSave(value);
+              }}
+            />
+            <button
+              type="button"
+              aria-label={reveal ? "Hide" : "Reveal"}
+              onClick={() => setReveal((r) => !r)}
+              className="absolute end-0.5 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-lg text-ink-subtle transition-colors active:text-ink"
+            >
+              {reveal ? <EyeOff size={18} /> : <Eye size={18} />}
+            </button>
           </div>
-        )}
 
-        <button
-          type="button"
-          onClick={validate}
-          disabled={!trimmed || checking}
-          className="mt-3 flex w-full items-center justify-center gap-2 rounded-full border border-edge-soft/70 py-3 text-[14.5px] font-semibold text-ink-muted transition-colors active:bg-raised/60 disabled:opacity-40"
-        >
-          {checking && <Loader2 size={16} className="animate-spin" />}
-          {verdict === "valid" || verdict === "warn" || verdict === "invalid" ? "Validate again" : "Validate"}
-        </button>
-
-        <div className="mt-3 flex gap-3">
           <button
             type="button"
-            onClick={onClose}
-            className="flex-1 rounded-full border border-edge-soft/70 py-3 text-[14.5px] font-semibold text-ink-muted transition-colors active:bg-raised/60"
+            onClick={() => openUrl(provider.apiKeyUrl)}
+            className="-my-1 mt-1.5 flex items-center gap-1.5 py-2 ps-1 text-[12.5px] font-medium text-ink-subtle transition-colors active:text-ink"
           >
-            Cancel
+            Where do I find this?
+            <ExternalLink size={13} strokeWidth={2.2} />
           </button>
+
+        </div>
+
+        <div className="shrink-0 px-5 pt-3">
+          {/* Pinned with Validate, not in the scrolling body: the result of a tap
+              has to be visible from where the tap happened. */}
+          {verdict !== "idle" && (
+            <div
+              className={`mb-3 flex items-start gap-2 rounded-xl px-3 py-2.5 text-[12.5px] leading-snug ${
+                verdict === "valid"
+                  ? "bg-success/10 text-success"
+                  : verdict === "warn"
+                    ? "bg-accent/10 text-accent"
+                    : verdict === "invalid"
+                      ? "bg-danger/10 text-danger"
+                      : "bg-white/[0.05] text-ink-muted"
+              }`}
+            >
+              <span className="mt-px shrink-0">
+                {verdict === "checking" ? (
+                  <Loader2 size={15} className="animate-spin" />
+                ) : verdict === "valid" ? (
+                  <Check size={15} strokeWidth={2.6} />
+                ) : (
+                  <AlertCircle size={15} />
+                )}
+              </span>
+              <span className="min-w-0 flex-1 break-words">
+                {verdict === "checking" ? "Checking key with the provider…" : detail}
+              </span>
+            </div>
+          )}
           <button
             type="button"
-            onClick={() => onSave(value)}
-            className="flex-1 rounded-full bg-ink py-3 text-[14.5px] font-semibold text-canvas transition-transform active:scale-[0.98]"
+            onClick={validate}
+            disabled={!trimmed || checking}
+            className="flex w-full items-center justify-center gap-2 rounded-full border border-edge-soft/70 py-3 text-[14.5px] font-semibold text-ink-muted transition-colors active:bg-raised/60 disabled:opacity-40"
           >
-            Save
+            {checking && <Loader2 size={16} className="animate-spin" />}
+            {verdict === "valid" || verdict === "warn" || verdict === "invalid"
+              ? "Validate again"
+              : "Validate"}
           </button>
+
+          <div className="mt-3 flex gap-3">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 rounded-full border border-edge-soft/70 py-3 text-[14.5px] font-semibold text-ink-muted transition-colors active:bg-raised/60"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={() => onSave(value)}
+              className="flex-1 rounded-full bg-ink py-3 text-[14.5px] font-semibold text-canvas transition-transform active:scale-[0.98]"
+            >
+              Save
+            </button>
+          </div>
         </div>
       </div>
     </div>

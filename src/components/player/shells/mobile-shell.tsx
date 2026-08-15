@@ -171,11 +171,15 @@ export function MobileShell(props: PlayerShellProps) {
       <div className="pointer-events-none absolute inset-x-0 top-0 z-20">
         <div
           aria-hidden
-          className="absolute inset-x-0 top-0 h-36 bg-gradient-to-b from-black/70 to-transparent"
+          className="absolute inset-x-0 top-0 h-44 bg-gradient-to-b from-black/70 to-transparent sm:h-36"
           style={scrimStyle}
         />
+        {/* Five 44px targets plus the title do not fit on one 375px line: below sm
+            the title drops to its own full-width row instead of being squeezed to
+            about six characters. Landscape (the locked steady state) is above sm
+            and keeps the single-row bar. */}
         <div
-          className={`relative flex items-start gap-3 ${interactive}`}
+          className={`relative flex flex-wrap items-start gap-x-3 gap-y-1 sm:flex-nowrap ${interactive}`}
           style={{
             ...zoneStyle("translateY(-8px)"),
             paddingTop: "calc(env(safe-area-inset-top, 0px) + 0.75rem)",
@@ -186,7 +190,8 @@ export function MobileShell(props: PlayerShellProps) {
           <IconButton label={t("Close")} onClick={onBack}>
             <ChevronDown size={24} strokeWidth={2.2} />
           </IconButton>
-          <div className="mt-0.5 flex min-w-0 flex-1 flex-col">
+          <span aria-hidden className="pointer-events-none flex-1 sm:hidden" />
+          <div className="pointer-events-none order-last mt-0.5 flex w-full min-w-0 flex-col sm:order-none sm:w-auto sm:flex-1">
             <span className="truncate text-[15px] font-semibold text-white drop-shadow-[0_1px_4px_rgba(0,0,0,0.6)]">
               {title}
             </span>

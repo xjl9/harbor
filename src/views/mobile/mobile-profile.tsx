@@ -403,41 +403,51 @@ function EditSheet({
         onClick={onClose}
         className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-fade-in"
       />
+      {/* Same bound as DebridSheet: the container's content box is already short by
+          the keyboard inset, so the title and the Save row survive a focused field
+          on a 667px screen and the hint scrolls instead. */}
       <div
-        className="relative z-10 w-full max-w-md rounded-t-3xl border border-edge-soft/70 bg-elevated p-5 pb-8 shadow-[0_-12px_40px_-12px_rgba(0,0,0,0.7)]"
-        style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 20px)" }}
+        className="relative z-10 flex w-full max-w-md min-h-0 flex-col rounded-t-3xl border border-edge-soft/70 bg-elevated shadow-[0_-12px_40px_-12px_rgba(0,0,0,0.7)]"
+        style={{
+          maxHeight: "calc(100% - env(safe-area-inset-top, 0px) - 12px)",
+          paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 20px)",
+        }}
       >
-        <h3 className="text-[16px] font-semibold text-ink">{field.label}</h3>
-        {field.hint && <p className="mt-1 text-[13px] leading-snug text-ink-muted">{field.hint}</p>}
-        <div className="relative mt-4">
-          <input
-            autoFocus
-            type={secret && !reveal ? "password" : "text"}
-            value={value}
-            onChange={(e) => setValue(e.target.value)}
-            placeholder={field.placeholder}
-            autoCapitalize="none"
-            autoCorrect="off"
-            autoComplete="off"
-            spellCheck={false}
-            inputMode={field.key === "remoteHostAddress" ? "decimal" : "text"}
-            className={`w-full rounded-xl border border-edge-soft/70 bg-canvas/70 py-3 ps-4 text-[16px] text-ink placeholder:text-ink-subtle focus:border-accent focus:outline-none ${secret ? "pe-12" : "pe-4"}`}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") onSave(value);
-            }}
-          />
-          {secret && (
-            <button
-              type="button"
-              aria-label={reveal ? "Hide" : "Reveal"}
-              onClick={() => setReveal((r) => !r)}
-              className="absolute end-1 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-lg text-ink-subtle transition-colors active:text-ink"
-            >
-              {reveal ? <EyeOff size={18} /> : <Eye size={18} />}
-            </button>
+        <h3 className="shrink-0 px-5 pt-5 text-[16px] font-semibold text-ink">{field.label}</h3>
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pb-1">
+          {field.hint && (
+            <p className="mt-1 text-[13px] leading-snug text-ink-muted">{field.hint}</p>
           )}
+          <div className="relative mt-4">
+            <input
+              autoFocus
+              type={secret && !reveal ? "password" : "text"}
+              value={value}
+              onChange={(e) => setValue(e.target.value)}
+              placeholder={field.placeholder}
+              autoCapitalize="none"
+              autoCorrect="off"
+              autoComplete="off"
+              spellCheck={false}
+              inputMode={field.key === "remoteHostAddress" ? "decimal" : "text"}
+              className={`w-full rounded-xl border border-edge-soft/70 bg-canvas/70 py-3 ps-4 text-[16px] text-ink placeholder:text-ink-subtle focus:border-accent focus:outline-none ${secret ? "pe-12" : "pe-4"}`}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") onSave(value);
+              }}
+            />
+            {secret && (
+              <button
+                type="button"
+                aria-label={reveal ? "Hide" : "Reveal"}
+                onClick={() => setReveal((r) => !r)}
+                className="absolute end-0.5 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-lg text-ink-subtle transition-colors active:text-ink"
+              >
+                {reveal ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            )}
+          </div>
         </div>
-        <div className="mt-4 flex gap-3">
+        <div className="flex shrink-0 gap-3 px-5 pt-4">
           <button
             type="button"
             onClick={onClose}
@@ -531,23 +541,37 @@ function Row({
       onClick={onClick}
       className="flex w-full items-center gap-3.5 px-4 py-3.5 text-start transition-colors active:bg-raised/60"
     >
-      <span className={danger ? "text-danger" : "text-ink-muted"}>{icon}</span>
-      <span className={`flex-1 text-[15px] font-medium ${danger ? "text-danger" : "text-ink"}`}>
+      <span className={`shrink-0 ${danger ? "text-danger" : "text-ink-muted"}`}>{icon}</span>
+      {/* The label holds its width and the value absorbs the squeeze, matching
+          the settings rows. A truncated label reads as broken; a truncated
+          value (an IP, a masked key) still reads as a value. The spacer keeps
+          the trailing furniture right-aligned on rows that carry no value. */}
+      <span
+        className={`shrink-0 text-[15px] font-medium ${danger ? "text-danger" : "text-ink"}`}
+      >
         {label}
       </span>
-      {dot === "ok" && <span className="h-2 w-2 rounded-full bg-success" />}
-      {value && <span className="max-w-[40%] truncate text-[13.5px] text-ink-subtle">{value}</span>}
+      {dot === "ok" && <span className="h-2 w-2 shrink-0 rounded-full bg-success" />}
+      {value ? (
+        <span className="min-w-0 flex-1 truncate text-end text-[13.5px] text-ink-subtle">
+          {value}
+        </span>
+      ) : (
+        <span aria-hidden className="min-w-0 flex-1" />
+      )}
       {badge && (
-        <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-accent px-1.5 text-[11px] font-bold tabular-nums text-canvas">
+        <span className="flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-accent px-1.5 text-[11px] font-bold tabular-nums text-canvas">
           {badge}
         </span>
       )}
       {pending && (
-        <span className="rounded-full bg-accent/10 px-2.5 py-1 text-[11.5px] font-semibold text-accent">
+        <span className="shrink-0 rounded-full bg-accent/10 px-2.5 py-1 text-[11.5px] font-semibold text-accent">
           {pendingLabel}
         </span>
       )}
-      {!danger && <ChevronRight size={18} strokeWidth={2.2} className="text-ink-subtle" />}
+      {!danger && (
+        <ChevronRight size={18} strokeWidth={2.2} className="shrink-0 text-ink-subtle" />
+      )}
     </button>
   );
 }

@@ -31,17 +31,24 @@ export function RendererSheet({ open, onClose, title = "Play on" }: { open: bool
       onClick={onClose}
     >
       <style>{SHEET_EXIT_CSS}</style>
+      {/* A busy Wi-Fi can discover a dozen targets; bound the panel to the visible
+          viewport and scroll the list so the handle and title never leave the screen. */}
       <div
-        className={`rounded-t-[28px] border-t border-edge-soft/60 bg-elevated ${leaving ? "harbor-sheet-panel-out" : "animate-in slide-in-from-bottom-4 duration-300"}`}
-        style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 22px)" }}
+        className={`flex min-h-0 flex-col rounded-t-[28px] border-t border-edge-soft/60 bg-elevated ${leaving ? "harbor-sheet-panel-out" : "animate-in slide-in-from-bottom-4 duration-300"}`}
+        style={{
+          maxHeight: "calc(100% - env(safe-area-inset-top, 0px) - 12px)",
+          paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 22px)",
+        }}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="mx-auto mt-3 h-1 w-10 rounded-full bg-ink/20" />
-        <div className="flex items-center justify-between px-5 pb-2 pt-4">
-          <h3 className="text-[16px] font-semibold text-ink">{title}</h3>
-          {snapshot.castDiscovering && <span className="text-[12px] text-ink-subtle">Scanning…</span>}
+        <div className="mx-auto mt-3 h-1 w-10 shrink-0 rounded-full bg-ink/20" />
+        <div className="flex shrink-0 items-center justify-between gap-3 px-5 pb-2 pt-4">
+          <h3 className="min-w-0 flex-1 text-[16px] font-semibold text-ink">{title}</h3>
+          {snapshot.castDiscovering && (
+            <span className="shrink-0 text-[12px] text-ink-subtle">Scanning…</span>
+          )}
         </div>
-        <div className="flex flex-col px-2 pb-2">
+        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain px-2 pb-2">
           {native &&
             hosts.map((h) => {
               const isHost = connected && configuredHost === h.host;
@@ -117,9 +124,9 @@ function DeviceRow({
     <button
       type="button"
       onClick={onSelect}
-      className="flex items-center gap-3.5 rounded-2xl px-4 py-3 text-start transition-colors active:bg-raised/60"
+      className="flex min-h-[3.25rem] shrink-0 items-center gap-3.5 rounded-2xl px-4 py-3 text-start transition-colors active:bg-raised/60"
     >
-      <span className={`flex h-10 w-10 items-center justify-center rounded-xl ${active ? "bg-accent-soft text-accent" : "bg-raised text-ink-muted"}`}>
+      <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${active ? "bg-accent-soft text-accent" : "bg-raised text-ink-muted"}`}>
         {icon}
       </span>
       <span className="flex min-w-0 flex-1 flex-col gap-0.5">
@@ -133,8 +140,10 @@ function DeviceRow({
         </span>
         {sub && <span className="truncate text-[12px] text-ink-subtle">{sub}</span>}
       </span>
-      {active && <Check size={19} strokeWidth={2.6} className="text-accent" />}
-      {connecting && <span className="text-[11.5px] font-semibold text-ink-subtle">…</span>}
+      {active && <Check size={19} strokeWidth={2.6} className="shrink-0 text-accent" />}
+      {connecting && (
+        <span className="shrink-0 text-[11.5px] font-semibold text-ink-subtle">…</span>
+      )}
     </button>
   );
 }

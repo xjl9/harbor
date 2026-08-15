@@ -11,6 +11,7 @@ import { useRegisterSheet } from "./mobile-sheet-lock";
 import { MobileServices } from "./mobile-services";
 import { RendererSheet } from "./renderer-sheet";
 import { KeyboardOverlay, SHEET_EXIT_CSS, SpeedSleepSheet, useSheetPresence } from "./remote-extras";
+import { useKeyboardInset } from "./use-keyboard-inset";
 import { VoiceSearch, getSpeechRecognition } from "./voice-search";
 
 type Service = (typeof SERVICES)[StreamingService];
@@ -492,6 +493,7 @@ function ConnectSheet({
   const { render, leaving } = useSheetPresence(open);
   const { hosts, scanning, rescan } = useRemoteDiscovery(open);
   const [draft, setDraft] = useState(configuredHost);
+  const keyboardInset = useKeyboardInset();
   const autoPicked = useRef(false);
 
   // Seed the manual field with the saved host each time the sheet opens.
@@ -522,92 +524,109 @@ function ConnectSheet({
 
   return (
     <div
-      className={`fixed inset-0 z-[70] flex flex-col justify-end bg-black/60 backdrop-blur-sm ${leaving ? "harbor-sheet-scrim-out" : "animate-fade-in"}`}
+      className={`fixed inset-0 z-[70] flex flex-col justify-end bg-black/60 backdrop-blur-sm transition-[padding] duration-150 ${leaving ? "harbor-sheet-scrim-out" : "animate-fade-in"}`}
+      style={{ paddingBottom: keyboardInset }}
       onClick={onClose}
     >
       <style>{SHEET_EXIT_CSS}</style>
+      {/* Discovered hosts, the manual IP field and the output row can outgrow a
+          667px screen, and focusing the field takes another ~300px. Bound the
+          panel to what is actually visible and scroll the body inside it. */}
       <div
-        className={`rounded-t-[28px] border-t border-edge-soft/60 bg-elevated ${leaving ? "harbor-sheet-panel-out" : "animate-in slide-in-from-bottom-4 duration-300"}`}
-        style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 22px)" }}
+        className={`flex min-h-0 flex-col rounded-t-[28px] border-t border-edge-soft/60 bg-elevated ${leaving ? "harbor-sheet-panel-out" : "animate-in slide-in-from-bottom-4 duration-300"}`}
+        style={{
+          maxHeight: "calc(100% - env(safe-area-inset-top, 0px) - 12px)",
+          paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 22px)",
+        }}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="mx-auto mt-3 h-1 w-10 rounded-full bg-ink/20" />
-        <div className="flex items-center justify-between px-5 pb-2 pt-4">
-          <h3 className="text-[16px] font-semibold text-ink">{t("Connect to a computer")}</h3>
+        <div className="mx-auto mt-3 h-1 w-10 shrink-0 rounded-full bg-ink/20" />
+        <div className="flex shrink-0 items-center justify-between gap-3 px-5 pb-2 pt-4">
+          <h3 className="min-w-0 flex-1 text-[16px] font-semibold text-ink">
+            {t("Connect to a computer")}
+          </h3>
           <button
             type="button"
             onClick={() => void rescan()}
-            className="flex items-center gap-1.5 rounded-full bg-raised px-3 py-1.5 text-[12.5px] font-semibold text-ink-muted transition-transform active:scale-95"
+            className="flex shrink-0 items-center gap-1.5 rounded-full bg-raised px-3 py-1.5 text-[12.5px] font-semibold text-ink-muted transition-transform active:scale-95"
           >
             <RefreshCw size={13} strokeWidth={2.4} className={scanning ? "animate-spin" : ""} />
             {scanning ? t("Scanning…") : t("Scan")}
           </button>
         </div>
 
-        <div className="flex flex-col px-2">
-          {hosts.map((h) => (
-            <HostRow
-              key={h.id}
-              host={h}
-              active={configuredHost === h.host && connected}
-              connecting={configuredHost === h.host && !connected}
-              onSelect={() => pick(h.host)}
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+          <div className="flex flex-col px-2">
+            {hosts.map((h) => (
+              <HostRow
+                key={h.id}
+                host={h}
+                active={configuredHost === h.host && connected}
+                connecting={configuredHost === h.host && !connected}
+                onSelect={() => pick(h.host)}
+              />
+            ))}
+            {hosts.length === 0 && (
+              <p className="px-4 py-5 text-center text-[13px] leading-relaxed text-ink-muted">
+                {scanning
+                  ? t("Looking for Harbor on your network…")
+                  : t("No Harbor apps found nearby. Make sure the computer is on the same Wi-Fi with Remote turned on, or enter its IP below.")}
+              </p>
+            )}
+          </div>
+
+          <div className="mx-5 mt-1 mb-1 flex items-center gap-2">
+            <input
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              inputMode="decimal"
+              autoCapitalize="off"
+              autoCorrect="off"
+              spellCheck={false}
+              placeholder="192.168.1.20"
+              className="h-11 min-w-0 flex-1 rounded-xl bg-raised px-3.5 text-[16px] text-ink outline-none placeholder:text-ink-subtle focus:ring-1 focus:ring-accent/50"
+              onKeyDown={(e) => {
+                if (e.key === "Enter") pick(draft);
+              }}
             />
-          ))}
-          {hosts.length === 0 && (
-            <p className="px-4 py-5 text-center text-[13px] leading-relaxed text-ink-muted">
-              {scanning
-                ? t("Looking for Harbor on your network…")
-                : t("No Harbor apps found nearby. Make sure the computer is on the same Wi-Fi with Remote turned on, or enter its IP below.")}
-            </p>
+            <button
+              type="button"
+              onClick={() => pick(draft)}
+              disabled={!draft.trim()}
+              className="h-11 shrink-0 rounded-xl bg-ink px-4 text-[14px] font-semibold text-canvas transition-transform active:scale-95 disabled:opacity-40"
+            >
+              {t("Connect")}
+            </button>
+          </div>
+          <p className="px-5 pt-1 text-[11.5px] leading-relaxed text-ink-subtle">
+            {t("Enter the IP shown in the computer's Harbor Remote settings.")}
+          </p>
+
+          {connected && (
+            <button
+              type="button"
+              onClick={onOpenOutputs}
+              className="mx-2 mt-2 flex items-center gap-3.5 rounded-2xl px-4 py-3 text-start transition-colors active:bg-raised/60"
+            >
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-raised text-ink-muted">
+                <Monitor size={20} strokeWidth={2} />
+              </span>
+              <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+                <span className="truncate text-[15px] font-semibold text-ink">
+                  {t("Playback output")}
+                </span>
+                <span className="truncate text-[12px] text-ink-subtle">
+                  {connectedLabel || t("Your computer")}
+                </span>
+              </span>
+              <ChevronDown
+                size={18}
+                strokeWidth={2.4}
+                className="-rotate-90 shrink-0 text-ink-subtle"
+              />
+            </button>
           )}
         </div>
-
-        <div className="mx-5 mt-1 mb-1 flex items-center gap-2">
-          <input
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            inputMode="decimal"
-            autoCapitalize="off"
-            autoCorrect="off"
-            spellCheck={false}
-            placeholder="192.168.1.20"
-            className="h-11 min-w-0 flex-1 rounded-xl bg-raised px-3.5 text-[15px] text-ink outline-none placeholder:text-ink-subtle focus:ring-1 focus:ring-accent/50"
-            onKeyDown={(e) => {
-              if (e.key === "Enter") pick(draft);
-            }}
-          />
-          <button
-            type="button"
-            onClick={() => pick(draft)}
-            disabled={!draft.trim()}
-            className="h-11 shrink-0 rounded-xl bg-ink px-4 text-[14px] font-semibold text-canvas transition-transform active:scale-95 disabled:opacity-40"
-          >
-            {t("Connect")}
-          </button>
-        </div>
-        <p className="px-5 pt-1 text-[11.5px] leading-relaxed text-ink-subtle">
-          {t("Enter the IP shown in the computer's Harbor Remote settings.")}
-        </p>
-
-        {connected && (
-          <button
-            type="button"
-            onClick={onOpenOutputs}
-            className="mx-2 mt-2 flex items-center gap-3.5 rounded-2xl px-4 py-3 text-start transition-colors active:bg-raised/60"
-          >
-            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-raised text-ink-muted">
-              <Monitor size={20} strokeWidth={2} />
-            </span>
-            <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-              <span className="truncate text-[15px] font-semibold text-ink">{t("Playback output")}</span>
-              <span className="truncate text-[12px] text-ink-subtle">
-                {connectedLabel || t("Your computer")}
-              </span>
-            </span>
-            <ChevronDown size={18} strokeWidth={2.4} className="-rotate-90 text-ink-subtle" />
-          </button>
-        )}
       </div>
     </div>
   );

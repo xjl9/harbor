@@ -172,13 +172,14 @@ export function MobileSettings({ onClose }: { onClose: () => void }) {
             className={`flex w-full items-center gap-3.5 py-3.5 text-start ${FOCUS}`}
           >
             <Globe size={20} strokeWidth={2} className="shrink-0 text-ink-muted" />
-            <span className="text-[15.5px] font-medium text-ink">Catalog region</span>
-            <span className="flex-1" />
-            <span className="max-w-[42%] truncate text-[14px] text-ink-muted">
+            <span className="shrink-0 text-[15.5px] font-medium text-ink">Catalog region</span>
+            {/* The value is the only flexible part, so a long region name ellipsizes
+                instead of squeezing the label onto two lines at 375px. */}
+            <span className="min-w-0 flex-1 truncate text-end text-[14px] text-ink-muted">
               {region ? region.name : settings.region || "Default"}
             </span>
             {region && (
-              <span className="rounded-md bg-raised/50 px-1.5 py-0.5 font-mono text-[12px] tracking-[0.06em] text-ink-subtle">
+              <span className="shrink-0 rounded-md bg-raised/50 px-1.5 py-0.5 font-mono text-[12px] tracking-[0.06em] text-ink-subtle">
                 {region.code}
               </span>
             )}
@@ -440,7 +441,9 @@ function RegionSheet({
         style={{ background: "oklch(0.12 0.006 48 / 0.62)" }}
       />
       <div
-        className={`relative z-10 flex max-h-[78vh] w-full max-w-md flex-col rounded-t-3xl border border-edge bg-elevated shadow-[0_-12px_40px_-12px_rgba(0,0,0,0.7)] transition-transform duration-300 [transition-timing-function:var(--ease-out)] ${
+        /* Bound against the container the keyboard inset already shortened, not
+           the full viewport: 78vh with a keyboard open still overflows. */
+        className={`relative z-10 flex max-h-[calc(100%-env(safe-area-inset-top,0px)-12px)] w-full max-w-md flex-col rounded-t-3xl border border-edge bg-elevated shadow-[0_-12px_40px_-12px_rgba(0,0,0,0.7)] transition-transform duration-300 [transition-timing-function:var(--ease-out)] ${
           open ? "translate-y-0" : "translate-y-full"
         }`}
         style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 16px)" }}
