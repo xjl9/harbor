@@ -13,6 +13,12 @@ import { useAutoSyncHandle } from "./autosync/autosync-store";
 const IDLE_MS = 12000;
 const round = (v: number) => Math.round(v * 100) / 100;
 
+// Landscape puts the notch on one edge and the rounded corner on the other. The
+// bar is centered, so padding the two edges by different insets would push it off
+// center: pad both by the larger inset, on top of the existing 1.5rem gutter.
+// Both env() values resolve to 0px on desktop and non-notched devices.
+const SAFE_X = "calc(max(env(safe-area-inset-left, 0px), env(safe-area-inset-right, 0px)) + 1.5rem)";
+
 type Props = {
   delaySec: number;
   onDelay: (sec: number) => void;
@@ -81,7 +87,10 @@ export function SubSyncBar({ delaySec, onDelay, onEnterSync, syncAvailable }: Pr
   if (!open) return popover;
 
   return (
-    <div className="pointer-events-none absolute inset-x-0 top-0 z-30 flex justify-center px-6 pt-[68px] animate-in fade-in slide-in-from-top-2 duration-300">
+    <div
+      className="pointer-events-none absolute inset-x-0 top-0 z-30 flex justify-center pt-[68px] animate-in fade-in slide-in-from-top-2 duration-300"
+      style={{ paddingLeft: SAFE_X, paddingRight: SAFE_X }}
+    >
       <div
         role="toolbar"
         aria-label={t("Subtitle sync")}

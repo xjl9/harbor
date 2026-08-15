@@ -14,6 +14,12 @@ import { haptics } from "@/lib/player/haptics";
 const COMMIT_VELOCITY = 1000; // px/s
 const EXIT_MS = 200;
 
+// Playback is locked to landscape, so the notch sits on one side and the rounded
+// corner on the other. The panel is full-bleed but its grabber is centered, so a
+// one-sided inset would visibly shift the grabber: pad both edges by the larger
+// inset instead. Resolves to 0px on desktop and non-notched devices.
+const SAFE_X = "max(env(safe-area-inset-left, 0px), env(safe-area-inset-right, 0px))";
+
 function reducedMotion(): boolean {
   return (
     typeof window !== "undefined" &&
@@ -244,6 +250,8 @@ export function MobileSheet({
           opacity: panelOpacity,
           transition: panelTransition,
           paddingBottom: "env(safe-area-inset-bottom, 0px)",
+          paddingLeft: SAFE_X,
+          paddingRight: SAFE_X,
         }}
       >
         <div className="flex shrink-0 items-center justify-center pt-2.5 pb-1">

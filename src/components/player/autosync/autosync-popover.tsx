@@ -7,6 +7,12 @@ import type { AutoSyncHandle } from "@/views/player/hooks/use-auto-sync";
 import type { PipelineOutcome } from "@/lib/subtitles/autosync/pipeline";
 import type { SyncTransform } from "@/lib/subtitles/autosync/fp-gate";
 
+// Landscape puts the notch on one edge and the rounded corner on the other. The
+// chip and its panel are centered, so padding the two edges by different insets
+// would push them off center: pad both by the larger inset, on top of the existing
+// 1.5rem gutter. Both env() values resolve to 0px on desktop and non-notched devices.
+const SAFE_X = "calc(max(env(safe-area-inset-left, 0px), env(safe-area-inset-right, 0px)) + 1.5rem)";
+
 type Phase = "analyzing" | "synced" | "offer" | "wrong" | "declined" | "error";
 type Thumb = "up" | "down";
 type Acting = "offer" | "retry" | null;
@@ -112,7 +118,10 @@ export function AutosyncPopover({ handle }: { handle: AutoSyncHandle }) {
   };
 
   return (
-    <div className="pointer-events-none absolute inset-x-0 top-0 z-30 flex justify-center px-6 pt-[68px]">
+    <div
+      className="pointer-events-none absolute inset-x-0 top-0 z-30 flex justify-center pt-[68px]"
+      style={{ paddingLeft: SAFE_X, paddingRight: SAFE_X }}
+    >
       <div
         className="pointer-events-auto relative flex flex-col items-center"
         onPointerEnter={() => setHeld(true)}

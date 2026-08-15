@@ -6,6 +6,15 @@ import { PICTURE_DIALS, closePictureBar, usePictureBarOpen } from "@/lib/player/
 
 const IDLE_MS = 12000;
 
+// Landscape puts the notch on one edge and the rounded corner on the other. The
+// bar is centered, so padding the two edges by different insets would push it off
+// center: pad both by the larger inset, on top of the existing 1.75rem gutter, and
+// shrink the wrap width by the same amount so the dials still fit. Both env()
+// values resolve to 0px on desktop and non-notched devices, leaving 100vw - 56px.
+const SAFE_INSET = "max(env(safe-area-inset-left, 0px), env(safe-area-inset-right, 0px))";
+const SAFE_X = `calc(${SAFE_INSET} + 1.75rem)`;
+const SAFE_MAX_W = `calc(100vw - 56px - 2 * ${SAFE_INSET})`;
+
 export function PictureBar() {
   const t = useT();
   const open = usePictureBarOpen();
@@ -63,11 +72,15 @@ export function PictureBar() {
   const anyActive = PICTURE_DIALS.some((d) => valueOf(d.key) !== 0);
 
   return (
-    <div className="pointer-events-none absolute inset-x-0 top-0 z-30 flex justify-center px-7 pt-[68px] animate-in fade-in slide-in-from-top-2 duration-200">
+    <div
+      className="pointer-events-none absolute inset-x-0 top-0 z-30 flex justify-center pt-[68px] animate-in fade-in slide-in-from-top-2 duration-200"
+      style={{ paddingLeft: SAFE_X, paddingRight: SAFE_X }}
+    >
       <div
         role="toolbar"
         aria-label={t("Picture adjustments")}
-        className="pointer-events-auto flex max-w-[calc(100vw-56px)] flex-wrap items-center justify-center gap-4 rounded-[16px] border border-edge bg-elevated px-4 py-3 shadow-[0_18px_44px_-22px_rgba(0,0,0,0.85)]"
+        className="pointer-events-auto flex flex-wrap items-center justify-center gap-4 rounded-[16px] border border-edge bg-elevated px-4 py-3 shadow-[0_18px_44px_-22px_rgba(0,0,0,0.85)]"
+        style={{ maxWidth: SAFE_MAX_W }}
       >
         {PICTURE_DIALS.map((dial) => {
           const value = valueOf(dial.key);
