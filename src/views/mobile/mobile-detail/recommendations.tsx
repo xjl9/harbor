@@ -37,7 +37,7 @@ function RecCard({ meta, onOpen }: { meta: Meta; onOpen: () => void }) {
     <button
       type="button"
       onClick={onOpen}
-      className="flex w-[104px] shrink-0 snap-start flex-col gap-2 text-start transition-transform active:scale-[0.97] motion-reduce:transition-none"
+      className="flex w-[104px] shrink-0 snap-start flex-col gap-2 text-start"
     >
       <Poster
         src={src}

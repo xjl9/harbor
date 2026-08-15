@@ -1,7 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { createPortal } from "react-dom";
 import { X } from "lucide-react";
-import { prefersReducedMotion } from "./data";
+import { useReducedMotion, useSheetExit } from "./data";
 
 export function MobileTrailerOverlay({
   id,
@@ -12,14 +12,15 @@ export function MobileTrailerOverlay({
   title: string;
   onClose: () => void;
 }) {
-  const [reduced] = useState(prefersReducedMotion);
+  const reduced = useReducedMotion();
+  const { leaving, close } = useSheetExit(onClose);
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") close();
     };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, [onClose]);
+  }, [close]);
 
   const params = new URLSearchParams({
     autoplay: "1",
@@ -39,16 +40,16 @@ export function MobileTrailerOverlay({
       role="dialog"
       aria-modal="true"
       aria-label={`${title} trailer`}
-      onClick={onClose}
+      onClick={close}
       className={`fixed inset-0 z-[120] flex items-center justify-center bg-black/90 px-4 ${
-        reduced ? "" : "md-sheet-fade"
+        reduced ? "" : leaving ? "md-fade-out" : "md-sheet-fade"
       }`}
     >
       <button
         type="button"
-        onClick={onClose}
+        onClick={close}
         aria-label="Close trailer"
-        className="absolute end-4 grid h-11 w-11 place-items-center rounded-full bg-canvas/90 text-ink shadow-[0_8px_22px_-8px_rgba(0,0,0,0.6)] transition-transform active:scale-95 motion-reduce:transition-none"
+        className="absolute end-4 grid h-11 w-11 place-items-center rounded-full bg-canvas/90 text-ink shadow-[0_8px_22px_-8px_rgba(0,0,0,0.6)]"
         style={{ top: "calc(env(safe-area-inset-top, 0px) + 12px)" }}
       >
         <X size={19} strokeWidth={2.4} />
@@ -56,7 +57,7 @@ export function MobileTrailerOverlay({
       <div
         onClick={(e) => e.stopPropagation()}
         className={`relative aspect-video w-full max-w-[720px] overflow-hidden rounded-2xl bg-black shadow-[0_30px_80px_-20px_rgba(0,0,0,0.7)] ${
-          reduced ? "" : "md-zoom-in"
+          reduced ? "" : leaving ? "md-zoom-out" : "md-zoom-in"
         }`}
       >
         <iframe

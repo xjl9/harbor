@@ -91,7 +91,7 @@ function RelatedCard({
     <Wrap
       {...wrapProps}
       className={`flex w-[104px] shrink-0 snap-start flex-col gap-2 text-start ${
-        onOpen ? "transition-transform active:scale-[0.97] motion-reduce:transition-none" : "cursor-default"
+        onOpen ? "" : "cursor-default"
       }`}
     >
       <Poster

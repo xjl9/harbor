@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { meta as fetchCinemetaMeta, narrowMediaType, type Meta } from "@/lib/cinemeta";
 import { tmdbDetails, type TmdbDetail } from "@/lib/providers/tmdb";
 import { EASE_IN, EASE_OUT, MOTION } from "@/lib/motion";
@@ -56,6 +56,47 @@ export function useReducedMotion(): boolean {
   return reduced;
 }
 
+/**
+ * Dismissal for the detail screen's sheets. `leaving` flips first so the panel
+ * can play its exit, then the parent's `onClose` runs and the sheet unmounts.
+ *
+ * The clock is the point. Listening for animationend is the obvious way to time
+ * this and the wrong one: reduced motion collapses the animation, a backgrounded
+ * tab need never deliver the event, and either case strands the user holding a
+ * sheet that will not close. The timer always fires; the animation is only what
+ * happens to be painted while it runs. Closing is one-shot, so a second tap on a
+ * sheet already on its way out cannot restart the exit or close twice.
+ *
+ * Mirrors the render/leaving shape of useSheetPresence in ../remote-extras, kept
+ * local because these sheets are mounted conditionally by their parent rather
+ * than held open by a prop, and because every value here comes from lib/motion.
+ */
+export function useSheetExit(onClose: () => void): { leaving: boolean; close: () => void } {
+  const reduced = useReducedMotion();
+  const [leaving, setLeaving] = useState(false);
+  const closed = useRef(false);
+  const timer = useRef(0);
+  // onClose is a fresh closure on every parent render; hold the latest one
+  // rather than rebuilding the timer around it.
+  const latest = useRef(onClose);
+  latest.current = onClose;
+
+  useEffect(() => () => window.clearTimeout(timer.current), []);
+
+  const close = useCallback(() => {
+    if (closed.current) return;
+    closed.current = true;
+    if (reduced) {
+      latest.current();
+      return;
+    }
+    setLeaving(true);
+    timer.current = window.setTimeout(() => latest.current(), MOTION.exit + MOTION.exitGrace);
+  }, [reduced]);
+
+  return { leaving, close };
+}
+
 // The detail screen no longer slides in as a slab. The tapped poster carries the
 // transition (see lib/motion + detail.tsx) and everything here exists to stay out
 // of its way: the screen only materialises, content only settles. Durations and
@@ -65,8 +106,10 @@ export const DETAIL_CSS = `
 @keyframes md-detail-out { from { opacity: 1; } to { opacity: 0; } }
 @keyframes md-rise-in { from { opacity: 0; transform: translate3d(0, ${MOTION.contentRise}px, 0); } to { opacity: 1; transform: translate3d(0, 0, 0); } }
 @keyframes md-sheet-in { from { transform: translate3d(0, 100%, 0); } to { transform: translate3d(0, 0, 0); } }
+@keyframes md-sheet-out { from { transform: translate3d(0, 0, 0); } to { transform: translate3d(0, 100%, 0); } }
 @keyframes md-sheet-fade { from { opacity: 0; } to { opacity: 1; } }
 @keyframes md-zoom-in { from { opacity: 0; transform: scale(0.94); } to { opacity: 1; transform: scale(1); } }
+@keyframes md-zoom-out { from { opacity: 1; transform: scale(1); } to { opacity: 0; transform: scale(0.94); } }
 @keyframes md-accordion { from { opacity: 0; transform: translate3d(0, -4px, 0); } to { opacity: 1; transform: translate3d(0, 0, 0); } }
 .md-detail-in { animation: md-detail-in ${MOTION.fast}ms ${EASE_OUT} both; }
 .md-detail-out { animation: md-detail-out ${MOTION.exit}ms ${EASE_IN} both; }
@@ -79,11 +122,29 @@ export const DETAIL_CSS = `
 .md-sheet-fade { animation: md-sheet-fade ${MOTION.fast}ms ${EASE_OUT} both; }
 .md-zoom-in { animation: md-zoom-in ${MOTION.base}ms ${EASE_OUT} both; }
 .md-accordion { animation: md-accordion ${MOTION.fast}ms ${EASE_OUT} both; }
+/* Departures. The entrance played backwards on the departure curve, and every
+   one of them on the single exit duration: a scrim that cleared before its panel
+   had finished leaving would hand the user a bright screen with a sheet still
+   sliding off it. They are one event, so they get one clock.
+   pointer-events is dropped for the same reason the unmount is timer-driven: a
+   sheet on its way out must not be able to take another tap.
+   The scrim reuses md-detail-out's keyframes; one surface fading away is one idea. */
+.md-sheet-out { animation: md-sheet-out ${MOTION.exit}ms ${EASE_IN} both; pointer-events: none; }
+.md-sheet-fade-out { animation: md-detail-out ${MOTION.exit}ms ${EASE_IN} both; pointer-events: none; }
+.md-zoom-out { animation: md-zoom-out ${MOTION.exit}ms ${EASE_IN} both; pointer-events: none; }
+/* Same fade, but for a leaving surface that is itself the full-screen backdrop.
+   Dropping pointer-events there would not make it inert, it would make it
+   transparent to taps: for the whole exit the screen is still painted while a
+   second impatient tap falls through to whatever is underneath. A backdrop keeps
+   swallowing until it is gone; its children carry the inert classes. */
+.md-fade-out { animation: md-detail-out ${MOTION.exit}ms ${EASE_IN} both; }
 @media (prefers-reduced-motion: reduce) {
-  /* .md-detail-out is deliberately absent: animation:none also nulls the
+  /* The -out classes are deliberately absent: animation:none also nulls the
      animation-name, so animationend never fires and anything watching for it
      waits forever. The global reduced-motion reset in index.css already
-     collapses it to 0.01ms, which reads as instant and still completes. */
+     collapses them to 0.01ms, which reads as instant and still completes.
+     Nothing here is load-bearing either way — useSheetExit closes on a timer,
+     and under reduced motion it unmounts without ever painting these. */
   .md-detail-in, .md-rise-in, .md-sheet-in, .md-sheet-fade, .md-zoom-in, .md-accordion { animation: none; }
 }
 `;

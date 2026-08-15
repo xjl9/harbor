@@ -10,7 +10,7 @@ import { useSettings } from "@/lib/settings";
 import { useView } from "@/lib/view";
 import { useDownloads } from "@/lib/download/downloads-store";
 import { useMobileRemote } from "../mobile-remote";
-import { HIDE_SCROLL, prefersReducedMotion } from "./data";
+import { HIDE_SCROLL, useReducedMotion, useSheetExit } from "./data";
 import { MobileTrailerOverlay } from "./trailer";
 import { Group, SheetRow } from "./sheet-ui";
 import { TrackGroup } from "./track-group";
@@ -53,7 +53,7 @@ export function DetailActions({
         <button
           type="button"
           onClick={onPlay}
-          className="flex h-12 flex-1 items-center justify-center gap-2 rounded-full bg-ink text-[15.5px] font-semibold text-canvas shadow-[0_10px_30px_-12px_rgba(0,0,0,0.5)] transition-transform duration-150 active:scale-[0.98] motion-reduce:transition-none"
+          className="flex h-12 flex-1 items-center justify-center gap-2 rounded-full bg-ink text-[15.5px] font-semibold text-canvas shadow-[0_10px_30px_-12px_rgba(0,0,0,0.5)]"
         >
           <Play size={18} strokeWidth={0} fill="currentColor" />
           Play
@@ -62,7 +62,7 @@ export function DetailActions({
           type="button"
           onClick={() => setSheetOpen(true)}
           aria-label="More actions"
-          className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-edge-soft bg-surface text-ink transition-transform duration-150 active:scale-[0.94] motion-reduce:transition-none"
+          className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-edge-soft bg-surface text-ink"
         >
           <MoreHorizontal size={20} strokeWidth={2} />
         </button>
@@ -73,10 +73,10 @@ export function DetailActions({
           detail={detail}
           title={title}
           trailerId={trailer}
-          onPlayTrailer={() => {
-            setSheetOpen(false);
-            setTrailerOpen(true);
-          }}
+          // The trailer opens on the tap, not after the sheet has finished
+          // leaving; the sheet dismisses itself underneath the overlay that is
+          // already covering it, so neither one is waiting on the other.
+          onPlayTrailer={() => setTrailerOpen(true)}
           onClose={() => setSheetOpen(false)}
         />
       )}
@@ -121,7 +121,8 @@ function ActionsSheet({
   onPlayTrailer: () => void;
   onClose: () => void;
 }) {
-  const [reduced] = useState(prefersReducedMotion);
+  const reduced = useReducedMotion();
+  const { leaving, close } = useSheetExit(onClose);
   const { sendToHost, castPlay, sendCommand, connected, snapshot } = useMobileRemote();
   const { openPicker } = useView();
   const downloads = useDownloads();
@@ -192,11 +193,11 @@ function ActionsSheet({
           : "Save this movie to watch offline";
   const onDownload = () => {
     if (dlActive || dlDone) {
-      onClose();
+      close();
       return;
     }
     openPicker(meta, undefined, { intent: "download" });
-    onClose();
+    close();
   };
 
   const sheet = (
@@ -204,12 +205,14 @@ function ActionsSheet({
       <button
         type="button"
         aria-label="Close"
-        onClick={onClose}
-        className={`absolute inset-0 bg-black/50 ${reduced ? "" : "md-sheet-fade"}`}
+        onClick={close}
+        className={`absolute inset-0 bg-black/50 ${
+          reduced ? "" : leaving ? "md-sheet-fade-out" : "md-sheet-fade"
+        }`}
       />
       <div
         className={`relative max-h-[82vh] overflow-y-auto rounded-t-3xl bg-canvas ${HIDE_SCROLL} ${
-          reduced ? "" : "md-sheet-in"
+          reduced ? "" : leaving ? "md-sheet-out" : "md-sheet-in"
         }`}
         style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 18px)" }}
       >
@@ -220,7 +223,14 @@ function ActionsSheet({
 
         <div className="flex flex-col px-3 pb-1">
           {trailerId && (
-            <SheetRow icon={<Film size={20} strokeWidth={2} />} label="Play trailer" onClick={onPlayTrailer} />
+            <SheetRow
+              icon={<Film size={20} strokeWidth={2} />}
+              label="Play trailer"
+              onClick={() => {
+                onPlayTrailer();
+                close();
+              }}
+            />
           )}
           {canDownload && (
             <SheetRow
@@ -243,8 +253,8 @@ function ActionsSheet({
                 label="Play on computer"
                 sublabel="Start this title on your connected Harbor app"
                 onClick={() => {
-                  onClose();
                   castPlay(meta);
+                  close();
                 }}
               />
               <SheetRow
@@ -252,8 +262,8 @@ function ActionsSheet({
                 label="Open on computer"
                 sublabel="Send this title to your Harbor app"
                 onClick={() => {
-                  onClose();
                   sendToHost(meta);
+                  close();
                 }}
               />
             </>

@@ -80,9 +80,7 @@ function CastChip({ cast, onPerson }: { cast: CastEntry; onPerson?: OnPerson }) 
   return (
     <Wrap
       {...wrapProps}
-      className={`flex w-[88px] shrink-0 snap-start flex-col gap-2 text-start ${
-        linkable ? "transition-transform active:scale-[0.97] motion-reduce:transition-none" : ""
-      }`}
+      className="flex w-[88px] shrink-0 snap-start flex-col gap-2 text-start"
     >
       <Poster src={photo} seed={String(cast.id)} ratio="portrait" lazy className="rounded-xl" />
       <div className="flex flex-col gap-0.5">

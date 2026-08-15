@@ -2,7 +2,7 @@ import { useState } from "react";
 import { createPortal } from "react-dom";
 import { Check, ChevronDown } from "lucide-react";
 import { useT } from "@/lib/i18n";
-import { HIDE_SCROLL, prefersReducedMotion } from "./data";
+import { HIDE_SCROLL, useReducedMotion, useSheetExit } from "./data";
 
 // Mobile mirror of the desktop SeasonArcPicker / TvdbOrderPanel row data,
 // rendered as a bottom sheet instead of an anchored menu.
@@ -64,19 +64,18 @@ export function SeasonPicker({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="flex shrink-0 items-center gap-1.5 rounded-full bg-surface px-3.5 py-2 text-[13px] font-semibold text-ink ring-1 ring-edge-soft transition-transform active:scale-[0.97] motion-reduce:transition-none"
+        className="flex shrink-0 items-center gap-1.5 rounded-full bg-surface px-3.5 py-2 text-[13px] font-semibold text-ink ring-1 ring-edge-soft"
       >
         <span className="max-w-[42vw] truncate">{current?.name ?? t("Seasons")}</span>
         <ChevronDown size={15} strokeWidth={2.4} className="shrink-0 text-ink-subtle" />
       </button>
       {open && (
+        // Picking applies immediately and the sheet dismisses itself, so the new
+        // season is already rendering behind the panel on its way down.
         <SeasonSheet
           items={items}
           activeKey={activeKey}
-          onPick={(k) => {
-            onPick(k);
-            setOpen(false);
-          }}
+          onPick={onPick}
           onClose={() => setOpen(false)}
         />
       )}
@@ -96,20 +95,27 @@ export function SeasonSheet({
   onClose: () => void;
 }) {
   const t = useT();
-  const [reduced] = useState(prefersReducedMotion);
+  const reduced = useReducedMotion();
+  const { leaving, close } = useSheetExit(onClose);
   const mainItems = items.filter((i) => !i.extra);
   const extraItems = items.filter((i) => i.extra);
+  const pick = (key: string) => {
+    onPick(key);
+    close();
+  };
   const sheet = (
     <div className="fixed inset-0 z-[60] flex flex-col justify-end" role="dialog" aria-modal="true">
       <button
         type="button"
         aria-label={t("Close")}
-        onClick={onClose}
-        className={`absolute inset-0 bg-black/50 ${reduced ? "" : "md-sheet-fade"}`}
+        onClick={close}
+        className={`absolute inset-0 bg-black/50 ${
+          reduced ? "" : leaving ? "md-sheet-fade-out" : "md-sheet-fade"
+        }`}
       />
       <div
         className={`relative max-h-[70vh] overflow-y-auto rounded-t-3xl bg-canvas ${HIDE_SCROLL} ${
-          reduced ? "" : "md-sheet-in"
+          reduced ? "" : leaving ? "md-sheet-out" : "md-sheet-in"
         }`}
         style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 16px)" }}
       >
@@ -121,7 +127,7 @@ export function SeasonSheet({
             {t("Seasons")}
           </h3>
           {mainItems.map((item) => (
-            <SheetRow key={item.key} item={item} active={item.key === activeKey} onPick={onPick} />
+            <SheetRow key={item.key} item={item} active={item.key === activeKey} onPick={pick} />
           ))}
           {extraItems.length > 0 && (
             <p className="mt-1 border-t border-edge-soft/60 px-3 pb-1 pt-3 text-[10.5px] font-semibold uppercase tracking-[0.14em] text-ink-subtle">
@@ -129,7 +135,7 @@ export function SeasonSheet({
             </p>
           )}
           {extraItems.map((item) => (
-            <SheetRow key={item.key} item={item} active={item.key === activeKey} onPick={onPick} />
+            <SheetRow key={item.key} item={item} active={item.key === activeKey} onPick={pick} />
           ))}
         </div>
       </div>
