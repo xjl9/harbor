@@ -1,4 +1,5 @@
 import {
+  Bug,
   Check,
   ChevronRight,
   ClipboardPaste,
@@ -32,6 +33,7 @@ import { MobileSettings } from "./mobile-settings";
 import { MobileWhosWatching } from "./mobile-whos-watching";
 import { ExportSetupSheet } from "./mobile-setup-export";
 import { ImportSetupSheet } from "./mobile-setup-import";
+import { MobileReportSheet } from "./mobile-report-sheet";
 import { DebridSheet, type DebridKey, type DebridProvider } from "./mobile-debrid-sheet";
 import { DEBRID_PROVIDERS } from "./debrid-providers";
 import { useMobileRemote } from "./mobile-remote";
@@ -66,6 +68,7 @@ export function MobileProfile({ onOpenRemote }: { onOpenRemote: () => void }) {
   const [downloadsOpen, setDownloadsOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
   const native = isMobileNative();
   const activeDownloads = useActiveDownloadCount();
   const installedAddonCount = loadInstalled().length;
@@ -290,6 +293,12 @@ export function MobileProfile({ onOpenRemote }: { onOpenRemote: () => void }) {
         />
         <Divider />
         <Row
+          icon={<Bug size={20} strokeWidth={2} />}
+          label="Report a problem"
+          onClick={() => setReportOpen(true)}
+        />
+        <Divider />
+        <Row
           icon={<HelpCircle size={20} strokeWidth={2} />}
           label="Help & feedback"
           onClick={() => window.open(HARBOR_BUGS_BASE, "_blank")}
@@ -315,6 +324,7 @@ export function MobileProfile({ onOpenRemote }: { onOpenRemote: () => void }) {
       {downloadsOpen && <MobileDownloads onClose={() => setDownloadsOpen(false)} />}
       {exportOpen && <ExportSetupSheet onClose={() => setExportOpen(false)} />}
       {importOpen && <ImportSetupSheet onClose={() => setImportOpen(false)} />}
+      {reportOpen && <MobileReportSheet onClose={() => setReportOpen(false)} />}
       {editing && (
         <EditSheet
           field={editing}

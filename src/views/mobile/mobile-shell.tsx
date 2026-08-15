@@ -18,6 +18,7 @@ import { ScrollToTop } from "./scroll-to-top";
 import { LayerActiveContext, useLayerParked } from "./layer-active";
 import { noteScroll, noteTab, restoredTab, restoreScroll } from "./reload-restore";
 import { MOBILE_INTENT_EVENT } from "./mobile-intent";
+import { installBugReportErrorCapture } from "@/lib/bug-report";
 import { MangaNowBar } from "./manga-remote/manga-now-bar";
 
 const RemoteApp = lazy(() => import("@/views/remote-app").then((m) => ({ default: m.RemoteApp })));
@@ -66,6 +67,11 @@ function ShellBody() {
     noteTab(next);
     setSeen((prev) => (prev.has(next) ? prev : new Set(prev).add(next)));
   };
+
+  // Start capturing runtime errors as soon as the phone shell mounts, so a
+  // report written later still carries what went wrong earlier in the session.
+  // The installer is idempotent, so the report sheet calling it again is a noop.
+  useEffect(() => installBugReportErrorCapture(), []);
 
   // A surface outside the tab tree asked for a destination that lives in one.
   // Switching here mounts it; the destination consumes the intent on mount.
