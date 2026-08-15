@@ -17,6 +17,7 @@ import { useMobileRemoteStyle } from "./remote-style";
 import { ScrollToTop } from "./scroll-to-top";
 import { LayerActiveContext, useLayerParked } from "./layer-active";
 import { noteScroll, noteTab, restoredTab, restoreScroll } from "./reload-restore";
+import { MOBILE_INTENT_EVENT } from "./mobile-intent";
 import { MangaNowBar } from "./manga-remote/manga-now-bar";
 
 const RemoteApp = lazy(() => import("@/views/remote-app").then((m) => ({ default: m.RemoteApp })));
@@ -65,6 +66,16 @@ function ShellBody() {
     noteTab(next);
     setSeen((prev) => (prev.has(next) ? prev : new Set(prev).add(next)));
   };
+
+  // A surface outside the tab tree asked for a destination that lives in one.
+  // Switching here mounts it; the destination consumes the intent on mount.
+  useEffect(() => {
+    const onIntent = (e: Event) => {
+      if ((e as CustomEvent<string>).detail === "addons") selectTab("profile");
+    };
+    window.addEventListener(MOBILE_INTENT_EVENT, onIntent);
+    return () => window.removeEventListener(MOBILE_INTENT_EVENT, onIntent);
+  }, []);
 
   useEffect(() => {
     const el = rootRef.current;

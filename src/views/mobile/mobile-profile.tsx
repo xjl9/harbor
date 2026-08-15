@@ -26,6 +26,7 @@ import { useSettings } from "@/lib/settings";
 import { loadInstalled } from "@/lib/addon-store";
 import { useActiveDownloadCount } from "@/lib/download/downloads-store";
 import { MobileAddons } from "./mobile-addons";
+import { consumeMobileIntent } from "./mobile-intent";
 import { MobileDownloads } from "./mobile-downloads";
 import { MobileSettings } from "./mobile-settings";
 import { MobileWhosWatching } from "./mobile-whos-watching";
@@ -58,7 +59,9 @@ export function MobileProfile({ onOpenRemote }: { onOpenRemote: () => void }) {
   const [switching, setSwitching] = useState(false);
   const [editing, setEditing] = useState<EditField | null>(null);
   const [debridEditing, setDebridEditing] = useState<DebridProvider | null>(null);
-  const [addonsOpen, setAddonsOpen] = useState(false);
+  // Opened straight from the no-sources screen: the picker asks for addons, the
+  // shell switches to this tab, and the sheet opens as this mounts.
+  const [addonsOpen, setAddonsOpen] = useState(() => consumeMobileIntent("addons"));
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [downloadsOpen, setDownloadsOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);

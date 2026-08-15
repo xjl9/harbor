@@ -1,10 +1,22 @@
 import type { Meta } from "@/lib/cinemeta";
 import { useView } from "@/lib/view";
+import { requestMobileIntent } from "@/views/mobile/mobile-intent";
 import { isPhoneShell } from "./picker-utils";
 
 export function NoSourcesConfiguredModal({ meta }: { meta: Meta }) {
   const { goBack, setView, openSettings } = useView();
   const phone = isPhoneShell();
+  // The phone shell has no addons or settings frame, so setView/openSettings
+  // drop this modal and land nowhere. Route both to the addons sheet instead,
+  // which is where a phone user actually fixes "no sources".
+  const browseAddons = () => {
+    if (phone) {
+      goBack();
+      requestMobileIntent("addons");
+      return;
+    }
+    setView("addons");
+  };
   const title = meta.name ?? "this title";
   return (
     <main
@@ -30,17 +42,19 @@ export function NoSourcesConfiguredModal({ meta }: { meta: Meta }) {
         </ul>
         <div className="mt-7 flex flex-col gap-2.5">
           <button
-            onClick={() => setView("addons")}
+            onClick={browseAddons}
             className="flex h-11 items-center justify-center rounded-full bg-ink text-[14px] font-semibold text-canvas transition-opacity hover:opacity-90"
           >
             Browse addons
           </button>
-          <button
-            onClick={() => openSettings("streaming")}
-            className="flex h-11 items-center justify-center rounded-full bg-elevated text-[13.5px] font-medium text-ink ring-1 ring-edge-soft transition-colors hover:bg-raised"
-          >
-            Open settings
-          </button>
+          {!phone && (
+            <button
+              onClick={() => openSettings("streaming")}
+              className="flex h-11 items-center justify-center rounded-full bg-elevated text-[13.5px] font-medium text-ink ring-1 ring-edge-soft transition-colors hover:bg-raised"
+            >
+              Open settings
+            </button>
+          )}
           <button
             onClick={goBack}
             className={`mt-1 text-[12.5px] text-ink-subtle transition-colors hover:text-ink-muted${phone ? " min-h-11" : ""}`}

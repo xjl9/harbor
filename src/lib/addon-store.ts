@@ -303,7 +303,17 @@ export async function installFromUrl(
       }
     }
   }
+  notifyAddonsChanged({ id: addon.manifest.id, installed: true });
   return { addon, syncedToStremio, replaced: replacedById || replacedByOld };
+}
+
+// Home rows, search and the addon store all refresh off this event. Desktop
+// views fire it themselves after calling in here; mobile surfaces did not, so an
+// install looked like it had silently failed until the next launch. Emitting from
+// the store covers every caller (a duplicate event just refreshes twice).
+function notifyAddonsChanged(detail: { id: string; installed: boolean }): void {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new CustomEvent("harbor:addons-changed", { detail }));
 }
 
 export async function uninstallAddon(id: string, transportUrl?: string): Promise<void> {
@@ -320,6 +330,8 @@ export async function uninstallAddon(id: string, transportUrl?: string): Promise
     for (const a of removed) if (disabled.delete(a.transportUrl)) touched = true;
     if (touched) saveDisabledAddons(disabled);
   }
+  // Fire before the Stremio sync below so the UI updates even when signed out.
+  notifyAddonsChanged({ id, installed: false });
   const authKey = readAuthKey();
   if (!authKey) return;
   const current = await userAddons(authKey).catch(() => [] as Addon[]);
