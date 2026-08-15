@@ -3,6 +3,7 @@ import type { TrackInfo } from "@/lib/player/bridge";
 import type { SubtitleAddHandler } from "@/lib/player/subtitle-load";
 import { useSettings } from "@/lib/settings";
 import { useT } from "@/lib/i18n";
+import { haptics } from "@/lib/player/haptics";
 import { AudioMenuBody } from "../audio-menu";
 import { SubtitleMenuBody } from "../subtitle-menu";
 import { MobileSheet } from "./mobile-sheet";
@@ -67,7 +68,7 @@ export function MobileTracksSheet({
     <MobileSheet open={open} onClose={onClose} heightClass="h-[68vh]">
       {showAudioTab && (
         <div className="px-4 pb-3">
-          <div className="flex rounded-full bg-black/30 p-1">
+          <div className="flex rounded-full bg-raised p-1">
             <SegButton label={t("Subtitles")} active={activeTab === "subtitles"} onClick={() => setTab("subtitles")} />
             <SegButton label={t("Audio")} active={activeTab === "audio"} onClick={() => setTab("audio")} />
           </div>
@@ -79,7 +80,10 @@ export function MobileTracksSheet({
             tracks={subtitleTracks}
             selectedId={subtitleTracks.find((x) => x.selected)?.id ?? null}
             delaySec={subDelaySec}
-            onSelect={onSubtitle}
+            onSelect={(id) => {
+              haptics.select();
+              onSubtitle(id);
+            }}
             onDelay={onSubDelay}
             onEnterSync={onEnterSync}
             onAddSubtitle={onAddSubtitle}
@@ -98,7 +102,10 @@ export function MobileTracksSheet({
             selectedId={audioTracks.find((x) => x.selected)?.id ?? null}
             delaySec={audioDelaySec}
             engine={engine}
-            onSelect={onAudio}
+            onSelect={(id) => {
+              haptics.select();
+              onAudio(id);
+            }}
             onDelay={onAudioDelay}
             onClose={onClose}
           />
@@ -114,7 +121,7 @@ function SegButton({ label, active, onClick }: { label: string; active: boolean;
       type="button"
       onClick={onClick}
       className={`h-9 flex-1 rounded-full text-[13.5px] font-semibold transition-colors ${
-        active ? "bg-white/90 text-black" : "text-white/70"
+        active ? "bg-ink text-canvas" : "text-ink-muted"
       }`}
     >
       {label}

@@ -2,7 +2,9 @@ import { useRef, useState } from "react";
 import {
   getPlaybackBuffered,
   setSeekHovering,
+  usePlaybackBuffered,
   usePlaybackBufferedGated,
+  usePlaybackPosition,
   usePlaybackPositionGated,
 } from "@/lib/player/playback-clock";
 
@@ -103,6 +105,23 @@ export function MobileSeekBar({
         )}
       </div>
       <TimeLabel sec={-Math.max(0, duration - shown)} remaining />
+    </div>
+  );
+}
+
+// A thin, non-interactive progress line that survives after the chrome auto-hides,
+// so the timeline never fully vanishes during playback. Reads the clock ungated
+// (the full bar's gated hook goes quiet with the chrome) and draws only two layers.
+export function MobilePeekBar({ durationSec }: { durationSec: number }) {
+  const positionSec = usePlaybackPosition();
+  const bufferedSec = usePlaybackBuffered();
+  const duration = durationSec || 1;
+  const ratio = clamp01(positionSec / duration);
+  const bufRatio = clamp01(bufferedSec / duration);
+  return (
+    <div aria-hidden className="relative h-[2px] w-full overflow-hidden bg-white/15">
+      <div className="absolute inset-y-0 left-0 bg-white/25" style={{ width: `${bufRatio * 100}%` }} />
+      <div className="absolute inset-y-0 left-0 bg-accent" style={{ width: `${ratio * 100}%` }} />
     </div>
   );
 }

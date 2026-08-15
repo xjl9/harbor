@@ -1,22 +1,32 @@
 import {
   Airplay,
+  Cast,
   ChevronDown,
   Layers,
   ListVideo,
   Loader2,
+  Lock,
   Pause,
+  PictureInPicture2,
   Play,
+  SkipBack,
   SkipForward,
   Subtitles as SubsIcon,
   Gauge,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import type { PlayerShellProps } from "@/lib/player-shells/types";
 import { MOBILE_OPEN_EPISODES_EVENT } from "@/lib/player/mobile-events";
+import {
+  MOBILE_LOCK_PEEK_EVENT,
+  setMobileLocked,
+  useMobileLocked,
+} from "@/lib/player/mobile-lock";
+import { haptics } from "@/lib/player/haptics";
 import { useSettings } from "@/lib/settings";
 import { useT } from "@/lib/i18n";
 import { RotatingSeekIcon } from "./mobile-seek-icon";
-import { MobileSeekBar } from "./mobile-seek-bar";
+import { MobilePeekBar, MobileSeekBar } from "./mobile-seek-bar";
 import { MobileSpeedSheet } from "./mobile-speed-sheet";
 import { MobileSubStyleSheet } from "./mobile-sub-style-sheet";
 import { MobileTracksSheet } from "./mobile-tracks-sheet";
@@ -38,8 +48,10 @@ export function MobileShell(props: PlayerShellProps) {
     onSeek,
     onSeekStep,
     onCast,
+    onPiP,
     onPickAnother,
     canPickAnother,
+    capabilities,
     onRate,
     onAudio,
     onSubtitle,
@@ -48,6 +60,7 @@ export function MobileShell(props: PlayerShellProps) {
     onAddSubtitle,
     onEnterSync,
     onMenuOpenChange,
+    onPrevEp,
     onNextEp,
     hasNextEp,
     hasPrevEp,
@@ -67,6 +80,10 @@ export function MobileShell(props: PlayerShellProps) {
   // shared subtitle menu-header fires onOpenStyleBar() then onClose() back to
   // back, so routing both through setSheet would let the close clobber the open.
   const [subStyleOpen, setSubStyleOpen] = useState(false);
+  const locked = useMobileLocked();
+  const [lockPeek, setLockPeek] = useState(false);
+  const lockPeekTimer = useRef<number | null>(null);
+  const reduce = usePrefersReducedMotion();
 
   const playing = snap.status === "playing";
   const buffering = snap.buffering || snap.status === "loading";
@@ -77,20 +94,90 @@ export function MobileShell(props: PlayerShellProps) {
     onMenuOpenChange?.(sheet.kind !== "none" || subStyleOpen);
   }, [sheet.kind, subStyleOpen, onMenuOpenChange]);
 
+  // While locked, a tap on the gesture stage peeks the unlock pill for 3s.
+  useEffect(() => {
+    if (!locked) return;
+    const onPeek = () => {
+      setLockPeek(true);
+      if (lockPeekTimer.current) window.clearTimeout(lockPeekTimer.current);
+      lockPeekTimer.current = window.setTimeout(() => setLockPeek(false), 3000);
+    };
+    onPeek();
+    window.addEventListener(MOBILE_LOCK_PEEK_EVENT, onPeek);
+    return () => {
+      window.removeEventListener(MOBILE_LOCK_PEEK_EVENT, onPeek);
+      if (lockPeekTimer.current) window.clearTimeout(lockPeekTimer.current);
+    };
+  }, [locked]);
+
+  // Clear lock on unmount so a new playback never starts locked.
+  useEffect(() => () => setMobileLocked(false), []);
+
   if (pipMode) return null;
+
+  // Locked: hide all chrome, ignore all controls, surface only the unlock pill.
+  if (locked) {
+    return (
+      <div className="pointer-events-none absolute inset-0 z-20">
+        <button
+          type="button"
+          aria-label={t("Unlock")}
+          onClick={() => {
+            haptics.select();
+            setMobileLocked(false);
+          }}
+          className={`absolute left-1/2 flex h-12 w-12 -translate-x-1/2 items-center justify-center rounded-full bg-black/55 text-white backdrop-blur-md transition-opacity duration-200 active:bg-black/70 ${
+            lockPeek ? "pointer-events-auto" : "pointer-events-none"
+          }`}
+          style={{
+            top: "calc(env(safe-area-inset-top, 0px) + 1rem)",
+            opacity: lockPeek ? 1 : 0,
+          }}
+        >
+          <Lock size={20} strokeWidth={2.2} />
+        </button>
+      </div>
+    );
+  }
 
   const chromeShown = visible && sheet.kind === "none" && !subStyleOpen;
   const interactive = chromeShown ? "pointer-events-auto" : "pointer-events-none";
-  const fade = `transition-opacity duration-200 ${chromeShown ? "opacity-100" : "opacity-0"}`;
+
+  // Chrome does not just cross-fade: each zone translates/scales into place on a
+  // fast ease-out and leaves on a slower ease-in, with the scrim leading the
+  // controls by a beat. prefers-reduced-motion collapses this to opacity only.
+  const showEase = "cubic-bezier(0,0,0.2,1)";
+  const hideEase = "cubic-bezier(0.4,0,1,1)";
+  const dur = chromeShown ? 200 : 280;
+  const ease = chromeShown ? showEase : hideEase;
+  const controlsDelay = chromeShown ? "30ms" : "0ms";
+  const scrimStyle: CSSProperties = {
+    opacity: chromeShown ? 1 : 0,
+    transition: `opacity ${dur}ms ${ease}`,
+  };
+  const zoneStyle = (hidden: string): CSSProperties =>
+    reduce
+      ? { opacity: chromeShown ? 1 : 0, transition: `opacity ${dur}ms ${ease}`, transitionDelay: controlsDelay }
+      : {
+          opacity: chromeShown ? 1 : 0,
+          transform: chromeShown ? "none" : hidden,
+          transition: `opacity ${dur}ms ${ease}, transform ${dur}ms ${ease}`,
+          transitionDelay: controlsDelay,
+        };
 
   return (
     <>
       {/* Top scrim + bar */}
-      <div className={`pointer-events-none absolute inset-x-0 top-0 z-20 ${fade}`}>
-        <div aria-hidden className="absolute inset-x-0 top-0 h-36 bg-gradient-to-b from-black/70 to-transparent" />
+      <div className="pointer-events-none absolute inset-x-0 top-0 z-20">
+        <div
+          aria-hidden
+          className="absolute inset-x-0 top-0 h-36 bg-gradient-to-b from-black/70 to-transparent"
+          style={scrimStyle}
+        />
         <div
           className={`relative flex items-start gap-3 ${interactive}`}
           style={{
+            ...zoneStyle("translateY(-8px)"),
             paddingTop: "calc(env(safe-area-inset-top, 0px) + 0.75rem)",
             paddingLeft: "calc(env(safe-area-inset-left, 0px) + 0.75rem)",
             paddingRight: "calc(env(safe-area-inset-right, 0px) + 0.75rem)",
@@ -109,9 +196,29 @@ export function MobileShell(props: PlayerShellProps) {
               </span>
             )}
           </div>
-          <IconButton label={t("AirPlay")} onClick={onCast}>
-            <Airplay size={21} strokeWidth={2} />
+          <IconButton
+            label={t("Lock screen")}
+            onClick={() => {
+              haptics.select();
+              setMobileLocked(true);
+            }}
+          >
+            <Lock size={20} strokeWidth={2} />
           </IconButton>
+          {capabilities.pictureInPicture && (
+            <IconButton label={t("Picture in picture")} onClick={onPiP}>
+              <PictureInPicture2 size={21} strokeWidth={2} />
+            </IconButton>
+          )}
+          {capabilities.airplay ? (
+            <IconButton label={t("AirPlay")} onClick={onCast}>
+              <Airplay size={21} strokeWidth={2} />
+            </IconButton>
+          ) : capabilities.chromecast ? (
+            <IconButton label={t("Cast")} onClick={onCast}>
+              <Cast size={20} strokeWidth={2} />
+            </IconButton>
+          ) : null}
           <IconButton
             label={t("Audio & Subtitles")}
             onClick={() => setSheet({ kind: "tracks", tab: "subtitles" })}
@@ -123,12 +230,16 @@ export function MobileShell(props: PlayerShellProps) {
 
       {/* Center transport cluster */}
       <div
-        className={`pointer-events-none absolute inset-0 z-20 flex items-center justify-center gap-8 ${fade}`}
+        className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center gap-8"
+        style={zoneStyle("scale(0.96)")}
       >
         <button
           type="button"
           aria-label={t("Rewind")}
-          onClick={() => onSeekStep(-1)}
+          onClick={() => {
+            haptics.light();
+            onSeekStep(-1);
+          }}
           className={`flex h-14 w-14 items-center justify-center rounded-full text-white active:bg-white/10 ${interactive}`}
         >
           <RotatingSeekIcon direction="back" seconds={settings.seekBackStepSec} />
@@ -136,7 +247,10 @@ export function MobileShell(props: PlayerShellProps) {
         <button
           type="button"
           aria-label={buffering ? t("Loading") : playing ? t("Pause") : t("Play")}
-          onClick={onPlayPause}
+          onClick={() => {
+            haptics.select();
+            onPlayPause();
+          }}
           className={`flex h-[76px] w-[76px] items-center justify-center rounded-full bg-black/45 text-white backdrop-blur-md active:bg-black/65 ${interactive}`}
         >
           {buffering ? (
@@ -150,7 +264,10 @@ export function MobileShell(props: PlayerShellProps) {
         <button
           type="button"
           aria-label={t("Fast forward")}
-          onClick={() => onSeekStep(1)}
+          onClick={() => {
+            haptics.light();
+            onSeekStep(1);
+          }}
           className={`flex h-14 w-14 items-center justify-center rounded-full text-white active:bg-white/10 ${interactive}`}
         >
           <RotatingSeekIcon direction="forward" seconds={settings.seekForwardStepSec} />
@@ -158,11 +275,16 @@ export function MobileShell(props: PlayerShellProps) {
       </div>
 
       {/* Bottom scrim + scrubber + action row */}
-      <div className={`pointer-events-none absolute inset-x-0 bottom-0 z-20 ${fade}`}>
-        <div aria-hidden className="absolute inset-x-0 bottom-0 h-56 bg-gradient-to-t from-black/75 via-black/25 to-transparent" />
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20">
+        <div
+          aria-hidden
+          className="absolute inset-x-0 bottom-0 h-56 bg-gradient-to-t from-black/75 via-black/25 to-transparent"
+          style={scrimStyle}
+        />
         <div
           className={`relative flex flex-col gap-1.5 ${interactive}`}
           style={{
+            ...zoneStyle("translateY(12px)"),
             paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 0.75rem)",
             paddingLeft: "calc(env(safe-area-inset-left, 0px) + 1rem)",
             paddingRight: "calc(env(safe-area-inset-right, 0px) + 1rem)",
@@ -191,6 +313,11 @@ export function MobileShell(props: PlayerShellProps) {
                   <ListVideo size={20} strokeWidth={2} />
                 </ActionButton>
               )}
+              {hasPrevEp && (
+                <ActionButton label={t("Previous episode")} onClick={onPrevEp}>
+                  <SkipBack size={20} strokeWidth={2} fill="currentColor" />
+                </ActionButton>
+              )}
               {hasNextEp && (
                 <ActionButton label={t("Next episode")} onClick={onNextEp}>
                   <SkipForward size={20} strokeWidth={2} fill="currentColor" />
@@ -199,6 +326,18 @@ export function MobileShell(props: PlayerShellProps) {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Peek progress line — a thin timeline that survives chrome auto-hide. */}
+      <div
+        className="pointer-events-none absolute inset-x-0 bottom-0 z-10"
+        style={{
+          paddingBottom: "env(safe-area-inset-bottom, 0px)",
+          opacity: chromeShown ? 0 : 1,
+          transition: `opacity ${dur}ms ${ease}`,
+        }}
+      >
+        <MobilePeekBar durationSec={snap.durationSec} />
       </div>
 
       <MobileTracksSheet
@@ -232,6 +371,19 @@ export function MobileShell(props: PlayerShellProps) {
       <MobileSubStyleSheet open={subStyleOpen} onClose={() => setSubStyleOpen(false)} />
     </>
   );
+}
+
+function usePrefersReducedMotion(): boolean {
+  const [reduce, setReduce] = useState(false);
+  useEffect(() => {
+    if (typeof window === "undefined" || typeof window.matchMedia !== "function") return;
+    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const on = () => setReduce(mq.matches);
+    on();
+    mq.addEventListener?.("change", on);
+    return () => mq.removeEventListener?.("change", on);
+  }, []);
+  return reduce;
 }
 
 function IconButton({

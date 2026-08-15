@@ -1119,7 +1119,16 @@ export function PlayerView({ src }: { src: PlayerSrc }) {
     >
       <div
         ref={videoMountRef}
-        className="absolute inset-0"
+        className="absolute inset-0 overflow-hidden"
+        style={{
+          // Driven imperatively by the mobile gesture stage during swipe-down
+          // dismiss (CSS vars default to identity, so this is inert elsewhere).
+          transform:
+            "translateY(var(--player-dismiss-ty, 0px)) scale(var(--player-dismiss-scale, 1))",
+          borderRadius: "var(--player-dismiss-radius, 0px)",
+          transformOrigin: "center center",
+          willChange: "transform",
+        }}
         onClick={(e) => {
           if (e.target !== e.currentTarget) return;
           if (drawMode || pipMode) return;

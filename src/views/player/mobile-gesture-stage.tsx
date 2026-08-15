@@ -1,14 +1,23 @@
 import { ChevronsLeft, ChevronsRight, ChevronDown, Sun, Volume2 } from "lucide-react";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { getPlaybackPosition } from "@/lib/player/playback-clock";
 import { useSettings } from "@/lib/settings";
 import { MOBILE_CHROME_TOGGLE_EVENT } from "@/lib/player/mobile-events";
+import {
+  getMobileLocked,
+  subscribeMobileLocked,
+  MOBILE_LOCK_PEEK_EVENT,
+} from "@/lib/player/mobile-lock";
+import { haptics } from "@/lib/player/haptics";
+import { projectEndpoint, rubberBand, springBack } from "@/lib/player/gesture-physics";
 
 const AXIS_LOCK_PX = 12;
 const TAP_MAX_MS = 260;
 const DOUBLE_TAP_MS = 300;
-const SINGLE_TAP_DELAY = 320;
-const DISMISS_COMMIT_FRAC = 0.25;
+const DISMISS_COMMIT_FRAC = 0.3;
+const DISMISS_COMMIT_VELOCITY = 1000; // px/s — a fast flick commits regardless of travel
+const DISMISS_MAX_SCALE_DROP = 0.1; // frame shrinks to 0.9 at full travel
+const DISMISS_MAX_RADIUS = 22; // px corner rounding at full travel
 
 type Mode = null | "scrub" | "volume" | "brightness" | "dismiss" | "none";
 
@@ -36,6 +45,9 @@ export function MobileGestureStage({
   onSeek,
   onPlayPause,
   onDismiss,
+  rate = 1,
+  onHoldRate,
+  onFill,
 }: {
   durationSec: number;
   volume: number;
@@ -43,11 +55,19 @@ export function MobileGestureStage({
   onSeek: (sec: number) => void;
   onPlayPause: () => void;
   onDismiss: () => void;
+  // Optional gesture vocabulary: long-press ramps to 2x (transient, restored on
+  // release); pinch snaps between fill (true) and fit (false).
+  rate?: number;
+  onHoldRate?: (r: number) => void;
+  onFill?: (fill: boolean) => void;
 }) {
   const { settings } = useSettings();
   const g = useRef<Gesture | null>(null);
   const rect = useRef<DOMRect | null>(null);
   const maxTouches = useRef(0);
+  // Set when a second finger interrupts an in-progress single-finger drag, so the
+  // all-fingers-lifted handler clears that drag's UI and does not misfire play/pause.
+  const dragAbandonedByMulti = useRef(false);
   const scrubTarget = useRef(0);
   const brightness = useRef(1);
   const dismissProg = useRef(0);
@@ -56,8 +76,69 @@ export function MobileGestureStage({
   const tapSide = useRef<"L" | "R" | null>(null);
   const seekAccum = useRef(0);
   const seekBase = useRef(0);
-  const singleTapTimer = useRef<number | null>(null);
+  const undoTimer = useRef<number | null>(null);
+  const pendingToggle = useRef(false);
   const pillTimer = useRef<number | null>(null);
+  const lockedRef = useRef(getMobileLocked());
+  useEffect(() => subscribeMobileLocked(() => (lockedRef.current = getMobileLocked())), []);
+
+  // Swipe-down dismiss: the video frame (the [data-harbor-player] ancestor's
+  // video mount) shrinks + rounds + follows the finger 1:1 through CSS vars, so it
+  // reads as throwing the player away rather than dimming it.
+  const playerRootRef = useRef<HTMLElement | null>(null);
+  const dismissRaw = useRef(0);
+  const dismissVel = useRef(0);
+  const lastMoveY = useRef(0);
+  const lastMoveT = useRef(0);
+  const dismissSpringStop = useRef<(() => void) | null>(null);
+
+  // Long-press → 2x hold, and pinch → fill/fit snap.
+  const longPressTimer = useRef<number | null>(null);
+  const holdingRef = useRef(false);
+  const baseRate = useRef(1);
+  const pinchStart = useRef(0);
+  const pinchedRef = useRef(false);
+  const [holdPill, setHoldPill] = useState(false);
+
+  const cancelLongPress = () => {
+    if (longPressTimer.current) {
+      window.clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+  };
+  const releaseHold = () => {
+    if (!holdingRef.current) return;
+    holdingRef.current = false;
+    setHoldPill(false);
+    onHoldRate?.(baseRate.current);
+  };
+  const touchDist = (a: React.Touch, b: React.Touch) => Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+
+  const setDismissVars = (d: number) => {
+    const el = playerRootRef.current;
+    if (!el) return;
+    const h = rect.current?.height ?? window.innerHeight;
+    const prog = clamp(Math.max(0, d) / h, 0, 1);
+    el.style.setProperty("--player-dismiss-ty", `${d}px`);
+    el.style.setProperty("--player-dismiss-scale", `${1 - prog * DISMISS_MAX_SCALE_DROP}`);
+    el.style.setProperty("--player-dismiss-radius", `${prog * DISMISS_MAX_RADIUS}px`);
+  };
+  const clearDismissVars = () => {
+    const el = playerRootRef.current;
+    if (!el) return;
+    el.style.removeProperty("--player-dismiss-ty");
+    el.style.removeProperty("--player-dismiss-scale");
+    el.style.removeProperty("--player-dismiss-radius");
+  };
+
+  useEffect(
+    () => () => {
+      dismissSpringStop.current?.();
+      clearDismissVars();
+      if (longPressTimer.current) window.clearTimeout(longPressTimer.current);
+    },
+    [],
+  );
 
   const [ripple, setRipple] = useState<"L" | "R" | null>(null);
   const [pill, setPill] = useState<number>(0);
@@ -73,15 +154,35 @@ export function MobileGestureStage({
   const regionOf = (x: number, w: number): Gesture["region"] =>
     x < w / 3 ? "left" : x > (2 * w) / 3 ? "right" : "center";
 
+  const toggleChrome = () => window.dispatchEvent(new CustomEvent(MOBILE_CHROME_TOGGLE_EVENT));
+
+  // Tap zones use the same left/center/right thirds as the drag regions. Center is
+  // a direct play/pause target. On the sides, chrome toggles OPTIMISTICALLY on the
+  // first tap (no 320ms disambiguation lag); a second tap within the double-tap
+  // window undoes that toggle and seeks instead.
   const handleTap = (x: number, w: number) => {
-    const side: "L" | "R" = x < w / 2 ? "L" : "R";
+    const region = regionOf(x, w);
+    if (region === "center") {
+      if (undoTimer.current) window.clearTimeout(undoTimer.current);
+      pendingToggle.current = false;
+      tapAt.current = 0;
+      haptics.select();
+      onPlayPause();
+      return;
+    }
+    const side: "L" | "R" = region === "right" ? "R" : "L";
     const now = Date.now();
     const isDouble = now - tapAt.current < DOUBLE_TAP_MS && tapSide.current === side;
     if (isDouble) {
-      if (singleTapTimer.current) window.clearTimeout(singleTapTimer.current);
+      if (pendingToggle.current) {
+        toggleChrome();
+        pendingToggle.current = false;
+      }
+      if (undoTimer.current) window.clearTimeout(undoTimer.current);
       const step = side === "R" ? settings.seekForwardStepSec : settings.seekBackStepSec;
       seekAccum.current += side === "R" ? step : -step;
       onSeek(clamp(seekBase.current + seekAccum.current, 0, duration));
+      haptics.light();
       setRipple(side);
       window.setTimeout(() => setRipple((r) => (r === side ? null : r)), 420);
       setPill(seekAccum.current);
@@ -94,11 +195,13 @@ export function MobileGestureStage({
       tapSide.current = side;
       seekAccum.current = 0;
       seekBase.current = getPlaybackPosition();
-      if (singleTapTimer.current) window.clearTimeout(singleTapTimer.current);
-      singleTapTimer.current = window.setTimeout(() => {
-        window.dispatchEvent(new CustomEvent(MOBILE_CHROME_TOGGLE_EVENT));
+      toggleChrome();
+      pendingToggle.current = true;
+      if (undoTimer.current) window.clearTimeout(undoTimer.current);
+      undoTimer.current = window.setTimeout(() => {
+        pendingToggle.current = false;
         tapAt.current = 0;
-      }, SINGLE_TAP_DELAY);
+      }, DOUBLE_TAP_MS);
     }
   };
 
@@ -107,13 +210,52 @@ export function MobileGestureStage({
       className="pointer-events-auto absolute inset-0 z-[6] touch-none select-none"
       onTouchStart={(e) => {
         rect.current = (e.currentTarget as HTMLElement).getBoundingClientRect();
+        if (!playerRootRef.current) {
+          playerRootRef.current = (e.currentTarget as HTMLElement).closest("[data-harbor-player]");
+        }
+        // A new touch overrides any in-flight spring-back from a released drag.
+        dismissSpringStop.current?.();
+        dismissSpringStop.current = null;
         maxTouches.current = Math.max(maxTouches.current, e.touches.length);
         if (e.touches.length >= 2) {
-          if (singleTapTimer.current) window.clearTimeout(singleTapTimer.current);
+          if (undoTimer.current) window.clearTimeout(undoTimer.current);
+          cancelLongPress();
+          // A second finger during an active single-finger drag abandons it: clear
+          // that drag's transient UI now and flag it so the lift handler does not
+          // fire a stray two-finger play/pause.
+          if (g.current && g.current.mode && g.current.mode !== "none") {
+            dragAbandonedByMulti.current = true;
+            setScrubUi(null);
+            setVolUi(null);
+            setBrightUi(null);
+            setDim(0);
+            // The spring was already stopped and nulled above; just clear the
+            // frame's dismiss transform so an abandoned swipe doesn't linger.
+            clearDismissVars();
+            setDismissUi(0);
+            dismissProg.current = 0;
+          }
+          if (onFill && e.touches.length === 2) pinchStart.current = touchDist(e.touches[0], e.touches[1]);
           g.current = null;
           return;
         }
         const t0 = e.touches[0];
+        dismissRaw.current = 0;
+        dismissVel.current = 0;
+        lastMoveY.current = t0.clientY;
+        lastMoveT.current = performance.now();
+        // Arm the long-press → 2x hold (cancelled by any drag or second finger).
+        cancelLongPress();
+        if (onHoldRate && !lockedRef.current) {
+          longPressTimer.current = window.setTimeout(() => {
+            if (!g.current || g.current.mode !== null || maxTouches.current >= 2) return;
+            holdingRef.current = true;
+            baseRate.current = rate;
+            onHoldRate(2);
+            haptics.light();
+            setHoldPill(true);
+          }, 500);
+        }
         g.current = {
           startX: t0.clientX,
           startY: t0.clientY,
@@ -126,6 +268,27 @@ export function MobileGestureStage({
         };
       }}
       onTouchMove={(e) => {
+        if (lockedRef.current) return;
+        // Pinch → fill/fit snap (handled before the single-finger guard below).
+        if (onFill && e.touches.length >= 2 && pinchStart.current > 0) {
+          e.preventDefault();
+          const dist = touchDist(e.touches[0], e.touches[1]);
+          const scale = dist / pinchStart.current;
+          if (!pinchedRef.current && scale > 1.15) {
+            pinchedRef.current = true;
+            onFill(true);
+            haptics.medium();
+          } else if (!pinchedRef.current && scale < 0.85) {
+            pinchedRef.current = true;
+            onFill(false);
+            haptics.medium();
+          }
+          return;
+        }
+        if (holdingRef.current) {
+          e.preventDefault();
+          return;
+        }
         const gg = g.current;
         const r = rect.current;
         if (!gg || !r || maxTouches.current >= 2) return;
@@ -134,6 +297,8 @@ export function MobileGestureStage({
         const dy = t0.clientY - gg.startY;
         if (gg.mode === null) {
           if (Math.hypot(dx, dy) < AXIS_LOCK_PX) return;
+          // A real drag cancels the pending long-press.
+          cancelLongPress();
           if (Math.abs(dx) > Math.abs(dy)) {
             gg.mode = "scrub";
           } else if (gg.region === "left") {
@@ -160,21 +325,59 @@ export function MobileGestureStage({
           setDim(1 - b);
           setBrightUi(b);
         } else if (gg.mode === "dismiss") {
-          const p = clamp(dy / r.height, 0, 1);
+          // Follow the finger 1:1 downward; resist an upward over-drag with a band.
+          const d = dy < 0 ? rubberBand(dy, r.height) : dy;
+          dismissRaw.current = Math.max(0, d);
+          const p = clamp(dismissRaw.current / r.height, 0, 1);
           dismissProg.current = p;
           setDismissUi(p);
+          setDismissVars(d);
+          const now = performance.now();
+          const dt = now - lastMoveT.current;
+          if (dt > 0) {
+            const inst = ((t0.clientY - lastMoveY.current) / dt) * 1000;
+            dismissVel.current = dismissVel.current * 0.4 + inst * 0.6;
+          }
+          lastMoveY.current = t0.clientY;
+          lastMoveT.current = now;
         }
       }}
       onTouchEnd={(e) => {
         const gg = g.current;
         const r = rect.current;
         const now = Date.now();
+        // Locked: swallow every gesture; a quick tap peeks the unlock pill.
+        if (lockedRef.current) {
+          if (gg && gg.mode == null && r && now - gg.startT < TAP_MAX_MS) {
+            e.preventDefault();
+            window.dispatchEvent(new CustomEvent(MOBILE_LOCK_PEEK_EVENT));
+          }
+          g.current = null;
+          maxTouches.current = 0;
+          return;
+        }
+        cancelLongPress();
+        // Release a 2x hold back to the prior rate; swallow the lift.
+        if (holdingRef.current) {
+          releaseHold();
+          g.current = null;
+          maxTouches.current = 0;
+          pinchedRef.current = false;
+          pinchStart.current = 0;
+          return;
+        }
         // All fingers lifted. A two-finger gesture with no single-finger drag =
-        // play/pause tap (VLC convention).
+        // play/pause tap (VLC convention) — but NOT if it was a pinch.
         if (e.touches.length === 0) {
           const wasMulti = maxTouches.current >= 2;
+          const wasPinch = pinchedRef.current;
+          const wasAbandonedDrag = dragAbandonedByMulti.current;
           maxTouches.current = 0;
-          if (wasMulti && (gg == null || gg.mode == null)) {
+          pinchedRef.current = false;
+          pinchStart.current = 0;
+          dragAbandonedByMulti.current = false;
+          // Two-finger tap = play/pause, but not after a pinch or an interrupted drag.
+          if (wasMulti && !wasPinch && !wasAbandonedDrag && (gg == null || gg.mode == null)) {
             onPlayPause();
             g.current = null;
             return;
@@ -192,9 +395,36 @@ export function MobileGestureStage({
           onSeek(scrubTarget.current);
           setScrubUi(null);
         } else if (gg.mode === "dismiss") {
-          if (dismissProg.current > DISMISS_COMMIT_FRAC) onDismiss();
-          dismissProg.current = 0;
-          setDismissUi(0);
+          const h = r.height;
+          const dist = dismissRaw.current;
+          const vel = dismissVel.current;
+          const projected = projectEndpoint(dist, vel);
+          const commit =
+            vel > DISMISS_COMMIT_VELOCITY || projected > h * DISMISS_COMMIT_FRAC || dist > h * DISMISS_COMMIT_FRAC;
+          if (commit) {
+            haptics.medium();
+            dismissProg.current = 0;
+            onDismiss();
+          } else {
+            // Spring the frame back to rest, seeded with the release velocity.
+            dismissSpringStop.current?.();
+            dismissSpringStop.current = springBack({
+              from: dist,
+              to: 0,
+              velocity: vel,
+              onUpdate: (v) => {
+                const d = Math.max(0, v);
+                setDismissVars(d);
+                setDismissUi(clamp(d / h, 0, 1));
+              },
+              onRest: () => {
+                clearDismissVars();
+                setDismissUi(0);
+                dismissProg.current = 0;
+                dismissSpringStop.current = null;
+              },
+            });
+          }
         } else if (gg.mode === "volume") {
           window.setTimeout(() => setVolUi(null), 500);
         } else if (gg.mode === "brightness") {
@@ -206,12 +436,13 @@ export function MobileGestureStage({
       {dim > 0 && (
         <div aria-hidden className="pointer-events-none absolute inset-0 bg-black" style={{ opacity: dim * 0.85 }} />
       )}
-      {dismissUi > 0 && (
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-0 bg-black"
-          style={{ opacity: dismissUi * 0.5 }}
-        />
+      {holdPill && (
+        <div className="pointer-events-none absolute inset-x-0 top-8 flex justify-center">
+          <div className="flex items-center gap-1.5 rounded-full bg-black/70 px-4 py-1.5 text-[14px] font-bold tabular-nums text-white backdrop-blur-sm animate-in fade-in slide-in-from-top-1 duration-200">
+            2×
+            <ChevronsRight size={16} strokeWidth={2.6} />
+          </div>
+        </div>
       )}
       {dismissUi > 0.04 && (
         <div className="pointer-events-none absolute inset-x-0 top-6 flex flex-col items-center gap-1 text-white/80">

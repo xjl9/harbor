@@ -20,6 +20,7 @@ import { useActiveKid } from "@/lib/profiles";
 import { FiltersMenu, type SwitcherFilters } from "./stream-switcher/filters-menu";
 import { sourceGroup } from "@/views/play-picker/quality-filter";
 import { KidsStreamSwitcher } from "./stream-switcher/kids-switcher";
+import { MobileStreamSwitcher } from "./stream-switcher/mobile-switcher";
 import { normalizeLangCode, streamMatchesLangs } from "./stream-switcher/lang-utils";
 import { QUALITY_BADGE, QUALITY_LABEL, QUALITY_ORDER, qualityKey, type QualityKey } from "./stream-switcher/quality";
 import { isCurrentStream, streamKey, SwitcherRow } from "./stream-switcher/switcher-row";
@@ -45,6 +46,7 @@ export function StreamSwitcher({
   episode,
   imdbId,
   hostSource,
+  mobile,
 }: {
   open: boolean;
   onClose: () => void;
@@ -59,6 +61,7 @@ export function StreamSwitcher({
   episode?: PlayEpisode;
   imdbId?: string | null;
   hostSource?: SourceDescriptor | null;
+  mobile?: boolean;
 }) {
   const t = useT();
   const kid = useActiveKid();
@@ -302,6 +305,28 @@ export function StreamSwitcher({
   };
   void cache?.meta.name;
   void cache?.episode;
+
+  // Mobile: keep mounted across open→close so the sheet can animate out. The
+  // sheet manages its own mount lifecycle from the `open` prop. Same derived
+  // pipeline as desktop — only the presentation differs.
+  if (mobile) {
+    return (
+      <MobileStreamSwitcher
+        open={open}
+        list={list}
+        onPick={onPick}
+        onClose={onClose}
+        resolvingKey={resolvingKey}
+        matchCurrent={matchCurrent}
+        addonLogos={addonLogos}
+        refreshing={refreshing}
+        refresh={refresh}
+        filters={filters}
+        matchScores={matchScores}
+        hasCache={!!cache}
+      />
+    );
+  }
 
   if (!open) return null;
 

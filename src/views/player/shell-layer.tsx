@@ -196,7 +196,7 @@ export const ShellLayer = memo(function ShellLayer({
       onFullscreen={onFullscreen}
       onCast={() => {
         const btn = (document.querySelector(
-          '[aria-label="Cast"]',
+          '[aria-label="Cast"],[aria-label="AirPlay"]',
         ) as HTMLElement | null);
         if (btn) {
           const r = btn.getBoundingClientRect();

@@ -1,5 +1,6 @@
 import { Check } from "lucide-react";
 import { useT } from "@/lib/i18n";
+import { haptics } from "@/lib/player/haptics";
 import { MobileSheet } from "./mobile-sheet";
 
 const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 2];
@@ -28,11 +29,12 @@ export function MobileSpeedSheet({
               key={s}
               type="button"
               onClick={() => {
+                haptics.medium();
                 onRate(s);
                 onClose();
               }}
               className={`flex h-12 items-center justify-between rounded-xl px-4 text-[15px] transition-colors ${
-                selected ? "bg-white/10 text-ink" : "text-ink-muted active:bg-white/5"
+                selected ? "bg-accent-soft text-ink" : "text-ink-muted active:bg-raised/60"
               }`}
             >
               <span className={selected ? "font-semibold" : ""}>{s === 1 ? t("Normal") : `${s}×`}</span>

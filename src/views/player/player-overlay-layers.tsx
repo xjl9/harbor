@@ -245,6 +245,9 @@ export const PlayerOverlayLayers = memo(function PlayerOverlayLayers(p: PlayerOv
             onSeek={p.seekTo}
             onPlayPause={p.playPauseToggle}
             onDismiss={p.closePlayer}
+            rate={p.snap.rate}
+            onHoldRate={(r) => p.bridgeRef.current?.setRate(r)}
+            onFill={(fill) => p.onCropMode?.(fill ? "fill" : "fit")}
           />
         )
       ) : (
@@ -487,6 +490,7 @@ export const PlayerOverlayLayers = memo(function PlayerOverlayLayers(p: PlayerOv
         episode={p.src.episode}
         imdbId={p.resolvedImdbId}
         hostSource={p.guestHostSource}
+        mobile={mobile}
       />
 
       <PanelsLayer
