@@ -13,7 +13,14 @@ import { useRegisterSheet } from "./mobile-sheet-lock";
 // Well-known free/debrid stream sources offered as one-tap installs so a fresh
 // standalone install has something for the play picker to query. These are the
 // bare manifests; debrid keys are configured on the addon's own /configure page.
-const SUGGESTIONS: Array<{ id: string; name: string; note: string; url: string }> = [
+// Exported because onboarding's addon step offers the same list: one source of
+// truth, so the two surfaces can never drift.
+export const ADDON_SUGGESTIONS: Array<{
+  id: string;
+  name: string;
+  note: string;
+  url: string;
+}> = [
   {
     id: "com.stremio.torrentio.addon",
     name: "Torrentio",
@@ -182,7 +189,7 @@ export function MobileAddons({ onClose }: { onClose: () => void }) {
             Suggested
           </h2>
           <div className="flex flex-col gap-2.5">
-            {SUGGESTIONS.map((s) => {
+            {ADDON_SUGGESTIONS.map((s) => {
               const done = installedUrls.has(s.url.replace(/\/$/, ""));
               return (
                 <div

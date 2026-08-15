@@ -7,6 +7,7 @@ import { useT } from "@/lib/i18n";
 import { useOnboarding } from "@/lib/onboarding";
 import { useRegisterSheet } from "../mobile-sheet-lock";
 import { useKeyboardInset } from "../use-keyboard-inset";
+import { ObAddons } from "./ob-addons";
 import { ObDone } from "./ob-done";
 import { ObLanguage } from "./ob-language";
 import { ObLayout } from "./ob-layout";
@@ -22,6 +23,9 @@ import { ObWelcome } from "./ob-welcome";
 // Step machine mirrors src/components/onboarding.tsx (same next/skip/back/finish/
 // toggleTaste, mobile chrome). The mobile-only "debrid" step slots after streaming
 // so first-party debrid keys are set during setup, not just in profile settings.
+// "addons" sits right before it: a debrid key is worth little without a stream
+// source, and nothing is installed by default, so setup used to certify a state
+// where nothing could play.
 type StepId =
   | "splash"
   | "language"
@@ -30,6 +34,7 @@ type StepId =
   | "tmdb"
   | "stremio"
   | "streaming"
+  | "addons"
   | "debrid"
   | "subtitles"
   | "taste"
@@ -42,6 +47,7 @@ const STEPS: StepId[] = [
   "tmdb",
   "stremio",
   "streaming",
+  "addons",
   "debrid",
   "subtitles",
   "taste",
@@ -96,6 +102,7 @@ export function MobileOnboarding() {
     step === "tmdb" ||
     step === "stremio" ||
     step === "streaming" ||
+    step === "addons" ||
     step === "debrid" ||
     step === "subtitles" ||
     step === "taste";
@@ -144,6 +151,7 @@ export function MobileOnboarding() {
               {step === "tmdb" && <ObTmdb />}
               {step === "stremio" && <ObStremio />}
               {step === "streaming" && <ObStreaming />}
+              {step === "addons" && <ObAddons />}
               {step === "debrid" && <ObDebrid onAdvance={next} />}
               {step === "subtitles" && <ObSubtitles />}
               {step === "taste" && <ObTaste selected={tastePicks} onToggle={toggleTaste} />}
@@ -203,8 +211,8 @@ export function MobileOnboarding() {
 }
 
 // Duplicated visuals from src/components/onboarding/dots.tsx; each 6px dot is
-// wrapped in a 44px-tall hit area (width is capped at 28px so nine dots still
-// fit a 294px content column; height carries the touch target).
+// wrapped in a 44px-tall hit area (width is capped at 24px so all eleven dots
+// still fit a 294px content column; height carries the touch target).
 function ObDots({
   count,
   active,
@@ -222,7 +230,7 @@ function ObDots({
           type="button"
           onClick={() => onJump(i)}
           aria-label={`Step ${i + 1}`}
-          className="flex min-h-11 min-w-7 items-center justify-center"
+          className="flex min-h-11 min-w-6 items-center justify-center"
         >
           <span
             className={`h-1.5 rounded-full transition-all duration-300 ${

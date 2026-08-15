@@ -1,3 +1,4 @@
+import { Puzzle } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import type { Meta } from "@/lib/cinemeta";
 import type { HomeRow } from "@/views/home/home-types";
@@ -23,6 +24,8 @@ import { MobileCollectionsRail } from "./mobile-collections-rail";
 import { MobileStreamingRail } from "./mobile-streaming-rail";
 import { MobileServicePage } from "./mobile-service-page";
 import { MobileDetail } from "./mobile-detail";
+import { loadInstalled } from "@/lib/addon-store";
+import { requestMobileIntent } from "./mobile-intent";
 
 function dedupeMetas(metas: Meta[]): Meta[] {
   const seen = new Set<string>();
@@ -268,6 +271,42 @@ export function MobileHome() {
           className="flex h-11 items-center rounded-full bg-ink px-6 text-[14px] font-semibold text-canvas transition-transform active:scale-95"
         >
           Try again
+        </button>
+      </div>
+    );
+  }
+
+  // Healthy but empty, which only classic can reach: classic skips the built-in
+  // rows, the hero and collections, so with no addons installed every source of
+  // content is empty and nothing threw. Distinct from the failure state above:
+  // there is nothing to retry, the user needs a catalog.
+  if (
+    isClassic &&
+    !failed &&
+    rows.length === 0 &&
+    cw.length === 0 &&
+    shownPinned.length === 0 &&
+    personalRows.length === 0
+  ) {
+    return (
+      <div className="flex h-[70vh] flex-col items-center justify-center gap-4 px-8 text-center">
+        <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-elevated/60 text-ink-muted">
+          <Puzzle size={22} strokeWidth={1.8} />
+        </span>
+        <h2 className="font-display text-[20px] font-medium text-ink">No catalogs yet</h2>
+        {/* Stream addons like Torrentio provide no catalogs, so someone can have
+            addons installed and still land here. Say which kind is missing. */}
+        <p className="max-w-xs text-[13.5px] leading-relaxed text-ink-muted">
+          {loadInstalled().length === 0
+            ? "Classic home shows the catalogs your addons provide, and you have none installed. Add one and your rows show up here."
+            : "Your addons provide streams but no catalogs. Add a catalog addon like Cinemeta to fill these rows."}
+        </p>
+        <button
+          type="button"
+          onClick={() => requestMobileIntent("addons")}
+          className="flex h-11 items-center rounded-full bg-ink px-6 text-[14px] font-semibold text-canvas transition-transform active:scale-95"
+        >
+          Add an addon
         </button>
       </div>
     );

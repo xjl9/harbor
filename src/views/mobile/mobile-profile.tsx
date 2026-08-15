@@ -16,7 +16,7 @@ import {
   SlidersHorizontal,
   Users,
 } from "lucide-react";
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import rpdbLogo from "@/assets/addon-logos/rpdb.png";
 import tmdbLogo from "@/assets/addon-logos/tmdb.png";
 import tvdbLogo from "@/assets/addon-logos/tvdb.svg";
@@ -27,7 +27,7 @@ import { useSettings } from "@/lib/settings";
 import { loadInstalled } from "@/lib/addon-store";
 import { useActiveDownloadCount } from "@/lib/download/downloads-store";
 import { MobileAddons } from "./mobile-addons";
-import { consumeMobileIntent } from "./mobile-intent";
+import { consumeMobileIntent, MOBILE_INTENT_EVENT } from "./mobile-intent";
 import { MobileDownloads } from "./mobile-downloads";
 import { MobileSettings } from "./mobile-settings";
 import { MobileWhosWatching } from "./mobile-whos-watching";
@@ -61,8 +61,10 @@ export function MobileProfile({ onOpenRemote }: { onOpenRemote: () => void }) {
   const [switching, setSwitching] = useState(false);
   const [editing, setEditing] = useState<EditField | null>(null);
   const [debridEditing, setDebridEditing] = useState<DebridProvider | null>(null);
-  // Opened straight from the no-sources screen: the picker asks for addons, the
-  // shell switches to this tab, and the sheet opens as this mounts.
+  // Opened straight from a surface that has no addons screen of its own. The
+  // initializer covers the first visit (this tab is not mounted yet when the
+  // request is made); the listener below covers every later visit, since the
+  // shell keeps visited tabs mounted and the initializer would never run again.
   const [addonsOpen, setAddonsOpen] = useState(() => consumeMobileIntent("addons"));
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [downloadsOpen, setDownloadsOpen] = useState(false);
@@ -72,6 +74,15 @@ export function MobileProfile({ onOpenRemote }: { onOpenRemote: () => void }) {
   const native = isMobileNative();
   const activeDownloads = useActiveDownloadCount();
   const installedAddonCount = loadInstalled().length;
+
+  useEffect(() => {
+    const onIntent = (e: Event) => {
+      if ((e as CustomEvent<string>).detail !== "addons") return;
+      if (consumeMobileIntent("addons")) setAddonsOpen(true);
+    };
+    window.addEventListener(MOBILE_INTENT_EVENT, onIntent);
+    return () => window.removeEventListener(MOBILE_INTENT_EVENT, onIntent);
+  }, []);
 
   const keySet = (v: string | undefined) => !!(v && v.trim());
 
