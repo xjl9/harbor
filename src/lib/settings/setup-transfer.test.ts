@@ -112,6 +112,15 @@ export function runSetupTransferTests(): void {
   const bare = "https://a.example/manifest.json";
   assert(isConfiguredAddonUrl(configured), "configured url detected");
   assert(!isConfiguredAddonUrl(bare), "bare url not configured");
+  // Config can also travel in the query string or basic-auth userinfo.
+  assert(
+    isConfiguredAddonUrl("https://addon.example/manifest.json?apiKey=SECRET"),
+    "query-config url detected",
+  );
+  assert(
+    isConfiguredAddonUrl("https://user:pass@addon.example/manifest.json"),
+    "userinfo url detected",
+  );
   const mixed = [bare, configured];
   const pubMixed = buildSetupBundle(fixture, mixed, { includeSensitive: false });
   assert(

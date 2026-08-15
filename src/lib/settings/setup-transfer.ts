@@ -56,14 +56,17 @@ export type BundleSummary = {
 };
 
 /**
- * A configured addon carries its settings in the URL path (everything between
- * the host and the trailing manifest.json). For debrid/auth addons that path
+ * A configured addon carries its settings in the URL — usually in the path
+ * (everything between the host and the trailing manifest.json), but sometimes
+ * in a query string or basic-auth userinfo. For debrid/auth addons that config
  * embeds the API key or token, so exporting the URL leaks a credential. Bare
- * public addons (host + /manifest.json) carry nothing sensitive.
+ * public addons (host + /manifest.json, nothing else) carry nothing sensitive.
  */
 export function isConfiguredAddonUrl(u: string): boolean {
   try {
     const url = new URL(u.trim().replace(/^stremio:\/\//i, "https://"));
+    // Query params and userinfo are config channels too (?apiKey=..., user:pass@).
+    if (url.search || url.username || url.password) return true;
     const middle = url.pathname
       .replace(/\/manifest\.json$/i, "")
       .replace(/^\/+|\/+$/g, "");
