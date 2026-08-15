@@ -138,7 +138,9 @@ function ShellBody() {
             </BrowseScroll>
           )}
         </TabLayer>
-        <TabLayer active={tab === "remote"}>{seen.has("remote") && <RemoteSurface />}</TabLayer>
+        <TabLayer active={tab === "remote"}>
+          {seen.has("remote") && <RemoteSurface onHome={() => selectTab("home")} />}
+        </TabLayer>
       </div>
       {showNowPlaying && <NowPlayingBar onExpand={() => selectTab("remote")} />}
       <BottomTabBar active={tab} onSelect={selectTab} />
@@ -375,7 +377,7 @@ function NowPlayingBar({ onExpand }: { onExpand: () => void }) {
   );
 }
 
-function RemoteSurface() {
+function RemoteSurface({ onHome }: { onHome: () => void }) {
   const { snapshot } = useMobileRemote();
   const style = useMobileRemoteStyle();
   const content = snapshot.manga?.open ? (
@@ -386,7 +388,7 @@ function RemoteSurface() {
     <DpadRemote />
   ) : (
     <Suspense fallback={<FullLoader />}>
-      <RemoteApp />
+      <RemoteApp onExitHome={onHome} />
     </Suspense>
   );
   return <div className="min-h-0 flex-1 overflow-hidden overscroll-none">{content}</div>;

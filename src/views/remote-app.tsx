@@ -13,15 +13,21 @@ import {
   Search,
   Volume2,
   VolumeX,
+  Wifi,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode, type RefObject } from "react";
 import { CastIcon } from "@/components/player/cast-icon";
 import { HarborLoader } from "@/components/harbor-loader";
 import { HarborMark } from "@/components/icons/harbor-mark";
 import type { CastDeviceInfo } from "@/lib/cast";
+import { useT } from "@/lib/i18n/translate";
 import { useKeyboardNavigation } from "@/lib/keyboard-navigation";
+import { isMobileNative } from "@/lib/platform";
 import { useRemoteClient } from "@/lib/remote/use-remote-client";
+import { useSettings } from "@/lib/settings";
 import type { RemoteCastDevice, RemoteNavKey, RemoteSnapshot, RemoteTextEntry } from "@/lib/remote/protocol";
+import { ConnectSheet } from "./mobile/dpad-remote";
+import { useRegisterSheet } from "./mobile/mobile-sheet-lock";
 
 function toCastDevice(d: RemoteCastDevice): CastDeviceInfo {
   return {
@@ -756,8 +762,73 @@ function RemoteBody({
 /** Wait before fullscreen reconnect UI so brief WS blips don't flash. */
 const DISCONNECT_OVERLAY_MS = 1200;
 
-export function RemoteApp() {
-  const { status, snapshot, sendCommand } = useRemoteClient();
+/**
+ * Native standalone builds have no implied host, so before one is configured the
+ * touchpad would drive nothing. Offer the connect flow instead of a dead surface.
+ */
+function ConnectPrompt({
+  onBack,
+  onConnect,
+  t,
+}: {
+  onBack: () => void;
+  onConnect: () => void;
+  t: (key: string, vars?: Record<string, string | number>) => string;
+}) {
+  return (
+    <div className="flex min-h-0 flex-1 flex-col px-4 pb-[calc(env(safe-area-inset-bottom,0px)+96px)] pt-[max(0.75rem,env(safe-area-inset-top))]">
+      <div className="flex shrink-0 items-center">
+        <button
+          type="button"
+          aria-label="Back to home"
+          onClick={onBack}
+          className="flex h-11 shrink-0 items-center gap-2 rounded-full bg-white/[0.08] px-3 text-ink shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08)] active:bg-white/[0.14]"
+        >
+          <ChevronLeft size={18} strokeWidth={1.8} />
+          <HarborMark className="h-5 w-5" />
+        </button>
+      </div>
+
+      <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-4 text-center">
+        <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-elevated text-ink-muted">
+          <Monitor size={26} strokeWidth={1.7} />
+        </span>
+        <div className="flex flex-col gap-1.5">
+          <h1 className="text-[19px] font-semibold tracking-tight text-ink">
+            {t("Connect to a computer")}
+          </h1>
+          <p className="max-w-[19rem] text-[13.5px] leading-relaxed text-ink-muted">
+            {t("The touchpad controls Harbor running on a computer. Pick one on your Wi-Fi to start.")}
+          </p>
+        </div>
+        <button
+          type="button"
+          data-tv-initial-focus
+          onClick={onConnect}
+          className="mt-1 flex h-12 items-center gap-2 rounded-full bg-ink px-6 text-[15px] font-semibold text-canvas transition-transform duration-100 active:scale-[0.97]"
+        >
+          <Wifi size={17} strokeWidth={2.2} />
+          {t("Find a computer")}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+export function RemoteApp({ onExitHome }: { onExitHome?: () => void }) {
+  const t = useT();
+  const { settings, update } = useSettings();
+  // The web remote is served BY the desktop, so its host is implied. A native
+  // build has no implied host, so it stays idle until the user configures one.
+  // Without this gate the client dials its own hostname and reconnects forever.
+  const native = isMobileNative();
+  const configuredHost = (settings.remoteHostAddress ?? "").trim();
+  const { status, snapshot, sendCommand } = useRemoteClient(
+    native ? configuredHost || undefined : undefined,
+    { enabled: !native || configuredHost !== "" },
+  );
+  const needsHost = native && configuredHost === "";
+  const [connectOpen, setConnectOpen] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [wasConnected, setWasConnected] = useState(false);
   const [showDisconnected, setShowDisconnected] = useState(false);
@@ -769,24 +840,42 @@ export function RemoteApp() {
       return;
     }
     if (!wasConnected) return;
-    const t = window.setTimeout(() => setShowDisconnected(true), DISCONNECT_OVERLAY_MS);
-    return () => window.clearTimeout(t);
+    const timer = window.setTimeout(() => setShowDisconnected(true), DISCONNECT_OVERLAY_MS);
+    return () => window.clearTimeout(timer);
   }, [status, wasConnected]);
 
   const closeSheet = useCallback(() => setSheetOpen(false), []);
+  useRegisterSheet(connectOpen);
+
+  // The shell hands down an in-app tab switch. Reloading the document instead
+  // would tear down the whole standalone app just to leave this screen.
   const goHome = useCallback(() => {
+    if (onExitHome) {
+      onExitHome();
+      return;
+    }
     window.location.assign("/");
-  }, []);
+  }, [onExitHome]);
 
   const onBack = useCallback(() => {
+    if (connectOpen) {
+      setConnectOpen(false);
+      return true;
+    }
     if (sheetOpen) {
       closeSheet();
       return true;
     }
-    // Drive the host display back — don't navigate the phone away from /remote.
+    // On the connect screen there is no host to drive, so the command would be
+    // swallowed and back would do nothing. Leave instead.
+    if (needsHost) {
+      goHome();
+      return true;
+    }
+    // Drive the host display back, do not navigate the phone away from /remote.
     sendCommand({ action: "nav", key: "back" });
     return true;
-  }, [sheetOpen, closeSheet, sendCommand]);
+  }, [connectOpen, sheetOpen, closeSheet, sendCommand, needsHost, goHome]);
 
   useKeyboardNavigation({ wrap: false, onBack });
 
@@ -820,7 +909,9 @@ export function RemoteApp() {
 
   return (
     <div className="flex h-full min-h-[100dvh] flex-col bg-canvas text-ink">
-      {showDisconnected ? (
+      {needsHost ? (
+        <ConnectPrompt onBack={goHome} onConnect={() => setConnectOpen(true)} t={t} />
+      ) : showDisconnected ? (
         <div className="flex min-h-0 flex-1 flex-col items-center justify-center bg-black">
           <HarborLoader size="md" caption="Connecting" />
         </div>
@@ -872,6 +963,22 @@ export function RemoteApp() {
             }}
           />
         </>
+      )}
+
+      {native && (
+        <ConnectSheet
+          open={connectOpen}
+          onClose={() => setConnectOpen(false)}
+          configuredHost={configuredHost}
+          connected={status === "connected"}
+          connectedLabel={snapshot.target.label}
+          onSelectHost={(host) => update({ remoteHostAddress: host })}
+          onOpenOutputs={() => {
+            setConnectOpen(false);
+            setSheetOpen(true);
+          }}
+          t={t}
+        />
       )}
     </div>
   );

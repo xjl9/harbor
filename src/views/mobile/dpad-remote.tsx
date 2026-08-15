@@ -471,7 +471,8 @@ function ProviderCard({ svc, service, onPress }: { svc: StreamingService; servic
   );
 }
 
-function ConnectSheet({
+/** Shared with the touchpad remote (views/remote-app), which needs the same connect flow. */
+export function ConnectSheet({
   open,
   onClose,
   configuredHost,
