@@ -3,6 +3,7 @@ import type { Meta } from "@/lib/cinemeta";
 import { useSettings } from "@/lib/settings";
 import { useView } from "@/lib/view";
 import { useIdleScreensaver } from "@/lib/screensaver/use-idle-screensaver";
+import { isMobileNative, isMobileWeb } from "@/lib/platform";
 import type { AmbientItem } from "./ambient-overlay";
 
 const AmbientOverlay = lazy(() =>
@@ -31,7 +32,12 @@ export function ScreensaverRoot() {
   const { player, picker, topKind } = useView();
   const enabled = settings.screensaver;
   const delayMs = Math.max(1, settings.screensaverDelayMin || 5) * 60000;
-  const suppressed = !!player || !!picker || topKind === "live" || topKind === "vod";
+  // A phone already has an idle screen: the system one. Running ours there means
+  // the timer keeps counting while the device is locked, so unlocking lands on an
+  // ambient clock that has to be dismissed instead of where the user left off.
+  // Tablets and desktops, where the app is likely the only thing on screen, keep it.
+  const onPhone = isMobileNative() || isMobileWeb();
+  const suppressed = onPhone || !!player || !!picker || topKind === "live" || topKind === "vod";
   const { active, dismiss } = useIdleScreensaver(enabled, delayMs, suppressed);
 
   const [items, setItems] = useState<AmbientItem[]>([]);

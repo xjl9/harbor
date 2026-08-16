@@ -184,8 +184,11 @@ export function MobileHero({ slides, onOpenDetail }: { slides: Meta[]; onOpenDet
           <div className="absolute inset-x-0 bottom-0 top-[30%] bg-gradient-to-t from-canvas via-canvas/70 to-transparent" />
           <div className="absolute inset-x-0 bottom-0 h-[38%] bg-gradient-to-t from-canvas to-transparent" />
         </button>
+        {/* The column is capped so landscape does not stretch Play into a 740px
+            slab. Portrait is narrower than the cap and so is unaffected, and the
+            box stays anchored to the inline start, which flips under RTL. */}
         <div
-          className="pointer-events-none absolute inset-x-0 bottom-0 z-10 flex flex-col gap-3.5 px-5"
+          className="pointer-events-none absolute inset-x-0 bottom-0 z-10 flex max-w-[560px] flex-col gap-3.5 px-5"
           style={{
             // Reserve the floating tab bar and now playing bar. Without this the
             // hero's actions sit under them on a short landscape viewport.

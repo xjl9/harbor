@@ -317,8 +317,12 @@ function DetailBody({
         onBack={onBack}
       />
 
+      {/* Capped and left aligned so it sits on the same edge as the hero's poster
+          and title. Uncapped, a landscape phone ran the synopsis to about 130
+          characters a line and stretched Play across the whole screen. Portrait is
+          narrower than the cap, so it is unchanged. */}
       <div
-        className="md-rise-in flex flex-col gap-8 px-5 pt-5"
+        className="md-rise-in flex w-full max-w-[640px] flex-col gap-8 px-5 pt-5"
         style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 44px)" }}
       >
         <DetailActions meta={meta} detail={detail} title={title} trailerId={trailerId} onPlay={onPlay} />
