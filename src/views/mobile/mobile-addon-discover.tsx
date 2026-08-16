@@ -248,7 +248,7 @@ export function MobileAddonDiscover({
           Array.from({ length: 5 }).map((_, i) => (
             <div
               key={i}
-              className="h-[64px] w-full animate-pulse rounded-2xl border border-edge-soft/60 bg-elevated/30"
+              className="harbor-skeleton h-[64px] w-full rounded-2xl border border-edge-soft/60 bg-elevated/30"
             />
           ))}
 

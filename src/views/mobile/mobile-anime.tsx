@@ -341,17 +341,10 @@ function HeroArt({ meta, logo, source, priority }: { meta: Meta; logo?: string; 
   );
 }
 
-function Shimmer() {
-  return (
-    <span className="animate-shimmer pointer-events-none absolute inset-y-0 -left-1/2 w-1/2 bg-gradient-to-r from-transparent via-ink/[0.07] to-transparent motion-reduce:hidden" />
-  );
-}
-
 function HeroSkeleton() {
   return (
     <section className="flex flex-col gap-3.5" aria-hidden>
       <div className="relative aspect-[4/5] w-full overflow-hidden bg-surface">
-        <Shimmer />
         <div className="absolute inset-0" style={{ background: "linear-gradient(to top, var(--color-canvas) 2%, transparent 60%)" }} />
         <div className="absolute inset-x-0 bottom-0 flex flex-col gap-3 px-5 pb-5">
           <div className="h-5 w-28 rounded-md bg-elevated/50" />
@@ -374,9 +367,7 @@ function RailSkeleton({ titleW }: { titleW: string }) {
       <div className={`mx-4 h-[18px] ${titleW} rounded-md bg-elevated/45`} />
       <div className="flex gap-3 overflow-hidden px-4 pb-1">
         {Array.from({ length: 5 }).map((_, i) => (
-          <div key={i} className="relative aspect-[2/3] w-[124px] shrink-0 overflow-hidden rounded-[14px] bg-elevated/40">
-            <Shimmer />
-          </div>
+          <div key={i} className="aspect-[2/3] w-[124px] shrink-0 rounded-[14px] bg-elevated/40" />
         ))}
       </div>
     </section>
@@ -385,7 +376,7 @@ function RailSkeleton({ titleW }: { titleW: string }) {
 
 function AnimeSkeleton() {
   return (
-    <div className="flex flex-col gap-7" aria-hidden>
+    <div className="harbor-skeleton flex flex-col gap-7" aria-hidden>
       <HeroSkeleton />
       <RailSkeleton titleW="w-44" />
       <RailSkeleton titleW="w-32" />

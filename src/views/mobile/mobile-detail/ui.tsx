@@ -32,7 +32,7 @@ export function EpisodeRating({ value, isImdb }: { value: number; isImdb: boolea
 }
 
 export function Line({ className = "" }: { className?: string }) {
-  return <span className={`h-3.5 animate-pulse rounded bg-elevated/70 ${className}`} />;
+  return <span className={`harbor-skeleton h-3.5 rounded bg-elevated/70 ${className}`} />;
 }
 
 export function Overview({ text }: { text: string }) {

@@ -376,15 +376,9 @@ export function MobileHome() {
   );
 }
 
-function Shimmer() {
-  return (
-    <span className="animate-shimmer pointer-events-none absolute inset-y-0 -left-1/2 w-1/2 bg-gradient-to-r from-transparent via-ink/[0.07] to-transparent motion-reduce:hidden" />
-  );
-}
-
 function HomeSkeleton() {
   return (
-    <div className="flex flex-col gap-7 pt-3" aria-hidden>
+    <div className="harbor-skeleton flex flex-col gap-7 pt-3" aria-hidden>
       <HeroSkeleton />
       <RailSkeleton titleW="w-40" />
       <RailSkeleton titleW="w-28" />
@@ -399,7 +393,6 @@ function HeroSkeleton() {
   return (
     <section className="relative -mt-3 mb-1">
       <div className="relative h-[62svh] min-h-[440px] w-full overflow-hidden bg-surface">
-        <Shimmer />
         <div className="absolute inset-x-0 bottom-0 h-[38%] bg-gradient-to-t from-canvas to-transparent" />
         <div className="absolute inset-x-0 bottom-0 flex flex-col gap-3.5 px-5 pb-7">
           <div className="h-3.5 w-32 rounded bg-elevated/50" />
@@ -425,9 +418,7 @@ function RailSkeleton({ titleW }: { titleW: string }) {
       <div className="flex gap-3 overflow-hidden px-4 pb-1">
         {Array.from({ length: 5 }).map((_, i) => (
           <div key={i} className="w-[124px] shrink-0">
-            <div className="relative aspect-[2/3] overflow-hidden rounded-[14px] bg-elevated/40">
-              <Shimmer />
-            </div>
+            <div className="aspect-[2/3] rounded-[14px] bg-elevated/40" />
             <div className="mt-1.5 h-2.5 w-4/5 rounded bg-elevated/35" />
             <div className="mt-1.5 h-2.5 w-3/5 rounded bg-elevated/30" />
           </div>

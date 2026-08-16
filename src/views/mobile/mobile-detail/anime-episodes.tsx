@@ -24,6 +24,7 @@ import { useT } from "@/lib/i18n";
 import { useMobileRemote } from "../mobile-remote";
 import { useEpisodeWindow } from "./data";
 import { EpisodeRating, SectionTitle } from "./ui";
+import { EpisodeSkeleton } from "./episode-item";
 import { SeasonPicker, type SeasonSheetItem } from "./season-sheet";
 import { animeSeasonKey } from "@/views/detail/anime-episodes/anime-season-key";
 
@@ -340,17 +341,5 @@ function AnimeEpisodeItem({
         )}
       </div>
     </button>
-  );
-}
-
-function EpisodeSkeleton() {
-  return (
-    <div className="flex gap-3.5 p-2">
-      <div className="aspect-video w-[128px] shrink-0 animate-pulse rounded-xl bg-elevated/60" />
-      <div className="flex flex-1 flex-col gap-2 py-1">
-        <div className="h-3.5 w-2/3 animate-pulse rounded bg-elevated/60" />
-        <div className="h-2.5 w-1/3 animate-pulse rounded bg-elevated/50" />
-      </div>
-    </div>
   );
 }

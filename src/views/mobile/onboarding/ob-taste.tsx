@@ -117,7 +117,7 @@ export function ObTaste({
       {items === null ? (
         <div className="grid grid-cols-3 gap-2.5">
           {Array.from({ length: 12 }).map((_, i) => (
-            <div key={i} className="aspect-[2/3] animate-pulse rounded-xl bg-raised" />
+            <div key={i} className="harbor-skeleton aspect-[2/3] rounded-xl bg-raised" />
           ))}
         </div>
       ) : (

@@ -149,22 +149,15 @@ export function MobileDiscover() {
   );
 }
 
-function Shimmer() {
-  return (
-    <span className="animate-shimmer pointer-events-none absolute inset-y-0 -left-1/2 w-1/2 bg-gradient-to-r from-transparent via-ink/[0.07] to-transparent motion-reduce:hidden" />
-  );
-}
-
 function DiscoverSkeleton() {
   return (
-    <div className="flex flex-col gap-7 pt-3" aria-hidden>
+    <div className="harbor-skeleton flex flex-col gap-7 pt-3" aria-hidden>
       <section className="flex flex-col gap-4">
         <div className="px-4">
           <div className="h-6 w-56 rounded-md bg-elevated/50" />
         </div>
         <div className="px-4">
           <div className="relative aspect-[4/5] w-[86%] overflow-hidden rounded-[22px] bg-surface ring-1 ring-edge-soft/50">
-            <Shimmer />
             <div className="absolute inset-x-0 bottom-0 flex flex-col gap-3 p-5">
               <div className="h-7 w-3/5 rounded-lg bg-elevated/55" />
               <div className="h-3.5 w-2/5 rounded bg-elevated/40" />
@@ -194,9 +187,7 @@ function RailSkeleton({ titleW }: { titleW: string }) {
       <div className="flex gap-3 overflow-hidden px-4 pb-1">
         {Array.from({ length: 5 }).map((_, i) => (
           <div key={i} className="w-[124px] shrink-0">
-            <div className="relative aspect-[2/3] overflow-hidden rounded-[14px] bg-elevated/40">
-              <Shimmer />
-            </div>
+            <div className="aspect-[2/3] rounded-[14px] bg-elevated/40" />
             <div className="mt-1.5 h-2.5 w-4/5 rounded bg-elevated/35" />
             <div className="mt-1.5 h-2.5 w-3/5 rounded bg-elevated/30" />
           </div>

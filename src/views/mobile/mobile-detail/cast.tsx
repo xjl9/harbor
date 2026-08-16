@@ -100,7 +100,7 @@ export function CastSkeleton() {
       <div className={`-mx-5 flex gap-3.5 overflow-x-auto px-5 ${HIDE_SCROLL}`}>
         {[0, 1, 2, 3, 4].map((i) => (
           <div key={i} className="flex w-[88px] shrink-0 flex-col gap-2">
-            <div className="aspect-[2/3] w-full animate-pulse rounded-xl bg-elevated/70" />
+            <div className="harbor-skeleton aspect-[2/3] w-full rounded-xl bg-elevated/70" />
             <Line className="w-3/4" />
           </div>
         ))}

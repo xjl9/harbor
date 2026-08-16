@@ -231,7 +231,7 @@ function GridSkeleton() {
       {Array.from({ length: 18 }).map((_, i) => (
         <div
           key={i}
-          className="aspect-[2/3] rounded-[14px] bg-elevated/40 motion-safe:animate-pulse"
+          className="harbor-skeleton aspect-[2/3] rounded-[14px] bg-elevated/40"
         />
       ))}
     </div>

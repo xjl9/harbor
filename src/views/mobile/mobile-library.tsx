@@ -270,14 +270,11 @@ function GridTile({ meta, onOpenDetail }: { meta: Meta; onOpenDetail: (m: Meta) 
 
 function SkeletonGrid() {
   return (
-    <div className="grid grid-cols-3 gap-x-3 gap-y-4">
+    <div className="harbor-skeleton grid grid-cols-3 gap-x-3 gap-y-4">
       {Array.from({ length: 9 }).map((_, i) => (
         <div key={i} className="flex flex-col gap-1.5">
-          <div
-            className="w-full animate-pulse rounded-[12px] bg-elevated/70"
-            style={{ paddingTop: "150%" }}
-          />
-          <div className="h-3 w-3/4 animate-pulse rounded bg-elevated/60" />
+          <div className="w-full rounded-[12px] bg-elevated/70" style={{ paddingTop: "150%" }} />
+          <div className="h-3 w-3/4 rounded bg-elevated/60" />
         </div>
       ))}
     </div>

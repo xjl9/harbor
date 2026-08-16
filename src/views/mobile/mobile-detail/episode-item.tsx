@@ -128,7 +128,7 @@ export function EpisodeItem({
 export function EpisodeSkeleton() {
   return (
     <div className="flex gap-3.5 p-2">
-      <div className="aspect-video w-[128px] shrink-0 animate-pulse rounded-xl bg-elevated/70" />
+      <div className="harbor-skeleton aspect-video w-[128px] shrink-0 rounded-xl bg-elevated/70" />
       <div className="flex flex-1 flex-col gap-2 py-1">
         <Line className="w-2/3" />
         <Line className="w-1/3" />

@@ -49,9 +49,6 @@
 
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
-  --duration-fast: 150ms;
-  --duration-base: 250ms;
-  --duration-slow: 400ms;
 }
 
 :root {
@@ -885,6 +882,41 @@ main[data-kids="on"]::-webkit-scrollbar-thumb:hover {
 
 .animate-shimmer {
   animation: harbor-shimmer 5.4s ease-in-out infinite;
+}
+
+/*
+ * The one loading idiom. Every skeleton in the app breathes on this clock, so
+ * moving between a catalog and a title never changes what "loading" feels like.
+ * Shape and tint stay with the caller (a poster skeleton has to stay poster
+ * shaped); only the feel lives here. Applied at the root of a skeleton it
+ * carries the whole composition, which is one composited layer instead of a
+ * dozen. Do not nest it inside itself: the opacities multiply and the inner
+ * pieces dip twice as deep as the outer ones.
+ *
+ * 2s is the period the eye is calibrated to from every other app. Slower reads
+ * as stalled; the 5.4s sweep this replaced spent most of its cycle looking
+ * frozen. The house --ease-in-out keeps it in the same family as
+ * .animate-loader-pulse (2.4s) without being mistaken for it: skeletons work,
+ * the cinematic loader broods.
+ */
+@keyframes harbor-skeleton {
+  50% { opacity: 0.55; }
+}
+
+.harbor-skeleton {
+  animation: harbor-skeleton 2s var(--ease-in-out) infinite;
+}
+
+/*
+ * A skeleton is a placeholder before it is an animation. With motion off it
+ * holds at full tint rather than resting at the trough or vanishing, so the
+ * shape of what is coming stays readable.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .harbor-skeleton {
+    animation: none;
+    opacity: 1;
+  }
 }
 
 @keyframes harbor-loader-pulse {

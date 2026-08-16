@@ -406,9 +406,9 @@ function ListRow({
 
 function GridSkeleton({ rows = 4 }: { rows?: number }) {
   return (
-    <div className="grid grid-cols-3 gap-x-3 gap-y-4">
+    <div className="harbor-skeleton grid grid-cols-3 gap-x-3 gap-y-4">
       {Array.from({ length: rows * 3 }).map((_, i) => (
-        <div key={i} className="aspect-[2/3] animate-pulse rounded-[12px] bg-elevated/40" />
+        <div key={i} className="aspect-[2/3] rounded-[12px] bg-elevated/40" />
       ))}
     </div>
   );
@@ -416,13 +416,13 @@ function GridSkeleton({ rows = 4 }: { rows?: number }) {
 
 function ListSkeleton({ rows = 8 }: { rows?: number }) {
   return (
-    <div className="flex flex-col gap-1">
+    <div className="harbor-skeleton flex flex-col gap-1">
       {Array.from({ length: rows }).map((_, i) => (
         <div key={i} className="flex items-center gap-3.5 p-2">
-          <div className="h-[69px] w-[46px] shrink-0 animate-pulse rounded-[8px] bg-elevated/40" />
+          <div className="h-[69px] w-[46px] shrink-0 rounded-[8px] bg-elevated/40" />
           <div className="flex flex-1 flex-col gap-2">
-            <div className="h-3.5 w-2/3 animate-pulse rounded bg-elevated/40" />
-            <div className="h-3 w-1/3 animate-pulse rounded bg-elevated/40" />
+            <div className="h-3.5 w-2/3 rounded bg-elevated/40" />
+            <div className="h-3 w-1/3 rounded bg-elevated/40" />
           </div>
         </div>
       ))}
