@@ -159,7 +159,7 @@ export function MobileAnime() {
   const topSpec = SPECS.find((s) => s.key === TOP_PICKS_KEY);
 
   return (
-    <div className="flex flex-col gap-7 motion-safe:[animation:harbor-step-in_420ms_var(--ease-out)_both]">
+    <div className="flex flex-col gap-7 [@media(max-height:500px)]:gap-4 motion-safe:[animation:harbor-step-in_420ms_var(--ease-out)_both]">
       {hero.metas.length > 0 ? (
         <AnimeHeroMobile slides={hero.metas} trending={hero.trending} onOpenDetail={setDetailMeta} />
       ) : (
@@ -376,7 +376,7 @@ function RailSkeleton({ titleW }: { titleW: string }) {
 
 function AnimeSkeleton() {
   return (
-    <div className="harbor-skeleton flex flex-col gap-7" aria-hidden>
+    <div className="harbor-skeleton flex flex-col gap-7 [@media(max-height:500px)]:gap-4" aria-hidden>
       <HeroSkeleton />
       <RailSkeleton titleW="w-44" />
       <RailSkeleton titleW="w-32" />

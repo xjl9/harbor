@@ -130,7 +130,7 @@ export function MobileMovies() {
   }
 
   return (
-    <div className="flex flex-col gap-7 pt-3 motion-safe:[animation:harbor-step-in_420ms_var(--ease-out)_both]">
+    <div className="flex flex-col gap-7 [@media(max-height:500px)]:gap-4 pt-3 motion-safe:[animation:harbor-step-in_420ms_var(--ease-out)_both]">
       <MobileHero slides={shownHero} onOpenDetail={setDetailMeta} />
       {shownRows[0] && shownRows[0].metas.length >= 6 && (
         <MobileRankRail title="Top 10 Movies Today" metas={dedupeMetas(shownRows[0].metas)} onOpenDetail={setDetailMeta} />
@@ -146,7 +146,7 @@ export function MobileMovies() {
 
 function MoviesSkeleton() {
   return (
-    <div className="harbor-skeleton flex flex-col gap-7 pt-3" aria-hidden>
+    <div className="harbor-skeleton flex flex-col gap-7 [@media(max-height:500px)]:gap-4 pt-3" aria-hidden>
       <HeroSkeleton />
       <RailSkeleton titleW="w-44" />
       <RailSkeleton titleW="w-28" />
