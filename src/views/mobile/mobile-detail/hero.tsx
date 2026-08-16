@@ -61,7 +61,7 @@ export function Hero({
         className="absolute start-4 grid h-11 w-11 place-items-center rounded-full bg-black/40 text-white backdrop-blur-sm"
         style={{ top: "calc(env(safe-area-inset-top, 0px) + 12px)" }}
       >
-        <ChevronLeft size={22} strokeWidth={2.4} />
+        <ChevronLeft size={22} strokeWidth={2.4} className="dir-icon" />
       </button>
 
       {awardSummary.length > 0 && (

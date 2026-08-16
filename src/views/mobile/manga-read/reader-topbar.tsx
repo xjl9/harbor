@@ -29,7 +29,7 @@ export function ReaderTopbar({
           onClick={onExit}
           className="grid h-11 w-11 shrink-0 place-items-center rounded-full text-ink-muted transition-transform active:scale-90 motion-reduce:transition-none"
         >
-          <ChevronLeft size={24} strokeWidth={2.2} />
+          <ChevronLeft size={24} strokeWidth={2.2} className="dir-icon" />
         </button>
         <div className="flex min-w-0 flex-1 flex-col items-center">
           <span className="max-w-full truncate text-[14px] font-semibold text-ink">{chapterLabel}</span>

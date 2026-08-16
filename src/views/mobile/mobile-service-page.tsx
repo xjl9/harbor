@@ -140,7 +140,7 @@ function ServiceHero({
           aria-label="Back"
           className="-ms-2 flex h-11 w-11 items-center justify-center rounded-full text-ink-muted transition-transform active:scale-[0.96]"
         >
-          <ChevronLeft size={24} strokeWidth={2.4} />
+          <ChevronLeft size={24} strokeWidth={2.4} className="dir-icon" />
         </button>
         <div className="flex flex-col gap-2.5 pb-1">
           <span className="text-[11.5px] font-medium uppercase tracking-[0.2em] text-ink-subtle">

@@ -84,7 +84,7 @@ function TopBar({ title, onBack }: { title: string; onBack: () => void }) {
         aria-label="Back"
         className="-ms-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-ink-muted transition-transform active:scale-[0.96]"
       >
-        <ChevronLeft size={24} strokeWidth={2.4} />
+        <ChevronLeft size={24} strokeWidth={2.4} className="dir-icon" />
       </button>
       <h1 className="font-display text-[22px] font-medium text-ink">{title}</h1>
     </header>

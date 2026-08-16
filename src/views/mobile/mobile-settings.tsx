@@ -107,7 +107,7 @@ export function MobileSettings({ onClose }: { onClose: () => void }) {
           aria-label="Back"
           className={`-ms-2 flex h-11 w-11 items-center justify-center rounded-full text-ink-muted ${FOCUS}`}
         >
-          <ChevronLeft size={24} strokeWidth={2.2} />
+          <ChevronLeft size={24} strokeWidth={2.2} className="dir-icon" />
         </button>
         <div>
           <p className="text-[11px] font-sans font-semibold uppercase tracking-[0.22em] text-ink-subtle">

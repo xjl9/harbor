@@ -114,7 +114,7 @@ export function ChapterNavigator({
           aria-label="Back"
           className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-ink-muted transition-transform active:scale-90"
         >
-          <ChevronLeft size={24} strokeWidth={2.2} />
+          <ChevronLeft size={24} strokeWidth={2.2} className="dir-icon" />
         </button>
         <div className="flex min-w-0 flex-1 flex-col">
           <span className="truncate text-[15px] font-semibold text-ink">Chapters</span>

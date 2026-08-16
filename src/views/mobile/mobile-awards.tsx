@@ -154,7 +154,7 @@ export function MobileAwards({
             aria-label="Back"
             className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-surface text-ink ring-1 ring-edge-soft transition-transform active:scale-95 motion-reduce:transition-none"
           >
-            <ChevronLeft size={22} strokeWidth={2.4} />
+            <ChevronLeft size={22} strokeWidth={2.4} className="dir-icon" />
           </button>
           <span className="font-display text-[17px] font-medium tracking-tight text-ink">
             Awards
