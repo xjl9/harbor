@@ -852,6 +852,11 @@ final class HarborMpvViewController: UIViewController, HarborPlayerEngine {
     seekSlider.maximumValue = 1
     seekSlider.value = 0
     seekSlider.minimumTrackTintColor = .white
+    // Without this the unplayed side keeps iOS's default tint, which over a dark
+    // frame is invisible: the scrubber reads as a stub ending at the thumb and
+    // gives no sense of how far the film runs or where a drag can go. Matches the
+    // 22% white the web shell uses for the same track.
+    seekSlider.maximumTrackTintColor = UIColor.white.withAlphaComponent(0.22)
     // Continuous so valueChanged fires during the drag for live label feedback;
     // the actual seek waits for touch-up (see seekTouchUp).
     seekSlider.isContinuous = true
