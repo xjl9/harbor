@@ -1,4 +1,3 @@
-import flagAra from "@/assets/flags/flag-ara.svg";
 import flagBra from "@/assets/flags/flag-bra.svg";
 import flagCes from "@/assets/flags/flag-ces.svg";
 import flagDan from "@/assets/flags/flag-dan.svg";
@@ -15,7 +14,6 @@ import flagKor from "@/assets/flags/flag-kor.svg";
 import flagNld from "@/assets/flags/flag-nld.svg";
 import flagNor from "@/assets/flags/flag-nor.svg";
 import flagPol from "@/assets/flags/flag-pol.svg";
-import flagPrt from "@/assets/flags/flag-prt.svg";
 import flagRon from "@/assets/flags/flag-ron.svg";
 import flagRus from "@/assets/flags/flag-rus.svg";
 import flagSpa from "@/assets/flags/flag-spa.svg";
@@ -38,12 +36,10 @@ const FLAG: Record<string, string> = {
   Korean: flagKor,
   Japanese: flagJpn,
   Chinese: flagZho,
-  Portuguese: flagPrt,
   "Portuguese (Brazil)": flagBra,
   German: flagDeu,
   French: flagFra,
   Turkish: flagTur,
-  Arabic: flagAra,
   Czech: flagCes,
   Danish: flagDan,
   Finnish: flagFin,
@@ -93,14 +89,6 @@ export function flagSrc(language: string): string | null {
   return FLAG[language] ?? null;
 }
 
-// Generic Portuguese is not tied to one country, so it renders as a single tile
-// split on the top-left/bottom-right diagonal: Brazil in the top-right, Portugal
-// in the bottom-left. Regional variants (pt-br / "Portuguese (Brazil)") keep the
-// plain Brazil flag from the FLAG map.
-function isGenericPortuguese(language: string): boolean {
-  return language === "Portuguese" || language === "pt";
-}
-
 // A short monogram chip used when no flag image exists for a language, so a row
 // never renders a blank flag column.
 function MonogramChip({ language, size }: { language: string; size: FlagSize }) {
@@ -135,10 +123,6 @@ export function Flag({
   }
 
   const h = FLAG_HEIGHT[size];
-
-  if (isGenericPortuguese(language)) {
-    return <DiagonalFlag size={size} showLabel={showLabel} label={language} />;
-  }
 
   const src = FLAG[language] ?? bridgeFlagSrc(language);
 
@@ -180,76 +164,6 @@ export function Flag({
           style={{ fontSize: LABEL_SIZE[size] }}
         >
           {language}
-        </span>
-      )}
-    </span>
-  );
-}
-
-// Two triangles clipped from the existing Brazil and Portugal tiles, meeting on
-// the top-left/bottom-right diagonal, with a hairline seam drawn corner to
-// corner (an SVG line so it tracks the non-square tile exactly).
-function DiagonalFlag({
-  size,
-  showLabel,
-  label,
-}: {
-  size: FlagSize;
-  showLabel: boolean;
-  label: string;
-}) {
-  const h = FLAG_HEIGHT[size];
-  const w = h * 1.5;
-  const tile: React.CSSProperties = {
-    position: "absolute",
-    inset: 0,
-    height: "100%",
-    width: "100%",
-    objectFit: "cover",
-  };
-  return (
-    <span className="inline-flex items-center gap-1.5">
-      <span
-        className="relative block overflow-hidden"
-        style={{ height: h, width: w, borderRadius: 2, boxShadow: FLAG_RING }}
-      >
-        <img
-          src={flagPrt}
-          alt=""
-          aria-hidden
-          draggable={false}
-          style={{ ...tile, clipPath: "polygon(0 0, 100% 100%, 0 100%)" }}
-        />
-        <img
-          src={flagBra}
-          alt=""
-          aria-hidden
-          draggable={false}
-          style={{ ...tile, clipPath: "polygon(0 0, 100% 0, 100% 100%)" }}
-        />
-        <svg
-          viewBox="0 0 3 2"
-          preserveAspectRatio="none"
-          aria-hidden
-          style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }}
-        >
-          <line
-            x1="0"
-            y1="0"
-            x2="3"
-            y2="2"
-            stroke="rgba(255,255,255,0.5)"
-            strokeWidth="1"
-            vectorEffect="non-scaling-stroke"
-          />
-        </svg>
-      </span>
-      {showLabel && (
-        <span
-          className="font-semibold tracking-[0.01em] text-ink-muted"
-          style={{ fontSize: LABEL_SIZE[size] }}
-        >
-          {label}
         </span>
       )}
     </span>
