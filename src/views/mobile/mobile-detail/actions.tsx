@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { Bookmark, Check, Download, Eye, Film, Monitor, MonitorPlay, MoreHorizontal, Play } from "lucide-react";
 import type { Meta } from "@/lib/cinemeta";
+import { readResumeMs } from "@/lib/resume";
 import type { TmdbDetail } from "@/lib/providers/tmdb";
 import type { RemoteLibraryAction, RemoteTrackers } from "@/lib/remote/protocol";
 import { resolveTrailerId } from "@/lib/trailer";
@@ -48,6 +49,14 @@ export function DetailActions({
     };
   }, [trailerId, meta.id, settings.tmdbKey]);
 
+  // Continue Watching already says how much is left, but arriving here from it
+  // the button still read "Play", which is the one word that suggests starting
+  // over. Series keep it: their Play targets the next episode, not this position.
+  const resuming = useMemo(
+    () => meta.type === "movie" && readResumeMs(meta.id) > 5000,
+    [meta.type, meta.id],
+  );
+
   return (
     <>
       <div className="flex items-center gap-2.5">
@@ -57,7 +66,7 @@ export function DetailActions({
           className="flex h-12 flex-1 items-center justify-center gap-2 rounded-full bg-ink text-[15.5px] font-semibold text-canvas shadow-[0_10px_30px_-12px_rgba(0,0,0,0.5)]"
         >
           <Play size={18} strokeWidth={0} fill="currentColor" />
-          Play
+          {resuming ? "Resume" : "Play"}
         </button>
         <button
           type="button"
