@@ -321,7 +321,11 @@ function BrowseScroll({ restoreKey, children }: { restoreKey: string; children: 
       <div
         ref={scrollRef}
         className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain"
-        style={{ paddingBottom: MOBILE_CHROME_CLEARANCE }}
+        style={{
+          paddingBottom: MOBILE_CHROME_CLEARANCE,
+          paddingLeft: "env(safe-area-inset-left, 0px)",
+          paddingRight: "env(safe-area-inset-right, 0px)",
+        }}
       >
         <ScrollRootContext.Provider value={scrollEl}>{children}</ScrollRootContext.Provider>
       </div>

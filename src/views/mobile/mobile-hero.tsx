@@ -147,7 +147,17 @@ export function MobileHero({ slides, onOpenDetail }: { slides: Meta[]; onOpenDet
   const layerTransition = reduce ? "none" : `opacity ${DISSOLVE_MS}ms ease-in-out`;
 
   return (
-    <section className="relative -mt-3 mb-1">
+    <section
+      className="relative -mt-3 mb-1"
+      style={{
+        // The scroller insets its children past the Dynamic Island, which is right
+        // for headings and cards but would letterbox a cinematic backdrop. Bleed
+        // back out to the screen edge; the caption column below re-applies the
+        // inset to itself so only the artwork sits under the island.
+        marginLeft: "calc(-1 * env(safe-area-inset-left, 0px))",
+        marginRight: "calc(-1 * env(safe-area-inset-right, 0px))",
+      }}
+    >
       {/* The 440px floor keeps the hero cinematic on small portrait phones, but taken
           literally it outgrows a landscape viewport that is itself only ~435px tall,
           hiding every row behind a full screen of scroll. Cap the floor to the

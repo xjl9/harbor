@@ -163,7 +163,14 @@ function ViewScroll({ restoreKey, children }: { restoreKey: string; children: Re
       <div
         ref={scrollRef}
         className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain"
-        style={{ paddingBottom: MOBILE_CHROME_CLEARANCE }}
+        style={{
+          paddingBottom: MOBILE_CHROME_CLEARANCE,
+          // Landscape puts the Dynamic Island over one long edge, where it was
+          // cutting into section headings and cards. Full-bleed children bleed
+          // back out with a matching negative margin; in portrait both are 0.
+          paddingLeft: "env(safe-area-inset-left, 0px)",
+          paddingRight: "env(safe-area-inset-right, 0px)",
+        }}
       >
         <ScrollRootContext.Provider value={scrollEl}>{children}</ScrollRootContext.Provider>
       </div>
