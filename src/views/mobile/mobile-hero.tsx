@@ -198,11 +198,14 @@ export function MobileHero({ slides, onOpenDetail }: { slides: Meta[]; onOpenDet
             slab. Portrait is narrower than the cap and so is unaffected, and the
             box stays anchored to the inline start, which flips under RTL. */}
         <div
-          className="pointer-events-none absolute inset-x-0 bottom-0 z-10 flex max-w-[560px] flex-col gap-3.5 [@media(max-height:500px)]:gap-2 [@media(max-height:500px)]:!pb-7"
+          className="pointer-events-none absolute inset-x-0 bottom-0 z-10 flex max-w-[560px] flex-col gap-3.5 [@media(max-height:500px)]:gap-2"
           style={{
-            // Reserve the floating tab bar and now playing bar. Without this the
-            // hero's actions sit under them on a short landscape viewport.
-            paddingBottom: "calc(1.75rem + var(--mobile-chrome-h, 0px))",
+            // No chrome reservation here. The bars are pinned to the bottom of the
+            // screen and this hero never reaches it: 62svh in portrait, 50svh on a
+            // short viewport. Reserving their height just pushed the caption up and
+            // left a dead band above the first row. The scroller still reserves it
+            // via MOBILE_CHROME_CLEARANCE, which is what actually needs it.
+            paddingBottom: "1.75rem",
             // Landscape puts the Dynamic Island on one side, and a flat 20px gutter
             // ran Play underneath it. Take the larger of the two per side.
             paddingLeft: "max(1.25rem, env(safe-area-inset-left, 0px))",
