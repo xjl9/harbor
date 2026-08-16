@@ -1003,6 +1003,18 @@ final class HarborMpvViewController: UIViewController, HarborPlayerEngine {
     armAutoHide()
   }
 
+  // A container that titles every audio stream the same way ("5.1 DD" on a MULTi
+  // release) renders as several identical rows with nothing to choose between
+  // them. The language is already on the entry, so append it whenever it adds
+  // something the title does not already say.
+  private func trackDisplayName(_ track: NativeTrackEntry) -> String {
+    let lang = track.lang.trimmingCharacters(in: .whitespaces)
+    guard !lang.isEmpty, !track.label.localizedCaseInsensitiveContains(lang) else {
+      return track.label
+    }
+    return "\(track.label) \u{00B7} \(lang)"
+  }
+
   @objc private func tracksTapped() {
     guard !shuttingDown, fileLoaded else { return }
     // Hold the chrome open while the sheet is up; re-arm from each handler.
@@ -1012,7 +1024,7 @@ final class HarborMpvViewController: UIViewController, HarborPlayerEngine {
     for track in lastAudioTracks {
       let mark = track.selected ? "\u{2713} " : ""
       sheet.addAction(
-        UIAlertAction(title: "\(mark)Audio: \(track.label)", style: .default) { [weak self] _ in
+        UIAlertAction(title: "\(mark)Audio: \(trackDisplayName(track))", style: .default) { [weak self] _ in
           self?.doSetAudioTrack(track.id)
           self?.armAutoHide()
         })
@@ -1020,7 +1032,7 @@ final class HarborMpvViewController: UIViewController, HarborPlayerEngine {
     for track in lastSubtitleTracks {
       let mark = track.selected ? "\u{2713} " : ""
       sheet.addAction(
-        UIAlertAction(title: "\(mark)Subtitle: \(track.label)", style: .default) { [weak self] _ in
+        UIAlertAction(title: "\(mark)Subtitle: \(trackDisplayName(track))", style: .default) { [weak self] _ in
           self?.doSetSubtitleTrack(track.id)
           self?.armAutoHide()
         })
