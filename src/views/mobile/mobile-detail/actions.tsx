@@ -3,9 +3,9 @@ import { createPortal } from "react-dom";
 import { Bookmark, Check, Download, Eye, Film, Monitor, MonitorPlay, MoreHorizontal, Play } from "lucide-react";
 import type { Meta } from "@/lib/cinemeta";
 import type { TmdbDetail } from "@/lib/providers/tmdb";
-import type { RemoteLibraryAction, RemoteLibraryItem, RemoteTrackers } from "@/lib/remote/protocol";
+import type { RemoteLibraryAction, RemoteTrackers } from "@/lib/remote/protocol";
 import { resolveTrailerId } from "@/lib/trailer";
-import { isMobileNative } from "@/lib/platform";
+import { isMobileNative, isRemoteRoute } from "@/lib/platform";
 import { useSettings } from "@/lib/settings";
 import { useView } from "@/lib/view";
 import { useDownloads } from "@/lib/download/downloads-store";
@@ -14,6 +14,7 @@ import { HIDE_SCROLL, useReducedMotion, useSheetExit } from "./data";
 import { MobileTrailerOverlay } from "./trailer";
 import { Group, SheetRow } from "./sheet-ui";
 import { TrackGroup } from "./track-group";
+import { useLibraryToggles } from "./library-actions";
 
 export function DetailActions({
   meta,
@@ -87,11 +88,6 @@ export function DetailActions({
   );
 }
 
-function inList(list: RemoteLibraryItem[] | undefined, id: string, imdbId?: string | null): boolean {
-  if (!list) return false;
-  return list.some((it) => it.id === id || (!!imdbId && it.id === imdbId));
-}
-
 function joinAnd(items: string[]): string {
   if (items.length <= 1) return items[0] ?? "";
   if (items.length === 2) return `${items[0]} and ${items[1]}`;
@@ -143,21 +139,6 @@ function ActionsSheet({
     ? downloads.find((d) => d.metaId === meta.id && d.season == null)
     : undefined;
 
-  const favBase = inList(library?.favorites, meta.id, imdbId);
-  const watchlistBase = inList(library?.watchlist, meta.id, imdbId);
-  const historyBase = inList(library?.history, meta.id, imdbId);
-
-  const [favOpt, setFavOpt] = useState<boolean | null>(null);
-  const [watchlistOpt, setWatchlistOpt] = useState<boolean | null>(null);
-  const [historyOpt, setHistoryOpt] = useState<boolean | null>(null);
-  useEffect(() => setFavOpt(null), [favBase]);
-  useEffect(() => setWatchlistOpt(null), [watchlistBase]);
-  useEffect(() => setHistoryOpt(null), [historyBase]);
-
-  const isFav = favOpt ?? favBase;
-  const inWatchlist = watchlistOpt ?? watchlistBase;
-  const isWatched = historyOpt ?? historyBase;
-
   const send = (op: RemoteLibraryAction) =>
     sendCommand({
       action: "libraryAction",
@@ -168,6 +149,20 @@ function ActionsSheet({
       imdbId,
       op,
     });
+
+  // The browser remote page exists to drive a computer and keeps no library of
+  // its own; every other phone surface owns the on-device stores the library
+  // tab reads, so it can write them with nothing connected.
+  const rows = useLibraryToggles({
+    meta,
+    title,
+    poster,
+    imdbId,
+    remote: online,
+    library,
+    canWriteLocal: !isRemoteRoute(),
+    send,
+  });
 
   const sync = online ? syncHint(trackers) : undefined;
 
@@ -272,47 +267,41 @@ function ActionsSheet({
 
         <Group label="Your library">
           <SheetRow
-            icon={<HeartIcon filled={isFav} />}
+            icon={<HeartIcon filled={rows.favorite.on} />}
             label="Favorites"
-            sublabel={isFav ? "Saved to your favorites" : "Save to your favorites"}
-            active={isFav}
-            disabled={!online}
-            trailing={isFav ? <Check size={18} strokeWidth={2.6} className="text-accent" /> : undefined}
-            onClick={() => {
-              const next = !isFav;
-              setFavOpt(next);
-              send({ kind: "favorite", on: next });
-            }}
+            sublabel={rows.favorite.on ? "Saved to your favorites" : "Save to your favorites"}
+            active={rows.favorite.on}
+            disabled={rows.favorite.disabled}
+            trailing={
+              rows.favorite.on ? <Check size={18} strokeWidth={2.6} className="text-accent" /> : undefined
+            }
+            onClick={rows.favorite.toggle}
           />
           <SheetRow
-            icon={<Bookmark size={20} strokeWidth={2} fill={inWatchlist ? "currentColor" : "none"} />}
+            icon={<Bookmark size={20} strokeWidth={2} fill={rows.watchlist.on ? "currentColor" : "none"} />}
             label="Watchlist"
-            sublabel={inWatchlist ? "In your watchlist" : "Add to your watchlist"}
+            sublabel={rows.watchlist.on ? "In your watchlist" : "Add to your watchlist"}
             hint={sync}
-            active={inWatchlist}
-            disabled={!online}
-            trailing={inWatchlist ? <Check size={18} strokeWidth={2.6} className="text-accent" /> : undefined}
-            onClick={() => {
-              const next = !inWatchlist;
-              setWatchlistOpt(next);
-              send({ kind: "watchlist", on: next });
-            }}
+            active={rows.watchlist.on}
+            disabled={rows.watchlist.disabled}
+            trailing={
+              rows.watchlist.on ? <Check size={18} strokeWidth={2.6} className="text-accent" /> : undefined
+            }
+            onClick={rows.watchlist.toggle}
           />
           <SheetRow
             icon={<Eye size={20} strokeWidth={2} />}
             label="Watched"
-            sublabel={isWatched ? "Marked as watched" : "Mark as watched"}
+            sublabel={rows.watched.on ? "Marked as watched" : "Mark as watched"}
             hint={sync}
-            active={isWatched}
-            disabled={!online}
-            trailing={isWatched ? <Check size={18} strokeWidth={2.6} className="text-accent" /> : undefined}
-            onClick={() => {
-              const next = !isWatched;
-              setHistoryOpt(next);
-              send({ kind: "watched", on: next });
-            }}
+            active={rows.watched.on}
+            disabled={rows.watched.disabled}
+            trailing={
+              rows.watched.on ? <Check size={18} strokeWidth={2.6} className="text-accent" /> : undefined
+            }
+            onClick={rows.watched.toggle}
           />
-          {!online && (
+          {rows.needsComputer && (
             <div className="flex items-center justify-center gap-2 px-6 pb-1 pt-1.5 text-center text-[12px] leading-relaxed text-ink-subtle">
               <Monitor size={14} strokeWidth={2} className="shrink-0" />
               <span>Connect to your computer to manage your library.</span>

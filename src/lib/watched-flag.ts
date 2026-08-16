@@ -43,7 +43,8 @@ export function setWatchedFlag(metaId: string, watched: boolean): void {
   persist(next);
 }
 
-function subscribe(fn: () => void): () => void {
+// Covers both stores a "watched" mark writes: the flag set and the movie list.
+export function subscribeWatched(fn: () => void): () => void {
   subs.add(fn);
   const offMovie = subscribeMovieWatched(fn);
   return () => {
@@ -58,7 +59,7 @@ export function useMetaWatched(
   altId?: string | null,
 ): boolean {
   return useSyncExternalStore(
-    subscribe,
+    subscribeWatched,
     () => {
       if (!metaId) return false;
       if (load().has(metaId)) return true;

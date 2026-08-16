@@ -21,6 +21,7 @@ import { library, libraryMetaType, type LibraryItem } from "@/lib/stremio";
 import { readLocalEntries, subscribeWatchlist, type LocalEntry } from "@/lib/watchlist";
 import { useMediaFavorites, type MediaEntry } from "@/lib/media-favorites";
 import { useLocalCwLibraryItems } from "@/lib/continue-watching";
+import { useLocalWatched, type LocalWatchedEntry } from "@/lib/library/local-watched";
 import { fetchWatchlist } from "@/lib/trakt/watchlist";
 import { fetchWatchedHistory, type HistoryItem } from "@/lib/trakt/history";
 import { traktItemToMeta } from "@/lib/trakt/to-meta";
@@ -343,6 +344,10 @@ function localToEntry(e: LocalEntry): Entry {
   };
 }
 
+function watchedToEntry(e: LocalWatchedEntry): Entry {
+  return { meta: { id: e.id, type: e.type, name: e.name, poster: e.poster }, date: e.at || 0 };
+}
+
 function favToEntry(e: MediaEntry): Entry {
   return {
     meta: { id: e.id, type: e.type, name: e.name || e.id, poster: e.poster },
@@ -434,7 +439,8 @@ function dedupEntries(groups: Entry[][]): Entry[] {
 
 // Builds all three library sections on-device, 1:1 with the desktop tabs:
 //   watchlist = local saved + Stremio cloud library + Trakt + desktop snapshot
-//   history   = Stremio cloud + local continue-watching + Trakt + snapshot
+//   history   = Stremio cloud + local continue-watching + on-device watched
+//               marks + Trakt + desktop snapshot
 //   favorites = local media favorites + snapshot
 // A connected desktop is merged in additively; it is never required.
 function useLibraryData(): { data: Record<SectionId, SectionState>; connected: boolean } {
@@ -445,6 +451,7 @@ function useLibraryData(): { data: Record<SectionId, SectionState>; connected: b
   const remoteLib = snapshot.library;
   const { items: favItems } = useMediaFavorites();
   const localCw = useLocalCwLibraryItems();
+  const localWatched = useLocalWatched();
 
   const [localWatch, setLocalWatch] = useState<LocalEntry[]>(() => readLocalEntries());
   useEffect(() => {
@@ -522,6 +529,7 @@ function useLibraryData(): { data: Record<SectionId, SectionState>; connected: b
     const history = dedupEntries([
       filterHistory(stremio).map((i) => libToEntry(i, "watched")),
       localCw.map((i) => libToEntry(i, "watched")),
+      localWatched.map(watchedToEntry),
       traktHist.map(traktHistoryToEntry).filter((e): e is Entry => e !== null),
       remoteToEntries(remoteLib?.history),
     ]);
@@ -552,6 +560,7 @@ function useLibraryData(): { data: Record<SectionId, SectionState>; connected: b
     favItems,
     localCw,
     localWatch,
+    localWatched,
     settings.libraryBookmarkedOnly,
   ]);
 }
