@@ -766,7 +766,7 @@ function CollectionsBrowser({
         ) : list.length === 0 ? (
           <EmptyState Icon={Layers} text="No collections yet. Add a collections addon to browse curated sets." />
         ) : (
-          <div className="grid grid-cols-3 gap-x-3 gap-y-4">
+          <div className="grid grid-cols-3 [@media(max-height:500px)]:grid-cols-6 gap-x-3 gap-y-4">
             {list.map((m) => (
               <CollectionTile key={m.id} meta={m} onOpen={openCollection} />
             ))}
@@ -779,7 +779,7 @@ function CollectionsBrowser({
 
 function Grid({ metas, onOpenDetail }: { metas: Meta[]; onOpenDetail: (m: Meta) => void }) {
   return (
-    <div className="grid grid-cols-3 gap-x-3 gap-y-4">
+    <div className="grid grid-cols-3 [@media(max-height:500px)]:grid-cols-6 gap-x-3 gap-y-4">
       {metas.map((m) => (
         <GridTile key={m.id} meta={m} onOpenDetail={onOpenDetail} />
       ))}

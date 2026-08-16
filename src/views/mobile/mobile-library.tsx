@@ -237,7 +237,7 @@ function Section({
   if (state.loading && state.entries.length === 0) return <SkeletonGrid />;
   if (state.entries.length === 0) return <Empty kind={kind} />;
   return (
-    <div className="grid grid-cols-3 gap-x-3 gap-y-4">
+    <div className="grid grid-cols-3 [@media(max-height:500px)]:grid-cols-6 gap-x-3 gap-y-4">
       {state.entries.map((e) => (
         <GridTile key={e.meta.id} meta={e.meta} onOpenDetail={onOpenDetail} />
       ))}
@@ -271,7 +271,7 @@ function GridTile({ meta, onOpenDetail }: { meta: Meta; onOpenDetail: (m: Meta) 
 
 function SkeletonGrid() {
   return (
-    <div className="harbor-skeleton grid grid-cols-3 gap-x-3 gap-y-4">
+    <div className="harbor-skeleton grid grid-cols-3 [@media(max-height:500px)]:grid-cols-6 gap-x-3 gap-y-4">
       {Array.from({ length: 9 }).map((_, i) => (
         <div key={i} className="flex flex-col gap-1.5">
           <div className="w-full rounded-[12px] bg-elevated/70" style={{ paddingTop: "150%" }} />

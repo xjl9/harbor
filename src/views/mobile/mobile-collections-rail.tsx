@@ -223,7 +223,7 @@ function CollectionMembersSheet({
         <span className="line-clamp-1 max-w-[70vw]">{name}</span>
       </button>
       {members === null ? (
-        <div className="grid grid-cols-3 gap-x-3 gap-y-4">
+        <div className="grid grid-cols-3 [@media(max-height:500px)]:grid-cols-6 gap-x-3 gap-y-4">
           {Array.from({ length: 6 }).map((_, i) => (
             <div
               key={i}
@@ -241,7 +241,7 @@ function CollectionMembersSheet({
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-3 gap-x-3 gap-y-4">
+        <div className="grid grid-cols-3 [@media(max-height:500px)]:grid-cols-6 gap-x-3 gap-y-4">
           {members.map((m) => (
             <MemberTile key={m.id} meta={m} onOpenDetail={openDetail} />
           ))}
