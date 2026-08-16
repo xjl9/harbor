@@ -110,10 +110,16 @@ export function MobileOnboarding() {
 
   return (
     <div
-      className={`fixed inset-0 z-[100] flex flex-col bg-canvas ${
+      className={`fixed inset-0 z-[100] flex flex-col bg-canvas [@media(max-height:500px)]:!pt-3 ${
         closing ? "opacity-0 transition-opacity duration-300" : "animate-fade-in"
       }`}
-      style={{ paddingTop: TOP_INSET }}
+      style={{
+        paddingTop: TOP_INSET,
+        // A fixed overlay never sees the shell's gutter, and landscape has no top
+        // inset to spend, so the 52pt floor is dead space there.
+        paddingLeft: "env(safe-area-inset-left, 0px)",
+        paddingRight: "env(safe-area-inset-right, 0px)",
+      }}
     >
       {/* Ambient amber wash, same whisper as mobile-settings (~14%). */}
       <div
@@ -162,7 +168,7 @@ export function MobileOnboarding() {
           {/* Footer hides while the keyboard is up; in-step submit buttons take over. */}
           {keyboardInset === 0 && (
             <div
-              className="shrink-0 px-5 pt-2"
+              className="shrink-0 px-5 pt-2 [@media(max-height:500px)]:pt-0"
               style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 16px)" }}
             >
               <div className="flex justify-center">
@@ -174,7 +180,7 @@ export function MobileOnboarding() {
               </div>
               <button
                 onClick={isLast ? finish : next}
-                className="mt-2 flex h-[52px] w-full items-center justify-center gap-2 rounded-full bg-ink text-[16px] font-semibold text-canvas transition-transform duration-150 active:scale-[0.97]"
+                className="mt-2 flex h-[52px] [@media(max-height:500px)]:h-11 [@media(max-height:500px)]:mt-1 w-full items-center justify-center gap-2 rounded-full bg-ink text-[16px] font-semibold text-canvas transition-transform duration-150 active:scale-[0.97]"
               >
                 {isLast ? t("Enter Harbor") : step === "welcome" ? t("Get Started") : t("Continue")}
                 <ArrowRight size={16} strokeWidth={2.4} className="dir-icon" />

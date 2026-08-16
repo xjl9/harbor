@@ -115,13 +115,13 @@ export function ObTaste({
         </p>
       </div>
       {items === null ? (
-        <div className="grid grid-cols-3 gap-2.5">
+        <div className="grid grid-cols-3 [@media(max-height:500px)]:grid-cols-6 gap-2.5">
           {Array.from({ length: 12 }).map((_, i) => (
             <div key={i} className="harbor-skeleton aspect-[2/3] rounded-xl bg-raised" />
           ))}
         </div>
       ) : (
-        <div className="grid grid-cols-3 gap-2.5">
+        <div className="grid grid-cols-3 [@media(max-height:500px)]:grid-cols-6 gap-2.5">
           {items.map((m) => {
             const sel = selectedIds.has(m.id);
             return (
