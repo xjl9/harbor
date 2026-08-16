@@ -1,7 +1,7 @@
 import { Transport } from "@/components/player/transport";
 import { MinimalShell } from "@/components/player/shells/minimal-shell";
 import { MobileShell } from "@/components/player/shells/mobile-shell";
-import { isMobileNative } from "@/lib/platform";
+import { isMobileNative, isMobileWeb } from "@/lib/platform";
 import type { PlayerShellMeta } from "./types";
 
 export const PLAYER_SHELLS: PlayerShellMeta[] = [
@@ -29,9 +29,11 @@ const MOBILE_SHELL: PlayerShellMeta = {
 };
 
 export function getPlayerShell(id: string): PlayerShellMeta {
-  // Native mobile always uses the touch shell; the configured desktop shell (with
-  // its width-based slot system) is unusable on a phone. Desktop is unaffected.
-  if (isMobileNative()) return MOBILE_SHELL;
+  // Any phone-sized surface gets the touch shell. The configured desktop shell
+  // sizes its controls by width and null-returns most of them below 600px, so a
+  // phone browser was left with a transport that renders almost nothing. Gating
+  // on native alone missed that case. Desktop is unaffected.
+  if (isMobileNative() || isMobileWeb()) return MOBILE_SHELL;
   return PLAYER_SHELLS.find((s) => s.id === id) ?? PLAYER_SHELLS[0];
 }
 
