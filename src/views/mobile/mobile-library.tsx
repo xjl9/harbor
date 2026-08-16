@@ -286,9 +286,12 @@ function Empty({ kind }: { kind: SectionId }) {
   const t = useT();
   const cfg = EMPTY[kind];
   const Icon = cfg.icon;
+  // Stacked this runs about 146pt tall, and a landscape phone leaves roughly 127pt
+  // between the sort row and the floating bars, so the icon sat behind the tab bar.
+  // On a short viewport it lies on its side instead, which halves the height.
   return (
-    <div className="flex flex-col items-center gap-4 pt-16 text-center">
-      <span className="grid h-16 w-16 place-items-center rounded-2xl bg-elevated/40 text-ink-subtle ring-1 ring-edge-soft">
+    <div className="flex flex-col items-center gap-4 pt-16 text-center [@media(max-height:500px)]:flex-row [@media(max-height:500px)]:justify-center [@media(max-height:500px)]:pt-6 [@media(max-height:500px)]:text-start">
+      <span className="grid h-16 w-16 shrink-0 place-items-center rounded-2xl bg-elevated/40 text-ink-subtle ring-1 ring-edge-soft [@media(max-height:500px)]:h-12 [@media(max-height:500px)]:w-12">
         <Icon size={26} strokeWidth={1.8} />
       </span>
       <div className="flex flex-col gap-1.5">
