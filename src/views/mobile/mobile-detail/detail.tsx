@@ -1,4 +1,11 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { createPortal } from "react-dom";
 import {
   claimOrigin,
@@ -11,7 +18,11 @@ import {
   type Rect,
 } from "@/lib/motion";
 import type { Meta } from "@/lib/cinemeta";
-import { awardSummary, pickHeroAwards, useAwards } from "@/lib/providers/wikidata";
+import {
+  awardSummary,
+  pickHeroAwards,
+  useAwards,
+} from "@/lib/providers/wikidata";
 import { mergeBundledAwards } from "@/lib/awards-history";
 import { useSettings } from "@/lib/settings";
 import { useHideAnimeMetas } from "@/lib/anime-hide";
@@ -29,11 +40,21 @@ import { Hero } from "./hero";
 import { DetailActions } from "./actions";
 import { Line, Overview } from "./ui";
 import { EpisodeSection } from "./episodes";
-import { AnimeEpisodeSection, firstAnimeEpisode, toPlayEpisode } from "./anime-episodes";
+import {
+  AnimeEpisodeSection,
+  firstAnimeEpisode,
+  toPlayEpisode,
+} from "./anime-episodes";
 import { CastRow, CastSkeleton, CrewSection } from "./cast";
 import { RecRail } from "./recommendations";
 import { AwardsSection } from "./awards";
-import { dedupeCharacters, dedupeMeta, dedupeRelated, isAnimeId, useAnimeDetail } from "./anime-data";
+import {
+  dedupeCharacters,
+  dedupeMeta,
+  dedupeRelated,
+  isAnimeId,
+  useAnimeDetail,
+} from "./anime-data";
 import {
   AnimeInfo,
   AnimeRelatedRow,
@@ -47,7 +68,13 @@ import { useAnimeAnilistDetails } from "@/views/detail/use-anime-anilist-details
 import { useAnimeCharacters } from "@/views/detail/use-anime-characters";
 import { useMalRating } from "@/lib/mal-rating";
 
-export function MobileDetail({ meta, onClose }: { meta: Meta; onClose: () => void }) {
+export function MobileDetail({
+  meta,
+  onClose,
+}: {
+  meta: Meta;
+  onClose: () => void;
+}) {
   const reduced = useReducedMotion();
   const [closing, setClosing] = useState(false);
   const [stack, setStack] = useState<Meta[]>([meta]);
@@ -61,7 +88,9 @@ export function MobileDetail({ meta, onClose }: { meta: Meta; onClose: () => voi
   // legitimately start one (opening the screen, tapping a related poster) and
   // read (never consumed) by the layout effect, so StrictMode's second
   // invocation replays the same flight instead of finding nothing left.
-  const flight = useRef<{ from: Rect; origin: OriginHandle | null } | null>(null);
+  const flight = useRef<{ from: Rect; origin: OriginHandle | null } | null>(
+    null,
+  );
   const openedFor = useRef<string | null>(null);
   const finished = useRef(false);
 
@@ -78,7 +107,9 @@ export function MobileDetail({ meta, onClose }: { meta: Meta; onClose: () => voi
   const isRoot = stack.length === 1;
 
   const heroPoster = useCallback(
-    () => scrollRef.current?.querySelector<HTMLElement>(`[${FLIP_TARGET_ATTR}]`) ?? null,
+    () =>
+      scrollRef.current?.querySelector<HTMLElement>(`[${FLIP_TARGET_ATTR}]`) ??
+      null,
     [],
   );
 
@@ -120,7 +151,10 @@ export function MobileDetail({ meta, onClose }: { meta: Meta; onClose: () => voi
     // one object moves, so the tile stays hidden until the screen gives it back
     // (finish(), or the unmount cleanup above, whichever comes first).
     if (!flipIn(el, next.from)) return () => resetFlip(el);
-    const handoff = window.setTimeout(() => next.origin?.hide(), MOTION.handoff);
+    const handoff = window.setTimeout(
+      () => next.origin?.hide(),
+      MOTION.handoff,
+    );
     return () => {
       window.clearTimeout(handoff);
       resetFlip(el);
@@ -139,7 +173,10 @@ export function MobileDetail({ meta, onClose }: { meta: Meta; onClose: () => voi
   finishRef.current = finish;
   useEffect(() => {
     if (!closing) return;
-    const t = window.setTimeout(() => finishRef.current(), MOTION.exit + MOTION.exitGrace);
+    const t = window.setTimeout(
+      () => finishRef.current(),
+      MOTION.exit + MOTION.exitGrace,
+    );
     return () => window.clearTimeout(t);
   }, [closing]);
 
@@ -202,12 +239,19 @@ export function MobileDetail({ meta, onClose }: { meta: Meta; onClose: () => voi
           something else) but its own controls go inert, so a tap can neither
           close twice nor navigate into a body the pending unmount destroys. */}
       <div className={closing ? "pointer-events-none contents" : "contents"}>
-        <DetailBody key={current.id} meta={current} onBack={back} onOpenMeta={openMeta} />
+        <DetailBody
+          key={current.id}
+          meta={current}
+          onBack={back}
+          onOpenMeta={openMeta}
+        />
       </div>
     </div>
   );
 
-  return typeof document !== "undefined" ? createPortal(node, document.body) : node;
+  return typeof document !== "undefined"
+    ? createPortal(node, document.body)
+    : node;
 }
 
 function DetailBody({
@@ -237,7 +281,10 @@ function DetailBody({
   const [settled, setSettled] = useState(false);
   useEffect(() => {
     setSettled(false);
-    const t = window.setTimeout(() => setSettled(true), settleReduced ? 0 : MOTION.travel);
+    const t = window.setTimeout(
+      () => setSettled(true),
+      settleReduced ? 0 : MOTION.travel,
+    );
     return () => window.clearTimeout(t);
   }, [meta.id, settleReduced]);
 
@@ -250,28 +297,36 @@ function DetailBody({
   );
   const malRating = useMalRating(
     isAnime
-      ? { ...meta, id: anime.canonicalId ?? meta.id, imdbRating: detail?.rating ?? meta.imdbRating }
+      ? {
+          ...meta,
+          id: anime.canonicalId ?? meta.id,
+          imdbRating: detail?.rating ?? meta.imdbRating,
+        }
       : undefined,
   );
 
   const handlePerson = useCallback(
-    (id: number, name: string) => openOnHost({ id: `person:${id}`, type: "movie", name } as Meta),
+    (id: number, name: string) =>
+      openOnHost({ id: `person:${id}`, type: "movie", name } as Meta),
     [openOnHost],
   );
 
-  const isSeries = !isAnime && (detail?.kind === "tv" || meta.type === "series");
+  const isSeries =
+    !isAnime && (detail?.kind === "tv" || meta.type === "series");
   const title = detail?.title || meta.name;
   const logo = detail?.logo || meta.logo;
   // TMDB details hand back /original here (up to ~4K, tens of MB decoded); w1280
   // already exceeds any phone-width hero box. Non-TMDB URLs pass through untouched.
-  const backdropSrc = detail?.backdrop || full?.background || meta.background || meta.poster;
+  const backdropSrc =
+    detail?.backdrop || full?.background || meta.background || meta.poster;
   const backdrop = backdropSrc ? sizeImageUrl(backdropSrc, 1280) : undefined;
   const year = (detail?.year || meta.releaseInfo || "").slice(0, 4);
   const imdbRating = meta.imdbRating || full?.imdbRating;
   const rating = isAnime ? malRating : imdbRating || detail?.rating;
   const runtime = detail?.runtime;
   const genres = (detail?.genres?.length ? detail.genres : meta.genres) ?? [];
-  const overview = detail?.overview || full?.description || meta.description || "";
+  const overview =
+    detail?.overview || full?.description || meta.description || "";
 
   const imdbId = detail?.imdbId ?? (meta.id.startsWith("tt") ? meta.id : null);
   const releaseYear = Number(year) || undefined;
@@ -281,15 +336,20 @@ function DetailBody({
     [liveAwards, meta.name, releaseYear],
   );
   const awardGroups = useMemo(() => awardSummary(awards), [awards]);
-  const heroAwardSummary = useMemo(() => pickHeroAwards(awardGroups), [awardGroups]);
+  const heroAwardSummary = useMemo(
+    () => pickHeroAwards(awardGroups),
+    [awardGroups],
+  );
 
   const seasons = useMemo(() => seasonList(full, detail), [full, detail]);
   const first = useMemo(() => firstEpisode(full, seasons), [full, seasons]);
-  const trailerId = detail?.trailerCandidates?.[0] ?? meta.trailerStreams?.[0]?.ytId ?? null;
+  const trailerId =
+    detail?.trailerCandidates?.[0] ?? meta.trailerStreams?.[0]?.ytId ?? null;
 
   const { recItems, simItems } = useMemo(() => {
     if (!detail) return { recItems: [] as Meta[], simItems: [] as Meta[] };
-    if (!isAnime) return { recItems: detail.recommendations, simItems: detail.similar };
+    if (!isAnime)
+      return { recItems: detail.recommendations, simItems: detail.similar };
     const seenIds = new Set<string>([meta.id]);
     const seenNames = new Set<string>([meta.name.trim().toLowerCase()]);
     const recItems = dedupeMeta(detail.recommendations, seenIds, seenNames);
@@ -303,7 +363,8 @@ function DetailBody({
   const onPlay = () => {
     if (isAnime) {
       const firstAnime = firstAnimeEpisode(anime.episodes);
-      if (firstAnime) playOnHost(playMeta, { playEpisode: toPlayEpisode(firstAnime) });
+      if (firstAnime)
+        playOnHost(playMeta, { playEpisode: toPlayEpisode(firstAnime) });
       else playOnHost(playMeta);
     } else if (isSeries && first) {
       playOnHost(meta, { season: first.season, episode: first.episode });
@@ -334,10 +395,20 @@ function DetailBody({
           characters a line and stretched Play across the whole screen. Portrait is
           narrower than the cap, so it is unchanged. */}
       <div
-        className="md-rise-in flex w-full max-w-[640px] flex-col gap-8 px-5 pt-5"
-        style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 44px)" }}
+        className="md-rise-in flex w-full max-w-[640px] flex-col gap-8 pt-5"
+        style={{
+          paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 44px)",
+          paddingLeft: "max(1.25rem, env(safe-area-inset-left, 0px))",
+          paddingRight: "max(1.25rem, env(safe-area-inset-right, 0px))",
+        }}
       >
-        <DetailActions meta={meta} detail={detail} title={title} trailerId={trailerId} onPlay={onPlay} />
+        <DetailActions
+          meta={meta}
+          detail={detail}
+          title={title}
+          trailerId={trailerId}
+          onPlay={onPlay}
+        />
 
         {overview ? (
           <Overview text={overview} />
@@ -351,72 +422,94 @@ function DetailBody({
 
         {settled && (
           <>
-        {isSeries && (
-          <EpisodeSection
-            meta={meta}
-            full={full}
-            detail={detail}
-            tmdbKey={key}
-            seasons={seasons}
-            onPlay={(ep) => playOnHost(meta, { season: ep.season, episode: ep.episode })}
-          />
-        )}
+            {isSeries && (
+              <EpisodeSection
+                meta={meta}
+                full={full}
+                detail={detail}
+                tmdbKey={key}
+                seasons={seasons}
+                onPlay={(ep) =>
+                  playOnHost(meta, { season: ep.season, episode: ep.episode })
+                }
+              />
+            )}
 
-        {isAnime && (
-          <AnimeEpisodeSection
-            meta={playMeta}
-            imdbId={imdbId}
-            episodes={anime.episodes}
-            loading={anime.loading}
-            onPlay={(ep) => playOnHost(playMeta, { playEpisode: ep })}
-          />
-        )}
+            {isAnime && (
+              <AnimeEpisodeSection
+                meta={playMeta}
+                imdbId={imdbId}
+                episodes={anime.episodes}
+                loading={anime.loading}
+                onPlay={(ep) => playOnHost(playMeta, { playEpisode: ep })}
+              />
+            )}
 
-        {detail && <CrewSection detail={detail} onPerson={handlePerson} />}
+            {detail && <CrewSection detail={detail} onPerson={handlePerson} />}
 
-        {detail && detail.cast.length > 0 ? (
-          <CastRow cast={detail.cast} onPerson={isAnime ? undefined : handlePerson} />
-        ) : (isAnime ? loading : key && loading) ? (
-          <CastSkeleton />
-        ) : null}
+            {detail && detail.cast.length > 0 ? (
+              <CastRow
+                cast={detail.cast}
+                onPerson={isAnime ? undefined : handlePerson}
+              />
+            ) : (isAnime ? loading : key && loading) ? (
+              <CastSkeleton />
+            ) : null}
 
-        {isAnime && animeCharacters.length > 0 && (
-          <CharactersRow characters={dedupeCharacters(animeCharacters)} />
-        )}
+            {isAnime && animeCharacters.length > 0 && (
+              <CharactersRow characters={dedupeCharacters(animeCharacters)} />
+            )}
 
-        {detail && shownRecItems.length > 0 && (
-          <RecRail title="More Like This" items={shownRecItems} onOpen={onOpenMeta} />
-        )}
+            {detail && shownRecItems.length > 0 && (
+              <RecRail
+                title="More Like This"
+                items={shownRecItems}
+                onOpen={onOpenMeta}
+              />
+            )}
 
-        {detail && shownSimItems.length > 0 && (
-          <RecRail title="You Might Also Like" items={shownSimItems} onOpen={onOpenMeta} />
-        )}
+            {detail && shownSimItems.length > 0 && (
+              <RecRail
+                title="You Might Also Like"
+                items={shownSimItems}
+                onOpen={onOpenMeta}
+              />
+            )}
 
-        {isAnime && anilist && anilist.relatedAnime.length > 0 && (
-          <AnimeRelatedRow
-            title="Related Anime"
-            nodes={dedupeRelated(anilist.relatedAnime)}
-            onOpen={(n) => onOpenMeta(relatedToMeta(n))}
-          />
-        )}
+            {isAnime && anilist && anilist.relatedAnime.length > 0 && (
+              <AnimeRelatedRow
+                title="Related Anime"
+                nodes={dedupeRelated(anilist.relatedAnime)}
+                onOpen={(n) => onOpenMeta(relatedToMeta(n))}
+              />
+            )}
 
-        {isAnime && anilist && anilist.adaptations.length > 0 && (
-          <AnimeRelatedRow title="Adaptations" nodes={dedupeRelated(anilist.adaptations)} />
-        )}
+            {isAnime && anilist && anilist.adaptations.length > 0 && (
+              <AnimeRelatedRow
+                title="Adaptations"
+                nodes={dedupeRelated(anilist.adaptations)}
+              />
+            )}
 
-        {isAnime && (detail || anilist) && (
-          <AnimeInfo detail={detail} anilist={anilist} malRating={malRating} />
-        )}
+            {isAnime && (detail || anilist) && (
+              <AnimeInfo
+                detail={detail}
+                anilist={anilist}
+                malRating={malRating}
+              />
+            )}
 
-        {isAnime && anilist && hasAnimeTitles(anilist, title) && (
-          <AnimeTitles details={anilist} primaryTitle={title} />
-        )}
+            {isAnime && anilist && hasAnimeTitles(anilist, title) && (
+              <AnimeTitles details={anilist} primaryTitle={title} />
+            )}
 
-        {isAnime && anilist && anilist.statusDistribution.length > 0 && (
-          <AnimeStats details={anilist} />
-        )}
+            {isAnime && anilist && anilist.statusDistribution.length > 0 && (
+              <AnimeStats details={anilist} />
+            )}
 
-        {awardGroups.length > 0 && <AwardsSection groups={awardGroups} awards={awards} />}
+            {awardGroups.length > 0 && (
+              <AwardsSection groups={awardGroups} awards={awards} />
+            )}
           </>
         )}
       </div>

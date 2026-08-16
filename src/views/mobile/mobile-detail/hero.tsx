@@ -5,7 +5,13 @@ import { Poster, usePosterChain } from "@/components/poster";
 import { ImdbIcon } from "@/components/icons/imdb-icon";
 import { HeroAwardsCorner } from "@/views/detail/hero-awards";
 import { useSettings } from "@/lib/settings";
-import { EASE_OUT, FLIP_TARGET_ATTR, MOTION, peekOriginPaint, sameArtwork } from "@/lib/motion";
+import {
+  EASE_OUT,
+  FLIP_TARGET_ATTR,
+  MOTION,
+  peekOriginPaint,
+  sameArtwork,
+} from "@/lib/motion";
 import type { TmdbDetail } from "@/lib/providers/tmdb";
 
 type HeroSummary = { type: string; wins: number; nominations: number }[];
@@ -63,11 +69,24 @@ export function Hero({
           className="absolute end-3 z-10"
           style={{ top: "calc(env(safe-area-inset-top, 0px) + 10px)" }}
         >
-          <HeroAwardsCorner summary={awardSummary} inline onDark className="max-w-[58vw] text-end" />
+          <HeroAwardsCorner
+            summary={awardSummary}
+            inline
+            onDark
+            className="max-w-[58vw] text-end"
+          />
         </div>
       )}
 
-      <div className="absolute inset-x-0 bottom-0 flex items-end gap-4 px-5 pb-1">
+      <div
+        className="absolute inset-x-0 bottom-0 flex items-end gap-4 pb-1"
+        style={{
+          // The detail page is a fixed overlay, so it never sees the scroller
+          // inset. In landscape a flat gutter put the poster under the island.
+          paddingLeft: "max(1.25rem, env(safe-area-inset-left, 0px))",
+          paddingRight: "max(1.25rem, env(safe-area-inset-right, 0px))",
+        }}
+      >
         <HeroPoster meta={meta} detail={detail} />
         <div className="md-rise-in flex min-w-0 flex-1 flex-col gap-2.5 pb-1">
           {logo ? (
@@ -81,7 +100,13 @@ export function Hero({
               {title}
             </h1>
           )}
-          <MetaPills year={year} rating={rating} isImdb={isImdb} runtime={runtime} genres={genres} />
+          <MetaPills
+            year={year}
+            rating={rating}
+            isImdb={isImdb}
+            runtime={runtime}
+            genres={genres}
+          />
         </div>
       </div>
     </div>
@@ -109,7 +134,10 @@ function Backdrop({ src }: { src: string }) {
       decoding="async"
       onLoad={() => setShown(true)}
       className="absolute inset-0 h-full w-full object-cover"
-      style={{ opacity: shown ? 1 : 0, transition: `opacity ${MOTION.image}ms ${EASE_OUT}` }}
+      style={{
+        opacity: shown ? 1 : 0,
+        transition: `opacity ${MOTION.image}ms ${EASE_OUT}`,
+      }}
     />
   );
 }
@@ -135,7 +163,13 @@ function useFlightBitmap(src: string | undefined): string | undefined {
   }, [src]);
 }
 
-function HeroPoster({ meta, detail }: { meta: Meta; detail: TmdbDetail | null }) {
+function HeroPoster({
+  meta,
+  detail,
+}: {
+  meta: Meta;
+  detail: TmdbDetail | null;
+}) {
   const { settings } = useSettings();
   const { src, onError } = usePosterChain(
     settings.rpdbKey,
@@ -176,7 +210,11 @@ function HeroPoster({ meta, detail }: { meta: Meta; detail: TmdbDetail | null })
 
   // The landing site for the shared-element flight from the tapped tile.
   return (
-    <div ref={wrapRef} {...{ [FLIP_TARGET_ATTR]: "" }} className="relative w-[92px] shrink-0">
+    <div
+      ref={wrapRef}
+      {...{ [FLIP_TARGET_ATTR]: "" }}
+      className="relative w-[92px] shrink-0"
+    >
       <Poster
         src={src}
         onError={onError}
@@ -217,25 +255,44 @@ function MetaPills({
   // Clean inline metadata (matches the home hero) instead of a row of identical gray
   // capsules — year/runtime recede, the rating is emphasized, genres are subtle.
   const items: React.ReactNode[] = [];
-  if (year) items.push(<span key="y" className="font-medium text-ink">{year}</span>);
+  if (year)
+    items.push(
+      <span key="y" className="font-medium text-ink">
+        {year}
+      </span>,
+    );
   if (rating)
     items.push(
       <span key="r" className="flex items-center gap-1.5">
         {isImdb ? (
           <ImdbIcon className="h-[14px] w-auto rounded-[3px]" />
         ) : (
-          <Star size={12} strokeWidth={0} fill="currentColor" className="text-accent" />
+          <Star
+            size={12}
+            strokeWidth={0}
+            fill="currentColor"
+            className="text-accent"
+          />
         )}
         <span className="font-semibold text-ink">{rating}</span>
       </span>,
     );
   if (runtime) items.push(<span key="rt">{runtime}</span>);
-  for (const g of genres.slice(0, 3)) items.push(<span key={`g-${g}`} className="text-ink-subtle">{g}</span>);
+  for (const g of genres.slice(0, 3))
+    items.push(
+      <span key={`g-${g}`} className="text-ink-subtle">
+        {g}
+      </span>,
+    );
   return (
     <div className="flex flex-wrap items-center gap-y-1 text-[13px] text-ink-muted">
       {items.map((it, i) => (
         <span key={i} className="inline-flex items-center">
-          {i > 0 && <span aria-hidden className="mx-2 text-ink-subtle/40">·</span>}
+          {i > 0 && (
+            <span aria-hidden className="mx-2 text-ink-subtle/40">
+              ·
+            </span>
+          )}
           {it}
         </span>
       ))}
