@@ -32,12 +32,13 @@ export function ScreensaverRoot() {
   const { player, picker, topKind } = useView();
   const enabled = settings.screensaver;
   const delayMs = Math.max(1, settings.screensaverDelayMin || 5) * 60000;
-  // A phone already has an idle screen: the system one. Running ours there means
-  // the timer keeps counting while the device is locked, so unlocking lands on an
-  // ambient clock that has to be dismissed instead of where the user left off.
-  // Tablets and desktops, where the app is likely the only thing on screen, keep it.
-  const onPhone = isMobileNative() || isMobileWeb();
-  const suppressed = onPhone || !!player || !!picker || topKind === "live" || topKind === "vod";
+  // A handheld already has an idle screen: the system one. Running ours there
+  // means the timer keeps counting while the device is locked, so unlocking lands
+  // on an ambient clock to dismiss instead of where the user left off. This covers
+  // every native mobile build (iPad included, which auto-locks the same way) plus
+  // phone-sized web. Desktop, where the app may be the only thing on screen, keeps it.
+  const handheld = isMobileNative() || isMobileWeb();
+  const suppressed = handheld || !!player || !!picker || topKind === "live" || topKind === "vod";
   const { active, dismiss } = useIdleScreensaver(enabled, delayMs, suppressed);
 
   const [items, setItems] = useState<AmbientItem[]>([]);

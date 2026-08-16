@@ -229,6 +229,18 @@ function DetailBody({
   const detail = isAnime ? anime.detail : tmdb.detail;
   const loading = isAnime ? anime.loading : tmdb.loading;
 
+  // Everything below the synopsis mounts in one commit the moment the fetch
+  // resolves, which measured as a single 348ms block landing 121ms into the open
+  // transition and visibly froze it. Hold those sections until the travel ends.
+  // Every fetch runs from this component, so this delays paint and nothing else.
+  const settleReduced = useReducedMotion();
+  const [settled, setSettled] = useState(false);
+  useEffect(() => {
+    setSettled(false);
+    const t = window.setTimeout(() => setSettled(true), settleReduced ? 0 : MOTION.travel);
+    return () => window.clearTimeout(t);
+  }, [meta.id, settleReduced]);
+
   const anilist = useAnimeAnilistDetails(anime.canonicalId, isAnime);
   const animeCharacters = useAnimeCharacters(anime.canonicalId, isAnime);
   // Anime streams resolve against the canonical kitsu id, not the browse id.
@@ -337,6 +349,8 @@ function DetailBody({
           </div>
         ) : null}
 
+        {settled && (
+          <>
         {isSeries && (
           <EpisodeSection
             meta={meta}
@@ -403,6 +417,8 @@ function DetailBody({
         )}
 
         {awardGroups.length > 0 && <AwardsSection groups={awardGroups} awards={awards} />}
+          </>
+        )}
       </div>
     </div>
   );
