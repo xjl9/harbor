@@ -96,13 +96,17 @@ export function ObLanguage() {
                 {selected && <span className="h-2.5 w-2.5 rounded-full bg-ink" />}
               </span>
               <span className="shrink-0">
-                <Flag language={lang.label} size="lg" showLabel={false} />
+                <Flag language={lang.label} size="xl" showLabel={false} />
               </span>
               <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+                {/* dir is what makes the glyphs shape and order correctly, but it
+                    also flips the box's alignment, which floated the Arabic name
+                    to the far edge while every other row started beside its flag.
+                    Pin the alignment so the list reads as one column. */}
                 <span
                   lang={lang.code}
                   dir={lang.rtl ? "rtl" : "ltr"}
-                  className={`text-[15px] font-semibold text-ink ${lang.rtl ? "font-arabic" : ""}`}
+                  className={`text-left text-[15px] font-semibold text-ink ${lang.rtl ? "font-arabic" : ""}`}
                 >
                   {lang.nativeLabel}
                 </span>

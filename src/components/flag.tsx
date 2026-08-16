@@ -63,18 +63,24 @@ export function countryFlagSrc(code: string): string | null {
   return regionFlagSrc(code);
 }
 
-export type FlagSize = "sm" | "md" | "lg";
+export type FlagSize = "sm" | "md" | "lg" | "xl";
 
+// xl exists for the language picker, where a row is tall enough to give a flag
+// real estate. Detailed flags stop being flags below roughly 30px: Saudi Arabia
+// is mostly Shahada script and Portugal is mostly an armillary sphere, and at
+// 22px both render as a smudge.
 const FLAG_HEIGHT: Record<FlagSize, number> = {
   sm: 12,
   md: 16,
   lg: 22,
+  xl: 30,
 };
 
 const LABEL_SIZE: Record<FlagSize, number> = {
   sm: 11,
   md: 13,
   lg: 15,
+  xl: 15,
 };
 
 const FLAG_RING = "0 0 0 1px rgba(255,255,255,0.06), 0 1px 2px rgba(0,0,0,0.4)";
