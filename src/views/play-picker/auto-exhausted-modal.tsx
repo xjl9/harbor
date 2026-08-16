@@ -44,13 +44,28 @@ export function AutoExhaustedModal({
           We could not find a working stream
         </h2>
         <p className="mt-3 text-start text-[14px] leading-relaxed text-ink-muted" dir="auto">
-          Harbor checked every available source for {title}{epSuffix} and none of them played.
-          The most common reasons:
+          {triedCount > 0
+            ? `Harbor tried ${triedCount} ${triedCount === 1 ? "source" : "sources"} for ${title}${epSuffix} and none of them played.`
+            : `Harbor found no sources for ${title}${epSuffix}.`}{" "}
+          {triedCount > 0 ? "Usually that means:" : "The most common reasons:"}
         </p>
+        {/* The count is the whole diagnosis. Saying "no addon is installed" when an
+            addon just returned dozens of sources sends people to fix the one thing
+            that is provably working, so that line only shows when nothing came back. */}
         <ul className="mt-3 space-y-1.5 text-start text-[13.5px] leading-relaxed text-ink-muted" dir="auto">
-          <li dir="auto">· A debrid key (TorBox, Real-Debrid, etc.) is missing or expired.</li>
-          <li dir="auto">· No stream addon is installed yet (Torrentio, MediaFusion, Comet).</li>
-          <li dir="auto">· This title is too new and no source has it cached yet.</li>
+          {triedCount > 0 ? (
+            <>
+              <li dir="auto">· None of them are cached on your debrid yet.</li>
+              <li dir="auto">· A debrid key (TorBox, Real-Debrid, etc.) is missing or expired.</li>
+              <li dir="auto">· Pick one yourself below and Harbor will start it downloading.</li>
+            </>
+          ) : (
+            <>
+              <li dir="auto">· No stream addon is installed yet (Torrentio, MediaFusion, Comet).</li>
+              <li dir="auto">· A debrid key (TorBox, Real-Debrid, etc.) is missing or expired.</li>
+              <li dir="auto">· This title is too new and no source has it cached yet.</li>
+            </>
+          )}
         </ul>
         <div className="mt-7 flex flex-col gap-2.5">
           <button
