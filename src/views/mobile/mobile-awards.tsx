@@ -432,7 +432,7 @@ function ListSkeleton({ rows = 8 }: { rows?: number }) {
 
 function Empty({ Icon, text }: { Icon: typeof Trophy; text: string }) {
   return (
-    <div className="flex flex-col items-center gap-3 pt-24 text-center">
+    <div className="flex flex-col items-center gap-3 pt-24 text-center [@media(max-height:500px)]:pt-6">
       <span className="grid h-14 w-14 place-items-center rounded-2xl bg-surface text-ink-subtle ring-1 ring-edge-soft">
         <Icon size={24} strokeWidth={1.9} />
       </span>
