@@ -188,17 +188,23 @@ export function MobileHero({ slides, onOpenDetail }: { slides: Meta[]; onOpenDet
             slab. Portrait is narrower than the cap and so is unaffected, and the
             box stays anchored to the inline start, which flips under RTL. */}
         <div
-          className="pointer-events-none absolute inset-x-0 bottom-0 z-10 flex max-w-[560px] flex-col gap-3.5 px-5"
+          className="pointer-events-none absolute inset-x-0 bottom-0 z-10 flex max-w-[560px] flex-col gap-3.5 [@media(max-height:500px)]:gap-2"
           style={{
             // Reserve the floating tab bar and now playing bar. Without this the
             // hero's actions sit under them on a short landscape viewport.
             paddingBottom: "calc(1.75rem + var(--mobile-chrome-h, 0px))",
+            // Landscape puts the Dynamic Island on one side, and a flat 20px gutter
+            // ran Play underneath it. Take the larger of the two per side.
+            paddingLeft: "max(1.25rem, env(safe-area-inset-left, 0px))",
+            paddingRight: "max(1.25rem, env(safe-area-inset-right, 0px))",
             opacity: textOn ? 1 : 0,
             transform: textOn ? "translateY(0)" : "translateY(8px)",
             transition: reduce ? "none" : `opacity ${TEXT_MS}ms ease, transform ${TEXT_MS}ms ease`,
           }}
         >
-          <span className="inline-flex items-center gap-1.5 self-start text-[10.5px] font-semibold uppercase tracking-[0.16em] text-white/85">
+          {/* The stack is taller than a landscape hero, so the least load-bearing
+              rows step aside there rather than clipping the title off the top. */}
+          <span className="inline-flex items-center gap-1.5 self-start text-[10.5px] font-semibold uppercase tracking-[0.16em] text-white/85 [@media(max-height:500px)]:hidden">
             <TrendingUp size={12} strokeWidth={2.8} className="text-accent" />
             #{safeActive + 1} in {kindLabel(current.type)} Today
           </span>
@@ -206,10 +212,10 @@ export function MobileHero({ slides, onOpenDetail }: { slides: Meta[]; onOpenDet
             <img
               src={logo}
               alt={current.name}
-              className="max-h-[84px] max-w-[80%] object-contain object-left drop-shadow-[0_2px_16px_rgba(0,0,0,0.6)]"
+              className="max-h-[84px] max-w-[80%] object-contain object-left drop-shadow-[0_2px_16px_rgba(0,0,0,0.6)] [@media(max-height:500px)]:max-h-[52px]"
             />
           ) : (
-            <h2 className="font-display text-[38px] font-medium leading-[0.98] tracking-tight text-white drop-shadow-[0_2px_16px_rgba(0,0,0,0.6)]">
+            <h2 className="font-display text-[38px] font-medium leading-[0.98] tracking-tight text-white drop-shadow-[0_2px_16px_rgba(0,0,0,0.6)] [@media(max-height:500px)]:text-[27px]">
               {current.name}
             </h2>
           )}
@@ -227,7 +233,7 @@ export function MobileHero({ slides, onOpenDetail }: { slides: Meta[]; onOpenDet
             <button
               type="button"
               onClick={() => playOnHost(current)}
-              className="flex h-[54px] flex-1 items-center justify-center gap-2.5 rounded-full bg-white text-[16px] font-semibold text-black shadow-[0_8px_24px_-8px_rgba(0,0,0,0.6)]"
+              className="flex h-[54px] flex-1 items-center justify-center gap-2.5 rounded-full bg-white text-[16px] font-semibold text-black shadow-[0_8px_24px_-8px_rgba(0,0,0,0.6)] [@media(max-height:500px)]:h-[46px]"
             >
               <Play size={19} strokeWidth={0} fill="currentColor" />
               Play
@@ -238,7 +244,7 @@ export function MobileHero({ slides, onOpenDetail }: { slides: Meta[]; onOpenDet
               onClick={() =>
                 toggleWatchlist({ id: current.id, type: current.type, name: current.name, poster: current.poster })
               }
-              className="flex h-[54px] w-[54px] shrink-0 items-center justify-center rounded-full border border-white/15 bg-white/10 text-white backdrop-blur-md"
+              className="flex h-[54px] w-[54px] shrink-0 items-center justify-center rounded-full border border-white/15 bg-white/10 text-white backdrop-blur-md [@media(max-height:500px)]:h-[46px] [@media(max-height:500px)]:w-[46px]"
             >
               {inWl ? <Check size={20} strokeWidth={2.6} className="text-accent" /> : <Plus size={21} strokeWidth={2.2} />}
             </button>
@@ -246,7 +252,7 @@ export function MobileHero({ slides, onOpenDetail }: { slides: Meta[]; onOpenDet
               type="button"
               aria-label="More info"
               onClick={open}
-              className="flex h-[54px] w-[54px] shrink-0 items-center justify-center rounded-full border border-white/15 bg-white/10 text-white backdrop-blur-md"
+              className="flex h-[54px] w-[54px] shrink-0 items-center justify-center rounded-full border border-white/15 bg-white/10 text-white backdrop-blur-md [@media(max-height:500px)]:h-[46px] [@media(max-height:500px)]:w-[46px]"
             >
               <Info size={21} strokeWidth={2.2} />
             </button>
