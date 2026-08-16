@@ -5,6 +5,7 @@ import { profileFromMeta } from "@/lib/discover/profile";
 import { trackEvent } from "@/lib/discover/store";
 import { isExternalPlaylistId } from "@/lib/iptv/vod";
 import { saveLocalCw } from "@/lib/local-cw";
+import { readActiveStremioAuthKey } from "@/lib/auth";
 import { recordWatchEvent } from "@/lib/watch-events";
 import { isLocalUrl } from "@/lib/player/local-url";
 import { isManuallyWatched, recordManualWatchedMeta, setManualWatched } from "@/lib/manual-watched";
@@ -125,9 +126,19 @@ export function useResumeAutosave(params: {
       id.startsWith("tt") &&
       !!s.episode?.kitsuStreamId &&
       (s.episode.imdbSeason == null || s.episode.imdbEpisode == null);
+    // A cloud-syncable id normally lives in the Stremio library, so the local
+    // store stays out of its way and avoids a duplicate row. Signed out there is
+    // no cloud library to hold it, and skipping the write leaves Continue
+    // Watching and History empty however long you watch. mergeContinueWatching
+    // dedupes by id, so writing both once an account appears is harmless.
+    const noCloudLibrary = !readActiveStremioAuthKey();
     if (
       (s.meta.type === "series" || s.meta.type === "movie" || animeLocal) &&
-      (!CLOUD_OK.test(id) || isLocalUrl(s.url) || animeLocal || ttAnimeUnmapped)
+      (!CLOUD_OK.test(id) ||
+        isLocalUrl(s.url) ||
+        animeLocal ||
+        ttAnimeUnmapped ||
+        noCloudLibrary)
     ) {
       saveLocalCw({
         id,
