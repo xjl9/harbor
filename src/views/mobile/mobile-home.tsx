@@ -2,7 +2,12 @@ import { Puzzle } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import type { Meta } from "@/lib/cinemeta";
 import type { HomeRow } from "@/views/home/home-types";
-import { buildCinemetaRows, buildTmdbRows, isStreamingServiceRow, mergeRows } from "@/views/home/home-rows";
+import {
+  buildCinemetaRows,
+  buildTmdbRows,
+  isStreamingServiceRow,
+  mergeRows,
+} from "@/views/home/home-rows";
 import { loadAddonRows, type AddonRow } from "@/lib/addons";
 import { isAnimeRow } from "@/views/anime/anime-rows";
 import { useAuth } from "@/lib/auth";
@@ -31,7 +36,9 @@ function dedupeMetas(metas: Meta[]): Meta[] {
   const seen = new Set<string>();
   const out: Meta[] = [];
   for (const m of metas) {
-    const nameKey = m.name ? m.name.toLowerCase().replace(/[^a-z0-9]+/g, "") : "";
+    const nameKey = m.name
+      ? m.name.toLowerCase().replace(/[^a-z0-9]+/g, "")
+      : "";
     if (seen.has(m.id) || (nameKey && seen.has(nameKey))) continue;
     seen.add(m.id);
     if (nameKey) seen.add(nameKey);
@@ -96,7 +103,9 @@ export function MobileHome() {
         // their own surfaces); classic keeps every catalog in install order.
         const filtered = isClassic
           ? addons
-          : addons.filter((a) => !isAnimeRow(a) && !isStreamingServiceRow(a.name));
+          : addons.filter(
+              (a) => !isAnimeRow(a) && !isStreamingServiceRow(a.name),
+            );
         const merged = mergeRows(builtRows, filtered, { dedup });
         setRows(merged);
         setFailed(merged.length === 0 && sawError);
@@ -226,13 +235,34 @@ export function MobileHome() {
     const toMetas = (m: Map<string, MediaEntry>): Meta[] =>
       [...m.values()]
         .sort((a, b) => b.addedAt - a.addedAt)
-        .map((e) => ({ id: e.id, type: e.type, name: e.name, poster: e.poster }));
+        .map((e) => ({
+          id: e.id,
+          type: e.type,
+          name: e.name,
+          poster: e.poster,
+        }));
     const out: HomeRow[] = [];
     if (favItems.size > 0) {
-      out.push({ key: "harbor-favorites", type: "movie", name: "Favorites", metas: toMetas(favItems), page: 1, hasMore: false, noDedup: true });
+      out.push({
+        key: "harbor-favorites",
+        type: "movie",
+        name: "Favorites",
+        metas: toMetas(favItems),
+        page: 1,
+        hasMore: false,
+        noDedup: true,
+      });
     }
     if (localItems.size > 0) {
-      out.push({ key: "harbor-watchlist", type: "movie", name: "My Watchlist", metas: toMetas(localItems), page: 1, hasMore: false, noDedup: true });
+      out.push({
+        key: "harbor-watchlist",
+        type: "movie",
+        name: "My Watchlist",
+        metas: toMetas(localItems),
+        page: 1,
+        hasMore: false,
+        noDedup: true,
+      });
     }
     return out;
   }, [favItems, localItems]);
@@ -240,7 +270,9 @@ export function MobileHome() {
   const enabledServices = useMemo<StreamingService[]>(
     () =>
       settings.tmdbKey
-        ? (Object.keys(settings.streaming) as StreamingService[]).filter((s) => settings.streaming[s])
+        ? (Object.keys(settings.streaming) as StreamingService[]).filter(
+            (s) => settings.streaming[s],
+          )
         : [],
     [settings.tmdbKey, settings.streaming],
   );
@@ -258,12 +290,21 @@ export function MobileHome() {
     return <HomeSkeleton />;
   }
 
-  if (failed && rows.length === 0 && cw.length === 0 && shownPinned.length === 0 && personalRows.length === 0) {
+  if (
+    failed &&
+    rows.length === 0 &&
+    cw.length === 0 &&
+    shownPinned.length === 0 &&
+    personalRows.length === 0
+  ) {
     return (
       <div className="flex h-[70vh] flex-col items-center justify-center gap-4 px-8 text-center">
-        <h2 className="font-display text-[20px] font-medium text-ink">Couldn't load your home</h2>
+        <h2 className="font-display text-[20px] font-medium text-ink">
+          Couldn't load your home
+        </h2>
         <p className="max-w-xs text-[13.5px] leading-relaxed text-ink-muted">
-          Harbor couldn't reach the catalog servers. Check your connection and try again.
+          Harbor couldn't reach the catalog servers. Check your connection and
+          try again.
         </p>
         <button
           type="button"
@@ -293,7 +334,9 @@ export function MobileHome() {
         <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-elevated/60 text-ink-muted">
           <Puzzle size={22} strokeWidth={1.8} />
         </span>
-        <h2 className="font-display text-[20px] font-medium text-ink">No catalogs yet</h2>
+        <h2 className="font-display text-[20px] font-medium text-ink">
+          No catalogs yet
+        </h2>
         {/* Stream addons like Torrentio provide no catalogs, so someone can have
             addons installed and still land here. Say which kind is missing. */}
         <p className="max-w-xs text-[13.5px] leading-relaxed text-ink-muted">
@@ -315,10 +358,20 @@ export function MobileHome() {
   const personalAndPinned = (
     <>
       {shownPinned.map((r) => (
-        <MobileRail key={r.key} title={r.name} metas={dedupeMetas(r.metas).slice(0, 18)} onOpenDetail={setDetailMeta} />
+        <MobileRail
+          key={r.key}
+          title={r.name}
+          metas={dedupeMetas(r.metas).slice(0, 18)}
+          onOpenDetail={setDetailMeta}
+        />
       ))}
       {personalRows.map((r) => (
-        <MobileRail key={r.key} title={r.name} metas={r.metas.slice(0, 18)} onOpenDetail={setDetailMeta} />
+        <MobileRail
+          key={r.key}
+          title={r.name}
+          metas={r.metas.slice(0, 18)}
+          onOpenDetail={setDetailMeta}
+        />
       ))}
     </>
   );
@@ -329,28 +382,49 @@ export function MobileHome() {
   const harborExtras = (
     <>
       {shownExtras.map((r) => (
-        <MobileRail key={r.key} title={r.name} metas={dedupeMetas(r.metas).slice(0, 18)} onOpenDetail={setDetailMeta} />
+        <MobileRail
+          key={r.key}
+          title={r.name}
+          metas={dedupeMetas(r.metas).slice(0, 18)}
+          onOpenDetail={setDetailMeta}
+        />
       ))}
     </>
   );
   // Collections gets its own row after Top 10, matching desktop home placement.
-  const collectionsRow = isClassic ? null : <MobileCollectionsRail onOpenDetail={setDetailMeta} />;
+  const collectionsRow = isClassic ? null : (
+    <MobileCollectionsRail onOpenDetail={setDetailMeta} />
+  );
 
   return (
     <div className="flex flex-col gap-7 pt-3 motion-safe:[animation:harbor-step-in_420ms_var(--ease-out)_both]">
-      {!isClassic && <MobileHero slides={shownHero} onOpenDetail={setDetailMeta} />}
+      {!isClassic && (
+        <MobileHero slides={shownHero} onOpenDetail={setDetailMeta} />
+      )}
       {cw.length > 0 && <MobileCwRow items={cw} onOpenDetail={setDetailMeta} />}
       {!isClassic && enabledServices.length > 0 && (
-        <MobileStreamingRail services={enabledServices} onOpen={setServiceOpen} />
+        <MobileStreamingRail
+          services={enabledServices}
+          onOpen={setServiceOpen}
+        />
       )}
       {!isClassic && shownRows[0] && shownRows[0].metas.length >= 6 ? (
         <>
-          <MobileRankRail title="Top 10 Today" metas={dedupeMetas(shownRows[0].metas)} onOpenDetail={setDetailMeta} />
+          <MobileRankRail
+            title="Top 10 Today"
+            metas={dedupeMetas(shownRows[0].metas)}
+            onOpenDetail={setDetailMeta}
+          />
           {collectionsRow}
           {personalAndPinned}
           {harborExtras}
           {shownRows.slice(1).map((r) => (
-            <MobileRail key={r.key} title={r.name} metas={dedupeMetas(r.metas).slice(0, 18)} onOpenDetail={setDetailMeta} />
+            <MobileRail
+              key={r.key}
+              title={r.name}
+              metas={dedupeMetas(r.metas).slice(0, 18)}
+              onOpenDetail={setDetailMeta}
+            />
           ))}
         </>
       ) : (
@@ -361,15 +435,25 @@ export function MobileHome() {
           {personalAndPinned}
           {harborExtras}
           {shownRows.map((r) => (
-            <MobileRail key={r.key} title={r.name} metas={dedupeMetas(r.metas).slice(0, 18)} onOpenDetail={setDetailMeta} />
+            <MobileRail
+              key={r.key}
+              title={r.name}
+              metas={dedupeMetas(r.metas).slice(0, 18)}
+              onOpenDetail={setDetailMeta}
+            />
           ))}
         </>
       )}
       <div className="h-4" />
-      {detailMeta && <MobileDetail meta={detailMeta} onClose={() => setDetailMeta(null)} />}
+      {detailMeta && (
+        <MobileDetail meta={detailMeta} onClose={() => setDetailMeta(null)} />
+      )}
       {serviceOpen && (
         <div className="fixed inset-0 z-[60] overflow-y-auto bg-canvas">
-          <MobileServicePage service={serviceOpen} onBack={() => setServiceOpen(null)} />
+          <MobileServicePage
+            service={serviceOpen}
+            onBack={() => setServiceOpen(null)}
+          />
         </div>
       )}
     </div>
@@ -391,10 +475,23 @@ function HeroSkeleton() {
   // Geometry mirrors the real full-bleed MobileHero so the load->loaded swap is a
   // cross-fade of identical boxes, not a reflow (was an inset rounded card -> jump).
   return (
-    <section className="relative -mt-3 mb-1">
-      <div className="relative h-[62svh] min-h-[440px] w-full overflow-hidden bg-surface">
+    <section
+      className="relative -mt-3 mb-1"
+      style={{
+        marginLeft: "calc(-1 * env(safe-area-inset-left, 0px))",
+        marginRight: "calc(-1 * env(safe-area-inset-right, 0px))",
+      }}
+    >
+      <div className="relative h-[62svh] min-h-[min(440px,72svh)] w-full overflow-hidden bg-surface">
         <div className="absolute inset-x-0 bottom-0 h-[38%] bg-gradient-to-t from-canvas to-transparent" />
-        <div className="absolute inset-x-0 bottom-0 flex flex-col gap-3.5 px-5 pb-7">
+        <div
+          className="absolute inset-x-0 bottom-0 flex flex-col gap-3.5"
+          style={{
+            paddingBottom: "calc(1.75rem + var(--mobile-chrome-h, 0px))",
+            paddingLeft: "max(1.25rem, env(safe-area-inset-left, 0px))",
+            paddingRight: "max(1.25rem, env(safe-area-inset-right, 0px))",
+          }}
+        >
           <div className="h-3.5 w-32 rounded bg-elevated/50" />
           <div className="h-9 w-3/5 rounded-lg bg-elevated/55" />
           <div className="h-3.5 w-2/5 rounded bg-elevated/40" />
