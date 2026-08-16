@@ -286,14 +286,18 @@ function MetaPills({
     );
   return (
     <div className="flex flex-wrap items-center gap-y-1 text-[13px] text-ink-muted">
+      {/* The separator trails its item rather than leading the next one. Carried
+          on the front, a wrapped line opened with a stray dot and its own left
+          margin indented that line past the one above it, which is what a narrow
+          phone showed once the genres pushed this to two lines. */}
       {items.map((it, i) => (
         <span key={i} className="inline-flex items-center">
-          {i > 0 && (
+          {it}
+          {i < items.length - 1 && (
             <span aria-hidden className="mx-2 text-ink-subtle/40">
               ·
             </span>
           )}
-          {it}
         </span>
       ))}
     </div>
