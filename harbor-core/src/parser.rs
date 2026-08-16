@@ -900,8 +900,18 @@ pub fn is_trusted_group(normalized: Option<&str>) -> bool {
 fn map_resolution(r: Option<&str>) -> Resolution {
     let Some(r) = r else { return Resolution::SD };
     let lower = r.to_lowercase();
+    // 4320p and 1440p have no bucket of their own, and falling through to SD
+    // labelled an 8K release as the lowest quality on offer, which is the one
+    // thing that would make a viewer skip it. Round each to the nearest bucket
+    // that exists: 8K reads as 4K, 1440p reads as 1080p.
+    if lower.contains("4320") || lower == "8k" {
+        return Resolution::UHD;
+    }
     if lower.contains("2160") || lower == "4k" || lower == "uhd" {
         return Resolution::UHD;
+    }
+    if lower.contains("1440") {
+        return Resolution::P1080;
     }
     if lower.contains("1080") {
         return Resolution::P1080;
