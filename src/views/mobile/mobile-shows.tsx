@@ -158,7 +158,7 @@ function HeroSkeleton() {
   return (
     <section className="flex flex-col gap-3">
       <div className="px-4">
-        <div className="relative aspect-[16/11] w-full overflow-hidden rounded-[24px] bg-surface ring-1 ring-edge-soft/50">
+        <div className="relative aspect-[16/11] w-full overflow-hidden rounded-[24px] bg-surface ring-1 ring-edge-soft/50 [@media(max-height:500px)]:aspect-auto [@media(max-height:500px)]:h-[62svh]">
           <div className="absolute inset-x-0 bottom-0 flex flex-col gap-3 p-5">
             <div className="h-5 w-28 rounded-md bg-elevated/50" />
             <div className="h-7 w-2/3 rounded-lg bg-elevated/55" />

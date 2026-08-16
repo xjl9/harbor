@@ -157,7 +157,7 @@ function DiscoverSkeleton() {
           <div className="h-6 w-56 rounded-md bg-elevated/50" />
         </div>
         <div className="px-4">
-          <div className="relative aspect-[4/5] w-[86%] overflow-hidden rounded-[22px] bg-surface ring-1 ring-edge-soft/50">
+          <div className="relative aspect-[4/5] w-[86%] [@media(max-height:500px)]:h-[62svh] [@media(max-height:500px)]:w-auto overflow-hidden rounded-[22px] bg-surface ring-1 ring-edge-soft/50">
             <div className="absolute inset-x-0 bottom-0 flex flex-col gap-3 p-5">
               <div className="h-7 w-3/5 rounded-lg bg-elevated/55" />
               <div className="h-3.5 w-2/5 rounded bg-elevated/40" />
