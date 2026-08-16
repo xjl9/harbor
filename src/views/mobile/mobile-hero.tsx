@@ -181,8 +181,11 @@ export function MobileHero({ slides, onOpenDetail }: { slides: Meta[]; onOpenDet
           <div className="absolute inset-x-0 bottom-0 h-[38%] bg-gradient-to-t from-canvas to-transparent" />
         </button>
         <div
-          className="pointer-events-none absolute inset-x-0 bottom-0 z-10 flex flex-col gap-3.5 px-5 pb-7"
+          className="pointer-events-none absolute inset-x-0 bottom-0 z-10 flex flex-col gap-3.5 px-5"
           style={{
+            // Reserve the floating tab bar and now playing bar. Without this the
+            // hero's actions sit under them on a short landscape viewport.
+            paddingBottom: "calc(1.75rem + var(--mobile-chrome-h, 0px))",
             opacity: textOn ? 1 : 0,
             transform: textOn ? "translateY(0)" : "translateY(8px)",
             transition: reduce ? "none" : `opacity ${TEXT_MS}ms ease, transform ${TEXT_MS}ms ease`,

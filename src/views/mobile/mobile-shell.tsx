@@ -73,6 +73,37 @@ function ShellBody() {
   // The installer is idempotent, so the report sheet calling it again is a noop.
   useEffect(() => installBugReportErrorCapture(), []);
 
+  // The tab bar and the now playing bar float above the content, so anything
+  // anchored to the bottom of a screen has to know how much room they take.
+  // In portrait a hero clears them by luck; in landscape the viewport is short
+  // enough that the now playing bar sat across the hero's Play button. Publish
+  // the measured height so bottom-anchored content can reserve it. Defaults to
+  // 0, so if the measurement ever fails the layout is exactly what it was.
+  useEffect(() => {
+    const root = rootRef.current;
+    if (!root) return;
+    const measure = () => {
+      const bars = root.querySelectorAll<HTMLElement>("[data-mobile-chrome]");
+      let top = window.innerHeight;
+      bars.forEach((b) => {
+        const r = b.getBoundingClientRect();
+        if (r.height > 0) top = Math.min(top, r.top);
+      });
+      const h = Math.max(0, Math.round(window.innerHeight - top));
+      root.style.setProperty("--mobile-chrome-h", `${h}px`);
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(root);
+    window.addEventListener("resize", measure);
+    window.addEventListener("orientationchange", measure);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener("resize", measure);
+      window.removeEventListener("orientationchange", measure);
+    };
+  }, [showNowPlaying, tab]);
+
   // A surface outside the tab tree asked for a destination that lives in one.
   // Switching here mounts it; the destination consumes the intent on mount.
   useEffect(() => {
@@ -342,6 +373,7 @@ function NowPlayingBar({ onExpand }: { onExpand: () => void }) {
   const ep = snap.episode ? `S${snap.episode.season} · E${snap.episode.episode}` : null;
   return (
     <div
+      data-mobile-chrome
       className="harbor-nowplaying-slide pointer-events-none fixed inset-x-0 z-30 flex justify-center px-3"
       data-hidden={sheetOpen ? "true" : undefined}
       style={{ bottom: "calc(env(safe-area-inset-bottom, 0px) + 74px)" }}

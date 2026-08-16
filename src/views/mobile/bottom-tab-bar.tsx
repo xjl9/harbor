@@ -48,6 +48,7 @@ export function BottomTabBar({
 
   return (
     <nav
+      data-mobile-chrome
       className="harbor-tabbar-slide pointer-events-none fixed inset-x-0 bottom-0 z-40 flex justify-center px-4"
       data-hidden={sheetOpen ? "true" : undefined}
       style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 10px)" }}
