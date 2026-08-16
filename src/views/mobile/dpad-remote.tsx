@@ -1,6 +1,18 @@
 import { useEffect, useRef, useState } from "react";
-import { Check, ChevronDown, Monitor, RefreshCw, Volume2, VolumeX, Wifi } from "lucide-react";
-import type { DiscoveredHost, RemoteNavKey, RemoteSnapshot } from "@/lib/remote/protocol";
+import {
+  Check,
+  ChevronDown,
+  Monitor,
+  RefreshCw,
+  Volume2,
+  VolumeX,
+  Wifi,
+} from "lucide-react";
+import type {
+  DiscoveredHost,
+  RemoteNavKey,
+  RemoteSnapshot,
+} from "@/lib/remote/protocol";
 import { useRemoteDiscovery } from "@/lib/remote/use-remote-discovery";
 import { isMobileNative } from "@/lib/platform";
 import { useT } from "@/lib/i18n/translate";
@@ -10,13 +22,25 @@ import { useMobileRemote } from "./mobile-remote";
 import { useRegisterSheet } from "./mobile-sheet-lock";
 import { MobileServices } from "./mobile-services";
 import { RendererSheet } from "./renderer-sheet";
-import { KeyboardOverlay, SHEET_EXIT_CSS, SpeedSleepSheet, useSheetPresence } from "./remote-extras";
+import {
+  KeyboardOverlay,
+  SHEET_EXIT_CSS,
+  SpeedSleepSheet,
+  useSheetPresence,
+} from "./remote-extras";
 import { useKeyboardInset } from "./use-keyboard-inset";
 import { VoiceSearch, getSpeechRecognition } from "./voice-search";
 
 type Service = (typeof SERVICES)[StreamingService];
 
-const PROVIDER_KEYS: StreamingService[] = ["netflix", "prime", "disney", "max", "hulu", "crunchyroll"];
+const PROVIDER_KEYS: StreamingService[] = [
+  "netflix",
+  "prime",
+  "disney",
+  "max",
+  "hulu",
+  "crunchyroll",
+];
 
 type Dir = "up" | "right" | "down" | "left";
 
@@ -26,9 +50,21 @@ const prefersReducedMotion = () =>
 
 const SEGMENTS: Array<{ dir: Dir; clip: string; fill: string }> = [
   { dir: "up", clip: "polygon(50% 47%, -17% -20%, 117% -20%)", fill: "to top" },
-  { dir: "right", clip: "polygon(53% 50%, 120% -17%, 120% 117%)", fill: "to right" },
-  { dir: "down", clip: "polygon(50% 53%, 117% 120%, -17% 120%)", fill: "to bottom" },
-  { dir: "left", clip: "polygon(47% 50%, -20% 117%, -20% -17%)", fill: "to left" },
+  {
+    dir: "right",
+    clip: "polygon(53% 50%, 120% -17%, 120% 117%)",
+    fill: "to right",
+  },
+  {
+    dir: "down",
+    clip: "polygon(50% 53%, 117% 120%, -17% 120%)",
+    fill: "to bottom",
+  },
+  {
+    dir: "left",
+    clip: "polygon(47% 50%, -20% 117%, -20% -17%)",
+    fill: "to left",
+  },
 ];
 
 const SVC_EXIT_CSS = `
@@ -40,11 +76,36 @@ const SVC_EXIT_CSS = `
 @media (prefers-reduced-motion: reduce) { .harbor-svc-exit { animation: none; } }
 `;
 
-const CHEVRONS: Array<{ dir: Dir; rotate: number; pos: string; nudge: string }> = [
-  { dir: "up", rotate: 0, pos: "inset-x-0 top-[11%] mx-auto w-max", nudge: "translateY(-5px)" },
-  { dir: "down", rotate: 180, pos: "inset-x-0 bottom-[11%] mx-auto w-max", nudge: "translateY(5px)" },
-  { dir: "left", rotate: 270, pos: "inset-y-0 start-[10%] my-auto h-max", nudge: "translateX(-5px)" },
-  { dir: "right", rotate: 90, pos: "inset-y-0 end-[10%] my-auto h-max", nudge: "translateX(5px)" },
+const CHEVRONS: Array<{
+  dir: Dir;
+  rotate: number;
+  pos: string;
+  nudge: string;
+}> = [
+  {
+    dir: "up",
+    rotate: 0,
+    pos: "inset-x-0 top-[11%] mx-auto w-max",
+    nudge: "translateY(-5px)",
+  },
+  {
+    dir: "down",
+    rotate: 180,
+    pos: "inset-x-0 bottom-[11%] mx-auto w-max",
+    nudge: "translateY(5px)",
+  },
+  {
+    dir: "left",
+    rotate: 270,
+    pos: "inset-y-0 start-[10%] my-auto h-max",
+    nudge: "translateX(-5px)",
+  },
+  {
+    dir: "right",
+    rotate: 90,
+    pos: "inset-y-0 end-[10%] my-auto h-max",
+    nudge: "translateX(5px)",
+  },
 ];
 
 export function DpadRemote() {
@@ -64,7 +125,10 @@ export function DpadRemote() {
   const [kbOpen, setKbOpen] = useState(false);
   const [speedOpen, setSpeedOpen] = useState(false);
   const [voiceOpen, setVoiceOpen] = useState(false);
-  const [services, setServices] = useState<{ open: boolean; initial?: StreamingService }>({ open: false });
+  const [services, setServices] = useState<{
+    open: boolean;
+    initial?: StreamingService;
+  }>({ open: false });
   const [servicesExiting, setServicesExiting] = useState(false);
   const closeServices = () => {
     setServicesExiting(true);
@@ -170,195 +234,297 @@ export function DpadRemote() {
 
   return (
     <div
-      className="flex h-full flex-col items-center justify-center gap-3 px-5 pt-3"
+      className="flex h-full flex-col items-center justify-center gap-3 px-5 pt-3 [@media(max-height:500px)]:flex-row [@media(max-height:500px)]:gap-7"
       style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 92px)" }}
     >
-      <button
-        type="button"
-        onClick={() => (native ? setConnectOpen(true) : setSheetOpen(true))}
-        className="flex shrink-0 items-center gap-2 text-[13.5px] font-semibold transition-opacity active:opacity-60"
-      >
-        <Monitor size={15} strokeWidth={2.2} className={connected ? "text-ink" : "text-ink-subtle"} />
-        <span className="text-ink">{headerLabel}</span>
-        <ChevronDown size={15} strokeWidth={2.4} className="text-ink-subtle" />
-      </button>
-
-      <div
-        className="relative aspect-square w-full select-none"
-        style={{ maxWidth: "min(300px, max(160px, calc(100dvh - 460px)))" }}
-      >
-        <div className="absolute inset-0 overflow-hidden rounded-full shadow-[inset_0_0_0_1.5px_var(--color-edge-soft)]">
-          {SEGMENTS.map(({ dir, clip, fill }) => (
-            <button
-              key={dir}
-              type="button"
-              aria-label={dir}
-              onPointerDown={(e) => {
-                e.preventDefault();
-                startPress(dir);
-              }}
-              onPointerUp={endPress}
-              onPointerLeave={endPress}
-              onPointerCancel={endPress}
-              className="absolute inset-0 bg-elevated outline-none"
-              style={{ clipPath: clip, touchAction: "manipulation" }}
-            >
-              <span
-                aria-hidden
-                className="absolute inset-0 transition-opacity duration-200 ease-out"
-                style={{
-                  background: `linear-gradient(${fill}, color-mix(in oklch, var(--color-accent) 6%, transparent), color-mix(in oklch, var(--color-accent) 46%, transparent))`,
-                  opacity: pressed === dir ? 1 : 0,
-                }}
-              />
-              <span
-                aria-hidden
-                className="absolute inset-0 transition-opacity duration-[240ms] ease-out"
-                style={{
-                  background: `linear-gradient(${fill}, color-mix(in oklch, var(--color-accent) 24%, transparent), color-mix(in oklch, var(--color-accent) 70%, transparent))`,
-                  opacity: holding && pressed === dir ? 1 : 0,
-                }}
-              />
-            </button>
-          ))}
-          <span
-            aria-hidden
-            className="pointer-events-none absolute inset-0"
-            style={{ background: "radial-gradient(circle at 50% 50%, var(--color-canvas) 33%, transparent 34%)" }}
-          />
-        </div>
-
-        {CHEVRONS.map(({ dir, rotate, pos, nudge }) => (
-          <span
-            key={dir}
-            aria-hidden
-            className={`pointer-events-none absolute ${pos} text-ink-muted transition-[transform,color] duration-200 ease-[cubic-bezier(0.34,1.5,0.5,1)]`}
-            style={{
-              transform: pressed === dir && !reduced ? `${nudge} scale(${holding ? 1.22 : 1.16})` : undefined,
-              color: pressed === dir ? "var(--color-accent)" : undefined,
-            }}
-          >
-            <img
-              src="/remote-icons/up.png"
-              alt=""
-              aria-hidden
-              draggable={false}
-              className="object-contain"
-              style={{ width: 34, height: 34, transform: `rotate(${rotate}deg)` }}
-            />
-          </span>
-        ))}
-
+      {/* Stacked, the wheel and the transport run about 550pt against a 402pt
+          landscape viewport, and centring clipped both ends. Side by side each
+          column fits. In portrait these wrappers inherit the same gap, so the
+          layout is unchanged. */}
+      <div className="flex w-full flex-col items-center gap-3 [@media(max-height:500px)]:w-auto">
         <button
           type="button"
-          aria-label="Select"
-          onPointerDown={(e) => {
-            e.preventDefault();
-            setOkDown(true);
-            nav("select");
-          }}
-          onPointerUp={() => setOkDown(false)}
-          onPointerLeave={() => setOkDown(false)}
-          onPointerCancel={() => setOkDown(false)}
-          className="absolute inset-0 z-10 m-auto grid h-[42%] w-[42%] place-items-center rounded-full bg-raised text-[16px] font-semibold tracking-wide text-ink-subtle outline-none shadow-[0_14px_30px_-14px_rgba(0,0,0,0.85),inset_0_1px_0_rgba(255,255,255,0.1)] transition-[transform] duration-150"
-          style={{
-            transform: okDown && !reduced ? "scale(0.92)" : undefined,
-            touchAction: "manipulation",
-            textShadow: "0 -1px 1px rgba(0,0,0,0.5), 0 1px 0 rgba(255,255,255,0.07)",
-          }}
+          onClick={() => (native ? setConnectOpen(true) : setSheetOpen(true))}
+          className="flex shrink-0 items-center gap-2 text-[13.5px] font-semibold transition-opacity active:opacity-60"
         >
-          OK
+          <Monitor
+            size={15}
+            strokeWidth={2.2}
+            className={connected ? "text-ink" : "text-ink-subtle"}
+          />
+          <span className="text-ink">{headerLabel}</span>
+          <ChevronDown
+            size={15}
+            strokeWidth={2.4}
+            className="text-ink-subtle"
+          />
         </button>
-      </div>
 
-      <div className="flex w-full max-w-[352px] shrink-0 items-center justify-between px-2">
-        <Util label="Speed & sleep" onPress={() => setSpeedOpen(true)}>
-          <RemoteIcon name="sleep_timer" size={24} />
-        </Util>
-        <Util label="Keyboard" onPress={() => setKbOpen(true)}>
-          <RemoteIcon name="keyboard" size={24} />
-        </Util>
-        <Util
-          label="Voice"
-          accent
-          onPress={() => {
-            if (getSpeechRecognition()) setVoiceOpen(true);
-            else sendCommand({ action: "openSearch" });
-          }}
+        <div
+          className="relative aspect-square w-full select-none"
+          style={{ maxWidth: "min(300px, max(160px, calc(100dvh - 460px)))" }}
         >
-          <RemoteIcon name="microphone" size={26} />
-        </Util>
-        <Util label="Apps" onPress={() => setServices({ open: true })}>
-          <RemoteIcon name="apps_grid" size={24} />
-        </Util>
-        <Util label="More" onPress={() => {}}>
-          <RemoteIcon name="more" size={24} />
-        </Util>
-      </div>
-
-      <div className="h-px w-full max-w-[352px] shrink-0 bg-edge-soft/60" />
-
-      <div
-        ref={pagerRef}
-        className="flex w-full max-w-[360px] shrink-0 snap-x snap-mandatory overflow-x-auto overflow-y-hidden overscroll-x-contain [scrollbar-width:none] [touch-action:pan-x] [&::-webkit-scrollbar]:hidden"
-      >
-        <Pane>
-          <div className="flex w-full justify-around">
-            <Circle label="Back" onPress={() => (watching ? setConfirm("back") : nav("back"))}>
-              <RemoteIcon name="back" size={26} />
-            </Circle>
-            <Circle label="Home" onPress={() => (watching ? setConfirm("home") : sendCommand({ action: "goView", view: "home" }))}>
-              <RemoteIcon name="home" size={26} />
-            </Circle>
-            <Circle label="Menu" onPress={() => sendCommand({ action: "openSearch" })}>
-              <RemoteIcon name="menu" size={26} />
-            </Circle>
-          </div>
-          <div className="flex w-full items-center justify-around">
-            <Circle label="Rewind" onPress={() => sendCommand({ action: "seek", positionSec: Math.max(0, snapshot.positionSec - 10) })}>
-              <RemoteIcon name="previous" size={26} />
-            </Circle>
-            <Circle label={playing ? "Pause" : "Play"} big onPress={() => sendCommand({ action: playing ? "pause" : "play" })}>
-              {playing ? <RemoteIcon name="pause" size={32} /> : <RemoteIcon name="play" size={32} />}
-            </Circle>
-            <Circle label="Forward" onPress={() => sendCommand({ action: "seek", positionSec: snapshot.positionSec + 10 })}>
-              <RemoteIcon name="previous" size={26} flip />
-            </Circle>
-          </div>
-        </Pane>
-
-        <Pane>
-          <div className="flex w-full justify-around">
-            <Circle label="Volume down" onPress={() => sendCommand({ action: "setVolume", volume: Math.max(0, (snapshot.volume ?? 1) - 0.1) })}>
-              <VolumeX size={26} strokeWidth={2.2} />
-            </Circle>
-            <Circle label="Mute" onPress={() => sendCommand({ action: "setMuted", muted: !snapshot.muted })}>
-              {snapshot.muted ? <VolumeX size={26} strokeWidth={2.2} /> : <Volume2 size={26} strokeWidth={2.2} />}
-            </Circle>
-            <Circle label="Volume up" onPress={() => sendCommand({ action: "setVolume", volume: Math.min(1, (snapshot.volume ?? 1) + 0.1) })}>
-              <Volume2 size={26} strokeWidth={2.2} />
-            </Circle>
-          </div>
-          <div className="flex w-full justify-around">
-            <Circle label="Subtitles" onPress={() => sendCommand({ action: "toggleSubtitles" })}>
-              <RemoteIcon name="captions" size={26} />
-            </Circle>
-          </div>
-        </Pane>
-
-        <Pane>
-          <div className="grid grid-cols-3 gap-2.5">
-            {PROVIDER_KEYS.map((svc) => (
-              <ProviderCard key={svc} svc={svc} service={SERVICES[svc]} onPress={() => setServices({ open: true, initial: svc })} />
+          <div className="absolute inset-0 overflow-hidden rounded-full shadow-[inset_0_0_0_1.5px_var(--color-edge-soft)]">
+            {SEGMENTS.map(({ dir, clip, fill }) => (
+              <button
+                key={dir}
+                type="button"
+                aria-label={dir}
+                onPointerDown={(e) => {
+                  e.preventDefault();
+                  startPress(dir);
+                }}
+                onPointerUp={endPress}
+                onPointerLeave={endPress}
+                onPointerCancel={endPress}
+                className="absolute inset-0 bg-elevated outline-none"
+                style={{ clipPath: clip, touchAction: "manipulation" }}
+              >
+                <span
+                  aria-hidden
+                  className="absolute inset-0 transition-opacity duration-200 ease-out"
+                  style={{
+                    background: `linear-gradient(${fill}, color-mix(in oklch, var(--color-accent) 6%, transparent), color-mix(in oklch, var(--color-accent) 46%, transparent))`,
+                    opacity: pressed === dir ? 1 : 0,
+                  }}
+                />
+                <span
+                  aria-hidden
+                  className="absolute inset-0 transition-opacity duration-[240ms] ease-out"
+                  style={{
+                    background: `linear-gradient(${fill}, color-mix(in oklch, var(--color-accent) 24%, transparent), color-mix(in oklch, var(--color-accent) 70%, transparent))`,
+                    opacity: holding && pressed === dir ? 1 : 0,
+                  }}
+                />
+              </button>
             ))}
+            <span
+              aria-hidden
+              className="pointer-events-none absolute inset-0"
+              style={{
+                background:
+                  "radial-gradient(circle at 50% 50%, var(--color-canvas) 33%, transparent 34%)",
+              }}
+            />
           </div>
-        </Pane>
+
+          {CHEVRONS.map(({ dir, rotate, pos, nudge }) => (
+            <span
+              key={dir}
+              aria-hidden
+              className={`pointer-events-none absolute ${pos} text-ink-muted transition-[transform,color] duration-200 ease-[cubic-bezier(0.34,1.5,0.5,1)]`}
+              style={{
+                transform:
+                  pressed === dir && !reduced
+                    ? `${nudge} scale(${holding ? 1.22 : 1.16})`
+                    : undefined,
+                color: pressed === dir ? "var(--color-accent)" : undefined,
+              }}
+            >
+              <img
+                src="/remote-icons/up.png"
+                alt=""
+                aria-hidden
+                draggable={false}
+                className="object-contain"
+                style={{
+                  width: 34,
+                  height: 34,
+                  transform: `rotate(${rotate}deg)`,
+                }}
+              />
+            </span>
+          ))}
+
+          <button
+            type="button"
+            aria-label="Select"
+            onPointerDown={(e) => {
+              e.preventDefault();
+              setOkDown(true);
+              nav("select");
+            }}
+            onPointerUp={() => setOkDown(false)}
+            onPointerLeave={() => setOkDown(false)}
+            onPointerCancel={() => setOkDown(false)}
+            className="absolute inset-0 z-10 m-auto grid h-[42%] w-[42%] place-items-center rounded-full bg-raised text-[16px] font-semibold tracking-wide text-ink-subtle outline-none shadow-[0_14px_30px_-14px_rgba(0,0,0,0.85),inset_0_1px_0_rgba(255,255,255,0.1)] transition-[transform] duration-150"
+            style={{
+              transform: okDown && !reduced ? "scale(0.92)" : undefined,
+              touchAction: "manipulation",
+              textShadow:
+                "0 -1px 1px rgba(0,0,0,0.5), 0 1px 0 rgba(255,255,255,0.07)",
+            }}
+          >
+            OK
+          </button>
+        </div>
       </div>
 
-      <div className="flex shrink-0 items-center gap-1.5">
-        {[0, 1, 2].map((i) => (
-          <span key={i} className={`h-1.5 rounded-full transition-all ${i === page ? "w-4 bg-ink" : "w-1.5 bg-ink/25"}`} />
-        ))}
+      <div className="flex w-full flex-col items-center gap-3 [@media(max-height:500px)]:w-auto [@media(max-height:500px)]:max-w-[360px]">
+        <div className="flex w-full max-w-[352px] shrink-0 items-center justify-between px-2">
+          <Util label="Speed & sleep" onPress={() => setSpeedOpen(true)}>
+            <RemoteIcon name="sleep_timer" size={24} />
+          </Util>
+          <Util label="Keyboard" onPress={() => setKbOpen(true)}>
+            <RemoteIcon name="keyboard" size={24} />
+          </Util>
+          <Util
+            label="Voice"
+            accent
+            onPress={() => {
+              if (getSpeechRecognition()) setVoiceOpen(true);
+              else sendCommand({ action: "openSearch" });
+            }}
+          >
+            <RemoteIcon name="microphone" size={26} />
+          </Util>
+          <Util label="Apps" onPress={() => setServices({ open: true })}>
+            <RemoteIcon name="apps_grid" size={24} />
+          </Util>
+          <Util label="More" onPress={() => {}}>
+            <RemoteIcon name="more" size={24} />
+          </Util>
+        </div>
+
+        <div className="h-px w-full max-w-[352px] shrink-0 bg-edge-soft/60" />
+
+        <div
+          ref={pagerRef}
+          className="flex w-full max-w-[360px] shrink-0 snap-x snap-mandatory overflow-x-auto overflow-y-hidden overscroll-x-contain [scrollbar-width:none] [touch-action:pan-x] [&::-webkit-scrollbar]:hidden"
+        >
+          <Pane>
+            <div className="flex w-full justify-around">
+              <Circle
+                label="Back"
+                onPress={() => (watching ? setConfirm("back") : nav("back"))}
+              >
+                <RemoteIcon name="back" size={26} />
+              </Circle>
+              <Circle
+                label="Home"
+                onPress={() =>
+                  watching
+                    ? setConfirm("home")
+                    : sendCommand({ action: "goView", view: "home" })
+                }
+              >
+                <RemoteIcon name="home" size={26} />
+              </Circle>
+              <Circle
+                label="Menu"
+                onPress={() => sendCommand({ action: "openSearch" })}
+              >
+                <RemoteIcon name="menu" size={26} />
+              </Circle>
+            </div>
+            <div className="flex w-full items-center justify-around">
+              <Circle
+                label="Rewind"
+                onPress={() =>
+                  sendCommand({
+                    action: "seek",
+                    positionSec: Math.max(0, snapshot.positionSec - 10),
+                  })
+                }
+              >
+                <RemoteIcon name="previous" size={26} />
+              </Circle>
+              <Circle
+                label={playing ? "Pause" : "Play"}
+                big
+                onPress={() =>
+                  sendCommand({ action: playing ? "pause" : "play" })
+                }
+              >
+                {playing ? (
+                  <RemoteIcon name="pause" size={32} />
+                ) : (
+                  <RemoteIcon name="play" size={32} />
+                )}
+              </Circle>
+              <Circle
+                label="Forward"
+                onPress={() =>
+                  sendCommand({
+                    action: "seek",
+                    positionSec: snapshot.positionSec + 10,
+                  })
+                }
+              >
+                <RemoteIcon name="previous" size={26} flip />
+              </Circle>
+            </div>
+          </Pane>
+
+          <Pane>
+            <div className="flex w-full justify-around">
+              <Circle
+                label="Volume down"
+                onPress={() =>
+                  sendCommand({
+                    action: "setVolume",
+                    volume: Math.max(0, (snapshot.volume ?? 1) - 0.1),
+                  })
+                }
+              >
+                <VolumeX size={26} strokeWidth={2.2} />
+              </Circle>
+              <Circle
+                label="Mute"
+                onPress={() =>
+                  sendCommand({ action: "setMuted", muted: !snapshot.muted })
+                }
+              >
+                {snapshot.muted ? (
+                  <VolumeX size={26} strokeWidth={2.2} />
+                ) : (
+                  <Volume2 size={26} strokeWidth={2.2} />
+                )}
+              </Circle>
+              <Circle
+                label="Volume up"
+                onPress={() =>
+                  sendCommand({
+                    action: "setVolume",
+                    volume: Math.min(1, (snapshot.volume ?? 1) + 0.1),
+                  })
+                }
+              >
+                <Volume2 size={26} strokeWidth={2.2} />
+              </Circle>
+            </div>
+            <div className="flex w-full justify-around">
+              <Circle
+                label="Subtitles"
+                onPress={() => sendCommand({ action: "toggleSubtitles" })}
+              >
+                <RemoteIcon name="captions" size={26} />
+              </Circle>
+            </div>
+          </Pane>
+
+          <Pane>
+            <div className="grid grid-cols-3 gap-2.5">
+              {PROVIDER_KEYS.map((svc) => (
+                <ProviderCard
+                  key={svc}
+                  svc={svc}
+                  service={SERVICES[svc]}
+                  onPress={() => setServices({ open: true, initial: svc })}
+                />
+              ))}
+            </div>
+          </Pane>
+        </div>
+
+        <div className="flex shrink-0 items-center gap-1.5">
+          {[0, 1, 2].map((i) => (
+            <span
+              key={i}
+              className={`h-1.5 rounded-full transition-all ${i === page ? "w-4 bg-ink" : "w-1.5 bg-ink/25"}`}
+            />
+          ))}
+        </div>
       </div>
 
       <RendererSheet open={sheetOpen} onClose={() => setSheetOpen(false)} />
@@ -380,9 +546,14 @@ export function DpadRemote() {
       <KeyboardOverlay open={kbOpen} onClose={() => setKbOpen(false)} />
       <SpeedSleepSheet open={speedOpen} onClose={() => setSpeedOpen(false)} />
       {services.open && (
-        <div className={`fixed inset-0 z-[60] overflow-y-auto bg-canvas ${servicesExiting ? "harbor-svc-exit" : ""}`}>
+        <div
+          className={`fixed inset-0 z-[60] overflow-y-auto bg-canvas ${servicesExiting ? "harbor-svc-exit" : ""}`}
+        >
           <style>{SVC_EXIT_CSS}</style>
-          <MobileServices initialService={services.initial} onBack={closeServices} />
+          <MobileServices
+            initialService={services.initial}
+            onBack={closeServices}
+          />
         </div>
       )}
       {confirm && (
@@ -414,22 +585,59 @@ export function DpadRemote() {
   );
 }
 
-function RemoteIcon({ name, size = 22, flip = false }: { name: string; size?: number; flip?: boolean }) {
-  return <img src={`/remote-icons/${name}.png`} alt="" aria-hidden draggable={false} style={{ width: size, height: size, transform: flip ? "scaleX(-1)" : undefined }} className="object-contain" />;
+function RemoteIcon({
+  name,
+  size = 22,
+  flip = false,
+}: {
+  name: string;
+  size?: number;
+  flip?: boolean;
+}) {
+  return (
+    <img
+      src={`/remote-icons/${name}.png`}
+      alt=""
+      aria-hidden
+      draggable={false}
+      style={{
+        width: size,
+        height: size,
+        transform: flip ? "scaleX(-1)" : undefined,
+      }}
+      className="object-contain"
+    />
+  );
 }
 
 function Pane({ children }: { children: React.ReactNode }) {
-  return <div className="flex w-full shrink-0 snap-center flex-col gap-4 px-2">{children}</div>;
+  return (
+    <div className="flex w-full shrink-0 snap-center flex-col gap-4 px-2">
+      {children}
+    </div>
+  );
 }
 
-function Util({ label, onPress, accent, children }: { label: string; onPress: () => void; accent?: boolean; children: React.ReactNode }) {
+function Util({
+  label,
+  onPress,
+  accent,
+  children,
+}: {
+  label: string;
+  onPress: () => void;
+  accent?: boolean;
+  children: React.ReactNode;
+}) {
   return (
     <button
       type="button"
       aria-label={label}
       onClick={onPress}
       className={`flex items-center justify-center rounded-full transition-transform duration-100 active:scale-90 ${
-        accent ? "h-14 w-14 bg-accent text-canvas shadow-[0_8px_20px_-8px_rgba(0,0,0,0.5)]" : "h-11 w-11 text-ink-muted"
+        accent
+          ? "h-14 w-14 bg-accent text-canvas shadow-[0_8px_20px_-8px_rgba(0,0,0,0.5)]"
+          : "h-11 w-11 text-ink-muted"
       }`}
     >
       {children}
@@ -437,14 +645,26 @@ function Util({ label, onPress, accent, children }: { label: string; onPress: ()
   );
 }
 
-function Circle({ label, onPress, big, children }: { label: string; onPress: () => void; big?: boolean; children: React.ReactNode }) {
+function Circle({
+  label,
+  onPress,
+  big,
+  children,
+}: {
+  label: string;
+  onPress: () => void;
+  big?: boolean;
+  children: React.ReactNode;
+}) {
   return (
     <button
       type="button"
       aria-label={label}
       onClick={onPress}
       className={`flex items-center justify-center rounded-full transition-transform duration-100 active:scale-90 ${
-        big ? "h-[64px] w-[64px] bg-accent text-canvas shadow-[0_10px_24px_-12px_rgba(0,0,0,0.55)]" : "h-[54px] w-[54px] bg-elevated/60 text-ink ring-1 ring-edge-soft/50"
+        big
+          ? "h-[64px] w-[64px] bg-accent text-canvas shadow-[0_10px_24px_-12px_rgba(0,0,0,0.55)]"
+          : "h-[54px] w-[54px] bg-elevated/60 text-ink ring-1 ring-edge-soft/50"
       }`}
     >
       {children}
@@ -452,7 +672,15 @@ function Circle({ label, onPress, big, children }: { label: string; onPress: () 
   );
 }
 
-function ProviderCard({ svc, service, onPress }: { svc: StreamingService; service: Service; onPress: () => void }) {
+function ProviderCard({
+  svc,
+  service,
+  onPress,
+}: {
+  svc: StreamingService;
+  service: Service;
+  onPress: () => void;
+}) {
   return (
     <button
       type="button"
@@ -551,7 +779,11 @@ export function ConnectSheet({
             onClick={() => void rescan()}
             className="flex shrink-0 items-center gap-1.5 rounded-full bg-raised px-3 py-1.5 text-[12.5px] font-semibold text-ink-muted transition-transform active:scale-95"
           >
-            <RefreshCw size={13} strokeWidth={2.4} className={scanning ? "animate-spin" : ""} />
+            <RefreshCw
+              size={13}
+              strokeWidth={2.4}
+              className={scanning ? "animate-spin" : ""}
+            />
             {scanning ? t("Scanning…") : t("Scan")}
           </button>
         </div>
@@ -571,7 +803,9 @@ export function ConnectSheet({
               <p className="px-4 py-5 text-center text-[13px] leading-relaxed text-ink-muted">
                 {scanning
                   ? t("Looking for Harbor on your network…")
-                  : t("No Harbor apps found nearby. Make sure the computer is on the same Wi-Fi with Remote turned on, or enter its IP below.")}
+                  : t(
+                      "No Harbor apps found nearby. Make sure the computer is on the same Wi-Fi with Remote turned on, or enter its IP below.",
+                    )}
               </p>
             )}
           </div>
@@ -650,22 +884,32 @@ function HostRow({
       onClick={onSelect}
       className="flex items-center gap-3.5 rounded-2xl px-4 py-3 text-start transition-colors active:bg-raised/60"
     >
-      <span className={`flex h-10 w-10 items-center justify-center rounded-xl ${active ? "bg-accent-soft text-accent" : "bg-raised text-ink-muted"}`}>
+      <span
+        className={`flex h-10 w-10 items-center justify-center rounded-xl ${active ? "bg-accent-soft text-accent" : "bg-raised text-ink-muted"}`}
+      >
         <Wifi size={20} strokeWidth={2} />
       </span>
       <span className="flex min-w-0 flex-1 flex-col gap-0.5">
         <span className="flex items-center gap-2">
-          <span className={`truncate text-[15px] font-semibold ${active ? "text-accent" : "text-ink"}`}>{host.name}</span>
+          <span
+            className={`truncate text-[15px] font-semibold ${active ? "text-accent" : "text-ink"}`}
+          >
+            {host.name}
+          </span>
           {host.version && (
             <span className="shrink-0 rounded-md bg-raised px-1.5 py-0.5 text-[10.5px] font-semibold text-ink-subtle">
               {`Harbor ${host.version}`}
             </span>
           )}
         </span>
-        <span className="truncate text-[12px] text-ink-subtle">{host.host}</span>
+        <span className="truncate text-[12px] text-ink-subtle">
+          {host.host}
+        </span>
       </span>
       {active && <Check size={19} strokeWidth={2.6} className="text-accent" />}
-      {connecting && <span className="text-[11.5px] font-semibold text-ink-subtle">…</span>}
+      {connecting && (
+        <span className="text-[11.5px] font-semibold text-ink-subtle">…</span>
+      )}
     </button>
   );
 }
@@ -685,7 +929,10 @@ function ConfirmLeave({
 }) {
   const remainingMin =
     snapshot.durationSec > 0
-      ? Math.max(0, Math.round((snapshot.durationSec - snapshot.positionSec) / 60))
+      ? Math.max(
+          0,
+          Math.round((snapshot.durationSec - snapshot.positionSec) / 60),
+        )
       : null;
   const ep = snapshot.episode;
   const meta = [
@@ -706,9 +953,15 @@ function ConfirmLeave({
       <style>{SHEET_EXIT_CSS}</style>
       <div
         className={`flex flex-col gap-5 rounded-t-[28px] border-t border-edge-soft/60 bg-elevated px-5 pt-4 ${
-          reduced ? "" : leaving ? "harbor-sheet-panel-out" : "animate-in slide-in-from-bottom-4 duration-300"
+          reduced
+            ? ""
+            : leaving
+              ? "harbor-sheet-panel-out"
+              : "animate-in slide-in-from-bottom-4 duration-300"
         }`}
-        style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 24px)" }}
+        style={{
+          paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 24px)",
+        }}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mx-auto h-1 w-10 rounded-full bg-ink/20" />
@@ -726,9 +979,15 @@ function ConfirmLeave({
             )}
             <div className="flex min-w-0 flex-col gap-0.5">
               {snapshot.mediaTitle && (
-                <span className="truncate text-[14.5px] font-semibold text-ink">{snapshot.mediaTitle}</span>
+                <span className="truncate text-[14.5px] font-semibold text-ink">
+                  {snapshot.mediaTitle}
+                </span>
               )}
-              {meta && <span className="truncate text-[12.5px] text-ink-muted">{meta}</span>}
+              {meta && (
+                <span className="truncate text-[12.5px] text-ink-muted">
+                  {meta}
+                </span>
+              )}
             </div>
           </div>
         )}
