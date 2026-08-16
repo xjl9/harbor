@@ -1021,6 +1021,11 @@ final class HarborMpvViewController: UIViewController, HarborPlayerEngine {
     autoHideTimer?.invalidate()
     autoHideTimer = nil
     let sheet = UIAlertController(title: "Tracks", message: nil, preferredStyle: .actionSheet)
+    // The sheet sits on top of a playing film, so it takes the player's context
+    // rather than the system's: on a phone set to light mode the default is a
+    // white slab over the picture. Scoped to this sheet on purpose, since the
+    // rest of the app should still follow whatever the user set.
+    sheet.overrideUserInterfaceStyle = .dark
     for track in lastAudioTracks {
       let mark = track.selected ? "\u{2713} " : ""
       sheet.addAction(
