@@ -961,11 +961,16 @@ function ConfirmLeave({
         }`}
         style={{
           paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 24px)",
+          // Bounded like the other sheets: unbounded, a short viewport pushes the
+          // question itself above the top edge and leaves only the buttons, so you
+          // confirm something you can no longer read. No-op when it already fits.
+          maxHeight: "calc(100% - env(safe-area-inset-top, 0px) - 12px)",
+          overflowY: "auto",
         }}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="mx-auto h-1 w-10 rounded-full bg-ink/20" />
-        <h3 className="text-center text-[18px] font-semibold tracking-tight text-ink">
+        <div className="mx-auto h-1 w-10 shrink-0 rounded-full bg-ink/20" />
+        <h3 className="shrink-0 text-center text-[18px] font-semibold tracking-tight text-ink">
           {"Leave what you're watching?"}
         </h3>
         {hasCard && (

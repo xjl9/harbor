@@ -74,9 +74,15 @@ export function ObTmdb() {
             type="password"
             value={draft}
             onChange={(e) => {
+              const next = e.target.value.trim();
               setDraft(e.target.value);
               setStatus("idle");
-              update({ tmdbKey: e.target.value.trim() });
+              // Committing every keystroke meant typing three characters and then
+              // skipping left that fragment as the live key, and a broken key
+              // degrades metadata quietly. Only commit a cleared field or a
+              // full-length v3 key, so a valid key still persists for someone who
+              // never taps Verify (validate() commits the checked one either way).
+              if (next.length === 0 || next.length === 32) update({ tmdbKey: next });
             }}
             onKeyDown={(e) => e.key === "Enter" && validate()}
             placeholder={t("v3 API key")}
