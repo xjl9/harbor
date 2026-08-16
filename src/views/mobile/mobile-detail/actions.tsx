@@ -209,7 +209,13 @@ function ActionsSheet({
         className={`relative max-h-[82vh] overflow-y-auto rounded-t-3xl bg-canvas ${HIDE_SCROLL} ${
           reduced ? "" : leaving ? "md-sheet-out" : "md-sheet-in"
         }`}
-        style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 18px)" }}
+        style={{
+          paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 18px)",
+          // A bottom sheet still spans the full width, so on a landscape phone the
+          // island sat over the row icons and clipped the section heading.
+          paddingLeft: "env(safe-area-inset-left, 0px)",
+          paddingRight: "env(safe-area-inset-right, 0px)",
+        }}
       >
         <div className="sticky top-0 z-10 flex flex-col items-center gap-2 bg-canvas pb-2 pt-3">
           <span className="h-1 w-9 rounded-full bg-edge" />
