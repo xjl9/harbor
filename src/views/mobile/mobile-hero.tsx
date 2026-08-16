@@ -162,7 +162,7 @@ export function MobileHero({ slides, onOpenDetail }: { slides: Meta[]; onOpenDet
           literally it outgrows a landscape viewport that is itself only ~435px tall,
           hiding every row behind a full screen of scroll. Cap the floor to the
           viewport so short screens still reveal the top of the first row. */}
-      <div className="relative h-[62svh] min-h-[min(440px,72svh)] w-full overflow-hidden">
+      <div className="relative h-[62svh] min-h-[min(440px,72svh)] [@media(max-height:500px)]:h-[50svh] [@media(max-height:500px)]:min-h-0 w-full overflow-hidden">
         <button
           type="button"
           aria-label={`Open ${current.name}`}
@@ -198,7 +198,7 @@ export function MobileHero({ slides, onOpenDetail }: { slides: Meta[]; onOpenDet
             slab. Portrait is narrower than the cap and so is unaffected, and the
             box stays anchored to the inline start, which flips under RTL. */}
         <div
-          className="pointer-events-none absolute inset-x-0 bottom-0 z-10 flex max-w-[560px] flex-col gap-3.5 [@media(max-height:500px)]:gap-2"
+          className="pointer-events-none absolute inset-x-0 bottom-0 z-10 flex max-w-[560px] flex-col gap-3.5 [@media(max-height:500px)]:gap-2 [@media(max-height:500px)]:!pb-7"
           style={{
             // Reserve the floating tab bar and now playing bar. Without this the
             // hero's actions sit under them on a short landscape viewport.

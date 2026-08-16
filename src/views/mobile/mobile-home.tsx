@@ -482,10 +482,10 @@ function HeroSkeleton() {
         marginRight: "calc(-1 * env(safe-area-inset-right, 0px))",
       }}
     >
-      <div className="relative h-[62svh] min-h-[min(440px,72svh)] w-full overflow-hidden bg-surface">
+      <div className="relative h-[62svh] min-h-[min(440px,72svh)] [@media(max-height:500px)]:h-[50svh] [@media(max-height:500px)]:min-h-0 w-full overflow-hidden bg-surface">
         <div className="absolute inset-x-0 bottom-0 h-[38%] bg-gradient-to-t from-canvas to-transparent" />
         <div
-          className="absolute inset-x-0 bottom-0 flex flex-col gap-3.5"
+          className="absolute inset-x-0 bottom-0 flex flex-col gap-3.5 [@media(max-height:500px)]:!pb-7"
           style={{
             paddingBottom: "calc(1.75rem + var(--mobile-chrome-h, 0px))",
             paddingLeft: "max(1.25rem, env(safe-area-inset-left, 0px))",
