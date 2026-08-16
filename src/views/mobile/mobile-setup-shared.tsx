@@ -1,5 +1,6 @@
 import { Check, X } from "lucide-react";
 import { useRegisterSheet } from "./mobile-sheet-lock";
+import { MOBILE_SAFE_X } from "./chrome-metrics";
 
 // Human labels for the key categories a bundle can carry, shared by both sheets.
 export const CATEGORY_LABEL: Record<string, string> = {
@@ -19,7 +20,10 @@ export function SheetShell({
 }) {
   useRegisterSheet(true);
   return (
-    <div className="fixed inset-0 z-[70] flex flex-col bg-canvas">
+    <div
+      className="fixed inset-0 z-[70] flex flex-col bg-canvas"
+      style={MOBILE_SAFE_X}
+    >
       <header
         className="flex items-center justify-between px-4 pb-3"
         style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 14px)" }}
@@ -39,7 +43,9 @@ export function SheetShell({
       </header>
       <div
         className="flex-1 overflow-y-auto px-5"
-        style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 32px)" }}
+        style={{
+          paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 32px)",
+        }}
       >
         {children}
       </div>

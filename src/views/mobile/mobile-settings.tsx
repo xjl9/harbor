@@ -5,6 +5,7 @@ import type { ContentCategory } from "@/lib/settings/types";
 import { osClass } from "@/lib/platform";
 import { useRegisterSheet } from "./mobile-sheet-lock";
 import { useKeyboardInset } from "./use-keyboard-inset";
+import { MOBILE_SAFE_X } from "./chrome-metrics";
 
 // Only settings the mobile shell actually reads are surfaced here, so every
 // control changes something real on the device — no decorative toggles.
@@ -84,6 +85,7 @@ export function MobileSettings({ onClose }: { onClose: () => void }) {
           ? "translate-x-full transition-transform duration-300 [transition-timing-function:var(--ease-out)]"
           : "animate-slide-from-right"
       }`}
+      style={MOBILE_SAFE_X}
     >
       {/* Ambient amber wash — Settings has no identity colour, so it whispers (~14%). */}
       <div
@@ -119,7 +121,9 @@ export function MobileSettings({ onClose }: { onClose: () => void }) {
 
       <div
         className="flex-1 overflow-y-auto px-5"
-        style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 40px)" }}
+        style={{
+          paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 40px)",
+        }}
       >
         <Department
           index={0}
@@ -129,7 +133,10 @@ export function MobileSettings({ onClose }: { onClose: () => void }) {
           title="How home looks"
           standfirst="Set the shape of the home screen and how continue watching is kept."
         >
-          <LayoutChoice value={settings.homeMode} onChange={(v) => update({ homeMode: v })} />
+          <LayoutChoice
+            value={settings.homeMode}
+            onChange={(v) => update({ homeMode: v })}
+          />
           <span className="mt-4 block h-px bg-edge-soft" />
           <ToggleRow
             label="Separate Continue Watching per profile"
@@ -171,8 +178,14 @@ export function MobileSettings({ onClose }: { onClose: () => void }) {
             onClick={() => setRegionOpen(true)}
             className={`flex w-full items-center gap-3.5 py-3.5 text-start ${FOCUS}`}
           >
-            <Globe size={20} strokeWidth={2} className="shrink-0 text-ink-muted" />
-            <span className="shrink-0 text-[15.5px] font-medium text-ink">Catalog region</span>
+            <Globe
+              size={20}
+              strokeWidth={2}
+              className="shrink-0 text-ink-muted"
+            />
+            <span className="shrink-0 text-[15.5px] font-medium text-ink">
+              Catalog region
+            </span>
             {/* The value is the only flexible part, so a long region name ellipsizes
                 instead of squeezing the label onto two lines at 375px. */}
             <span className="min-w-0 flex-1 truncate text-end text-[14px] text-ink-muted">
@@ -183,7 +196,11 @@ export function MobileSettings({ onClose }: { onClose: () => void }) {
                 {region.code}
               </span>
             )}
-            <ChevronRight size={18} strokeWidth={2.2} className="shrink-0 text-ink-subtle" />
+            <ChevronRight
+              size={18}
+              strokeWidth={2.2}
+              className="shrink-0 text-ink-subtle"
+            />
           </button>
         </Department>
 
@@ -259,7 +276,9 @@ function Department({
         </h2>
         <span className="h-px flex-1 bg-edge-soft" />
       </div>
-      <p className="mt-3 max-w-[32ch] text-[13px] leading-relaxed text-ink-muted">{standfirst}</p>
+      <p className="mt-3 max-w-[32ch] text-[13px] leading-relaxed text-ink-muted">
+        {standfirst}
+      </p>
       <div className="mt-5">{children}</div>
     </section>
   );
@@ -279,7 +298,11 @@ function LayoutChoice({
     { v: "classic", label: "Classic" },
   ];
   return (
-    <div role="radiogroup" aria-label="Home layout" className="grid grid-cols-2 gap-3">
+    <div
+      role="radiogroup"
+      aria-label="Home layout"
+      className="grid grid-cols-2 gap-3"
+    >
       {opts.map((o) => {
         const active = value === o.v;
         return (
@@ -358,7 +381,9 @@ function ToggleRow({
       className={`no-press group flex w-full items-center gap-3 px-4 py-3.5 text-start transition-colors active:bg-raised/50 ${FOCUS}`}
     >
       {/* Label encodes state: ink when ON, ink-muted when OFF. */}
-      <span className={`min-w-0 flex-1 text-[15px] font-medium ${on ? "text-ink" : "text-ink-muted"}`}>
+      <span
+        className={`min-w-0 flex-1 text-[15px] font-medium ${on ? "text-ink" : "text-ink-muted"}`}
+      >
         {label}
       </span>
       <span
@@ -370,7 +395,9 @@ function ToggleRow({
         {/* Warm off-white knob, elongates on press for a real-switch feel. */}
         <span
           className={`absolute start-[2px] h-[27px] w-[27px] rounded-full bg-ink shadow-[0_1px_2px_rgba(0,0,0,0.35)] ring-1 ring-edge transition-all duration-[220ms] [transition-timing-function:var(--ease-out)] group-active:w-[31px] ${
-            on ? "translate-x-[20px] group-active:translate-x-[16px]" : "translate-x-0"
+            on
+              ? "translate-x-[20px] group-active:translate-x-[16px]"
+              : "translate-x-0"
           }`}
         />
       </span>
@@ -419,7 +446,8 @@ function RegionSheet({
     const q = query.trim().toLowerCase();
     if (!q) return REGIONS;
     return REGIONS.filter(
-      (r) => r.name.toLowerCase().includes(q) || r.code.toLowerCase().includes(q),
+      (r) =>
+        r.name.toLowerCase().includes(q) || r.code.toLowerCase().includes(q),
     );
   }, [query]);
 
@@ -446,12 +474,16 @@ function RegionSheet({
         className={`relative z-10 flex max-h-[calc(100%-env(safe-area-inset-top,0px)-12px)] w-full max-w-md flex-col rounded-t-3xl border border-edge bg-elevated shadow-[0_-12px_40px_-12px_rgba(0,0,0,0.7)] transition-transform duration-300 [transition-timing-function:var(--ease-out)] ${
           open ? "translate-y-0" : "translate-y-full"
         }`}
-        style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 16px)" }}
+        style={{
+          paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 16px)",
+        }}
       >
         <div className="px-5 pt-3">
           <div className="mx-auto mb-3 h-1 w-9 rounded-full bg-ink/20" />
           <div className="flex items-baseline justify-between">
-            <h3 className="font-display text-[19px] font-medium text-ink">Catalog region</h3>
+            <h3 className="font-display text-[19px] font-medium text-ink">
+              Catalog region
+            </h3>
             <span className="font-mono text-[12px] tabular-nums text-ink-subtle">
               {filtered.length}
             </span>
@@ -484,7 +516,11 @@ function RegionSheet({
                   {r.code}
                 </span>
                 {active ? (
-                  <Check size={18} strokeWidth={2.6} className="harbor-pop text-accent" />
+                  <Check
+                    size={18}
+                    strokeWidth={2.6}
+                    className="harbor-pop text-accent"
+                  />
                 ) : (
                   <span />
                 )}

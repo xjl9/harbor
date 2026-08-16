@@ -1,9 +1,13 @@
 import { useMemo } from "react";
 import { Download, X } from "lucide-react";
-import { useDownloads, type DownloadItem } from "@/lib/download/downloads-store";
+import {
+  useDownloads,
+  type DownloadItem,
+} from "@/lib/download/downloads-store";
 import { fmtBytes, fmtSpeed } from "@/views/downloads/downloads-format";
 import { MobileDownloadRow } from "./mobile-download-row";
 import { useRegisterSheet } from "./mobile-sheet-lock";
+import { MOBILE_SAFE_X } from "./chrome-metrics";
 
 function isActive(d: DownloadItem): boolean {
   return d.status === "downloading" || d.status === "paused";
@@ -12,7 +16,11 @@ function isSaved(d: DownloadItem): boolean {
   return d.status === "done";
 }
 function isIssue(d: DownloadItem): boolean {
-  return d.status === "error" || d.status === "interrupted" || d.status === "canceled";
+  return (
+    d.status === "error" ||
+    d.status === "interrupted" ||
+    d.status === "canceled"
+  );
 }
 
 export function MobileDownloads({ onClose }: { onClose: () => void }) {
@@ -32,7 +40,10 @@ export function MobileDownloads({ onClose }: { onClose: () => void }) {
     (sum, d) => (d.status === "downloading" ? sum + d.bytesPerSec : sum),
     0,
   );
-  const savedBytes = saved.reduce((sum, d) => sum + (d.totalBytes ?? d.receivedBytes), 0);
+  const savedBytes = saved.reduce(
+    (sum, d) => sum + (d.totalBytes ?? d.receivedBytes),
+    0,
+  );
   const summary =
     items.length === 0
       ? null
@@ -46,15 +57,24 @@ export function MobileDownloads({ onClose }: { onClose: () => void }) {
           .join("  ·  ");
 
   return (
-    <div className="fixed inset-0 z-[70] flex flex-col bg-canvas">
+    <div
+      className="fixed inset-0 z-[70] flex flex-col bg-canvas"
+      style={MOBILE_SAFE_X}
+    >
       <header
         className="flex items-center justify-between px-4 pb-3"
         style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 14px)" }}
       >
         <span className="w-9" />
         <div className="flex flex-col items-center">
-          <h1 className="font-display text-[19px] font-medium text-ink">Downloads</h1>
-          {summary && <p className="text-[11.5px] tabular-nums text-ink-subtle">{summary}</p>}
+          <h1 className="font-display text-[19px] font-medium text-ink">
+            Downloads
+          </h1>
+          {summary && (
+            <p className="text-[11.5px] tabular-nums text-ink-subtle">
+              {summary}
+            </p>
+          )}
         </div>
         <button
           type="button"
@@ -68,7 +88,9 @@ export function MobileDownloads({ onClose }: { onClose: () => void }) {
 
       <div
         className="flex-1 overflow-y-auto overscroll-y-contain px-5"
-        style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 32px)" }}
+        style={{
+          paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 32px)",
+        }}
       >
         {items.length === 0 ? (
           <EmptyState />
@@ -109,8 +131,8 @@ function EmptyState() {
       <div className="flex flex-col gap-1.5">
         <p className="text-[15px] font-semibold text-ink">No downloads yet</p>
         <p className="max-w-[300px] text-[13px] leading-relaxed text-ink-muted">
-          Open a movie or episode, tap Download, and pick a source. It saves here for offline
-          watching.
+          Open a movie or episode, tap Download, and pick a source. It saves
+          here for offline watching.
         </p>
       </div>
     </div>

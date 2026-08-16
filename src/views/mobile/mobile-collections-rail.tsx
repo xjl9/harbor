@@ -4,20 +4,31 @@ import { ChevronRight, Layers } from "lucide-react";
 import type { Meta } from "@/lib/cinemeta";
 import { Poster, usePosterChain } from "@/components/poster";
 import { COLLECTIONS_CATALOG } from "@/lib/collections-catalog";
-import { collectionNameMatches, tmdbCollection, tmdbSearchCollectionId } from "@/lib/providers/tmdb";
+import {
+  collectionNameMatches,
+  tmdbCollection,
+  tmdbSearchCollectionId,
+} from "@/lib/providers/tmdb";
 import { useSettings } from "@/lib/settings";
 import { useT } from "@/lib/i18n";
 
-const RAIL_CULL = "[content-visibility:auto] [contain-intrinsic-size:auto_170px]";
+const RAIL_CULL =
+  "[content-visibility:auto] [contain-intrinsic-size:auto_170px]";
 
 // Mobile Collections rail: the curated TMDB franchise sets from COLLECTIONS_CATALOG,
 // rendered as landscape cards. The desktop home opens a dedicated collection page via
 // the nav stack, which the tab-based mobile shell does not render, so tapping a card
 // resolves the collection's films inline and hands each one to the shared detail sheet.
-export function MobileCollectionsRail({ onOpenDetail }: { onOpenDetail: (m: Meta) => void }) {
+export function MobileCollectionsRail({
+  onOpenDetail,
+}: {
+  onOpenDetail: (m: Meta) => void;
+}) {
   const { settings } = useSettings();
   const t = useT();
-  const [active, setActive] = useState<{ id: number; name: string } | null>(null);
+  const [active, setActive] = useState<{ id: number; name: string } | null>(
+    null,
+  );
 
   if (!settings.tmdbKey) return null;
 
@@ -93,11 +104,19 @@ function CollectionCardTile({
     void (async () => {
       // Same heal path as the desktop CollectionCard: fall back to a name search
       // when the hardcoded id is missing (id 0) or resolves to the wrong set.
-      let c = id > 0 ? await tmdbCollection(settings.tmdbKey, id).catch(() => null) : null;
+      let c =
+        id > 0
+          ? await tmdbCollection(settings.tmdbKey, id).catch(() => null)
+          : null;
       if (!c || (id <= 0 && !collectionNameMatches(c.name, name))) {
-        const healedId = await tmdbSearchCollectionId(settings.tmdbKey, name).catch(() => null);
+        const healedId = await tmdbSearchCollectionId(
+          settings.tmdbKey,
+          name,
+        ).catch(() => null);
         if (healedId != null && healedId !== id) {
-          c = await tmdbCollection(settings.tmdbKey, healedId).catch(() => null);
+          c = await tmdbCollection(settings.tmdbKey, healedId).catch(
+            () => null,
+          );
         }
       }
       if (cancelled || !c) return;
@@ -132,7 +151,10 @@ function CollectionCardTile({
           onLoad={(e) => e.currentTarget.setAttribute("data-on", "true")}
         />
       )}
-      <div aria-hidden className="absolute inset-0 bg-gradient-to-t from-black/88 via-black/30 to-transparent" />
+      <div
+        aria-hidden
+        className="absolute inset-0 bg-gradient-to-t from-black/88 via-black/30 to-transparent"
+      />
       <span className="absolute start-3 top-2.5 inline-flex items-center gap-1.5 rounded-full bg-black/45 px-2 py-0.5 text-[9.5px] font-bold uppercase tracking-[0.14em] text-white/85 backdrop-blur-md">
         <Layers size={10} strokeWidth={2.4} />
         {count != null ? t("{count} films", { count }) : t("Collection")}
@@ -181,19 +203,32 @@ function CollectionMembersSheet({
   }, [id, settings.tmdbKey]);
 
   return (
-    <div className="fixed inset-0 z-[60] overflow-y-auto overscroll-contain bg-canvas px-4 pb-14 pt-4">
+    <div
+      className="fixed inset-0 z-[60] overflow-y-auto overscroll-contain bg-canvas pb-14 pt-4"
+      style={{
+        paddingLeft: "max(1rem, env(safe-area-inset-left, 0px))",
+        paddingRight: "max(1rem, env(safe-area-inset-right, 0px))",
+      }}
+    >
       <button
         type="button"
         onClick={onClose}
         className="mb-5 flex items-center gap-1 self-start rounded-full bg-surface py-2 pe-4 ps-2.5 text-[14px] font-semibold text-ink ring-1 ring-edge-soft"
       >
-        <ChevronRight size={17} strokeWidth={2.6} className="rotate-180 text-ink-subtle" />
+        <ChevronRight
+          size={17}
+          strokeWidth={2.6}
+          className="rotate-180 text-ink-subtle"
+        />
         <span className="line-clamp-1 max-w-[70vw]">{name}</span>
       </button>
       {members === null ? (
         <div className="grid grid-cols-3 gap-x-3 gap-y-4">
           {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="aspect-[2/3] rounded-[12px] bg-elevated/40" />
+            <div
+              key={i}
+              className="aspect-[2/3] rounded-[12px] bg-elevated/40"
+            />
           ))}
         </div>
       ) : members.length === 0 ? (
@@ -216,7 +251,13 @@ function CollectionMembersSheet({
   );
 }
 
-function MemberTile({ meta, onOpenDetail }: { meta: Meta; onOpenDetail: (m: Meta) => void }) {
+function MemberTile({
+  meta,
+  onOpenDetail,
+}: {
+  meta: Meta;
+  onOpenDetail: (m: Meta) => void;
+}) {
   const { settings } = useSettings();
   const { src, onError } = usePosterChain(
     settings.rpdbKey,
@@ -230,7 +271,14 @@ function MemberTile({ meta, onOpenDetail }: { meta: Meta; onOpenDetail: (m: Meta
       onClick={() => onOpenDetail(meta)}
       className="text-start"
     >
-      <Poster src={src} onError={onError} seed={meta.id} ratio="portrait" lazy className="rounded-[12px] ring-1 ring-white/[0.06]" />
+      <Poster
+        src={src}
+        onError={onError}
+        seed={meta.id}
+        ratio="portrait"
+        lazy
+        className="rounded-[12px] ring-1 ring-white/[0.06]"
+      />
       <p className="mt-1.5 line-clamp-2 min-h-[2.7em] text-[12px] font-medium leading-snug text-ink-muted">
         {meta.name}
       </p>

@@ -1,4 +1,12 @@
-import { AlertCircle, Check, Loader2, Plus, Puzzle, Trash2, X } from "lucide-react";
+import {
+  AlertCircle,
+  Check,
+  Loader2,
+  Plus,
+  Puzzle,
+  Trash2,
+  X,
+} from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import {
   installFromUrl,
@@ -9,6 +17,7 @@ import {
 import { useSettings } from "@/lib/settings";
 import { MobileAddonDiscover } from "./mobile-addon-discover";
 import { useRegisterSheet } from "./mobile-sheet-lock";
+import { MOBILE_SAFE_X } from "./chrome-metrics";
 
 // Well-known free/debrid stream sources offered as one-tap installs so a fresh
 // standalone install has something for the play picker to query. These are the
@@ -44,7 +53,9 @@ export const ADDON_SUGGESTIONS: Array<{
 export function MobileAddons({ onClose }: { onClose: () => void }) {
   useRegisterSheet(true);
   const { settings } = useSettings();
-  const [installed, setInstalled] = useState<InstalledAddon[]>(() => loadInstalled());
+  const [installed, setInstalled] = useState<InstalledAddon[]>(() =>
+    loadInstalled(),
+  );
   const [url, setUrl] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -59,7 +70,9 @@ export function MobileAddons({ onClose }: { onClose: () => void }) {
     return () => window.removeEventListener("harbor:addons-changed", onChanged);
   }, [refresh]);
 
-  const installedUrls = new Set(installed.map((a) => a.transportUrl.replace(/\/$/, "")));
+  const installedUrls = new Set(
+    installed.map((a) => a.transportUrl.replace(/\/$/, "")),
+  );
   const installedIds = new Set(installed.map((a) => a.id));
 
   const install = useCallback(
@@ -73,7 +86,9 @@ export function MobileAddons({ onClose }: { onClose: () => void }) {
         setUrl("");
         refresh();
       } catch (e) {
-        setError(e instanceof Error ? e.message : "Could not install that addon.");
+        setError(
+          e instanceof Error ? e.message : "Could not install that addon.",
+        );
       } finally {
         setBusy(null);
       }
@@ -95,13 +110,18 @@ export function MobileAddons({ onClose }: { onClose: () => void }) {
   );
 
   return (
-    <div className="fixed inset-0 z-[70] flex flex-col bg-canvas">
+    <div
+      className="fixed inset-0 z-[70] flex flex-col bg-canvas"
+      style={MOBILE_SAFE_X}
+    >
       <header
         className="flex items-center justify-between px-4 pb-3"
         style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 14px)" }}
       >
         <span className="w-9" />
-        <h1 className="font-display text-[19px] font-medium text-ink">Addons</h1>
+        <h1 className="font-display text-[19px] font-medium text-ink">
+          Addons
+        </h1>
         <button
           type="button"
           onClick={onClose}
@@ -115,7 +135,11 @@ export function MobileAddons({ onClose }: { onClose: () => void }) {
       <div className="flex-1 overflow-y-auto px-5 pb-10">
         <section className="flex flex-col gap-2.5">
           <div className="flex items-center gap-2 rounded-2xl border border-edge-soft/70 bg-elevated/40 px-3.5 py-2">
-            <Plus size={18} strokeWidth={2.2} className="shrink-0 text-ink-subtle" />
+            <Plus
+              size={18}
+              strokeWidth={2.2}
+              className="shrink-0 text-ink-subtle"
+            />
             <input
               value={url}
               onChange={(e) => setUrl(e.target.value)}
@@ -134,12 +158,20 @@ export function MobileAddons({ onClose }: { onClose: () => void }) {
               onClick={() => install(url, "url")}
               className="shrink-0 rounded-full bg-ink px-3.5 py-1.5 text-[13.5px] font-semibold text-canvas transition-transform active:scale-95 disabled:opacity-40"
             >
-              {busy === "url" ? <Loader2 size={15} className="animate-spin" /> : "Add"}
+              {busy === "url" ? (
+                <Loader2 size={15} className="animate-spin" />
+              ) : (
+                "Add"
+              )}
             </button>
           </div>
           {error && (
             <p className="flex items-start gap-1.5 px-1 text-[13px] text-danger">
-              <AlertCircle size={14} strokeWidth={2.2} className="mt-0.5 shrink-0" />
+              <AlertCircle
+                size={14}
+                strokeWidth={2.2}
+                className="mt-0.5 shrink-0"
+              />
               {error}
             </p>
           )}
@@ -153,7 +185,9 @@ export function MobileAddons({ onClose }: { onClose: () => void }) {
             <div className="overflow-hidden rounded-2xl border border-edge-soft/70 bg-elevated/40">
               {installed.map((addon, i) => (
                 <div key={addon.transportUrl}>
-                  {i > 0 && <span className="mx-4 block h-px bg-edge-soft/60" />}
+                  {i > 0 && (
+                    <span className="mx-4 block h-px bg-edge-soft/60" />
+                  )}
                   <div className="flex items-center gap-3.5 px-4 py-3.5">
                     <AddonMark logo={addon.manifest?.logo} />
                     <div className="min-w-0 flex-1">
@@ -161,7 +195,9 @@ export function MobileAddons({ onClose }: { onClose: () => void }) {
                         {addon.manifest?.name || addon.id}
                       </p>
                       <p className="truncate text-[12.5px] text-ink-subtle">
-                        {(addon.manifest?.types || []).slice(0, 3).join(" · ") || "addon"}
+                        {(addon.manifest?.types || [])
+                          .slice(0, 3)
+                          .join(" · ") || "addon"}
                       </p>
                     </div>
                     <button
@@ -200,8 +236,12 @@ export function MobileAddons({ onClose }: { onClose: () => void }) {
                     <Puzzle size={18} strokeWidth={2} />
                   </span>
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-[15px] font-medium text-ink">{s.name}</p>
-                    <p className="truncate text-[12.5px] text-ink-subtle">{s.note}</p>
+                    <p className="truncate text-[15px] font-medium text-ink">
+                      {s.name}
+                    </p>
+                    <p className="truncate text-[12.5px] text-ink-subtle">
+                      {s.note}
+                    </p>
                   </div>
                   <button
                     type="button"

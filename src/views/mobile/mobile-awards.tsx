@@ -9,6 +9,7 @@ import { loadAwardFilms } from "@/lib/awards/award-page";
 import type { Meta } from "@/lib/cinemeta";
 import type { AwardType } from "@/lib/providers/wikidata";
 import { useSettings } from "@/lib/settings";
+import { MOBILE_SAFE_X } from "./chrome-metrics";
 
 const MOBILE_AWARDS: AwardType[] = [
   "oscar",
@@ -138,6 +139,7 @@ export function MobileAwards({
       className={`fixed inset-0 z-50 overflow-y-auto overscroll-contain bg-canvas ${
         closing ? "ma-out" : "ma-in"
       }`}
+      style={MOBILE_SAFE_X}
     >
       <style>{AWARDS_CSS}</style>
 
@@ -170,7 +172,9 @@ export function MobileAwards({
               {meta.title}
             </h1>
             <p className="line-clamp-1 text-[11.5px] font-semibold uppercase tracking-[0.16em] text-ink-subtle">
-              {meta.founded > 0 ? `${meta.shorthand} · since ${meta.founded}` : meta.shorthand}
+              {meta.founded > 0
+                ? `${meta.shorthand} · since ${meta.founded}`
+                : meta.shorthand}
             </p>
           </div>
         </div>
@@ -195,7 +199,9 @@ export function MobileAwards({
 
         <div
           className="px-5"
-          style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 40px)" }}
+          style={{
+            paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 40px)",
+          }}
         >
           {!hasKey ? (
             <Empty
@@ -209,16 +215,32 @@ export function MobileAwards({
               <ListSkeleton />
             )
           ) : films.length === 0 ? (
-            <Empty Icon={Trophy} text="No winners are catalogued for this award yet." />
+            <Empty
+              Icon={Trophy}
+              text="No winners are catalogued for this award yet."
+            />
           ) : mode === "grid" ? (
             <>
               <WinnerGrid films={films} onOpen={onOpenDetail} />
-              {loadingMore && <div className="mt-4"><GridSkeleton rows={1} /></div>}
+              {loadingMore && (
+                <div className="mt-4">
+                  <GridSkeleton rows={1} />
+                </div>
+              )}
             </>
           ) : (
             <>
-              <WinnerList films={films} awardType={awardType} tint={tint} onOpen={onOpenDetail} />
-              {loadingMore && <div className="mt-2"><ListSkeleton rows={2} /></div>}
+              <WinnerList
+                films={films}
+                awardType={awardType}
+                tint={tint}
+                onOpen={onOpenDetail}
+              />
+              {loadingMore && (
+                <div className="mt-2">
+                  <ListSkeleton rows={2} />
+                </div>
+              )}
             </>
           )}
 
@@ -230,7 +252,9 @@ export function MobileAwards({
     </div>
   );
 
-  return typeof document !== "undefined" ? createPortal(node, document.body) : node;
+  return typeof document !== "undefined"
+    ? createPortal(node, document.body)
+    : node;
 }
 
 function AwardPill({
@@ -250,7 +274,9 @@ function AwardPill({
       className={`flex shrink-0 items-center gap-2 rounded-full border px-3.5 py-2 text-[13px] font-semibold transition-colors motion-reduce:transition-none ${
         active ? "text-ink" : "border-edge-soft bg-surface text-ink-muted"
       }`}
-      style={active ? { borderColor: tint, backgroundColor: `${tint}22` } : undefined}
+      style={
+        active ? { borderColor: tint, backgroundColor: `${tint}22` } : undefined
+      }
     >
       <AwardLogo type={type} size={17} />
       {AWARD_CATALOG[type].shorthand}
@@ -269,10 +295,20 @@ function ModeToggle({
 }) {
   return (
     <div className="flex items-center gap-1 rounded-full border border-edge-soft bg-surface p-1">
-      <ModeButton active={mode === "grid"} onClick={() => onSelect("grid")} label="Grid view" tint={tint}>
+      <ModeButton
+        active={mode === "grid"}
+        onClick={() => onSelect("grid")}
+        label="Grid view"
+        tint={tint}
+      >
         <LayoutGrid size={16} strokeWidth={2.2} />
       </ModeButton>
-      <ModeButton active={mode === "list"} onClick={() => onSelect("list")} label="List view" tint={tint}>
+      <ModeButton
+        active={mode === "list"}
+        onClick={() => onSelect("list")}
+        label="List view"
+        tint={tint}
+      >
         <List size={16} strokeWidth={2.2} />
       </ModeButton>
     </div>
@@ -308,7 +344,13 @@ function ModeButton({
   );
 }
 
-function WinnerGrid({ films, onOpen }: { films: Meta[]; onOpen: (m: Meta) => void }) {
+function WinnerGrid({
+  films,
+  onOpen,
+}: {
+  films: Meta[];
+  onOpen: (m: Meta) => void;
+}) {
   return (
     <div className="grid grid-cols-3 gap-x-3 gap-y-4">
       {films.map((m) => (
@@ -332,8 +374,17 @@ function GridTile({ meta, onOpen }: { meta: Meta; onOpen: (m: Meta) => void }) {
       onClick={() => onOpen(meta)}
       className="text-start transition-transform duration-150 active:scale-[0.96] motion-reduce:transition-none"
     >
-      <Poster src={src} onError={onError} seed={meta.id} ratio="portrait" lazy className="rounded-[12px]" />
-      <p className="mt-1.5 line-clamp-2 text-[12px] font-medium leading-snug text-ink-muted">{meta.name}</p>
+      <Poster
+        src={src}
+        onError={onError}
+        seed={meta.id}
+        ratio="portrait"
+        lazy
+        className="rounded-[12px]"
+      />
+      <p className="mt-1.5 line-clamp-2 text-[12px] font-medium leading-snug text-ink-muted">
+        {meta.name}
+      </p>
     </button>
   );
 }
@@ -352,7 +403,13 @@ function WinnerList({
   return (
     <div className="flex flex-col gap-1">
       {films.map((m) => (
-        <ListRow key={m.id} meta={m} awardType={awardType} tint={tint} onOpen={onOpen} />
+        <ListRow
+          key={m.id}
+          meta={m}
+          awardType={awardType}
+          tint={tint}
+          onOpen={onOpen}
+        />
       ))}
     </div>
   );
@@ -384,10 +441,19 @@ function ListRow({
       className="flex items-center gap-3.5 rounded-2xl p-2 text-start transition-colors active:bg-elevated/50 motion-reduce:transition-none"
     >
       <div className="w-[46px] shrink-0">
-        <Poster src={src} onError={onError} seed={meta.id} ratio="portrait" lazy className="rounded-[8px]" />
+        <Poster
+          src={src}
+          onError={onError}
+          seed={meta.id}
+          ratio="portrait"
+          lazy
+          className="rounded-[8px]"
+        />
       </div>
       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-        <span className="line-clamp-1 text-[15px] font-medium leading-snug text-ink">{meta.name}</span>
+        <span className="line-clamp-1 text-[15px] font-medium leading-snug text-ink">
+          {meta.name}
+        </span>
         <span className="text-[12.5px] tabular-nums text-ink-subtle">
           {year ? `${year} · ` : ""}
           {meta.type === "series" ? "Series" : "Film"}
@@ -436,7 +502,9 @@ function Empty({ Icon, text }: { Icon: typeof Trophy; text: string }) {
       <span className="grid h-14 w-14 place-items-center rounded-2xl bg-surface text-ink-subtle ring-1 ring-edge-soft">
         <Icon size={24} strokeWidth={1.9} />
       </span>
-      <p className="max-w-[260px] text-[14px] leading-relaxed text-ink-muted">{text}</p>
+      <p className="max-w-[260px] text-[14px] leading-relaxed text-ink-muted">
+        {text}
+      </p>
     </div>
   );
 }
