@@ -19,6 +19,7 @@ import { ZoomJoystick } from "./zoom-joystick";
 import { useOptimisticPage } from "./use-optimistic-page";
 import { useHistoryBackGuard } from "./use-history-guard";
 import { clampZoom, ZOOM_MAX, ZOOM_MIN, type TurnDir } from "./gesture-math";
+import { MOBILE_CHROME_CLEARANCE } from "../chrome-metrics";
 
 const ChapterNavigator = lazy(() =>
   import("./chapter-navigator").then((m) => ({ default: m.ChapterNavigator })),
@@ -221,7 +222,7 @@ export function MangaRemote({
           onZoom={zoomAbs}
           onPan={pan}
           onEngageChange={setZoomEngaged}
-          bottomOffset="calc(env(safe-area-inset-bottom, 0px) + 84px)"
+          bottomOffset={MOBILE_CHROME_CLEARANCE}
         />
       </div>
 

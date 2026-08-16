@@ -148,7 +148,11 @@ export function MobileHero({ slides, onOpenDetail }: { slides: Meta[]; onOpenDet
 
   return (
     <section className="relative -mt-3 mb-1">
-      <div className="relative h-[62svh] min-h-[440px] w-full overflow-hidden">
+      {/* The 440px floor keeps the hero cinematic on small portrait phones, but taken
+          literally it outgrows a landscape viewport that is itself only ~435px tall,
+          hiding every row behind a full screen of scroll. Cap the floor to the
+          viewport so short screens still reveal the top of the first row. */}
+      <div className="relative h-[62svh] min-h-[min(440px,72svh)] w-full overflow-hidden">
         <button
           type="button"
           aria-label={`Open ${current.name}`}

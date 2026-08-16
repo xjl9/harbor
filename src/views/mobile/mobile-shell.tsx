@@ -20,6 +20,7 @@ import { noteScroll, noteTab, restoredTab, restoreScroll } from "./reload-restor
 import { MOBILE_INTENT_EVENT } from "./mobile-intent";
 import { installBugReportErrorCapture } from "@/lib/bug-report";
 import { MangaNowBar } from "./manga-remote/manga-now-bar";
+import { MOBILE_CHROME_CLEARANCE } from "./chrome-metrics";
 
 const RemoteApp = lazy(() => import("@/views/remote-app").then((m) => ({ default: m.RemoteApp })));
 const MangaRemote = lazy(() => import("./manga-remote/manga-remote").then((m) => ({ default: m.MangaRemote })));
@@ -90,17 +91,30 @@ function ShellBody() {
         if (r.height > 0) top = Math.min(top, r.top);
       });
       const h = Math.max(0, Math.round(window.innerHeight - top));
-      root.style.setProperty("--mobile-chrome-h", `${h}px`);
+      // Consumers live in sibling subtrees (browse owns its own scroller), so the
+      // value goes on the document rather than this element.
+      document.documentElement.style.setProperty("--mobile-chrome-h", `${h}px`);
     };
     measure();
     const ro = new ResizeObserver(measure);
     ro.observe(root);
+    // The bars are absolutely positioned and slide in, so the root never resizes
+    // when one appears and a ResizeObserver alone reports a stale height forever.
+    // Watch for them mounting, and re-measure once their entrance finishes.
+    const mo = new MutationObserver(measure);
+    mo.observe(root, { childList: true, subtree: true });
+    root.addEventListener("animationend", measure);
+    root.addEventListener("transitionend", measure);
     window.addEventListener("resize", measure);
     window.addEventListener("orientationchange", measure);
     return () => {
       ro.disconnect();
+      mo.disconnect();
+      root.removeEventListener("animationend", measure);
+      root.removeEventListener("transitionend", measure);
       window.removeEventListener("resize", measure);
       window.removeEventListener("orientationchange", measure);
+      document.documentElement.style.removeProperty("--mobile-chrome-h");
     };
   }, [showNowPlaying, tab]);
 
@@ -307,7 +321,7 @@ function BrowseScroll({ restoreKey, children }: { restoreKey: string; children: 
       <div
         ref={scrollRef}
         className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain"
-        style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 84px)" }}
+        style={{ paddingBottom: MOBILE_CHROME_CLEARANCE }}
       >
         <ScrollRootContext.Provider value={scrollEl}>{children}</ScrollRootContext.Provider>
       </div>

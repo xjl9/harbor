@@ -10,6 +10,7 @@ import { MobileDeviceSwitcher } from "./mobile-device-switcher";
 import { ScrollToTop } from "./scroll-to-top";
 import { LayerActiveContext, useLayerActive, useLayerParked } from "./layer-active";
 import { noteScroll, noteView, restoredView, restoreScroll } from "./reload-restore";
+import { MOBILE_CHROME_CLEARANCE } from "./chrome-metrics";
 
 export type View = "home" | "movies" | "shows" | "anime" | "discover";
 
@@ -162,7 +163,7 @@ function ViewScroll({ restoreKey, children }: { restoreKey: string; children: Re
       <div
         ref={scrollRef}
         className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain"
-        style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 84px)" }}
+        style={{ paddingBottom: MOBILE_CHROME_CLEARANCE }}
       >
         <ScrollRootContext.Provider value={scrollEl}>{children}</ScrollRootContext.Provider>
       </div>
