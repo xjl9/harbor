@@ -86,39 +86,52 @@ jobs:
       # Cached on the pinned version: this is a large zip and it was refetched on
       # every run. The version lives in one place now so the key cannot drift
       # away from the URL when MPVKit is bumped.
-      - name: Cache Libmpv xcframework
+      #
+      # The ZIP is what is cached, not the extracted framework, so the sha256
+      # below runs on EVERY build. Caching the extracted directory would have
+      # skipped that check on a hit, which quietly trades a supply-chain
+      # guarantee for a download: a poisoned or truncated cache entry would have
+      # been built against unverified. Extraction is cheap; the verification is
+      # the part worth keeping.
+      - name: Cache Libmpv archive
         uses: actions/cache@v4
         with:
-          path: src-tauri/plugins/tauri-plugin-harbor-player/ios/.frameworks
+          path: .cache/libmpv
           key: harbor-libmpv-${{ env.MPVKIT_VERSION }}
 
-      - name: Fetch Libmpv xcframework
+      - name: Fetch and verify Libmpv xcframework
         run: |
           set -euo pipefail
           DIR=src-tauri/plugins/tauri-plugin-harbor-player/ios/.frameworks
-          mkdir -p "$DIR"
-          # Skipped on a cache hit. A partial or corrupt entry has no
-          # .xcframework directory, so it falls through and refetches rather
-          # than building against half an archive.
-          if [ ! -d "$DIR/Libmpv.xcframework" ]; then
-            BASE=https://github.com/mpvkit/MPVKit/releases/download/${MPVKIT_VERSION}
-            curl -fsSL --retry 3 -o /tmp/Libmpv.xcframework.zip "$BASE/Libmpv.xcframework.zip"
-            curl -fsSL --retry 3 -o /tmp/Libmpv.xcframework.checksum.txt "$BASE/Libmpv.xcframework.checksum.txt"
-            EXPECTED=$(tr -d '[:space:]' < /tmp/Libmpv.xcframework.checksum.txt)
-            ACTUAL=$(shasum -a 256 /tmp/Libmpv.xcframework.zip | awk '{print $1}')
-            echo "expected: $EXPECTED"
-            echo "actual:   $ACTUAL"
+          CACHE=.cache/libmpv
+          mkdir -p "$DIR" "$CACHE"
+          BASE=https://github.com/mpvkit/MPVKit/releases/download/${MPVKIT_VERSION}
+          # Download only what the cache did not supply.
+          for ASSET in Libmpv.xcframework.zip Libmpv.xcframework.checksum.txt; do
+            test -f "$CACHE/$ASSET" || curl -fsSL --retry 3 -o "$CACHE/$ASSET" "$BASE/$ASSET"
+          done
+          # Always verified, cache hit or miss.
+          EXPECTED=$(tr -d '[:space:]' < "$CACHE/Libmpv.xcframework.checksum.txt")
+          ACTUAL=$(shasum -a 256 "$CACHE/Libmpv.xcframework.zip" | awk '{print $1}')
+          echo "expected: $EXPECTED"
+          echo "actual:   $ACTUAL"
+          if [ "$EXPECTED" != "$ACTUAL" ]; then
+            # A bad cache entry must not be able to wedge the build forever.
+            echo "checksum mismatch, discarding cached archive and refetching"
+            for ASSET in Libmpv.xcframework.zip Libmpv.xcframework.checksum.txt; do
+              rm -f "$CACHE/$ASSET"
+              curl -fsSL --retry 3 -o "$CACHE/$ASSET" "$BASE/$ASSET"
+            done
+            EXPECTED=$(tr -d '[:space:]' < "$CACHE/Libmpv.xcframework.checksum.txt")
+            ACTUAL=$(shasum -a 256 "$CACHE/Libmpv.xcframework.zip" | awk '{print $1}')
             test "$EXPECTED" = "$ACTUAL"
-            unzip -q /tmp/Libmpv.xcframework.zip -d "$DIR"
-          else
-            echo "Libmpv.xcframework restored from cache"
           fi
+          rm -rf "$DIR/Libmpv.xcframework"
+          unzip -q "$CACHE/Libmpv.xcframework.zip" -d "$DIR"
           # The Package.swift -F path goes through this symlink so device and
           # simulator builds can each select their slice (sim: point it at
-          # ios-arm64_x86_64-simulator instead). Remade every run so a cache hit
-          # still lands a correct link.
+          # ios-arm64_x86_64-simulator instead).
           ln -sfn Libmpv.xcframework/ios-arm64 "$DIR/active"
-          # Guards the cache as well as the download.
           test -d "$DIR/Libmpv.xcframework/ios-arm64/Libmpv.framework"
 
       # Fast-fail diagnostic: surfaces Rust compile errors for the iOS target
