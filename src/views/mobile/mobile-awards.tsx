@@ -208,7 +208,17 @@ export function MobileAwards({
             <Empty
               Icon={KeyRound}
               text="Add a TMDB key in Settings to unlock award winners."
-              action={{ label: "Open Settings", onClick: () => requestMobileIntent("settings") }}
+              // Dismiss on the way out. This dialog is portaled to document.body,
+              // so it sits in its own stacking context and stays in front of the
+              // settings screen the intent opens no matter what z-index that
+              // screen carries: the button looked dead until this closed too.
+              action={{
+                label: "Open Settings",
+                onClick: () => {
+                  close();
+                  requestMobileIntent("settings");
+                },
+              }}
             />
           ) : loading && films.length === 0 ? (
             mode === "grid" ? (
