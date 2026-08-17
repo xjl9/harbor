@@ -95,7 +95,7 @@ export function MobileProfile({ onOpenRemote }: { onOpenRemote: () => void }) {
 
   return (
     <div
-      className="relative flex min-h-full flex-col gap-7 px-5 pb-8"
+      className="relative mx-auto flex min-h-full w-full max-w-[680px] flex-col gap-7 px-5 pb-8"
       style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 14px)" }}
     >
       {/* Ambient identity wash: the profile's own color bleeds from the top, same cinematic depth as the home hero. */}

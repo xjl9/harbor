@@ -97,8 +97,13 @@ export function MobileSettings({ onClose }: { onClose: () => void }) {
         }}
       />
 
+      {/* Settings is a list of label-and-control rows, and a row only reads as one
+          thing while the two ends stay near each other. Uncapped on a tablet the
+          label sat against the left edge with its switch about 1300px away, so
+          the column is capped and centred; a phone never reaches the cap. The
+          header shares it so the title lines up with the rows beneath it. */}
       <header
-        className="flex items-center gap-3 px-5 pb-2"
+        className="mx-auto flex w-full max-w-[680px] items-center gap-3 px-5 pb-2"
         style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 14px)" }}
       >
         <button
@@ -120,7 +125,7 @@ export function MobileSettings({ onClose }: { onClose: () => void }) {
       </header>
 
       <div
-        className="flex-1 overflow-y-auto px-5"
+        className="mx-auto w-full max-w-[680px] flex-1 overflow-y-auto px-5"
         style={{
           paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 40px)",
         }}
