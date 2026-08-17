@@ -342,7 +342,11 @@ function Landing({
         </section>
       )}
 
-      <section className="grid grid-cols-2 [@media(min-width:700px)_and_(min-height:600px)]:grid-cols-4 [@media(min-width:1000px)_and_(min-height:600px)]:grid-cols-5 gap-3">
+      {/* Two cards, forever, so this row stays two columns at every width. The
+          tablet rule that widens the genre grid below belongs there and not
+          here: four columns holding two children left the pair huddled in the
+          first half of an iPad with the rest of the row empty. */}
+      <section className="grid grid-cols-2 gap-3">
         <AwardsCard onClick={onAwards} />
         <CollectionsCard onClick={onCollections} />
       </section>
