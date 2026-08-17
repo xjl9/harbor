@@ -13,6 +13,7 @@ import {
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { fetchWithRetry } from "./lib/fetch-retry.mjs";
 
 if (process.platform !== "win32") {
   console.log("[mpv] not Windows, skipping bundled mpv.exe");
@@ -62,7 +63,7 @@ const temp = mkdtempSync(join(tmpdir(), "harbor-mpv-"));
 
 try {
   console.log(`[mpv] fetching ${url}`);
-  const response = await fetch(url, { redirect: "follow" });
+  const response = await fetchWithRetry(url, { redirect: "follow" }, { label: spec.asset });
   if (!response.ok) throw new Error(`[mpv] download failed (${response.status} ${response.statusText})`);
 
   const archive = join(temp, spec.asset);
