@@ -45,7 +45,7 @@ export function Hero({
 }) {
   return (
     <div className="relative">
-      <div className="relative aspect-[3/4] max-h-[62vh] w-full overflow-hidden bg-surface">
+      <div className="relative aspect-[3/4] [@media(min-width:700px)_and_(min-height:600px)]:aspect-[16/9] max-h-[62vh] w-full overflow-hidden bg-surface">
         {backdrop && <Backdrop src={backdrop} />}
         <div className="absolute inset-0 bg-gradient-to-t from-canvas via-canvas/45 to-transparent" />
         <div className="absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-black/45 to-transparent" />

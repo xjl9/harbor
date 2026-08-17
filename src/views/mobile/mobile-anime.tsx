@@ -223,7 +223,7 @@ function AnimeHeroMobile({
         type="button"
         aria-label={`Open ${current.name}`}
         onClick={() => onOpenDetail(current)}
-        className="relative block aspect-[4/5] w-full overflow-hidden bg-surface text-start [@media(max-height:500px)]:aspect-auto [@media(max-height:500px)]:h-[62svh]"
+        className="relative block aspect-[4/5] w-full overflow-hidden bg-surface text-start [@media(max-height:500px)]:aspect-auto [@media(max-height:500px)]:h-[62svh] [@media(min-width:700px)_and_(min-height:600px)]:aspect-[16/10]"
       >
         {shown.map((m, i) => (
           <div
@@ -344,7 +344,7 @@ function HeroArt({ meta, logo, source, priority }: { meta: Meta; logo?: string; 
 function HeroSkeleton() {
   return (
     <section className="flex flex-col gap-3.5" aria-hidden>
-      <div className="relative aspect-[4/5] w-full overflow-hidden bg-surface [@media(max-height:500px)]:aspect-auto [@media(max-height:500px)]:h-[62svh]">
+      <div className="relative aspect-[4/5] w-full overflow-hidden bg-surface [@media(max-height:500px)]:aspect-auto [@media(max-height:500px)]:h-[62svh] [@media(min-width:700px)_and_(min-height:600px)]:aspect-[16/10]">
         <div className="absolute inset-0" style={{ background: "linear-gradient(to top, var(--color-canvas) 2%, transparent 60%)" }} />
         <div className="absolute inset-x-0 bottom-0 flex flex-col gap-3 px-5 pb-5">
           <div className="h-5 w-28 rounded-md bg-elevated/50" />

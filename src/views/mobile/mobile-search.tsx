@@ -342,7 +342,7 @@ function Landing({
         </section>
       )}
 
-      <section className="grid grid-cols-2 [@media(min-width:700px)_and_(min-height:600px)]:grid-cols-3 [@media(min-width:1000px)_and_(min-height:600px)]:grid-cols-4 gap-3">
+      <section className="grid grid-cols-2 [@media(min-width:700px)_and_(min-height:600px)]:grid-cols-4 [@media(min-width:1000px)_and_(min-height:600px)]:grid-cols-5 gap-3">
         <AwardsCard onClick={onAwards} />
         <CollectionsCard onClick={onCollections} />
       </section>
@@ -378,7 +378,7 @@ function Landing({
 
       <section className="flex flex-col gap-3.5">
         <SectionTitle>Genres</SectionTitle>
-        <div className="grid grid-cols-2 [@media(min-width:700px)_and_(min-height:600px)]:grid-cols-3 [@media(min-width:1000px)_and_(min-height:600px)]:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 [@media(min-width:700px)_and_(min-height:600px)]:grid-cols-4 [@media(min-width:1000px)_and_(min-height:600px)]:grid-cols-5 gap-3">
           {CATEGORIES.map((c) => (
             <GenreTile key={c.label} category={c} onOpen={() => onGenre(c)} />
           ))}
