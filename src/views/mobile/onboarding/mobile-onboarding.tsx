@@ -146,8 +146,13 @@ export function MobileOnboarding() {
         <ObSplash onAdvance={next} />
       ) : (
         <>
+          {/* Onboarding is the first thing a new device shows, and on a tablet the
+              phone shell ran every step's copy and controls across the full 810pt.
+              Capped and centred like the rest of the list surfaces; the footer
+              takes the same cap so the dots and the Next button stay under the
+              step they belong to. */}
           <div
-            className="flex-1 overflow-y-auto px-5 pt-2"
+            className="mx-auto w-full max-w-[680px] flex-1 overflow-y-auto px-5 pt-2"
             style={{ paddingBottom: keyboardInset > 0 ? keyboardInset : 16 }}
           >
             <div key={step} className="animate-step-in flex min-h-full flex-col">
@@ -168,7 +173,7 @@ export function MobileOnboarding() {
           {/* Footer hides while the keyboard is up; in-step submit buttons take over. */}
           {keyboardInset === 0 && (
             <div
-              className="shrink-0 px-5 pt-2 [@media(max-height:500px)]:pt-0"
+              className="mx-auto w-full max-w-[680px] shrink-0 px-5 pt-2 [@media(max-height:500px)]:pt-0"
               style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 16px)" }}
             >
               <div className="flex justify-center">
