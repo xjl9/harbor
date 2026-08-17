@@ -149,6 +149,15 @@ export function MobileHero({ slides, onOpenDetail }: { slides: Meta[]; onOpenDet
   return (
     <section
       className="relative -mt-3 mb-1"
+      // Any touch on the hero freezes the rotation, not just a tap on the dots.
+      // The carousel used to keep its cadence while a finger was on the way
+      // down, so a Play press aimed at the visible title could commit to the
+      // NEXT one: pressing Play under Project Hail Mary opened Backrooms.
+      // pointerdown lands before the click, so arming the pause here makes the
+      // slide the user pressed the slide that acts.
+      onPointerDown={() => {
+        pausedUntil.current = Date.now() + PILL_PAUSE_MS;
+      }}
       style={{
         // The scroller insets its children past the Dynamic Island, which is right
         // for headings and cards but would letterbox a cinematic backdrop. Bleed
