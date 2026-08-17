@@ -52,6 +52,20 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       # The bundle.resources fonts are gitignored .otf files fetched at setup time.
+      #
+      # Cached because they were re-downloaded on every run, and the host started
+      # answering 429 to the runners: a build died on the font step before a line
+      # was compiled, and retries did not help because the limit was sustained.
+      # The files are pinned by URL and sha256 inside the script, so the script
+      # hash is the right key, and the fetcher verifies checksums and skips any
+      # file already on disk, which makes a cache hit a no-op rather than a
+      # source of stale fonts.
+      - name: Cache bundled fonts
+        uses: actions/cache@v4
+        with:
+          path: src-tauri/fonts
+          key: harbor-fonts-${{ hashFiles('scripts/fetch-fonts.mjs') }}
+
       - name: Fetch bundled fonts
         run: pnpm run setup:fonts
 
