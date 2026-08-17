@@ -68,6 +68,7 @@ import {
 import { useAnimeAnilistDetails } from "@/views/detail/use-anime-anilist-details";
 import { useAnimeCharacters } from "@/views/detail/use-anime-characters";
 import { useMalRating } from "@/lib/mal-rating";
+import { MOBILE_INTENT_EVENT } from "../mobile-intent";
 
 export function MobileDetail({
   meta,
@@ -77,11 +78,25 @@ export function MobileDetail({
   onClose: () => void;
 }) {
   const reduced = useReducedMotion();
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
   // This screen covers the shell, and it fades in rather than cutting, so for the
   // length of that fade the browse chrome underneath shows through - the cast pill
   // landing on top of this screen's own back button. Registering as a sheet takes
   // that chrome away for as long as the screen is mounted, closing animation included.
   useRegisterSheet(true);
+
+  // A cross-surface intent means "take me somewhere else in the app". This
+  // screen is a fixed overlay owned by local state in whichever view opened it
+  // (mobile-search, mobile-genre-page), so it is not in the navigation stack and
+  // no view-level call can dismiss it: it would sit on top of the tab the intent
+  // just switched to, and the button that fired it would look like it had only
+  // closed the picker. Standing down here covers every owner at once.
+  useEffect(() => {
+    const onIntent = () => onCloseRef.current();
+    window.addEventListener(MOBILE_INTENT_EVENT, onIntent);
+    return () => window.removeEventListener(MOBILE_INTENT_EVENT, onIntent);
+  }, []);
   const [closing, setClosing] = useState(false);
   const [stack, setStack] = useState<Meta[]>([meta]);
   const scrollRef = useRef<HTMLDivElement>(null);

@@ -178,36 +178,17 @@ export type ScrollSnapshot = {
 };
 
 export type SettingsSection =
-  | "basics"
   | "account"
   | "library"
   | "trakt"
   | "anilist"
-  | "mal"
   | "simkl"
-  | "letterboxd"
+  | "parental"
   | "relay"
   | "streaming"
-  | "streamFilters"
-  | "p2p"
   | "language"
-  | "subSources"
-  | "autoSync"
   | "player"
-  | "mpv"
-  | "anime"
-  | "shaders"
-  | "playerLayout"
-  | "hotkeys"
-  | "controllers"
-  | "theme"
-  | "badges"
-  | "awardIcons"
-  | "webhooks"
-  | "bug"
-  | "support"
-  | "remotes"
-  | "storage"
+  | "streamFilters"
   | "advanced";
 
 type ViewValue = {

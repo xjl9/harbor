@@ -315,9 +315,7 @@ export function MangaReader({
         document.activeElement.blur();
       }
       if (e.key === "Escape") {
-        if (pickBookmark) setPickBookmark(false);
-        else if (bookmarksOpen) setBookmarksOpen(false);
-        else if (!settingsOpen) onExit();
+        if (!settingsOpen) onExit();
       } else if (bookAtEnd && (e.key === " " || e.key === (rtl ? "ArrowLeft" : "ArrowRight"))) {
         e.preventDefault();
         advanceFromBookEnd();
