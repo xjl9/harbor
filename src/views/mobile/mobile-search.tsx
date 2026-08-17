@@ -19,6 +19,7 @@ import { fetchAddonCatalogPage, fetchAddonMeta, isCollectionCatalog } from "@/li
 import { MobileDetail } from "./mobile-detail";
 import { MobileAwards } from "./mobile-awards";
 import { MobileGenrePage } from "./mobile-genre-page";
+import { requestMobileIntent } from "./mobile-intent";
 
 const prefersReducedMotion = () =>
   typeof window !== "undefined" &&
@@ -768,7 +769,11 @@ function CollectionsBrowser({
         {list === null ? (
           <LoaderBlock />
         ) : list.length === 0 ? (
-          <EmptyState Icon={Layers} text="No collections yet. Add a collections addon to browse curated sets." />
+          <EmptyState
+            Icon={Layers}
+            text="No collections yet. Add a collections addon to browse curated sets."
+            action={{ label: "Add an addon", onClick: () => requestMobileIntent("addons") }}
+          />
         ) : (
           <div className="grid grid-cols-3 [@media(max-height:500px)]:grid-cols-6 [@media(min-width:700px)_and_(min-height:600px)]:grid-cols-5 [@media(min-width:1000px)_and_(min-height:600px)]:grid-cols-6 gap-x-3 gap-y-4">
             {list.map((m) => (
@@ -842,13 +847,34 @@ function BackBar({ title, onBack }: { title: string; onBack: () => void }) {
   );
 }
 
-function EmptyState({ Icon, text }: { Icon: typeof SearchIcon; text: string }) {
+// An empty state that names a fix should also offer it. Home already pairs its
+// "you have no addons" copy with the button that installs one; collections said
+// the same thing and left the reader to find Addons on their own, four taps away
+// under the profile tab.
+function EmptyState({
+  Icon,
+  text,
+  action,
+}: {
+  Icon: typeof SearchIcon;
+  text: string;
+  action?: { label: string; onClick: () => void };
+}) {
   return (
     <div className="flex flex-col items-center gap-3 pt-20 text-center [@media(max-height:500px)]:pt-6">
       <span className="grid h-14 w-14 place-items-center rounded-2xl bg-surface text-ink-subtle ring-1 ring-edge-soft">
         <Icon size={24} strokeWidth={1.9} />
       </span>
       <p className="max-w-[250px] text-[14px] leading-relaxed text-ink-muted">{text}</p>
+      {action && (
+        <button
+          type="button"
+          onClick={action.onClick}
+          className="no-press mt-1 flex h-11 items-center rounded-full bg-ink px-6 text-[14px] font-semibold text-canvas transition-transform active:scale-95"
+        >
+          {action.label}
+        </button>
+      )}
     </div>
   );
 }
