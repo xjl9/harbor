@@ -34,6 +34,14 @@ final class HarborMpvViewController: UIViewController, HarborPlayerEngine {
   var onState: ((String, String?) -> Void)?
   var onClosed: ((Double, Double) -> Void)?
   var onTracks: (([NativeTrackEntry], [NativeTrackEntry]) -> Void)?
+  /// Raised when the viewer asks for the following episode from the overlay.
+  /// Loading it is the JS side's job, the same path auto-advance already uses.
+  var onNextEpisode: (() -> Void)?
+  /// Only true when the JS side says a following episode exists, so the button
+  /// never appears on a film or on the last episode of a season.
+  var canNext: Bool = false {
+    didSet { nextButton.isHidden = !canNext }
+  }
 
   private let metalLayer = HarborMetalLayer()
   private let closeButton = UIButton(type: .system)
@@ -46,6 +54,7 @@ final class HarborMpvViewController: UIViewController, HarborPlayerEngine {
   private let durationLabel = UILabel()
   private let seekSlider = UISlider()
   private let tracksButton = UIButton(type: .system)
+  private let nextButton = UIButton(type: .system)
   private let nowPlaying = HarborNowPlaying()
   private let eventQueue = DispatchQueue(label: "harbor-player.mpv-events", qos: .userInitiated)
 
@@ -869,10 +878,17 @@ final class HarborMpvViewController: UIViewController, HarborPlayerEngine {
     tracksButton.setImage(UIImage(systemName: "captions.bubble"), for: .normal)
     tracksButton.tintColor = .white
     tracksButton.translatesAutoresizingMaskIntoConstraints = false
+
+    nextButton.setImage(UIImage(systemName: "forward.end.fill"), for: .normal)
+    nextButton.tintColor = .white
+    nextButton.translatesAutoresizingMaskIntoConstraints = false
+    nextButton.isHidden = !canNext
+    nextButton.accessibilityLabel = "Next episode"
+    nextButton.addTarget(self, action: #selector(nextTapped), for: .touchUpInside)
     tracksButton.addTarget(self, action: #selector(tracksTapped), for: .touchUpInside)
 
     let stack = UIStackView(arrangedSubviews: [
-      playPauseButton, currentTimeLabel, seekSlider, durationLabel, tracksButton,
+      playPauseButton, currentTimeLabel, seekSlider, durationLabel, nextButton, tracksButton,
     ])
     stack.axis = .horizontal
     stack.alignment = .center
@@ -893,6 +909,7 @@ final class HarborMpvViewController: UIViewController, HarborPlayerEngine {
       stack.centerYAnchor.constraint(equalTo: transportBar.centerYAnchor),
       playPauseButton.widthAnchor.constraint(equalToConstant: 32),
       tracksButton.widthAnchor.constraint(equalToConstant: 32),
+      nextButton.widthAnchor.constraint(equalToConstant: 32),
     ])
 
     // The slider takes the slack; the time labels hug their text so digits never
@@ -1013,6 +1030,12 @@ final class HarborMpvViewController: UIViewController, HarborPlayerEngine {
       return track.label
     }
     return "\(track.label) \u{00B7} \(lang)"
+  }
+
+  @objc private func nextTapped() {
+    guard !shuttingDown, fileLoaded else { return }
+    armAutoHide()
+    onNextEpisode?()
   }
 
   @objc private func tracksTapped() {

@@ -20,9 +20,10 @@ struct LoadArgs: Decodable {
   let subtitles: [SubArg]
   let startAtSec: Double
   let title: String?
+  let canNext: Bool
 
   private enum CodingKeys: String, CodingKey {
-    case url, headers, subtitles, startAtSec, title
+    case url, headers, subtitles, startAtSec, title, canNext
   }
 
   // decodeIfPresent plus defaults mirror the Kotlin @InvokeArg defaults. The Rust serde
@@ -34,6 +35,7 @@ struct LoadArgs: Decodable {
     subtitles = try c.decodeIfPresent([SubArg].self, forKey: .subtitles) ?? []
     startAtSec = try c.decodeIfPresent(Double.self, forKey: .startAtSec) ?? 0
     title = try c.decodeIfPresent(String.self, forKey: .title)
+    canNext = try c.decodeIfPresent(Bool.self, forKey: .canNext) ?? false
   }
 }
 
@@ -139,6 +141,15 @@ class HarborPlayerPlugin: Plugin {
           guard let self = self else { return }
           self.sendClosed(pos, dur)
           if let vc = vc, self.controller === vc { self.controller = nil }
+        }
+      }
+      // Set on every load, not just when the controller is created: advancing to
+      // the next episode reuses the presented player, and the last episode of a
+      // season has to be able to turn the button back off.
+      if let mpv = vc as? HarborMpvViewController {
+        mpv.canNext = args.canNext
+        if mpv.onNextEpisode == nil {
+          mpv.onNextEpisode = { [weak self] in self?.sendAction("next") }
         }
       }
       if vc.presentingViewController == nil {
@@ -278,6 +289,12 @@ class HarborPlayerPlugin: Plugin {
     var payload: JSObject = ["status": status]
     if let code = errorCode { payload["errorCode"] = code }
     trigger("state", data: payload)
+  }
+
+  /// A request from the native overlay that only the JS side can carry out.
+  /// Kept as one event with a kind so later controls do not each need their own.
+  private func sendAction(_ kind: String) {
+    trigger("action", data: ["kind": kind] as JSObject)
   }
 
   private func sendClosed(_ pos: Double, _ dur: Double) {

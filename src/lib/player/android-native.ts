@@ -1,4 +1,14 @@
 import { invoke, addPluginListener, type PluginListener } from "@tauri-apps/api/core";
+
+/// Raised when the native overlay asks for something only the React side can do.
+export const NATIVE_PLAYER_ACTION_EVENT = "harbor:native-player-action";
+
+// Whether a following episode exists. Current state rather than a property of a
+// url, so it is set here instead of threaded through every load() call site.
+let canNextEpisode = false;
+export function setNativeCanNext(value: boolean): void {
+  canNextEpisode = value;
+}
 import { isMobileNative } from "@/lib/platform";
 import type { SubCue } from "@/lib/subtitles/parser";
 import {
@@ -140,6 +150,13 @@ export function createNativeBridge(): PlayerBridge {
           subtitleTracks: (t.subtitle ?? []).map((s) => toTrackInfo(s, "subtitle")),
         });
       }),
+      // The overlay cannot resolve a stream itself, so it asks. Forwarded as a
+      // window event because the player view owns the episode logic and this
+      // module has no route back to it.
+      await addPluginListener("harbor-player", "action", (a: { kind?: string }) => {
+        if (!a?.kind) return;
+        window.dispatchEvent(new CustomEvent(NATIVE_PLAYER_ACTION_EVENT, { detail: a.kind }));
+      }),
     );
   };
 
@@ -166,6 +183,7 @@ export function createNativeBridge(): PlayerBridge {
           })),
           startAtSec: src.startAtSec ?? 0,
           title: mediaTitle,
+          canNext: canNextEpisode,
         },
       });
     },

@@ -16,7 +16,11 @@ import { isLocalUrl } from "@/lib/player/local-url";
 import { hasPlaybackStartedForStallCheck, stallWaitMs } from "@/lib/player/stall-wait";
 import { useAuth } from "@/lib/auth";
 import { embedFlags } from "./player/player-utils";
-import { setOrientation } from "@/lib/player/android-native";
+import {
+  NATIVE_PLAYER_ACTION_EVENT,
+  setNativeCanNext,
+  setOrientation,
+} from "@/lib/player/android-native";
 import { useFullscreen } from "./player/hooks/use-fullscreen";
 import { useSvpGuard } from "./player/hooks/use-svp-guard";
 import { usePlayerCast } from "./player/hooks/use-player-cast";
@@ -430,6 +434,22 @@ export function PlayerView({ src }: { src: PlayerSrc }) {
       goToEpisode,
       openPicker,
     });
+
+  // The native overlay is a separate surface with no view of the queue, so the
+  // button's visibility is pushed to it and its taps come back as an event. The
+  // same playNext the auto-advance path uses runs either way.
+  useEffect(() => {
+    setNativeCanNext(hasNextEpisodeNow);
+    return () => setNativeCanNext(false);
+  }, [hasNextEpisodeNow]);
+
+  useEffect(() => {
+    const onAction = (e: Event) => {
+      if ((e as CustomEvent<string>).detail === "next") playNextRef.current();
+    };
+    window.addEventListener(NATIVE_PLAYER_ACTION_EVENT, onAction);
+    return () => window.removeEventListener(NATIVE_PLAYER_ACTION_EVENT, onAction);
+  }, [playNextRef]);
 
   usePlaybackPresence({ src, snap, season, episode, liveGuideOpen: liveOverlay.open });
   useCastReturnPublish({

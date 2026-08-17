@@ -22,6 +22,10 @@ pub struct LoadRequest {
     pub start_at_sec: f64,
     #[serde(default)]
     pub title: Option<String>,
+    /// Whether this title has a following episode. The native overlay only shows
+    /// its next button when the JS side says there is somewhere to go.
+    #[serde(default)]
+    pub can_next: bool,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
