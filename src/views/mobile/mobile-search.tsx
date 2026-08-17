@@ -633,10 +633,16 @@ function GenreCollage({ art, rpdbKey }: { art: Meta[]; rpdbKey: string }) {
     <span aria-hidden className="absolute inset-0 grid grid-cols-3">
       {art.slice(0, 3).map((m, i) => (
         <span key={m.id} className="relative overflow-hidden" style={{ transform: `skewX(-8deg) translateX(${(i - 1) * 5}px)` }}>
+          {/* Sixteen genre tiles carry three backdrops each, and these were the
+              only posters on the page mounting without lazy: 48 images decoded
+              on arrival, most of them for tiles several screens down. They are
+              decoration behind a colour wash, so they release when far off
+              screen the same way the catalog grid's posters do. */}
           <Poster
             src={rpdbPoster(rpdbKey, m.id, m.background ?? m.poster)}
             seed={m.id}
             ratio="landscape"
+            lazy="release"
             className="absolute inset-0 rounded-none [transform:skewX(8deg)_scale(1.4)]"
           />
         </span>
