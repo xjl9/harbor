@@ -808,10 +808,16 @@ export function PlayPicker({
         className={`absolute start-0 end-6 top-0 z-10 h-20${phone ? " hidden" : ""}`}
       />
 
+      {/* The phone column is capped, not just centered. `mx-auto` on a `w-full`
+          box does nothing without a max-width, so on a tablet every source row
+          stretched the full 810pt and in landscape the title ran the width of
+          the screen. A source list is a reading column: past ~620px the eye has
+          to travel the whole width to pair a release name with its size badge.
+          The cap is inert on a portrait phone, which never gets that wide. */}
       <div
         className={
           phone
-            ? "relative mx-auto flex min-h-full w-full flex-col gap-7 px-5"
+            ? "relative mx-auto flex min-h-full w-full max-w-[620px] flex-col gap-7 px-5"
             : "relative mx-auto flex min-h-full w-full max-w-5xl flex-col gap-12 px-12 pb-32 pt-32"
         }
         style={
@@ -819,6 +825,10 @@ export function PlayPicker({
             ? {
                 paddingTop: "max(calc(env(safe-area-inset-top, 0px) + 12px), 52px)",
                 paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 96px)",
+                // Centering handles the tablet, but a landscape phone puts the
+                // island beside the column, and the cap alone will not clear it.
+                paddingLeft: "max(1.25rem, env(safe-area-inset-left, 0px))",
+                paddingRight: "max(1.25rem, env(safe-area-inset-right, 0px))",
               }
             : undefined
         }

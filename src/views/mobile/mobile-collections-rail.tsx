@@ -138,7 +138,7 @@ function CollectionCardTile({
       ref={ref}
       type="button"
       onClick={() => resolvedId > 0 && onOpen(resolvedId)}
-      className="relative aspect-[16/9] w-[240px] shrink-0 overflow-hidden rounded-[16px] text-start ring-1 ring-edge-soft/50"
+      className="relative aspect-[16/9] w-[240px] [@media(min-width:700px)_and_(min-height:600px)]:w-[400px] shrink-0 overflow-hidden rounded-[16px] text-start ring-1 ring-edge-soft/50"
       style={{ background: `linear-gradient(140deg, ${from}, ${to})` }}
     >
       {backdrop && (

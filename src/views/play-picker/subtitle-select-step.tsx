@@ -80,7 +80,7 @@ export function SubtitleSelectStep({
       <div
         className={
           phone
-            ? "relative mx-auto flex min-h-0 w-full flex-1 flex-col gap-4 px-5"
+            ? "relative mx-auto flex min-h-0 w-full max-w-[620px] flex-1 flex-col gap-4 px-5"
             : "relative mx-auto flex min-h-0 w-full max-w-4xl flex-1 flex-col gap-6 px-10 pb-10 pt-24"
         }
         style={
@@ -88,6 +88,8 @@ export function SubtitleSelectStep({
             ? {
                 paddingTop: "max(calc(env(safe-area-inset-top, 0px) + 12px), 52px)",
                 paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 16px)",
+                paddingLeft: "max(1.25rem, env(safe-area-inset-left, 0px))",
+                paddingRight: "max(1.25rem, env(safe-area-inset-right, 0px))",
               }
             : undefined
         }

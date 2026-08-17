@@ -393,7 +393,7 @@ function FeatureCardShell({ onClick, art, title, caption, wash, backdrop }: { on
     <button
       type="button"
       onClick={onClick}
-      className="group relative flex min-h-[132px] flex-col justify-between overflow-hidden rounded-[20px] bg-surface p-4 text-start ring-1 ring-edge-soft transition-transform duration-150 active:scale-[0.98] motion-reduce:transition-none"
+      className="group relative flex min-h-[132px] flex-col justify-between overflow-hidden rounded-[20px] bg-surface p-4 text-start ring-1 ring-edge-soft"
     >
       {backdrop}
       <span aria-hidden className={`pointer-events-none absolute inset-0 bg-gradient-to-br to-transparent ${wash}`} />
@@ -599,7 +599,7 @@ function GenreTile({ category, onOpen }: { category: (typeof CATEGORIES)[number]
     <button
       type="button"
       onClick={onOpen}
-      className="group relative aspect-[16/10] w-full overflow-hidden rounded-2xl border border-edge-soft text-start transition-transform duration-200 active:scale-[0.98] motion-reduce:transition-none"
+      className="group relative aspect-[16/10] w-full overflow-hidden rounded-2xl border border-edge-soft text-start"
       style={{ background: `linear-gradient(150deg, ${palette.from}, ${palette.to})` }}
     >
       <GenreCollage art={art} rpdbKey={settings.rpdbKey} />
@@ -799,7 +799,7 @@ function GridTile({ meta, onOpenDetail }: { meta: Meta; onOpenDetail: (m: Meta) 
     <button
       type="button"
       onClick={() => onOpenDetail(meta)}
-      className="text-start transition-transform duration-150 active:scale-[0.96] motion-reduce:transition-none"
+      className="text-start"
     >
       <Poster src={src} onError={onError} seed={meta.id} ratio="portrait" lazy className="rounded-[12px] ring-1 ring-white/[0.06]" />
       <p className="mt-1.5 line-clamp-2 min-h-[2.7em] text-[12px] font-medium leading-snug text-ink-muted">{meta.name}</p>
@@ -812,7 +812,7 @@ function CollectionTile({ meta, onOpen }: { meta: Meta; onOpen: (m: Meta) => voi
     <button
       type="button"
       onClick={() => onOpen(meta)}
-      className="text-start transition-transform duration-150 active:scale-[0.96] motion-reduce:transition-none"
+      className="text-start"
     >
       <div className="relative overflow-hidden rounded-[12px] ring-1 ring-edge-soft">
         <Poster src={meta.poster} seed={meta.id} ratio="portrait" lazy />
@@ -830,7 +830,7 @@ function BackBar({ title, onBack }: { title: string; onBack: () => void }) {
     <button
       type="button"
       onClick={onBack}
-      className="flex items-center gap-1 self-start rounded-full bg-surface py-2 pe-4 ps-2.5 text-[14px] font-semibold text-ink ring-1 ring-edge-soft transition-transform duration-150 active:scale-[0.97] motion-reduce:transition-none"
+      className="flex items-center gap-1 self-start rounded-full bg-surface py-2 pe-4 ps-2.5 text-[14px] font-semibold text-ink ring-1 ring-edge-soft"
     >
       <ChevronRight size={17} strokeWidth={2.6} className="rotate-180 text-ink-subtle" />
       <span className="line-clamp-1 max-w-[70vw]">{title}</span>
