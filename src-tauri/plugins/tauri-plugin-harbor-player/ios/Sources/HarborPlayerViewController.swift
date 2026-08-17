@@ -75,6 +75,19 @@ final class HarborPlayerViewController: AVPlayerViewController, AVPlayerViewCont
     // args.subtitles is accepted for wire parity but unused: AVFoundation cannot
     // attach sidecar SRT/ASS to a progressive asset. The MPVKit swap covers it.
     let item = AVPlayerItem(asset: asset)
+    // AVKit draws the title in its own transport chrome, but only from the item's
+    // external metadata, and nothing was setting it. A progressive asset carries
+    // no title of its own, so this surface showed a scrubber over an unnamed
+    // video the same way the mpv one did before it was given a label.
+    if let name = currentTitle, !name.isEmpty {
+      let field = AVMutableMetadataItem()
+      field.identifier = .commonIdentifierTitle
+      field.value = name as NSString
+      // A nil locale is what AVKit matches against when the viewer has no
+      // preferred language for the item; an unset one is skipped entirely.
+      field.extendedLanguageTag = "und"
+      item.externalMetadata = [field]
+    }
     if args.startAtSec > 0 {
       // Resume position is part of the load itself, before playback starts.
       item.seek(to: CMTime(seconds: args.startAtSec, preferredTimescale: 1000), completionHandler: nil)
