@@ -352,7 +352,7 @@ function WinnerGrid({
   onOpen: (m: Meta) => void;
 }) {
   return (
-    <div className="grid grid-cols-3 [@media(max-height:500px)]:grid-cols-6 gap-x-3 gap-y-4">
+    <div className="grid grid-cols-3 [@media(max-height:500px)]:grid-cols-6 [@media(min-width:700px)_and_(min-height:600px)]:grid-cols-5 [@media(min-width:1000px)_and_(min-height:600px)]:grid-cols-6 gap-x-3 gap-y-4">
       {films.map((m) => (
         <GridTile key={m.id} meta={m} onOpen={onOpen} />
       ))}
@@ -472,7 +472,7 @@ function ListRow({
 
 function GridSkeleton({ rows = 4 }: { rows?: number }) {
   return (
-    <div className="harbor-skeleton grid grid-cols-3 [@media(max-height:500px)]:grid-cols-6 gap-x-3 gap-y-4">
+    <div className="harbor-skeleton grid grid-cols-3 [@media(max-height:500px)]:grid-cols-6 [@media(min-width:700px)_and_(min-height:600px)]:grid-cols-5 [@media(min-width:1000px)_and_(min-height:600px)]:grid-cols-6 gap-x-3 gap-y-4">
       {Array.from({ length: rows * 3 }).map((_, i) => (
         <div key={i} className="aspect-[2/3] rounded-[12px] bg-elevated/40" />
       ))}

@@ -342,7 +342,7 @@ function Landing({
         </section>
       )}
 
-      <section className="grid grid-cols-2 gap-3">
+      <section className="grid grid-cols-2 [@media(min-width:700px)_and_(min-height:600px)]:grid-cols-3 [@media(min-width:1000px)_and_(min-height:600px)]:grid-cols-4 gap-3">
         <AwardsCard onClick={onAwards} />
         <CollectionsCard onClick={onCollections} />
       </section>
@@ -378,7 +378,7 @@ function Landing({
 
       <section className="flex flex-col gap-3.5">
         <SectionTitle>Genres</SectionTitle>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 [@media(min-width:700px)_and_(min-height:600px)]:grid-cols-3 [@media(min-width:1000px)_and_(min-height:600px)]:grid-cols-4 gap-3">
           {CATEGORIES.map((c) => (
             <GenreTile key={c.label} category={c} onOpen={() => onGenre(c)} />
           ))}
@@ -766,7 +766,7 @@ function CollectionsBrowser({
         ) : list.length === 0 ? (
           <EmptyState Icon={Layers} text="No collections yet. Add a collections addon to browse curated sets." />
         ) : (
-          <div className="grid grid-cols-3 [@media(max-height:500px)]:grid-cols-6 gap-x-3 gap-y-4">
+          <div className="grid grid-cols-3 [@media(max-height:500px)]:grid-cols-6 [@media(min-width:700px)_and_(min-height:600px)]:grid-cols-5 [@media(min-width:1000px)_and_(min-height:600px)]:grid-cols-6 gap-x-3 gap-y-4">
             {list.map((m) => (
               <CollectionTile key={m.id} meta={m} onOpen={openCollection} />
             ))}
@@ -779,7 +779,7 @@ function CollectionsBrowser({
 
 function Grid({ metas, onOpenDetail }: { metas: Meta[]; onOpenDetail: (m: Meta) => void }) {
   return (
-    <div className="grid grid-cols-3 [@media(max-height:500px)]:grid-cols-6 gap-x-3 gap-y-4">
+    <div className="grid grid-cols-3 [@media(max-height:500px)]:grid-cols-6 [@media(min-width:700px)_and_(min-height:600px)]:grid-cols-5 [@media(min-width:1000px)_and_(min-height:600px)]:grid-cols-6 gap-x-3 gap-y-4">
       {metas.map((m) => (
         <GridTile key={m.id} meta={m} onOpenDetail={onOpenDetail} />
       ))}
