@@ -1,7 +1,6 @@
 import type { Meta } from "@/lib/cinemeta";
 import { useView, type PlayEpisode } from "@/lib/view";
 import { openUrl } from "@/lib/window";
-import { requestMobileIntent } from "@/views/mobile/mobile-intent";
 import { isPhoneShell } from "./picker-utils";
 
 export function AutoExhaustedModal({
@@ -15,21 +14,8 @@ export function AutoExhaustedModal({
   triedCount: number;
   onBrowseManually: () => void;
 }) {
-  const { goBack, openSettings } = useView();
+  const { goBack } = useView();
   const phone = isPhoneShell();
-  // Both branches of the list below name an expired or missing debrid key as a
-  // cause, and until now the modal offered no way to go and check it. Debrid
-  // keys live on the profile page on the phone shell and in streaming settings
-  // on desktop. goBack first on the phone: this is a fixed layer over the
-  // picker and would otherwise stay in front of the page it sends you to.
-  const fixDebrid = () => {
-    if (phone) {
-      goBack();
-      requestMobileIntent("debrid");
-      return;
-    }
-    openSettings("streaming");
-  };
   const title = meta.name ?? "this title";
   const epSuffix = episode
     ? ` S${episode.imdbSeason ?? episode.season}E${String(episode.imdbEpisode ?? episode.episode).padStart(2, "0")}`
@@ -87,12 +73,6 @@ export function AutoExhaustedModal({
             className="flex h-11 items-center justify-center rounded-full bg-ink text-[14px] font-semibold text-canvas transition-opacity hover:opacity-90"
           >
             Browse streams manually
-          </button>
-          <button
-            onClick={fixDebrid}
-            className="flex h-11 items-center justify-center rounded-full bg-elevated text-[13.5px] font-medium text-ink ring-1 ring-edge-soft transition-colors hover:bg-raised"
-          >
-            {phone ? "Check debrid key" : "Open settings"}
           </button>
           <button
             onClick={() => openUrl(mailto)}
