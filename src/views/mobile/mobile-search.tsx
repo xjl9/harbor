@@ -347,12 +347,12 @@ function Landing({
           tablet rule that widens the genre grid below belongs there and not
           here: four columns holding two children left the pair huddled in the
           first half of an iPad with the rest of the row empty. */}
-      <section className="grid grid-cols-2 gap-3">
+      <section className="grid max-w-[770px] grid-cols-2 gap-3">
         <AwardsCard onClick={onAwards} />
         <CollectionsCard onClick={onCollections} />
       </section>
 
-      <section className="flex flex-col gap-3.5">
+      <section className="flex max-w-[770px] flex-col gap-3.5">
         <SectionTitle>More to explore</SectionTitle>
         <div className="overflow-hidden rounded-[18px] bg-surface ring-1 ring-edge-soft">
           {EXPLORE.map((e, i) => (
