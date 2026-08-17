@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { fetchWithRetry } from "./lib/fetch-retry.mjs";
 
 const BASE =
   process.env.HARBOR_FONTS_BASE ??
@@ -51,27 +52,9 @@ for (const f of FONTS) {
     continue;
   }
   console.log(`[fonts] fetching ${f.url}`);
-  // One unlucky response used to fail the whole build before a line was
-  // compiled. A 429 from the font host took out an iOS CI run, and rate limits
-  // and blips are exactly the failures that pass on their own a moment later,
-  // so transient statuses and network errors get a few tries with a widening
-  // gap. A 404 or a checksum mismatch is not transient and still stops here.
-  const TRANSIENT = new Set([408, 425, 429, 500, 502, 503, 504]);
-  let res = null;
-  for (let attempt = 1; attempt <= 4; attempt++) {
-    try {
-      res = await fetch(f.url, { redirect: "follow" });
-      if (res.ok || !TRANSIENT.has(res.status)) break;
-      console.warn(`[fonts] ${res.status} on ${f.file}, attempt ${attempt} of 4`);
-    } catch (err) {
-      console.warn(`[fonts] network error on ${f.file} (${err.message}), attempt ${attempt} of 4`);
-      res = null;
-    }
-    if (attempt < 4) await new Promise((r) => setTimeout(r, attempt * 3000));
-  }
-  if (!res || !res.ok) {
-    const why = res ? `${res.status} ${res.statusText}` : "network error";
-    console.error(`[fonts] download failed (${why}) for ${f.file} after 4 attempts`);
+  const res = await fetchWithRetry(f.url, { redirect: "follow" }, { label: f.file });
+  if (!res.ok) {
+    console.error(`[fonts] download failed (${res.status} ${res.statusText}) for ${f.file}`);
     console.error("[fonts] set HARBOR_FONTS_BASE to a mirror, or drop the .otf into src-tauri/fonts/ by hand");
     process.exit(1);
   }

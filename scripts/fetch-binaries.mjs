@@ -60,6 +60,7 @@ import {
 import { tmpdir } from "node:os";
 import { basename, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { fetchWithRetry } from "./lib/fetch-retry.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const binDir = join(root, "src-tauri", "binaries");
@@ -121,7 +122,7 @@ const dlCache = new Map();
 async function download(url) {
   if (dlCache.has(url)) return dlCache.get(url);
   console.log(`[binaries] fetching ${url}`);
-  const res = await fetch(url, { redirect: "follow", headers: { "user-agent": UA, accept: "*/*" } });
+  const res = await fetchWithRetry(url, { redirect: "follow", headers: { "user-agent": UA, accept: "*/*" } }, { label: url.split("/").pop() });
   if (!res.ok) throw new Error(`download failed (${res.status} ${res.statusText})`);
   const buf = Buffer.from(await res.arrayBuffer());
   dlCache.set(url, buf);

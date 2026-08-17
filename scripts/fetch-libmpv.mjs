@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { fetchWithRetry } from "./lib/fetch-retry.mjs";
 
 const SHA256 = "e9c87d19055bc5a82771b2b48e9fbae047bd5180603f5a1aaae10c90ca690467";
 const TAG = process.env.HARBOR_LIBMPV_TAG ?? "mpvdll";
@@ -24,7 +25,7 @@ if (existsSync(dest) && digest(readFileSync(dest)) === SHA256) {
 }
 
 console.log(`[libmpv] fetching ${url}`);
-const res = await fetch(url, { redirect: "follow" });
+const res = await fetchWithRetry(url, { redirect: "follow" }, { label: "libmpv" });
 if (!res.ok) {
   console.error(`[libmpv] download failed (${res.status} ${res.statusText})`);
   console.error("[libmpv] set HARBOR_LIBMPV_URL to a mirror, or drop libmpv-2.dll into src-tauri/libmpv/ by hand");
