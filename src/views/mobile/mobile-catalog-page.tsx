@@ -1,4 +1,5 @@
 import { useCallback, useContext, useEffect, useRef, useState } from "react";
+import { useMediaQuery } from "@/lib/use-media-query";
 import { Star } from "lucide-react";
 import type { Meta } from "@/lib/cinemeta";
 import { Poster, usePosterChain } from "@/components/poster";
@@ -39,6 +40,12 @@ export function MobileCatalogGrid({
   onOpenDetail: (m: Meta) => void;
   initialPages?: number;
 }) {
+  // VirtualGrid derives its column count in JS from minColumnWidth, so the CSS
+  // grid classes below only ever governed the non-virtualized fallback. A
+  // tablet has to widen this number rather than the stylesheet. 144 lands on
+  // five columns in portrait and six in landscape, matching the poster size the
+  // other tablet grids use, while a phone keeps 102 and stays at three.
+  const tabletGrid = useMediaQuery("(min-width:700px) and (min-height:600px)");
   const [items, setItems] = useState<Meta[]>([]);
   const [nextPage, setNextPage] = useState(initialPages + 1);
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
@@ -139,8 +146,8 @@ export function MobileCatalogGrid({
             items={items}
             scrollRef={scrollElRef}
             scrollMargin={gridMargin}
-            estimateRowHeight={208}
-            minColumnWidth={102}
+            estimateRowHeight={tabletGrid ? 268 : 208}
+            minColumnWidth={tabletGrid ? 144 : 102}
             gapX={12}
             gapY={20}
             getKey={(m) => m.id}
