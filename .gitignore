@@ -59,3 +59,7 @@ public/awards/golden-globe.png
 public/awards/cannestrophy.png
 public/awards/sag.png
 public/awards/critics-choice.png
+
+# Build-time download cache (Libmpv archive fetched by the iOS workflow).
+# Large binary, reproducible from the pinned URL, never belongs in a commit.
+.cache/
