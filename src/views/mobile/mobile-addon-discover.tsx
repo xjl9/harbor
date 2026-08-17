@@ -57,6 +57,9 @@ export function MobileAddonDiscover({
   const [page, setPage] = useState(1);
   const [exhausted, setExhausted] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
+  // A failed install used to leave the row looking untouched, so the only
+  // signal was that nothing happened. Remember which row failed and say so.
+  const [failed, setFailed] = useState<string | null>(null);
 
   const seenRef = useRef<Set<string>>(new Set());
   const sentinelRef = useRef<HTMLDivElement | null>(null);
@@ -175,11 +178,13 @@ export function MobileAddonDiscover({
         return;
       }
       setBusy(a.uuid);
+      setFailed(null);
       try {
         await installFromUrl(a.manifestUrl);
         onChange();
       } catch {
-        // Non-fatal: leave the row installable so the user can retry.
+        // Still non-fatal, the row stays installable, but the reader is told.
+        setFailed(a.uuid);
       } finally {
         setBusy(null);
       }
@@ -238,6 +243,7 @@ export function MobileAddonDiscover({
             addon={a}
             installed={!!a.manifest?.id && installedIds.has(a.manifest.id)}
             busy={busy === a.uuid}
+            failed={failed === a.uuid}
             showNew={tab === "new" && isNewlyAdded(a.createdAt)}
             showTrending={tab === "trending"}
             onInstall={install}
@@ -300,6 +306,7 @@ function DiscoverRow({
   addon,
   installed,
   busy,
+  failed,
   showNew,
   showTrending,
   onInstall,
@@ -307,6 +314,7 @@ function DiscoverRow({
   addon: SAAddon;
   installed: boolean;
   busy: boolean;
+  failed: boolean;
   showNew: boolean;
   showTrending: boolean;
   onInstall: (a: SAAddon) => void;
@@ -348,6 +356,11 @@ function DiscoverRow({
           <p className="mt-0.5 line-clamp-1 text-[12.5px] text-ink-muted">{description}</p>
         )}
         {types && <p className="mt-0.5 truncate text-[11.5px] text-ink-subtle">{types}</p>}
+        {failed && (
+          <p className="mt-1 flex items-center gap-1 text-[11.5px] font-medium text-danger">
+            <AlertCircle size={12} strokeWidth={2.4} /> Could not add this addon. Tap Add to retry.
+          </p>
+        )}
       </div>
       <button
         type="button"
@@ -365,7 +378,7 @@ function DiscoverRow({
           <Loader2 size={15} className="animate-spin" />
         ) : (
           <span className="flex items-center gap-1">
-            <Plus size={14} strokeWidth={2.6} /> Add
+            <Plus size={14} strokeWidth={2.6} /> {failed ? "Retry" : "Add"}
           </span>
         )}
       </button>
