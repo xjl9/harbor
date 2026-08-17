@@ -8,12 +8,18 @@ import { useKeyboardInset } from "./use-keyboard-inset";
 import { MOBILE_SAFE_X } from "./chrome-metrics";
 
 // Only settings the mobile shell actually reads are surfaced here, so every
-// control changes something real on the device — no decorative toggles.
+// control changes something real on the device - no decorative toggles.
+//
+// This list was breaking that rule. `anime` drives the view switcher
+// (mobile-view-switcher.tsx) and `adult` filters the addon Discover list
+// (lib/addons-store/adult-filter.ts), but liveTv, sports and manga are read
+// only by the DESKTOP chrome (sidebars, topbar, dock, rails) which this shell
+// never renders, so they were three switches that did nothing under a
+// standfirst promising an effect they could not have. hideContent is stored per
+// device and is not part of the transfer bundle, so dropping them here cannot
+// take away control of another device.
 const CATEGORIES: Array<{ key: ContentCategory; label: string }> = [
   { key: "anime", label: "Anime" },
-  { key: "liveTv", label: "Live TV" },
-  { key: "sports", label: "Sports" },
-  { key: "manga", label: "Manga" },
   { key: "adult", label: "Adult" },
 ];
 
@@ -155,7 +161,7 @@ export function MobileSettings({ onClose }: { onClose: () => void }) {
           kicker="Catalog"
           folio="02"
           title="What shows up"
-          standfirst="Choose which categories appear in the view switcher and rows."
+          standfirst="Choose which categories Harbor shows on this device."
         >
           <div className="overflow-hidden rounded-2xl border border-edge-soft bg-elevated/40">
             {CATEGORIES.map((c, i) => (
