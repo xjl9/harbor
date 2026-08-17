@@ -66,6 +66,7 @@ export function MobileProfile({ onOpenRemote }: { onOpenRemote: () => void }) {
   // request is made); the listener below covers every later visit, since the
   // shell keeps visited tabs mounted and the initializer would never run again.
   const [addonsOpen, setAddonsOpen] = useState(() => consumeMobileIntent("addons"));
+  useState(() => consumeMobileIntent("debrid"));
   const [settingsOpen, setSettingsOpen] = useState(() => consumeMobileIntent("settings"));
   const [downloadsOpen, setDownloadsOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
@@ -80,6 +81,9 @@ export function MobileProfile({ onOpenRemote }: { onOpenRemote: () => void }) {
       const which = (e as CustomEvent<string>).detail;
       if (which === "addons" && consumeMobileIntent("addons")) setAddonsOpen(true);
       if (which === "settings" && consumeMobileIntent("settings")) setSettingsOpen(true);
+      // This page IS the debrid destination, so arriving is the whole action.
+      // Consume anyway or the flag lingers and fires on a later visit.
+      if (which === "debrid") consumeMobileIntent("debrid");
     };
     window.addEventListener(MOBILE_INTENT_EVENT, onIntent);
     return () => window.removeEventListener(MOBILE_INTENT_EVENT, onIntent);

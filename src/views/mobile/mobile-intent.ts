@@ -6,7 +6,9 @@
 
 export const MOBILE_INTENT_EVENT = "harbor:mobile-intent";
 
-type Intent = "addons" | "settings";
+// "debrid" has no sub-screen: debrid keys are managed on the profile page
+// itself, so arriving at that tab is the whole action.
+type Intent = "addons" | "settings" | "debrid";
 
 let pending: Intent | null = null;
 
