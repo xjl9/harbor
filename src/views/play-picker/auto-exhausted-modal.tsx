@@ -1,6 +1,5 @@
 import type { Meta } from "@/lib/cinemeta";
 import { useView, type PlayEpisode } from "@/lib/view";
-import { requestMobileIntent } from "@/views/mobile/mobile-intent";
 import { openUrl } from "@/lib/window";
 import { isPhoneShell } from "./picker-utils";
 
@@ -15,26 +14,8 @@ export function AutoExhaustedModal({
   triedCount: number;
   onBrowseManually: () => void;
 }) {
-  const { goBack, setView, openSettings } = useView();
+  const { goBack } = useView();
   const phone = isPhoneShell();
-  // Both branches of the cause list below name an expired or missing debrid key,
-  // and the modal offered no way to go and check one. Debrid keys live on the
-  // profile page on this shell and in streaming settings on desktop.
-  //
-  // setView("home"), not goBack(): this modal sits on a stack of fixed overlays
-  // (picker over detail page), and popping one frame only revealed the detail
-  // page, which then covered the tab the intent had switched to. setView("home")
-  // collapses the whole stack to a single home frame, so the destination is
-  // actually visible. That is the right depth anyway, since the viewer is
-  // leaving playback to go and configure something.
-  const fixDebrid = () => {
-    if (phone) {
-      setView("home");
-      requestMobileIntent("debrid");
-      return;
-    }
-    openSettings("streaming");
-  };
   const title = meta.name ?? "this title";
   const epSuffix = episode
     ? ` S${episode.imdbSeason ?? episode.season}E${String(episode.imdbEpisode ?? episode.episode).padStart(2, "0")}`
@@ -92,12 +73,6 @@ export function AutoExhaustedModal({
             className="flex h-11 items-center justify-center rounded-full bg-ink text-[14px] font-semibold text-canvas transition-opacity hover:opacity-90"
           >
             Browse streams manually
-          </button>
-          <button
-            onClick={fixDebrid}
-            className="flex h-11 items-center justify-center rounded-full bg-elevated text-[13.5px] font-medium text-ink ring-1 ring-edge-soft transition-colors hover:bg-raised"
-          >
-            {phone ? "Check debrid key" : "Open settings"}
           </button>
           <button
             onClick={() => openUrl(mailto)}

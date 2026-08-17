@@ -8,7 +8,7 @@ import { useProfiles, type Profile } from "@/lib/profiles";
 import { useView } from "@/lib/view";
 
 export function CurfewGuard() {
-  const { activeProfile, openPicker } = useProfiles();
+  const { activeProfile, openPicker, pickerOpen } = useProfiles();
   const { player, exitPlayer } = useView();
   const profileId = activeProfile?.id ?? null;
   const limit = activeProfile?.kid?.curfewMinutes ?? null;
@@ -44,6 +44,7 @@ export function CurfewGuard() {
   return (
     <CurfewLockdown
       profile={activeProfile}
+      pickerOpen={pickerOpen}
       onUnlock={() => {
         const next = { ...rec, unlocked: true };
         saveCurfew(profileId, next);
@@ -56,10 +57,12 @@ export function CurfewGuard() {
 
 function CurfewLockdown({
   profile,
+  pickerOpen,
   onUnlock,
   onSwitch,
 }: {
   profile: Profile;
+  pickerOpen: boolean;
   onUnlock: () => void;
   onSwitch: () => void;
 }) {
@@ -81,7 +84,7 @@ function CurfewLockdown({
   };
 
   return createPortal(
-    <div className="fixed inset-0 z-[300] flex flex-col items-center justify-center overflow-hidden bg-gradient-to-b from-[#3aa6c4] via-[#1c789f] to-[#0a3d5c] px-8 text-center text-white">
+    <div className={`fixed inset-0 ${pickerOpen ? "z-[170]" : "z-[300]"} flex flex-col items-center justify-center overflow-hidden bg-gradient-to-b from-[#3aa6c4] via-[#1c789f] to-[#0a3d5c] px-8 text-center text-white`}>
       <Bubbles />
       <div className="curfew-bob pointer-events-none absolute bottom-[14%] left-[8%]">
         <img
