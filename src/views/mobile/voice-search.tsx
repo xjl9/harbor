@@ -174,7 +174,14 @@ export function VoiceSearch({
         recRef.current = rec;
         try {
           rec.start();
-        } catch {}
+        } catch {
+          // Every other way this can fail already settles into the error phase.
+          // A throw from start() is the one that did not, and it is the one the
+          // listener callbacks cannot cover: nothing has started, so neither
+          // onerror nor onend will ever fire and the sheet listens forever at a
+          // dead mic.
+          settle("error", "");
+        }
       }
     }
     return () => {
