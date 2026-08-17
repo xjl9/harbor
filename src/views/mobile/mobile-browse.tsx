@@ -11,6 +11,7 @@ import { ScrollToTop } from "./scroll-to-top";
 import { LayerActiveContext, useLayerActive, useLayerParked } from "./layer-active";
 import { noteScroll, noteView, restoredView, restoreScroll } from "./reload-restore";
 import { MOBILE_CHROME_CLEARANCE } from "./chrome-metrics";
+import { useSheetLock } from "./mobile-sheet-lock";
 
 export type View = "home" | "movies" | "shows" | "anime" | "discover";
 
@@ -43,6 +44,7 @@ const VIEW_TRANSITION_CSS = `
 const VIEW_IDS: readonly View[] = ["home", "movies", "shows", "anime", "discover"];
 
 export function MobileBrowse() {
+  const { sheetOpen } = useSheetLock();
   const [view, setView] = useState<View>(() => restoredView(VIEW_IDS) ?? "home");
   const [seen, setSeen] = useState<Set<View>>(
     () => new Set<View>([restoredView(VIEW_IDS) ?? "home"]),
@@ -93,9 +95,11 @@ export function MobileBrowse() {
         )}
       </ViewLayer>
 
-      <div className="pointer-events-none absolute inset-x-0 top-0 z-30 h-36 bg-gradient-to-b from-black/60 via-black/22 to-transparent" />
       <div
-        className="pointer-events-none absolute inset-x-0 top-0 z-40 flex items-start justify-between gap-3 px-3"
+        className={`pointer-events-none absolute inset-x-0 top-0 z-30 h-36 bg-gradient-to-b from-black/60 via-black/22 to-transparent transition-opacity duration-150 ${sheetOpen ? "opacity-0" : "opacity-100"}`}
+      />
+      <div
+        className={`pointer-events-none absolute inset-x-0 top-0 z-40 flex items-start justify-between gap-3 px-3 transition-opacity duration-150 ${sheetOpen ? "opacity-0" : "opacity-100"}`}
         style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 10px)" }}
       >
         <div className="pointer-events-auto min-w-0">

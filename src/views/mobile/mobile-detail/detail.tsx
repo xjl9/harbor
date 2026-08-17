@@ -28,6 +28,7 @@ import { useSettings } from "@/lib/settings";
 import { useHideAnimeMetas } from "@/lib/anime-hide";
 import { sizeImageUrl } from "@/lib/img-size";
 import { useMobileRemote } from "../mobile-remote";
+import { useRegisterSheet } from "../mobile-sheet-lock";
 import {
   DETAIL_CSS,
   firstEpisode,
@@ -76,6 +77,11 @@ export function MobileDetail({
   onClose: () => void;
 }) {
   const reduced = useReducedMotion();
+  // This screen covers the shell, and it fades in rather than cutting, so for the
+  // length of that fade the browse chrome underneath shows through - the cast pill
+  // landing on top of this screen's own back button. Registering as a sheet takes
+  // that chrome away for as long as the screen is mounted, closing animation included.
+  useRegisterSheet(true);
   const [closing, setClosing] = useState(false);
   const [stack, setStack] = useState<Meta[]>([meta]);
   const scrollRef = useRef<HTMLDivElement>(null);
