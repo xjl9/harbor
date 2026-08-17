@@ -17,6 +17,19 @@ export function NoSourcesConfiguredModal({ meta }: { meta: Meta }) {
     }
     setView("addons");
   };
+  // The modal lists two fixes and the phone only ever got a button for the
+  // first, because openSettings has no frame to land in here. Debrid keys live
+  // on the profile page on this shell, so route there and let the tab switch be
+  // the action. goBack first: this modal is a fixed layer over the picker and
+  // would otherwise stay in front of wherever the viewer lands.
+  const openDebridKeys = () => {
+    if (phone) {
+      goBack();
+      requestMobileIntent("debrid");
+      return;
+    }
+    openSettings("streaming");
+  };
   const title = meta.name ?? "this title";
   return (
     <main
@@ -47,14 +60,12 @@ export function NoSourcesConfiguredModal({ meta }: { meta: Meta }) {
           >
             Browse addons
           </button>
-          {!phone && (
-            <button
-              onClick={() => openSettings("streaming")}
-              className="flex h-11 items-center justify-center rounded-full bg-elevated text-[13.5px] font-medium text-ink ring-1 ring-edge-soft transition-colors hover:bg-raised"
-            >
-              Open settings
-            </button>
-          )}
+          <button
+            onClick={openDebridKeys}
+            className="flex h-11 items-center justify-center rounded-full bg-elevated text-[13.5px] font-medium text-ink ring-1 ring-edge-soft transition-colors hover:bg-raised"
+          >
+            {phone ? "Add a debrid key" : "Open settings"}
+          </button>
           <button
             onClick={goBack}
             className={`mt-1 text-[12.5px] text-ink-subtle transition-colors hover:text-ink-muted${phone ? " min-h-11" : ""}`}

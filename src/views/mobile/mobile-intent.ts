@@ -6,7 +6,11 @@
 
 export const MOBILE_INTENT_EVENT = "harbor:mobile-intent";
 
-type Intent = "addons" | "settings";
+// "debrid" has no sub-screen of its own: debrid keys are managed on the profile
+// page itself, so switching to that tab is the whole action. It still goes
+// through the flag so the destination clears it and a later visit cannot
+// re-trigger.
+type Intent = "addons" | "settings" | "debrid";
 
 let pending: Intent | null = null;
 
