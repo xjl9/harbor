@@ -96,6 +96,9 @@ final class HarborMpvViewController: UIViewController, HarborPlayerEngine {
   // Overlay state. isScrubbing fences tick from fighting the user's slider drag;
   // chromeVisible is the source of truth for the show/hide toggle; autoHideTimer
   // dismisses the chrome after a few idle seconds.
+  // Fill-the-frame toggle. mpv's panscan crops the picture to the window
+  // instead of letterboxing it, which is what every other player calls zoom.
+  private var filled = false
   private var isScrubbing = false
   private var chromeVisible = true
   private var autoHideTimer: Timer?
@@ -129,6 +132,17 @@ final class HarborMpvViewController: UIViewController, HarborPlayerEngine {
     let tap = UITapGestureRecognizer(target: self, action: #selector(surfaceTapped(_:)))
     // Without this the recognizer cancels the close button's own touch handling.
     tap.cancelsTouchesInView = false
+    // Double tap fills the frame, the convention every other video player uses
+    // and the one thing this surface could not do: a 4:3 or scope source sat
+    // letterboxed with no way to crop it. The AVPlayer engine gets the same
+    // affordance free from AVKit, so this is parity rather than a new idea.
+    let doubleTap = UITapGestureRecognizer(target: self, action: #selector(surfaceDoubleTapped))
+    doubleTap.numberOfTapsRequired = 2
+    doubleTap.cancelsTouchesInView = false
+    view.addGestureRecognizer(doubleTap)
+    // Single tap waits to see whether a second one lands, so a double tap does
+    // not also flip the chrome on its way past.
+    tap.require(toFail: doubleTap)
     view.addGestureRecognizer(tap)
   }
 
@@ -856,6 +870,15 @@ final class HarborMpvViewController: UIViewController, HarborPlayerEngine {
   // instead of toggling pause; the dedicated play/pause button owns pause. The
   // guards keep taps that land on a control from also flipping chrome, and let
   // any tap re-summon chrome once it has auto-hidden.
+  @objc private func surfaceDoubleTapped() {
+    guard !shuttingDown, fileLoaded else { return }
+    filled.toggle()
+    // 1.0 crops until the picture covers the window, 0 restores letterboxing.
+    setString("panscan", filled ? "1.0" : "0")
+    // Keep the chrome's idle timer honest: the viewer just interacted.
+    if chromeVisible { armAutoHide() }
+  }
+
   @objc private func surfaceTapped(_ recognizer: UITapGestureRecognizer) {
     guard fileLoaded else { return }
     if chromeVisible {
