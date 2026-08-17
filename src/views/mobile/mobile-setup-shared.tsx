@@ -41,8 +41,11 @@ export function SheetShell({
           <X size={19} strokeWidth={2.2} />
         </button>
       </header>
+      {/* Both setup screens share this shell, so the tablet cap belongs here
+          rather than in each of them. Export in particular had its debrid-keys
+          switch a full screen away from the label it belongs to. */}
       <div
-        className="flex-1 overflow-y-auto px-5"
+        className="mx-auto w-full max-w-[680px] flex-1 overflow-y-auto px-5"
         style={{
           paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 32px)",
         }}
