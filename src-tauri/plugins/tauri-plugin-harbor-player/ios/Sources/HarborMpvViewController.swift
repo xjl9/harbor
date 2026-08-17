@@ -45,6 +45,7 @@ final class HarborMpvViewController: UIViewController, HarborPlayerEngine {
 
   private let metalLayer = HarborMetalLayer()
   private let closeButton = UIButton(type: .system)
+  private let titleLabel = UILabel()
   // Native transport overlay (mpv engine only; the AVPlayer engine uses AVKit's
   // own chrome). The close button plus this bar form one "chrome" set that shows
   // and hides together on a surface tap.
@@ -181,6 +182,10 @@ final class HarborMpvViewController: UIViewController, HarborPlayerEngine {
     lastStatus = nil
     fileLoaded = false
     currentTitle = args.title
+    // configure can run either side of viewDidLoad, and it runs again for every
+    // episode on an auto-advance, so the overlay title is refreshed here rather
+    // than only where the label is built.
+    applyTitle()
     pendingSubtitles = args.subtitles
     lastSeekTargetSec = nil
     cachedPosition = 0
@@ -811,6 +816,36 @@ final class HarborMpvViewController: UIViewController, HarborPlayerEngine {
       closeButton.widthAnchor.constraint(equalToConstant: 40),
       closeButton.heightAnchor.constraint(equalToConstant: 40),
     ])
+
+    // The title was already carried in the load args and stored, but nothing
+    // ever drew it, so this surface showed a runtime and an X and nothing that
+    // said what was playing. AVKit's Done bar names the title for the other
+    // engine; this one has to name its own. Shadowed rather than plated so it
+    // stays legible over a bright frame without another floating chip.
+    titleLabel.textColor = .white
+    titleLabel.font = .systemFont(ofSize: 17, weight: .semibold)
+    titleLabel.lineBreakMode = .byTruncatingTail
+    titleLabel.layer.shadowColor = UIColor.black.cgColor
+    titleLabel.layer.shadowOpacity = 0.6
+    titleLabel.layer.shadowRadius = 8
+    titleLabel.layer.shadowOffset = .zero
+    titleLabel.translatesAutoresizingMaskIntoConstraints = false
+    view.addSubview(titleLabel)
+    applyTitle()
+    NSLayoutConstraint.activate([
+      titleLabel.centerYAnchor.constraint(equalTo: closeButton.centerYAnchor),
+      titleLabel.leadingAnchor.constraint(equalTo: closeButton.trailingAnchor, constant: 14),
+      // Stop short of the trailing edge so a long name never collides with a
+      // system indicator or reaches under the notch in landscape.
+      titleLabel.trailingAnchor.constraint(
+        lessThanOrEqualTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -16),
+    ])
+  }
+
+  private func applyTitle() {
+    let name = currentTitle ?? ""
+    titleLabel.text = name
+    titleLabel.isHidden = name.isEmpty
   }
 
   @objc private func closeTapped() {
@@ -938,6 +973,7 @@ final class HarborMpvViewController: UIViewController, HarborPlayerEngine {
     transportBar.isUserInteractionEnabled = visible
     let apply = {
       self.closeButton.alpha = visible ? 1 : 0
+      self.titleLabel.alpha = visible ? 1 : 0
       self.transportBar.alpha = visible ? 1 : 0
     }
     if animated {
