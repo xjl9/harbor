@@ -171,7 +171,13 @@ export function MobileHero({ slides, onOpenDetail }: { slides: Meta[]; onOpenDet
           literally it outgrows a landscape viewport that is itself only ~435px tall,
           hiding every row behind a full screen of scroll. Cap the floor to the
           viewport so short screens still reveal the top of the first row. */}
-      <div className="relative h-[62svh] min-h-[min(440px,72svh)] [@media(max-height:500px)]:h-[50svh] [@media(max-height:500px)]:min-h-0 w-full overflow-hidden">
+      {/* A tablet held on its side is wide but short: 62svh of an 820pt viewport is
+          a 508pt hero, which pushed continue watching under the floating tab bar
+          at rest, so the first row a returning viewer wants was covered until
+          they scrolled. The window is bounded above at 900px so portrait, which
+          has the height to spend, keeps the full 62svh, and bounded below at
+          500px so a landscape phone keeps its own 50svh rule. */}
+      <div className="relative h-[62svh] min-h-[min(440px,72svh)] [@media(max-height:500px)]:h-[50svh] [@media(max-height:500px)]:min-h-0 [@media(min-width:700px)_and_(min-height:500px)_and_(max-height:900px)]:h-[48svh] [@media(min-width:700px)_and_(min-height:500px)_and_(max-height:900px)]:min-h-0 w-full overflow-hidden">
         <button
           type="button"
           aria-label={`Open ${current.name}`}
