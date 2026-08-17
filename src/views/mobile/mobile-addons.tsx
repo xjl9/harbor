@@ -132,7 +132,11 @@ export function MobileAddons({ onClose }: { onClose: () => void }) {
         </button>
       </header>
 
-      <div className="flex-1 overflow-y-auto px-5 pb-10">
+      {/* Capped like settings and profile: these are list rows with a name at one
+          end and an install or delete control at the other, and full bleed on a
+          tablet put a screen's width between them. The header keeps its own full
+          width so the close button stays in the screen corner. */}
+      <div className="mx-auto w-full max-w-[680px] flex-1 overflow-y-auto px-5 pb-10">
         <section className="flex flex-col gap-2.5">
           <div className="flex items-center gap-2 rounded-2xl border border-edge-soft/70 bg-elevated/40 px-3.5 py-2">
             <Plus

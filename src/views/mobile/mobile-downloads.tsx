@@ -87,7 +87,7 @@ export function MobileDownloads({ onClose }: { onClose: () => void }) {
       </header>
 
       <div
-        className="flex-1 overflow-y-auto overscroll-y-contain px-5"
+        className="mx-auto w-full max-w-[680px] flex-1 overflow-y-auto overscroll-y-contain px-5"
         style={{
           paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 32px)",
         }}
