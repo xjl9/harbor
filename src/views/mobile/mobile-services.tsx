@@ -82,7 +82,7 @@ function TopBar({ title, onBack }: { title: string; onBack: () => void }) {
         type="button"
         onClick={onBack}
         aria-label="Back"
-        className="-ms-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-ink-muted transition-transform active:scale-[0.96]"
+        className="-ms-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-ink-muted"
       >
         <ChevronLeft size={24} strokeWidth={2.4} className="dir-icon" />
       </button>
@@ -105,7 +105,7 @@ function ServiceCard({
       type="button"
       onClick={onSelect}
       aria-label={meta.name}
-      className="flex aspect-[16/10] items-center justify-center rounded-2xl bg-elevated/70 shadow-[0_2px_8px_-2px_rgba(0,0,0,0.4)] ring-1 ring-edge-soft/60 transition-transform active:scale-[0.96]"
+      className="flex aspect-[16/10] items-center justify-center rounded-2xl bg-elevated/70 shadow-[0_2px_8px_-2px_rgba(0,0,0,0.4)] ring-1 ring-edge-soft/60"
     >
       {failed ? (
         <span className="px-1 text-center text-[13px] font-semibold tracking-tight text-ink">

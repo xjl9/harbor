@@ -133,7 +133,7 @@ function FeaturedCard({ meta, logo, onOpen }: { meta: Meta; logo?: string; onOpe
     <button
       type="button"
       onClick={() => onOpen(meta)}
-      className="relative block aspect-[4/5] w-[86%] [@media(max-height:500px)]:h-[62svh] [@media(max-height:500px)]:w-auto [@media(min-width:700px)_and_(min-height:600px)]:w-[400px] shrink-0 snap-start overflow-hidden rounded-[22px] bg-surface text-start ring-1 ring-edge-soft/50 transition-transform duration-150 active:scale-[0.98]"
+      className="relative block aspect-[4/5] w-[86%] [@media(max-height:500px)]:h-[62svh] [@media(max-height:500px)]:w-auto [@media(min-width:700px)_and_(min-height:600px)]:w-[400px] shrink-0 snap-start overflow-hidden rounded-[22px] bg-surface text-start ring-1 ring-edge-soft/50"
     >
       {bg && (
         <img src={bg} alt="" loading="lazy" decoding="async" className="absolute inset-0 h-full w-full object-cover" />

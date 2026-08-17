@@ -84,7 +84,7 @@ export function BookmarksSheet({ open, onClose }: { open: boolean; onClose: () =
                       key={n}
                       type="button"
                       onClick={() => add(n)}
-                      className="flex h-12 flex-1 items-center justify-center gap-2 rounded-2xl bg-accent text-[15px] font-semibold text-canvas transition-transform active:scale-[0.97]"
+                      className="flex h-12 flex-1 items-center justify-center gap-2 rounded-2xl bg-accent text-[15px] font-semibold text-canvas"
                     >
                       <BookmarkPlus size={17} strokeWidth={2.2} /> Page {n}
                     </button>

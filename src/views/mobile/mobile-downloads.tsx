@@ -80,7 +80,7 @@ export function MobileDownloads({ onClose }: { onClose: () => void }) {
           type="button"
           onClick={onClose}
           aria-label="Close"
-          className="flex h-9 w-9 items-center justify-center rounded-full bg-elevated/60 text-ink-muted transition-transform active:scale-90"
+          className="no-press flex h-9 w-9 items-center justify-center rounded-full bg-elevated/60 text-ink-muted transition-transform active:scale-90"
         >
           <X size={19} strokeWidth={2.2} />
         </button>

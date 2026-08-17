@@ -161,7 +161,7 @@ export function MobileReportSheet({ onClose }: { onClose: () => void }) {
           <button
             type="button"
             onClick={onClose}
-            className="mt-7 w-full rounded-full bg-ink py-3 text-[14.5px] font-semibold text-canvas transition-transform active:scale-[0.98]"
+            className="mt-7 w-full rounded-full bg-ink py-3 text-[14.5px] font-semibold text-canvas"
           >
             Done
           </button>
@@ -272,7 +272,7 @@ export function MobileReportSheet({ onClose }: { onClose: () => void }) {
           type="button"
           onClick={() => void send()}
           disabled={!canSend}
-          className="mt-5 flex w-full items-center justify-center gap-2 rounded-full bg-ink py-3 text-[14.5px] font-semibold text-canvas transition-transform active:scale-[0.98] disabled:opacity-40"
+          className="mt-5 flex w-full items-center justify-center gap-2 rounded-full bg-ink py-3 text-[14.5px] font-semibold text-canvas disabled:opacity-40"
         >
           {sending && <Loader2 size={16} className="animate-spin" />}
           {sending

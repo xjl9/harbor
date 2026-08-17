@@ -172,7 +172,7 @@ function GridPoster({ meta, onOpen }: { meta: Meta; onOpen: (m: Meta) => void })
     <button
       type="button"
       onClick={() => onOpen(meta)}
-      className="w-full text-start transition-transform duration-150 active:scale-[0.96]"
+      className="w-full text-start"
     >
       <Poster src={src} onError={onError} seed={meta.id} ratio="portrait" lazy="release" className="rounded-[14px]">
         {!settings.rpdbKey && meta.imdbRating && (
@@ -250,7 +250,7 @@ function ErrorState({ onRetry }: { onRetry: () => void }) {
       <button
         type="button"
         onClick={onRetry}
-        className="flex h-11 items-center rounded-full bg-ink px-6 text-[14px] font-semibold text-canvas transition-transform active:scale-95"
+        className="no-press flex h-11 items-center rounded-full bg-ink px-6 text-[14px] font-semibold text-canvas transition-transform active:scale-95"
       >
         Try again
       </button>

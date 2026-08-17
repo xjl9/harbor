@@ -121,7 +121,7 @@ export function MobileMovies() {
         <button
           type="button"
           onClick={() => setReloadKey((k) => k + 1)}
-          className="flex h-11 items-center rounded-full bg-ink px-6 text-[14px] font-semibold text-canvas transition-transform active:scale-95"
+          className="no-press flex h-11 items-center rounded-full bg-ink px-6 text-[14px] font-semibold text-canvas transition-transform active:scale-95"
         >
           Try again
         </button>

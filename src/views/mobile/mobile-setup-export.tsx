@@ -78,7 +78,7 @@ export function ExportSetupSheet({ onClose }: { onClose: () => void }) {
       <button
         type="button"
         onClick={copy}
-        className="mt-5 flex w-full items-center justify-center gap-2 rounded-full bg-ink py-3 text-[14.5px] font-semibold text-canvas transition-transform active:scale-[0.98]"
+        className="mt-5 flex w-full items-center justify-center gap-2 rounded-full bg-ink py-3 text-[14.5px] font-semibold text-canvas"
       >
         {copied ? (
           <Check size={16} strokeWidth={2.6} />

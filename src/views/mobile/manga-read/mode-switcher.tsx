@@ -29,7 +29,7 @@ export function ModeSwitcher({
             aria-pressed={active}
             onClick={() => onPick(m)}
             className={`grid h-11 w-11 place-items-center rounded-full ${reduce ? "" : "transition-colors duration-150 motion-reduce:transition-none"} ${
-              active ? "bg-accent text-canvas" : "text-ink-muted active:scale-90"
+              active ? "bg-accent text-canvas" : "no-press text-ink-muted active:scale-90"
             }`}
           >
             <Icon size={20} strokeWidth={2.2} />

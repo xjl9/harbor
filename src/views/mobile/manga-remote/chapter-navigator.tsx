@@ -112,7 +112,7 @@ export function ChapterNavigator({
           type="button"
           onClick={onClose}
           aria-label="Back"
-          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-ink-muted transition-transform active:scale-90"
+          className="no-press flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-ink-muted transition-transform active:scale-90"
         >
           <ChevronLeft size={24} strokeWidth={2.2} className="dir-icon" />
         </button>
@@ -125,7 +125,7 @@ export function ChapterNavigator({
         <button
           type="button"
           onClick={onJumpPage}
-          className="flex h-11 items-center rounded-full bg-elevated/70 px-4 text-[13.5px] font-semibold text-ink transition-transform active:scale-95"
+          className="no-press flex h-11 items-center rounded-full bg-elevated/70 px-4 text-[13.5px] font-semibold text-ink transition-transform active:scale-95"
         >
           Page {manga.pageIndex + 1}
         </button>
@@ -156,7 +156,7 @@ export function ChapterNavigator({
             })
           }
           aria-label={desc ? "Sorted newest first, tap for oldest" : "Sorted oldest first, tap for newest"}
-          className="flex h-9 shrink-0 items-center gap-1.5 rounded-full border border-edge-soft/70 px-3 text-[12.5px] font-semibold text-ink-muted transition-transform active:scale-95"
+          className="no-press flex h-9 shrink-0 items-center gap-1.5 rounded-full border border-edge-soft/70 px-3 text-[12.5px] font-semibold text-ink-muted transition-transform active:scale-95"
         >
           {desc ? <ArrowDownWideNarrow size={15} strokeWidth={2.2} /> : <ArrowUpNarrowWide size={15} strokeWidth={2.2} />}
           {desc ? "Newest" : "Oldest"}
@@ -201,7 +201,7 @@ export function ChapterNavigator({
           type="button"
           onClick={() => vw.ref.current?.scrollTo({ top: 0, behavior: reduce ? "auto" : "smooth" })}
           aria-label="Scroll to top"
-          className="absolute end-5 grid h-12 w-12 place-items-center rounded-full border border-edge-soft bg-elevated/90 text-ink shadow-[0_10px_24px_-8px_rgba(0,0,0,0.6)] backdrop-blur-md transition-transform active:scale-90"
+          className="no-press absolute end-5 grid h-12 w-12 place-items-center rounded-full border border-edge-soft bg-elevated/90 text-ink shadow-[0_10px_24px_-8px_rgba(0,0,0,0.6)] backdrop-blur-md transition-transform active:scale-90"
           style={{ bottom: "calc(env(safe-area-inset-bottom, 0px) + 24px)" }}
         >
           <ArrowUp size={22} strokeWidth={2.4} />
@@ -288,7 +288,7 @@ function SourceDropdown({
         type="button"
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
-        className="flex h-9 w-full min-w-0 items-center gap-1.5 rounded-full bg-elevated/70 px-3 text-[12.5px] font-semibold text-ink transition-transform active:scale-[0.98]"
+        className="flex h-9 w-full min-w-0 items-center gap-1.5 rounded-full bg-elevated/70 px-3 text-[12.5px] font-semibold text-ink"
       >
         <Layers size={14} strokeWidth={2.2} className="shrink-0 text-ink-subtle" />
         <span className="min-w-0 flex-1 truncate text-start">{activeName}</span>

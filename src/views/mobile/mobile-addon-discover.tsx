@@ -269,7 +269,7 @@ export function MobileAddonDiscover({
                 setExhausted(false);
                 setError(false);
               }}
-              className="rounded-full bg-ink px-4 py-1.5 text-[13px] font-semibold text-canvas transition-transform active:scale-95"
+              className="no-press rounded-full bg-ink px-4 py-1.5 text-[13px] font-semibold text-canvas transition-transform active:scale-95"
             >
               Try again
             </button>

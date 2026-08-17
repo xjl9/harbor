@@ -111,7 +111,7 @@ export function ObTmdb() {
           className={`flex h-12 w-full items-center justify-center gap-1.5 rounded-xl px-5 text-[14px] font-semibold transition-all duration-300 ${
             status === "ok"
               ? "bg-accent-soft text-accent"
-              : "bg-ink text-canvas active:scale-[0.98] disabled:scale-100 disabled:opacity-50"
+              : "bg-ink text-canvas disabled:scale-100 disabled:opacity-50"
           } ${status === "ok" ? "animate-verified-button-pulse" : ""}`}
         >
           {status === "checking" ? (

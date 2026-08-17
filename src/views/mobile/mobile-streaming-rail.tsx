@@ -25,7 +25,7 @@ export function MobileStreamingRail({
             key={svc}
             type="button"
             onClick={() => onOpen(svc)}
-            className="flex h-[72px] w-[116px] shrink-0 items-center justify-center rounded-2xl bg-elevated/60 ring-1 ring-edge-soft/60 transition-transform duration-150 active:scale-[0.96]"
+            className="flex h-[72px] w-[116px] shrink-0 items-center justify-center rounded-2xl bg-elevated/60 ring-1 ring-edge-soft/60"
           >
             <ServiceLogo service={svc} height={24} />
           </button>

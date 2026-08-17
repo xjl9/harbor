@@ -297,7 +297,7 @@ export function ZoomJoystick({
           type="button"
           aria-label={`Zoom controls, ${pct} percent`}
           onClick={engage}
-          className="flex h-14 w-14 touch-none select-none flex-col items-center justify-center rounded-full bg-elevated/80 text-ink shadow-[0_10px_28px_-14px_rgba(0,0,0,0.65)] ring-1 ring-edge-soft/50 backdrop-blur-xl transition-transform duration-100 active:scale-90"
+          className="no-press flex h-14 w-14 touch-none select-none flex-col items-center justify-center rounded-full bg-elevated/80 text-ink shadow-[0_10px_28px_-14px_rgba(0,0,0,0.65)] ring-1 ring-edge-soft/50 backdrop-blur-xl transition-transform duration-100 active:scale-90"
         >
           <ZoomIn size={20} strokeWidth={2.2} />
           <span className="mt-0.5 text-[10.5px] font-semibold leading-none tabular-nums text-ink-subtle">
@@ -317,7 +317,7 @@ export function ZoomJoystick({
             aria-label="Close zoom controls"
             onPointerDown={(e) => e.stopPropagation()}
             onClick={disengage}
-            className="absolute -right-1 -top-1 z-10 grid h-11 w-11 place-items-center rounded-full text-ink-subtle transition-transform active:scale-90"
+            className="no-press absolute -right-1 -top-1 z-10 grid h-11 w-11 place-items-center rounded-full text-ink-subtle transition-transform active:scale-90"
           >
             <X size={20} strokeWidth={2.4} />
           </button>
@@ -328,7 +328,7 @@ export function ZoomJoystick({
               aria-label="Zoom in"
               onPointerDown={(e) => e.stopPropagation()}
               onClick={() => stepZoom(1)}
-              className="grid h-12 w-12 place-items-center rounded-full bg-surface/85 text-ink shadow-[0_10px_28px_-14px_rgba(0,0,0,0.65)] ring-1 ring-edge-soft/50 backdrop-blur-xl transition-transform active:scale-90"
+              className="no-press grid h-12 w-12 place-items-center rounded-full bg-surface/85 text-ink shadow-[0_10px_28px_-14px_rgba(0,0,0,0.65)] ring-1 ring-edge-soft/50 backdrop-blur-xl transition-transform active:scale-90"
             >
               <ZoomIn size={18} strokeWidth={2.2} />
             </button>
@@ -337,7 +337,7 @@ export function ZoomJoystick({
               aria-label="Zoom out"
               onPointerDown={(e) => e.stopPropagation()}
               onClick={() => stepZoom(-1)}
-              className="grid h-12 w-12 place-items-center rounded-full bg-surface/85 text-ink shadow-[0_10px_28px_-14px_rgba(0,0,0,0.65)] ring-1 ring-edge-soft/50 backdrop-blur-xl transition-transform active:scale-90"
+              className="no-press grid h-12 w-12 place-items-center rounded-full bg-surface/85 text-ink shadow-[0_10px_28px_-14px_rgba(0,0,0,0.65)] ring-1 ring-edge-soft/50 backdrop-blur-xl transition-transform active:scale-90"
             >
               <ZoomOut size={18} strokeWidth={2.2} />
             </button>

@@ -172,7 +172,7 @@ export function EpisodeDownloadButton({
         if (inFlight || done) return;
         onDownload();
       }}
-      className="flex h-10 w-10 items-center justify-center rounded-xl text-ink-subtle transition-[color,background-color,transform] duration-150 active:scale-[0.92] active:bg-ink/10 motion-reduce:transition-none"
+      className="no-press flex h-10 w-10 items-center justify-center rounded-xl text-ink-subtle transition-[color,background-color,transform] duration-150 active:scale-[0.92] active:bg-ink/10 motion-reduce:transition-none"
     >
       {done ? (
         <Check size={18} strokeWidth={2.6} className="text-accent" />

@@ -47,7 +47,7 @@ function ChapterButton({
       aria-label={label}
       disabled={disabled}
       onClick={onPress}
-      className="flex h-11 items-center gap-1.5 rounded-full bg-elevated/70 px-4 text-[13.5px] font-semibold text-ink ring-1 ring-edge-soft/50 backdrop-blur-xl transition-transform active:scale-95 disabled:opacity-30 disabled:active:scale-100 motion-reduce:transition-none"
+      className="no-press flex h-11 items-center gap-1.5 rounded-full bg-elevated/70 px-4 text-[13.5px] font-semibold text-ink ring-1 ring-edge-soft/50 backdrop-blur-xl transition-transform active:scale-95 disabled:opacity-30 disabled:active:scale-100 motion-reduce:transition-none"
     >
       {children}
     </button>

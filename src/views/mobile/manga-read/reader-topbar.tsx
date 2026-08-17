@@ -27,7 +27,7 @@ export function ReaderTopbar({
           type="button"
           aria-label="Back to remote"
           onClick={onExit}
-          className="grid h-11 w-11 shrink-0 place-items-center rounded-full text-ink-muted transition-transform active:scale-90 motion-reduce:transition-none"
+          className="no-press grid h-11 w-11 shrink-0 place-items-center rounded-full text-ink-muted transition-transform active:scale-90 motion-reduce:transition-none"
         >
           <ChevronLeft size={24} strokeWidth={2.2} className="dir-icon" />
         </button>

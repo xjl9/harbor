@@ -180,7 +180,7 @@ export function MobileOnboarding() {
               </div>
               <button
                 onClick={isLast ? finish : next}
-                className="mt-2 flex h-[52px] [@media(max-height:500px)]:h-11 [@media(max-height:500px)]:mt-1 w-full items-center justify-center gap-2 rounded-full bg-ink text-[16px] font-semibold text-canvas transition-transform duration-150 active:scale-[0.97]"
+                className="mt-2 flex h-[52px] [@media(max-height:500px)]:h-11 [@media(max-height:500px)]:mt-1 w-full items-center justify-center gap-2 rounded-full bg-ink text-[16px] font-semibold text-canvas"
               >
                 {isLast ? t("Enter Harbor") : step === "welcome" ? t("Get Started") : t("Continue")}
                 <ArrowRight size={16} strokeWidth={2.4} className="dir-icon" />

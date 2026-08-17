@@ -63,7 +63,7 @@ export function PageJumpSheet({ open, onClose }: { open: boolean; onClose: () =>
           <button
             type="button"
             onClick={() => commit(page)}
-            className="h-12 flex-1 rounded-full bg-accent text-[15px] font-semibold text-canvas transition-transform active:scale-[0.97]"
+            className="h-12 flex-1 rounded-full bg-accent text-[15px] font-semibold text-canvas"
           >
             {isPair ? `Go to pages ${pageDisp}` : `Go to page ${page}`}
           </button>
@@ -142,7 +142,7 @@ function Stepper({ label, onPress, children }: { label: string; onPress: () => v
       type="button"
       aria-label={label}
       onClick={onPress}
-      className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-raised text-ink transition-transform active:scale-90"
+      className="no-press grid h-12 w-12 shrink-0 place-items-center rounded-full bg-raised text-ink transition-transform active:scale-90"
     >
       {children}
     </button>

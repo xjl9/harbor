@@ -109,7 +109,7 @@ export function MangaRemote({
             type="button"
             aria-label="Close reader"
             onClick={() => sendCommand({ action: "mangaCloseReader" })}
-            className="grid h-11 w-11 shrink-0 place-items-center rounded-full text-ink-muted transition-transform active:scale-90"
+            className="no-press grid h-11 w-11 shrink-0 place-items-center rounded-full text-ink-muted transition-transform active:scale-90"
           >
             <X size={22} strokeWidth={2.2} />
           </button>
@@ -133,7 +133,7 @@ export function MangaRemote({
               type="button"
               onClick={onReadHere}
               aria-label="Read on this device"
-              className="ms-auto flex h-11 items-center gap-1.5 rounded-full bg-accent px-3.5 text-[12.5px] font-semibold text-canvas transition-transform active:scale-95"
+              className="no-press ms-auto flex h-11 items-center gap-1.5 rounded-full bg-accent px-3.5 text-[12.5px] font-semibold text-canvas transition-transform active:scale-95"
             >
               <BookOpen size={15} strokeWidth={2.4} /> Read here
             </button>
@@ -192,7 +192,7 @@ export function MangaRemote({
               type="button"
               aria-label="Reset zoom"
               onClick={() => zoomAbs(1)}
-              className="grid h-11 min-w-[54px] place-items-center rounded-full bg-elevated/60 px-3 text-[13px] font-semibold tabular-nums text-ink ring-1 ring-edge-soft/50 transition-transform active:scale-95"
+              className="no-press grid h-11 min-w-[54px] place-items-center rounded-full bg-elevated/60 px-3 text-[13px] font-semibold tabular-nums text-ink ring-1 ring-edge-soft/50 transition-transform active:scale-95"
             >
               {Math.round(m.zoom * 100)}%
             </button>

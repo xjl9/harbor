@@ -173,7 +173,7 @@ export function SubLangsSheet({
             <button
               type="button"
               onClick={dismiss}
-              className="flex h-[52px] w-full items-center justify-center rounded-full bg-ink text-[16px] font-semibold text-canvas transition-transform duration-150 active:scale-[0.98]"
+              className="flex h-[52px] w-full items-center justify-center rounded-full bg-ink text-[16px] font-semibold text-canvas"
             >
               {value.length > 0 ? t("Done") : t("Close")}
             </button>

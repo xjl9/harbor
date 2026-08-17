@@ -136,7 +136,7 @@ export function ObTaste({
                 aria-pressed={sel}
                 aria-label={m.name}
                 className={`relative block overflow-hidden rounded-xl transition duration-200 disabled:pointer-events-none ${
-                  sel ? "" : atMax ? "opacity-40" : "active:scale-[0.98]"
+                  sel ? "" : atMax ? "opacity-40" : ""
                 }`}
               >
                 <Poster src={m.poster} seed={m.id} ratio="portrait" />

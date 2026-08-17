@@ -30,7 +30,7 @@ export function MangaNowBar({ m, hidden, onExpand }: { m: RemoteMangaState; hidd
         <button
           type="button"
           onClick={onExpand}
-          className="pointer-events-auto flex w-full items-center gap-3 rounded-2xl border border-edge-soft/60 bg-elevated/80 p-2 pe-4 text-start shadow-[0_10px_30px_-10px_rgba(0,0,0,0.6)] backdrop-blur-2xl transition-transform active:scale-[0.99]"
+          className="pointer-events-auto flex w-full items-center gap-3 rounded-2xl border border-edge-soft/60 bg-elevated/80 p-2 pe-4 text-start shadow-[0_10px_30px_-10px_rgba(0,0,0,0.6)] backdrop-blur-2xl"
         >
           <span className="h-11 w-11 shrink-0 overflow-hidden rounded-xl bg-surface">
             {m.cover && <img src={m.cover} alt="" className="h-full w-full object-cover" />}

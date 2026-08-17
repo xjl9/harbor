@@ -152,7 +152,7 @@ export function MobileAwards({
             type="button"
             onClick={close}
             aria-label="Back"
-            className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-surface text-ink ring-1 ring-edge-soft transition-transform active:scale-95 motion-reduce:transition-none"
+            className="no-press grid h-10 w-10 shrink-0 place-items-center rounded-full bg-surface text-ink ring-1 ring-edge-soft transition-transform active:scale-95 motion-reduce:transition-none"
           >
             <ChevronLeft size={22} strokeWidth={2.4} className="dir-icon" />
           </button>
@@ -372,7 +372,7 @@ function GridTile({ meta, onOpen }: { meta: Meta; onOpen: (m: Meta) => void }) {
     <button
       type="button"
       onClick={() => onOpen(meta)}
-      className="text-start transition-transform duration-150 active:scale-[0.96] motion-reduce:transition-none"
+      className="text-start"
     >
       <Poster
         src={src}

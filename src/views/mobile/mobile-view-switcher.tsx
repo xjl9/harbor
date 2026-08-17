@@ -72,7 +72,7 @@ export function MobileViewSwitcher({ view, onSelect }: { view: View; onSelect: (
         aria-expanded={open}
         aria-label={`Browsing ${current.label}. Change section`}
         onClick={() => setOpen((o) => !o)}
-        className="flex h-11 items-center gap-1 rounded-full border border-white/10 bg-black/25 pe-2 ps-3.5 text-ink backdrop-blur-xl transition-transform duration-150 active:scale-[0.96]"
+        className="flex h-11 items-center gap-1 rounded-full border border-white/10 bg-black/25 pe-2 ps-3.5 text-ink backdrop-blur-xl"
       >
         <span className="text-[13.5px] font-semibold">{current.label}</span>
         <ChevronDown

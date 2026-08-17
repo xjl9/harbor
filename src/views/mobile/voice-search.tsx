@@ -210,7 +210,7 @@ export function VoiceSearch({
           e.stopPropagation();
           leave();
         }}
-        className="absolute right-4 grid h-11 w-11 place-items-center rounded-full bg-elevated/70 text-ink-muted transition-transform duration-100 active:scale-90"
+        className="no-press absolute right-4 grid h-11 w-11 place-items-center rounded-full bg-elevated/70 text-ink-muted transition-transform duration-100 active:scale-90"
         style={{ top: "calc(env(safe-area-inset-top, 0px) + 12px)" }}
       >
         <X size={20} strokeWidth={2.2} />

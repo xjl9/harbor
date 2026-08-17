@@ -276,7 +276,7 @@ export function DebridSheet({
             <button
               type="button"
               onClick={() => onSave(value)}
-              className="flex-1 rounded-full bg-ink py-3 text-[14.5px] font-semibold text-canvas transition-transform active:scale-[0.98]"
+              className="flex-1 rounded-full bg-ink py-3 text-[14.5px] font-semibold text-canvas"
             >
               Save
             </button>

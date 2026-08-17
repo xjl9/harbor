@@ -126,7 +126,7 @@ export function MobileAddons({ onClose }: { onClose: () => void }) {
           type="button"
           onClick={onClose}
           aria-label="Close"
-          className="flex h-9 w-9 items-center justify-center rounded-full bg-elevated/60 text-ink-muted transition-transform active:scale-90"
+          className="no-press flex h-9 w-9 items-center justify-center rounded-full bg-elevated/60 text-ink-muted transition-transform active:scale-90"
         >
           <X size={19} strokeWidth={2.2} />
         </button>
@@ -156,7 +156,7 @@ export function MobileAddons({ onClose }: { onClose: () => void }) {
               type="button"
               disabled={!url.trim() || busy === "url"}
               onClick={() => install(url, "url")}
-              className="shrink-0 rounded-full bg-ink px-3.5 py-1.5 text-[13.5px] font-semibold text-canvas transition-transform active:scale-95 disabled:opacity-40"
+              className="no-press shrink-0 rounded-full bg-ink px-3.5 py-1.5 text-[13.5px] font-semibold text-canvas transition-transform active:scale-95 disabled:opacity-40"
             >
               {busy === "url" ? (
                 <Loader2 size={15} className="animate-spin" />

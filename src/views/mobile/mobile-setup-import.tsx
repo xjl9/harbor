@@ -119,7 +119,7 @@ export function ImportSetupSheet({ onClose }: { onClose: () => void }) {
           <button
             type="button"
             onClick={onClose}
-            className="mt-7 w-full rounded-full bg-ink py-3 text-[14.5px] font-semibold text-canvas transition-transform active:scale-[0.98]"
+            className="mt-7 w-full rounded-full bg-ink py-3 text-[14.5px] font-semibold text-canvas"
           >
             Done
           </button>
@@ -145,7 +145,7 @@ export function ImportSetupSheet({ onClose }: { onClose: () => void }) {
               const scanned = await scanQr();
               if (scanned) setRaw(scanned);
             }}
-            className="mt-4 flex w-full items-center justify-center gap-2 rounded-full bg-ink py-3 text-[14.5px] font-semibold text-canvas transition-transform active:scale-[0.98]"
+            className="mt-4 flex w-full items-center justify-center gap-2 rounded-full bg-ink py-3 text-[14.5px] font-semibold text-canvas"
           >
             <QrCode size={17} strokeWidth={2.4} />
             Scan QR code
@@ -251,7 +251,7 @@ export function ImportSetupSheet({ onClose }: { onClose: () => void }) {
               type="button"
               onClick={apply}
               disabled={applying}
-              className="mt-6 flex w-full items-center justify-center gap-2 rounded-full bg-ink py-3 text-[14.5px] font-semibold text-canvas transition-transform active:scale-[0.98] disabled:opacity-50"
+              className="mt-6 flex w-full items-center justify-center gap-2 rounded-full bg-ink py-3 text-[14.5px] font-semibold text-canvas disabled:opacity-50"
             >
               {applying && <Loader2 size={16} className="animate-spin" />}
               {applying ? "Applying…" : "Apply"}

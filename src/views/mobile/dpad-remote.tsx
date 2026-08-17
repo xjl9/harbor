@@ -687,7 +687,7 @@ function ProviderCard({
       aria-label={service.name}
       data-svc={svc}
       onClick={onPress}
-      className="flex aspect-[16/10] items-center justify-center rounded-xl bg-elevated/60 px-2 ring-1 ring-edge-soft/50 transition-transform duration-100 active:scale-[0.95]"
+      className="no-press flex aspect-[16/10] items-center justify-center rounded-xl bg-elevated/60 px-2 ring-1 ring-edge-soft/50 transition-transform duration-100 active:scale-[0.95]"
     >
       <img
         src={service.logo}
@@ -777,7 +777,7 @@ export function ConnectSheet({
           <button
             type="button"
             onClick={() => void rescan()}
-            className="flex shrink-0 items-center gap-1.5 rounded-full bg-raised px-3 py-1.5 text-[12.5px] font-semibold text-ink-muted transition-transform active:scale-95"
+            className="no-press flex shrink-0 items-center gap-1.5 rounded-full bg-raised px-3 py-1.5 text-[12.5px] font-semibold text-ink-muted transition-transform active:scale-95"
           >
             <RefreshCw
               size={13}
@@ -828,7 +828,7 @@ export function ConnectSheet({
               type="button"
               onClick={() => pick(draft)}
               disabled={!draft.trim()}
-              className="h-11 shrink-0 rounded-xl bg-ink px-4 text-[14px] font-semibold text-canvas transition-transform active:scale-95 disabled:opacity-40"
+              className="no-press h-11 shrink-0 rounded-xl bg-ink px-4 text-[14px] font-semibold text-canvas transition-transform active:scale-95 disabled:opacity-40"
             >
               {t("Connect")}
             </button>
@@ -1001,7 +1001,7 @@ function ConfirmLeave({
             type="button"
             onClick={onCancel}
             className={`h-12 flex-1 rounded-full bg-raised text-[15px] font-semibold text-ink transition-transform duration-100 ${
-              reduced ? "" : "active:scale-[0.97]"
+              reduced ? "" : ""
             }`}
           >
             Keep watching
@@ -1010,7 +1010,7 @@ function ConfirmLeave({
             type="button"
             onClick={onConfirm}
             className={`h-12 flex-1 rounded-full bg-ink text-[15px] font-semibold text-canvas transition-transform duration-100 ${
-              reduced ? "" : "active:scale-[0.97]"
+              reduced ? "" : ""
             }`}
           >
             Leave

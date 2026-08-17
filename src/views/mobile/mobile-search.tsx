@@ -288,7 +288,7 @@ function SearchBar({
             onClear();
             ref.current?.focus();
           }}
-          className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-canvas/12 text-canvas/70 transition-transform active:scale-90 motion-reduce:transition-none"
+          className="no-press grid h-6 w-6 shrink-0 place-items-center rounded-full bg-canvas/12 text-canvas/70 transition-transform active:scale-90 motion-reduce:transition-none"
         >
           <X size={14} strokeWidth={2.6} />
         </button>

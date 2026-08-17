@@ -217,7 +217,7 @@ function SortBar({
         type="button"
         onClick={() => onSort({ key: sort.key, dir: asc ? "desc" : "asc" })}
         aria-label={asc ? t("Ascending") : t("Descending")}
-        className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-elevated/60 text-ink-muted ring-1 ring-edge-soft/60 transition-transform active:scale-[0.94] motion-reduce:transition-none"
+        className="no-press grid h-8 w-8 shrink-0 place-items-center rounded-full bg-elevated/60 text-ink-muted ring-1 ring-edge-soft/60 transition-transform active:scale-[0.94] motion-reduce:transition-none"
       >
         <DirIcon size={15} strokeWidth={2.4} />
       </button>
@@ -257,7 +257,7 @@ function GridTile({ meta, onOpenDetail }: { meta: Meta; onOpenDetail: (m: Meta) 
     <button
       type="button"
       onClick={() => onOpenDetail(meta)}
-      className="text-start transition-transform duration-150 active:scale-[0.96] motion-reduce:transition-none"
+      className="text-start"
     >
       <Poster src={src} onError={onError} seed={meta.id} ratio="portrait" lazy className="rounded-[12px]" />
       {meta.name && (

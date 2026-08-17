@@ -111,7 +111,7 @@ export function MobileProfile({ onOpenRemote }: { onOpenRemote: () => void }) {
         <button
           type="button"
           onClick={() => setSwitching(true)}
-          className="flex flex-col items-center gap-3.5 transition-transform active:scale-[0.98]"
+          className="flex flex-col items-center gap-3.5"
         >
           <span
             className="flex h-[92px] w-[92px] items-center justify-center overflow-hidden rounded-full text-[32px] font-semibold text-white ring-1 ring-white/15"
@@ -458,7 +458,7 @@ function EditSheet({
           <button
             type="button"
             onClick={() => onSave(value)}
-            className="flex-1 rounded-full bg-ink py-3 text-[14.5px] font-semibold text-canvas transition-transform active:scale-[0.98]"
+            className="flex-1 rounded-full bg-ink py-3 text-[14.5px] font-semibold text-canvas"
           >
             Save
           </button>

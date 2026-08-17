@@ -116,7 +116,7 @@ export function ObStremio() {
         <button
           type="submit"
           disabled={busy || !email || !password}
-          className="flex h-12 items-center justify-center gap-2 rounded-xl text-[15px] font-semibold text-white transition-transform active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100"
+          className="flex h-12 items-center justify-center gap-2 rounded-xl text-[15px] font-semibold text-white transition-transform disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100"
           style={{
             background: "linear-gradient(135deg, #6c5cff 0%, #8b5cff 100%)",
             boxShadow: "0 10px 30px -12px rgba(108, 92, 255, 0.55)",
