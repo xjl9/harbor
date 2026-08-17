@@ -210,7 +210,7 @@ export function MobileSettings({ onClose }: { onClose: () => void }) {
             kicker="Playback"
             folio="04"
             title="How video plays"
-            standfirst="The native player is the default and plays every format. Turn on the in-app player for Harbor's touch controls on direct and HLS streams; MKV, HEVC and AC3 still need the native player."
+            standfirst="The native player is the default and plays every format. Turn on the in-app player for Harbor's touch controls on direct and HLS streams. Anything the webview cannot decode, MKV most of all, switches back to the native player on its own."
           >
             <div className="overflow-hidden rounded-2xl border border-edge-soft bg-elevated/40">
               <ToggleRow

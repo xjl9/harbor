@@ -48,6 +48,23 @@ export function embedFlags(
   };
 }
 
+// What WKWebView's <video> can actually decode: the MP4 family and HLS. Handed an
+// MKV, or HEVC/AC3 inside one, it does not raise an error, it simply never fires
+// loadeddata, which is exactly what "the in-app player keeps loading" looks like
+// from the outside. Anything unrecognised counts as not playable, because the
+// fallback is the native surface, which plays everything.
+const IOS_WEBVIEW_PLAYABLE = /\.(mp4|m4v|mov|webm|m3u8)(\?|#|$)/i;
+
+export function iosWebviewCanPlay(url: string | undefined): boolean {
+  if (!url) return false;
+  try {
+    // Relative base so a bare path is still parsed rather than throwing.
+    return IOS_WEBVIEW_PLAYABLE.test(new URL(url.trim(), "http://harbor.local").pathname);
+  } catch {
+    return false;
+  }
+}
+
 export function formatNames(names: string[]): string {
   if (names.length === 0) return "";
   if (names.length === 1) return names[0];
@@ -72,6 +89,7 @@ export async function pickBridge(
     fullDownload?: boolean;
     getEmbedRect?: () => Promise<MpvRect | null> | MpvRect | null;
   },
+  srcUrl?: string,
 ): Promise<{ bridge: PlayerBridge; engine: "html5" | "mpv" | "native" }> {
   // Native mobile build: the native player (media3/ExoPlayer on Android,
   // AVPlayer on iOS) decodes MKV/HEVC the webview can't, so it stays the
@@ -81,7 +99,12 @@ export async function pickBridge(
   // desktop/web path and must still get the native surface here (Android
   // already ignores `want` entirely).
   if (isMobileNative()) {
-    if (osClass() === "ios" && engineSetting === "html5") {
+    // The hatch only opens for something the webview can decode. It used to open
+    // for anything, so choosing the in-app player and then playing an MKV handed
+    // the source to a <video> that could never open it and sat on a spinner with
+    // no error and no way out. The native surface plays every format, so falling
+    // back to it costs the chrome the setting asked for and nothing else.
+    if (osClass() === "ios" && engineSetting === "html5" && iosWebviewCanPlay(srcUrl)) {
       return { bridge: createHtml5Bridge(), engine: "html5" };
     }
     return { bridge: createNativeBridge(), engine: "native" };
