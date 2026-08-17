@@ -98,10 +98,13 @@ export function MobileProfile({ onOpenRemote }: { onOpenRemote: () => void }) {
       className="relative mx-auto flex min-h-full w-full max-w-[680px] flex-col gap-7 px-5 pb-8"
       style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 14px)" }}
     >
-      {/* Ambient identity wash: the profile's own color bleeds from the top, same cinematic depth as the home hero. */}
+      {/* Ambient identity wash: the profile's own color bleeds from the top, same cinematic depth as the home hero.
+          Sized to the viewport rather than to this column: the column is capped on
+          a tablet, and inset-x-0 pinned the gradient to that cap, which drew two
+          vertical seams down the top of the screen where the wash stopped. */}
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-72"
+        className="pointer-events-none absolute left-1/2 top-0 -z-10 h-72 w-screen -translate-x-1/2"
         style={{
           background: `radial-gradient(125% 72% at 50% -12%, color-mix(in oklab, ${color} 30%, transparent), transparent 72%)`,
         }}
