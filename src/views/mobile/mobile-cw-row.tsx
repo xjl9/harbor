@@ -276,8 +276,16 @@ function MobileCwCard({
       : "";
   const bg = downscaleTmdb(readSnapshot(item._id) ?? item.background ?? item.poster);
 
+  // Continue watching is the row a returning viewer reaches for first, and it was
+  // the only 16:9 rail left at phone width: featured, discover and the collections
+  // rail all widen on a tablet, so this one read as the small one on the page. The
+  // intrinsic-size hint scales with the card, standing in for its height until the
+  // row first renders.
   return (
-    <div ref={ref} className="w-[260px] shrink-0 [content-visibility:auto] [contain-intrinsic-size:auto_172px]">
+    <div
+      ref={ref}
+      className="w-[260px] [@media(min-width:700px)_and_(min-height:600px)]:w-[400px] shrink-0 [content-visibility:auto] [contain-intrinsic-size:auto_172px] [@media(min-width:700px)_and_(min-height:600px)]:[contain-intrinsic-size:auto_251px]"
+    >
       <div className="relative">
         {/* The artwork is the resume button: this row exists to get you back into
             something you already started, so it plays rather than routing through a
