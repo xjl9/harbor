@@ -122,7 +122,10 @@ function ShellBody() {
   // Switching here mounts it; the destination consumes the intent on mount.
   useEffect(() => {
     const onIntent = (e: Event) => {
-      if ((e as CustomEvent<string>).detail === "addons") selectTab("profile");
+      // Both destinations live under the profile tab, so both switch to it and
+      // let the tab consume the flag on mount.
+      const which = (e as CustomEvent<string>).detail;
+      if (which === "addons" || which === "settings") selectTab("profile");
     };
     window.addEventListener(MOBILE_INTENT_EVENT, onIntent);
     return () => window.removeEventListener(MOBILE_INTENT_EVENT, onIntent);

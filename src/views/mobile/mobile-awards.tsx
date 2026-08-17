@@ -10,6 +10,7 @@ import type { Meta } from "@/lib/cinemeta";
 import type { AwardType } from "@/lib/providers/wikidata";
 import { useSettings } from "@/lib/settings";
 import { MOBILE_SAFE_X } from "./chrome-metrics";
+import { requestMobileIntent } from "./mobile-intent";
 
 const MOBILE_AWARDS: AwardType[] = [
   "oscar",
@@ -207,6 +208,7 @@ export function MobileAwards({
             <Empty
               Icon={KeyRound}
               text="Add a TMDB key in Settings to unlock award winners."
+              action={{ label: "Open Settings", onClick: () => requestMobileIntent("settings") }}
             />
           ) : loading && films.length === 0 ? (
             mode === "grid" ? (
@@ -496,7 +498,18 @@ function ListSkeleton({ rows = 8 }: { rows?: number }) {
   );
 }
 
-function Empty({ Icon, text }: { Icon: typeof Trophy; text: string }) {
+// Same rule the collections empty state now follows: a state that names the fix
+// should also offer it, rather than leaving the reader to find Settings under
+// the profile tab on their own.
+function Empty({
+  Icon,
+  text,
+  action,
+}: {
+  Icon: typeof Trophy;
+  text: string;
+  action?: { label: string; onClick: () => void };
+}) {
   return (
     <div className="flex flex-col items-center gap-3 pt-24 text-center [@media(max-height:500px)]:pt-6">
       <span className="grid h-14 w-14 place-items-center rounded-2xl bg-surface text-ink-subtle ring-1 ring-edge-soft">
@@ -505,6 +518,15 @@ function Empty({ Icon, text }: { Icon: typeof Trophy; text: string }) {
       <p className="max-w-[260px] text-[14px] leading-relaxed text-ink-muted">
         {text}
       </p>
+      {action && (
+        <button
+          type="button"
+          onClick={action.onClick}
+          className="no-press mt-1 flex h-11 items-center rounded-full bg-ink px-6 text-[14px] font-semibold text-canvas transition-transform active:scale-95"
+        >
+          {action.label}
+        </button>
+      )}
     </div>
   );
 }

@@ -66,7 +66,7 @@ export function MobileProfile({ onOpenRemote }: { onOpenRemote: () => void }) {
   // request is made); the listener below covers every later visit, since the
   // shell keeps visited tabs mounted and the initializer would never run again.
   const [addonsOpen, setAddonsOpen] = useState(() => consumeMobileIntent("addons"));
-  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(() => consumeMobileIntent("settings"));
   const [downloadsOpen, setDownloadsOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
@@ -77,8 +77,9 @@ export function MobileProfile({ onOpenRemote }: { onOpenRemote: () => void }) {
 
   useEffect(() => {
     const onIntent = (e: Event) => {
-      if ((e as CustomEvent<string>).detail !== "addons") return;
-      if (consumeMobileIntent("addons")) setAddonsOpen(true);
+      const which = (e as CustomEvent<string>).detail;
+      if (which === "addons" && consumeMobileIntent("addons")) setAddonsOpen(true);
+      if (which === "settings" && consumeMobileIntent("settings")) setSettingsOpen(true);
     };
     window.addEventListener(MOBILE_INTENT_EVENT, onIntent);
     return () => window.removeEventListener(MOBILE_INTENT_EVENT, onIntent);

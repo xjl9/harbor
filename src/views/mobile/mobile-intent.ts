@@ -6,7 +6,7 @@
 
 export const MOBILE_INTENT_EVENT = "harbor:mobile-intent";
 
-type Intent = "addons";
+type Intent = "addons" | "settings";
 
 let pending: Intent | null = null;
 
