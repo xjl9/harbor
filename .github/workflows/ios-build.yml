@@ -17,6 +17,12 @@ jobs:
     name: iOS (aarch64, unsigned IPA)
     runs-on: macos-15
     timeout-minutes: 90
+    env:
+      # Single source for the MPVKit release: the download URL and the cache key
+      # both read it, so bumping the version cannot leave the cache pointing at
+      # the old archive. Moves in lockstep with the pins in the plugin's
+      # ios/Package.swift and src-tauri/ios-template/project.yml.
+      MPVKIT_VERSION: "1.0.0"
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -77,25 +83,42 @@ jobs:
       # scripts execute under check too, so the Swift compile happens there.
       # Version moves in lockstep with the pins in the plugin ios/Package.swift
       # and src-tauri/ios-template/project.yml.
-      - name: Fetch Libmpv xcframework (MPVKit 1.0.0)
+      # Cached on the pinned version: this is a large zip and it was refetched on
+      # every run. The version lives in one place now so the key cannot drift
+      # away from the URL when MPVKit is bumped.
+      - name: Cache Libmpv xcframework
+        uses: actions/cache@v4
+        with:
+          path: src-tauri/plugins/tauri-plugin-harbor-player/ios/.frameworks
+          key: harbor-libmpv-${{ env.MPVKIT_VERSION }}
+
+      - name: Fetch Libmpv xcframework
         run: |
           set -euo pipefail
           DIR=src-tauri/plugins/tauri-plugin-harbor-player/ios/.frameworks
           mkdir -p "$DIR"
-          curl -fsSL --retry 3 -o /tmp/Libmpv.xcframework.zip \
-            https://github.com/mpvkit/MPVKit/releases/download/1.0.0/Libmpv.xcframework.zip
-          curl -fsSL --retry 3 -o /tmp/Libmpv.xcframework.checksum.txt \
-            https://github.com/mpvkit/MPVKit/releases/download/1.0.0/Libmpv.xcframework.checksum.txt
-          EXPECTED=$(tr -d '[:space:]' < /tmp/Libmpv.xcframework.checksum.txt)
-          ACTUAL=$(shasum -a 256 /tmp/Libmpv.xcframework.zip | awk '{print $1}')
-          echo "expected: $EXPECTED"
-          echo "actual:   $ACTUAL"
-          test "$EXPECTED" = "$ACTUAL"
-          unzip -q /tmp/Libmpv.xcframework.zip -d "$DIR"
+          # Skipped on a cache hit. A partial or corrupt entry has no
+          # .xcframework directory, so it falls through and refetches rather
+          # than building against half an archive.
+          if [ ! -d "$DIR/Libmpv.xcframework" ]; then
+            BASE=https://github.com/mpvkit/MPVKit/releases/download/${MPVKIT_VERSION}
+            curl -fsSL --retry 3 -o /tmp/Libmpv.xcframework.zip "$BASE/Libmpv.xcframework.zip"
+            curl -fsSL --retry 3 -o /tmp/Libmpv.xcframework.checksum.txt "$BASE/Libmpv.xcframework.checksum.txt"
+            EXPECTED=$(tr -d '[:space:]' < /tmp/Libmpv.xcframework.checksum.txt)
+            ACTUAL=$(shasum -a 256 /tmp/Libmpv.xcframework.zip | awk '{print $1}')
+            echo "expected: $EXPECTED"
+            echo "actual:   $ACTUAL"
+            test "$EXPECTED" = "$ACTUAL"
+            unzip -q /tmp/Libmpv.xcframework.zip -d "$DIR"
+          else
+            echo "Libmpv.xcframework restored from cache"
+          fi
           # The Package.swift -F path goes through this symlink so device and
           # simulator builds can each select their slice (sim: point it at
-          # ios-arm64_x86_64-simulator instead).
+          # ios-arm64_x86_64-simulator instead). Remade every run so a cache hit
+          # still lands a correct link.
           ln -sfn Libmpv.xcframework/ios-arm64 "$DIR/active"
+          # Guards the cache as well as the download.
           test -d "$DIR/Libmpv.xcframework/ios-arm64/Libmpv.framework"
 
       # Fast-fail diagnostic: surfaces Rust compile errors for the iOS target
