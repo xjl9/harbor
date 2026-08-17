@@ -17,6 +17,7 @@ import {
   useLocalCwLibraryItems,
 } from "@/lib/continue-watching";
 import { useCwDismissVersion } from "@/lib/cw-dismiss";
+import { useMobileRemote } from "./mobile-remote";
 import { manualWatchedVersion, subscribeManualWatched } from "@/lib/manual-watched";
 import { readSnapshot, useSnapshotVersion } from "@/lib/snapshots";
 import { useSettings } from "@/lib/settings";
@@ -266,6 +267,7 @@ function MobileCwCard({
   // offset, so a remaining-time label would be wrong for them.
   const remaining = dur > 0 && !external && !item.upNext ? formatRemaining(dur - off) : "";
   const ep = episodeInfo(item);
+  const { playOnHost } = useMobileRemote();
   const sub =
     item.type !== "movie" && ep
       ? isAnimeCwItem(item)
@@ -277,9 +279,12 @@ function MobileCwCard({
   return (
     <div ref={ref} className="w-[260px] shrink-0 [content-visibility:auto] [contain-intrinsic-size:auto_172px]">
       <div className="relative">
+        {/* The artwork is the resume button: this row exists to get you back into
+            something you already started, so it plays rather than routing through a
+            page you have already read. The title underneath still opens it. */}
         <button
           type="button"
-          onClick={() => onOpenDetail(meta)}
+          onClick={() => playOnHost(meta, ep ? { season: ep.season, episode: ep.episode } : undefined)}
           {...{ [FLIP_ORIGIN_ATTR]: "" }}
           className="relative block aspect-[16/9] w-full overflow-hidden rounded-[16px] bg-surface text-start ring-1 ring-edge-soft/50"
         >

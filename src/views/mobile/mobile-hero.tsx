@@ -167,7 +167,7 @@ export function MobileHero({ slides, onOpenDetail }: { slides: Meta[]; onOpenDet
           type="button"
           aria-label={`Open ${current.name}`}
           onClick={open}
-          className="absolute inset-0 z-0 block h-full w-full text-start"
+          className="no-press absolute inset-0 z-0 block h-full w-full text-start"
         >
           {src0 && (
             <img
