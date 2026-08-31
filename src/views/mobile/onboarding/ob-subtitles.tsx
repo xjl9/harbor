@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Flag } from "@/components/flag";
 import { useT } from "@/lib/i18n";
 import { useSettings } from "@/lib/settings";
+import { normalizeLang } from "@/lib/subtitles/language";
 import { SubLangsSheet } from "./sub-langs-sheet";
 
 // Header copy mirrors src/components/onboarding/subtitles-step.tsx; the desktop
@@ -47,7 +48,12 @@ export function ObSubtitles() {
                 onClick={() => toggle(lang)}
                 className="inline-flex min-h-11 items-center gap-2 rounded-full border border-accent/40 bg-accent/15 px-3.5 text-[12.5px] font-semibold text-accent transition-colors active:bg-accent/25"
               >
-                <Flag language={lang} size="sm" showLabel={false} />
+                <Flag
+                  language={lang}
+                  code={normalizeLang(lang)}
+                  size="sm"
+                  showLabel={false}
+                />
                 <span>{lang}</span>
                 <X size={11} strokeWidth={2.4} className="opacity-70" />
               </button>

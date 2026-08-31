@@ -204,10 +204,17 @@ function CollectionMembersSheet({
 
   return (
     <div
-      className="fixed inset-0 z-[60] overflow-y-auto overscroll-contain bg-canvas pb-14 pt-4"
+      className="fixed inset-0 z-[60] overflow-y-auto overscroll-contain bg-canvas"
       style={{
         paddingLeft: "max(1rem, env(safe-area-inset-left, 0px))",
         paddingRight: "max(1rem, env(safe-area-inset-right, 0px))",
+        // Portaled to the body, so this page inherits none of the shell's insets
+        // and covers the tab bar rather than sitting under it. Both paddings were
+        // flat, ignoring the insets on a notched device: the back button rode up
+        // into the status bar, and the last poster row crowded the home indicator.
+        // Matches the awards page, the other full-screen grid portaled this way.
+        paddingTop: "calc(env(safe-area-inset-top, 0px) + 1rem)",
+        paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 40px)",
       }}
     >
       <button

@@ -792,6 +792,18 @@ function CollectionsBrowser({
   );
 }
 
+// Search is the only tile surface in the mobile shell without content-visibility
+// culling; every rail already has it. A long result set otherwise pays full
+// layout and paint for rows several screens away, which is the scroll roughness
+// the tester reported.
+//
+// The intrinsic sizes are the real tile heights so skipped rows reserve the right
+// box and the scrollbar does not jump. Phone: 3 columns gives a ~111pt tile and a
+// 2:3 poster is 167pt, plus a two line label. Tablet hits the 5 column breakpoint
+// at ~146pt wide, so the poster grows to 219pt.
+const TILE_CULL =
+  "[content-visibility:auto] [contain-intrinsic-size:auto_200px] [@media(min-width:700px)_and_(min-height:600px)]:[contain-intrinsic-size:auto_252px]";
+
 function Grid({ metas, onOpenDetail }: { metas: Meta[]; onOpenDetail: (m: Meta) => void }) {
   return (
     <div className="grid grid-cols-3 [@media(max-height:500px)]:grid-cols-6 [@media(min-width:700px)_and_(min-height:600px)]:grid-cols-5 [@media(min-width:1000px)_and_(min-height:600px)]:grid-cols-6 gap-x-3 gap-y-4">
@@ -814,7 +826,7 @@ function GridTile({ meta, onOpenDetail }: { meta: Meta; onOpenDetail: (m: Meta) 
     <button
       type="button"
       onClick={() => onOpenDetail(meta)}
-      className="text-start"
+      className={`text-start ${TILE_CULL}`}
     >
       <Poster src={src} onError={onError} seed={meta.id} ratio="portrait" lazy className="rounded-[12px] ring-1 ring-white/[0.06]" />
       <p className="mt-1.5 line-clamp-2 min-h-[2.7em] text-[12px] font-medium leading-snug text-ink-muted">{meta.name}</p>
@@ -827,7 +839,7 @@ function CollectionTile({ meta, onOpen }: { meta: Meta; onOpen: (m: Meta) => voi
     <button
       type="button"
       onClick={() => onOpen(meta)}
-      className="text-start"
+      className={`text-start ${TILE_CULL}`}
     >
       <div className="relative overflow-hidden rounded-[12px] ring-1 ring-edge-soft">
         <Poster src={meta.poster} seed={meta.id} ratio="portrait" lazy />

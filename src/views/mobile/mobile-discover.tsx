@@ -134,7 +134,15 @@ export function MobileDiscover() {
   }
 
   return (
-    <div className="flex flex-col gap-7 [@media(max-height:500px)]:gap-4 pt-3 motion-safe:[animation:harbor-step-in_420ms_var(--ease-out)_both]">
+    // Every other browse view opens with a full bleed hero that is MEANT to run
+    // under the floating top bar. Discover opens with a section heading instead,
+    // so pt-3 left "Recommended" sitting under the cast pill with its first
+    // letters covered. Clear the bar: its own offset is the top inset plus 10px,
+    // the pill is about 36px tall, then a gap.
+    <div
+      className="flex flex-col gap-7 [@media(max-height:500px)]:gap-4 motion-safe:[animation:harbor-step-in_420ms_var(--ease-out)_both]"
+      style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 58px)" }}
+    >
       <MobileFeatured items={shownFeatured} onOpen={setDetailMeta} />
       {shownRows.map((r, i) =>
         i === 0 && r.id.split(":")[0] === ANCHOR_TRENDING && r.metas.length >= 6 ? (
@@ -151,7 +159,11 @@ export function MobileDiscover() {
 
 function DiscoverSkeleton() {
   return (
-    <div className="harbor-skeleton flex flex-col gap-7 [@media(max-height:500px)]:gap-4 pt-3" aria-hidden>
+    <div
+      className="harbor-skeleton flex flex-col gap-7 [@media(max-height:500px)]:gap-4"
+      style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 58px)" }}
+      aria-hidden
+    >
       <section className="flex flex-col gap-4">
         <div className="px-4">
           <div className="h-6 w-56 rounded-md bg-elevated/50" />

@@ -816,6 +816,20 @@ const misc: Record<string, string> = {
   "Pick a home layout": "اختر تخطيط الصفحة الرئيسية",
   "You can switch later in Settings under Library & metadata.":
     "يمكنك التبديل لاحقًا من الإعدادات ضمن المكتبة والبيانات الوصفية.",
+  "Hero carousel, Top 10, curated rails.": "عرض رئيسي دوّار، وأفضل 10، وصفوف مختارة.",
+  "Your addons as rows, install order.": "إضافاتك في صفوف، حسب ترتيب التثبيت.",
+
+  "Add languages": "أضف لغات",
+  "No language matches that search.": "لا توجد لغة تطابق هذا البحث.",
+
+  "Give Harbor something to play": "وفّر لـ Harbor مصدرًا للتشغيل",
+  "Addons are where catalogs and streams come from, and Harbor starts with none. Add one now so the first title you open has something to play.":
+    "الإضافات هي مصدر الكتالوجات وعمليات البث، ويبدأ Harbor من دون أي منها. أضف واحدة الآن حتى يتوفر شيء لتشغيله عند فتح أول عنوان.",
+  "Could not install that addon.": "تعذّر تثبيت هذه الإضافة.",
+  "Add or remove sources anytime from Profile, under Addons.":
+    "يمكنك إضافة المصادر أو إزالتها في أي وقت من الملف الشخصي، ضمن الإضافات.",
+  "Not sure which? Torrentio and Cinemeta cover most people. You can change this later in Profile, under Addons.":
+    "لست متأكدًا؟ يغطي Torrentio وCinemeta احتياجات معظم المستخدمين. يمكنك تغيير ذلك لاحقًا من الملف الشخصي، ضمن الإضافات.",
 
   "Step 1 · Metadata": "الخطوة 1 · البيانات الوصفية",
   "Free, two-minute signup. Unlocks Trending, In Theaters Now, Top Rated, and per-streaming catalogs (Netflix, Disney+, Hulu, …). Your key stays on this machine.":
@@ -847,6 +861,16 @@ const misc: Record<string, string> = {
     "يجلب Harbor أكثر العناوين شهرة لدى كل خدمة الآن. عطّل أي خدمة لست مشتركًا بها.",
   "These rails activate once a TMDB key is set. You can come back to this anytime in Settings.":
     "تُفعَّل هذه الصفوف بمجرد تعيين مفتاح TMDB. يمكنك العودة إلى هذا في أي وقت من الإعدادات.",
+
+  "Step 4 · Debrid": "الخطوة 4 · Debrid",
+  "Get faster, more reliable streams": "احصل على بث أسرع وأكثر موثوقية",
+  "Connect a debrid provider to see cached streams that can start immediately. This is optional, requires a separate paid provider account, and can be configured later in Settings.":
+    "اربط مزوّد debrid لعرض عمليات البث المخزّنة مؤقتًا التي يمكن تشغيلها فورًا. هذا اختياري، ويتطلب حسابًا مدفوعًا منفصلًا لدى المزوّد، ويمكن إعداده لاحقًا من الإعدادات.",
+  "Choose your provider": "اختر مزوّد الخدمة",
+  "No debrid? Skip this. Harbor still finds free public streams, they can just be slower.":
+    "ليس لديك debrid؟ تخطَّ هذه الخطوة. سيظل Harbor يعثر على عمليات بث عامة مجانية، لكنها قد تكون أبطأ.",
+
+  "Step 5 · Subtitles": "الخطوة 5 · الترجمات",
 
   "Step 4 · Subtitles": "الخطوة 4 · الترجمات",
   "Pick your subtitle languages": "اختر لغات الترجمة",
@@ -921,6 +945,9 @@ const misc: Record<string, string> = {
   "Remove tag": "إزالة الوسم",
   "Tag limit reached": "تم بلوغ حدّ الوسوم",
   "Add a tag": "أضِف وسمًا",
+  "Episode title hidden": "عنوان الحلقة مخفي",
+  "Episode image hidden": "صورة الحلقة مخفية",
+  "No episode image": "لا توجد صورة للحلقة",
 };
 
 export default misc;

@@ -47,6 +47,7 @@ type EditField = {
   label: string;
   placeholder: string;
   hint?: string;
+  logo?: string;
 };
 
 export function MobileProfile({ onOpenRemote }: { onOpenRemote: () => void }) {
@@ -100,8 +101,8 @@ export function MobileProfile({ onOpenRemote }: { onOpenRemote: () => void }) {
 
   return (
     <div
-      className="relative mx-auto flex min-h-full w-full max-w-[680px] flex-col gap-7 px-5 pb-8"
-      style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 14px)" }}
+      className="relative mx-auto flex min-h-full w-full max-w-[680px] flex-col gap-9 px-5 pb-12"
+      style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 24px)" }}
     >
       {/* Ambient identity wash: the profile's own color bleeds from the top, same cinematic depth as the home hero.
           Sized to the viewport rather than to this column: the column is capped on
@@ -115,14 +116,14 @@ export function MobileProfile({ onOpenRemote }: { onOpenRemote: () => void }) {
         }}
       />
 
-      <header className="flex flex-col items-center gap-4">
+      <header className="flex flex-col items-center gap-5">
         <button
           type="button"
           onClick={() => setSwitching(true)}
-          className="flex flex-col items-center gap-3.5"
+          className="flex flex-col items-center gap-4"
         >
           <span
-            className="flex h-[92px] w-[92px] items-center justify-center overflow-hidden rounded-full text-[32px] font-semibold text-white ring-1 ring-white/15"
+            className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-full text-[34px] font-semibold text-white ring-1 ring-white/15"
             style={{
               background: avatar ? undefined : color,
               boxShadow: `0 18px 48px -14px color-mix(in oklab, ${color} 62%, transparent)`,
@@ -134,21 +135,21 @@ export function MobileProfile({ onOpenRemote }: { onOpenRemote: () => void }) {
               name.slice(0, 1).toUpperCase()
             )}
           </span>
-          <h1 className="font-display text-[27px] font-medium leading-none tracking-[-0.01em] text-ink">
+          <h1 className="font-display text-[29px] font-medium leading-none tracking-[-0.01em] text-ink">
             {name}
           </h1>
         </button>
         <button
           type="button"
           onClick={() => setSwitching(true)}
-          className="flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.05] px-3.5 py-1.5 text-[12.5px] font-semibold text-ink-muted backdrop-blur-sm transition-colors active:bg-white/[0.1]"
+          className="flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.05] px-4 py-2 text-[12.5px] font-semibold text-ink-muted backdrop-blur-sm transition-colors active:bg-white/[0.1]"
         >
           <Users size={13} strokeWidth={2.4} />
           Switch profile
         </button>
       </header>
 
-      <section className="flex flex-col gap-3">
+      <section className="flex flex-col gap-4">
         <h2 className="px-1 text-[12px] font-bold uppercase tracking-[0.16em] text-ink-subtle">
           Remote style
         </h2>
@@ -158,12 +159,12 @@ export function MobileProfile({ onOpenRemote }: { onOpenRemote: () => void }) {
         </div>
       </section>
 
-      <section className="flex flex-col gap-3">
-        <div className="flex flex-col gap-1.5">
+      <section className="flex flex-col gap-4">
+        <div className="flex flex-col gap-2">
           <h2 className="px-1 text-[12px] font-bold uppercase tracking-[0.16em] text-ink-subtle">
             Streaming setup
           </h2>
-          <p className="px-1 text-[12.5px] leading-snug text-ink-subtle">
+          <p className="px-1 text-[12.5px] leading-relaxed text-ink-subtle">
             A TMDB key unlocks the full catalog. RPDB bakes ratings into every poster.
           </p>
         </div>
@@ -199,6 +200,7 @@ export function MobileProfile({ onOpenRemote }: { onOpenRemote: () => void }) {
               setEditing({
                 key: "tmdbKey",
                 label: "TMDB API key",
+                logo: tmdbLogo,
                 placeholder: "Paste key",
                 hint: "Free at themoviedb.org. Powers rich detail pages and episode grids.",
               })
@@ -215,6 +217,7 @@ export function MobileProfile({ onOpenRemote }: { onOpenRemote: () => void }) {
               setEditing({
                 key: "tvdbKey",
                 label: "TVDB API key",
+                logo: tvdbLogo,
                 placeholder: "Paste key",
                 hint: "Optional. Episode orders work without one via Harbor's proxy.",
               })
@@ -231,6 +234,7 @@ export function MobileProfile({ onOpenRemote }: { onOpenRemote: () => void }) {
               setEditing({
                 key: "rpdbKey",
                 label: "RPDB API key",
+                logo: rpdbLogo,
                 placeholder: "Paste key",
                 hint: "Rated posters on every rail. Paid plan at ratingposterdb.com.",
               })
@@ -248,12 +252,12 @@ export function MobileProfile({ onOpenRemote }: { onOpenRemote: () => void }) {
         </div>
       </section>
 
-      <section className="flex flex-col gap-3">
-        <div className="flex flex-col gap-1.5">
+      <section className="flex flex-col gap-4">
+        <div className="flex flex-col gap-2">
           <h2 className="px-1 text-[12px] font-bold uppercase tracking-[0.16em] text-ink-subtle">
             Debrid
           </h2>
-          <p className="px-1 text-[12.5px] leading-snug text-ink-subtle">
+          <p className="px-1 text-[12.5px] leading-relaxed text-ink-subtle">
             Connect a debrid service and cached streams play direct. Keys stay on this device.
           </p>
         </div>
@@ -415,18 +419,30 @@ function EditSheet({
           the keyboard inset, so the title and the Save row survive a focused field
           on a 667px screen and the hint scrolls instead. */}
       <div
-        className="relative z-10 flex w-full max-w-md min-h-0 flex-col rounded-t-3xl border border-edge-soft/70 bg-elevated shadow-[0_-12px_40px_-12px_rgba(0,0,0,0.7)]"
+        className="relative z-10 flex min-h-0 w-full max-w-md flex-col rounded-t-[30px] border border-edge-soft/70 bg-elevated shadow-[0_-12px_40px_-12px_rgba(0,0,0,0.7)]"
         style={{
-          maxHeight: "calc(100% - env(safe-area-inset-top, 0px) - 12px)",
-          paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 20px)",
+          maxHeight: "calc(100% - env(safe-area-inset-top, 0px) - 16px)",
+          paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 24px)",
         }}
       >
-        <h3 className="shrink-0 px-5 pt-5 text-[16px] font-semibold text-ink">{field.label}</h3>
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pb-1">
+        <h3 className="shrink-0 px-6 pt-6 text-[18px] font-semibold text-ink">
+          {field.label}
+        </h3>
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-6 pb-1">
           {field.hint && (
-            <p className="mt-1 text-[13px] leading-snug text-ink-muted">{field.hint}</p>
+            <p className="mt-2 text-[13px] leading-relaxed text-ink-muted">{field.hint}</p>
           )}
-          <div className="relative mt-4">
+          <div className="mt-5 flex min-h-[58px] items-center rounded-2xl border border-edge-soft/70 bg-canvas/70 p-1.5 transition-colors focus-within:border-accent">
+            {field.logo && (
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-raised/70 ring-1 ring-white/[0.06]">
+                <img
+                  src={field.logo}
+                  alt=""
+                  draggable={false}
+                  className="max-h-8 max-w-8 object-contain"
+                />
+              </span>
+            )}
             <input
               autoFocus
               type={secret && !reveal ? "password" : "text"}
@@ -438,7 +454,7 @@ function EditSheet({
               autoComplete="off"
               spellCheck={false}
               inputMode={field.key === "remoteHostAddress" ? "decimal" : "text"}
-              className={`w-full rounded-xl border border-edge-soft/70 bg-canvas/70 py-3 ps-4 text-[16px] text-ink placeholder:text-ink-subtle focus:border-accent focus:outline-none ${secret ? "pe-12" : "pe-4"}`}
+              className="min-w-0 flex-1 bg-transparent px-3 py-3 text-[16px] text-ink placeholder:text-ink-subtle focus:outline-none"
               onKeyDown={(e) => {
                 if (e.key === "Enter") onSave(value);
               }}
@@ -448,14 +464,14 @@ function EditSheet({
                 type="button"
                 aria-label={reveal ? "Hide" : "Reveal"}
                 onClick={() => setReveal((r) => !r)}
-                className="absolute end-0.5 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-lg text-ink-subtle transition-colors active:text-ink"
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-ink-subtle transition-colors active:bg-raised/60 active:text-ink"
               >
                 {reveal ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
             )}
           </div>
         </div>
-        <div className="flex shrink-0 gap-3 px-5 pt-4">
+        <div className="flex shrink-0 gap-3 px-6 pt-5">
           <button
             type="button"
             onClick={onClose}
@@ -547,7 +563,7 @@ function Row({
     <button
       type="button"
       onClick={onClick}
-      className="flex w-full items-center gap-3.5 px-4 py-3.5 text-start transition-colors active:bg-raised/60"
+      className="flex w-full items-center gap-4 px-4 py-4 text-start transition-colors active:bg-raised/60"
     >
       <span className={`shrink-0 ${danger ? "text-danger" : "text-ink-muted"}`}>{icon}</span>
       {/* The label holds its width and the value absorbs the squeeze, matching

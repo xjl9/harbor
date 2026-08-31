@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { Flag } from "@/components/flag";
 import { useT } from "@/lib/i18n";
-import { ALL_LANGUAGE_NAMES } from "@/lib/subtitles/language";
+import { ALL_LANGUAGE_NAMES, normalizeLang } from "@/lib/subtitles/language";
 import { useRegisterSheet } from "../mobile-sheet-lock";
 import { useKeyboardInset } from "../use-keyboard-inset";
 import { FOCUS, tapHaptic } from "./ob-shared";
@@ -136,7 +136,12 @@ export function SubLangsSheet({
                 style={{ minHeight: 52 }}
               >
                 <span className="flex justify-center">
-                  <Flag language={lang} size="md" showLabel={false} />
+                  <Flag
+                    language={lang}
+                    code={normalizeLang(lang)}
+                    size="md"
+                    showLabel={false}
+                  />
                 </span>
                 <span
                   className={`truncate text-[15px] ${

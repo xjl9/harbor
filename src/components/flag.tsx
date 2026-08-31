@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react";
 import flagBra from "@/assets/flags/flag-bra.svg";
 import flagCes from "@/assets/flags/flag-ces.svg";
 import flagDan from "@/assets/flags/flag-dan.svg";
@@ -14,6 +15,7 @@ import flagKor from "@/assets/flags/flag-kor.svg";
 import flagNld from "@/assets/flags/flag-nld.svg";
 import flagNor from "@/assets/flags/flag-nor.svg";
 import flagPol from "@/assets/flags/flag-pol.svg";
+import flagPor from "@/assets/flags/flag-por.svg";
 import flagRon from "@/assets/flags/flag-ron.svg";
 import flagRus from "@/assets/flags/flag-rus.svg";
 import flagSpa from "@/assets/flags/flag-spa.svg";
@@ -25,6 +27,7 @@ import flagVie from "@/assets/flags/flag-vie.svg";
 import flagZho from "@/assets/flags/flag-zho.svg";
 import { bridgeFlagSrc } from "@/lib/flag-map";
 import { regionFlagSrc } from "@/lib/region-flags";
+import { normalizeLang } from "@/lib/subtitles/language";
 
 const FLAG: Record<string, string> = {
   English: flagEng,
@@ -53,6 +56,34 @@ const FLAG: Record<string, string> = {
   Thai: flagTha,
   Ukrainian: flagUkr,
   Vietnamese: flagVie,
+};
+const FLAG_BY_CODE: Record<string, string> = {
+  en: flagEng,
+  it: flagIta,
+  ru: flagRus,
+  hi: flagHin,
+  es: flagSpa,
+  ko: flagKor,
+  ja: flagJpn,
+  zh: flagZho,
+  pt: flagPor,
+  "pt-br": flagBra,
+  de: flagDeu,
+  fr: flagFra,
+  tr: flagTur,
+  cs: flagCes,
+  da: flagDan,
+  fi: flagFin,
+  he: flagHeb,
+  hu: flagHun,
+  nl: flagNld,
+  no: flagNor,
+  pl: flagPol,
+  ro: flagRon,
+  sv: flagSwe,
+  th: flagTha,
+  uk: flagUkr,
+  vi: flagVie,
 };
 
 export function countryFlagSrc(code: string): string | null {
@@ -101,13 +132,75 @@ function MonogramChip({ language, size }: { language: string; size: FlagSize }) 
     </span>
   );
 }
+function FlagImage({
+  language,
+  src,
+  size,
+  splitPortuguese,
+}: {
+  language: string;
+  src: string;
+  size: FlagSize;
+  splitPortuguese: boolean;
+}) {
+  const h = FLAG_HEIGHT[size];
+  const frame: CSSProperties = {
+    height: h,
+    width: h * 1.5,
+    display: "block",
+    borderRadius: 2,
+    objectFit: "cover",
+    boxShadow: FLAG_RING,
+  };
+  if (!splitPortuguese) {
+    return <img src={src} alt={language} style={frame} draggable={false} />;
+  }
+
+  return (
+    <span
+      role="img"
+      aria-label={language}
+      style={{ ...frame, position: "relative", overflow: "hidden" }}
+    >
+      <img
+        src={flagPor}
+        alt=""
+        aria-hidden
+        draggable={false}
+        style={{
+          position: "absolute",
+          inset: 0,
+          width: "100%",
+          height: "100%",
+          objectFit: "cover",
+        }}
+      />
+      <img
+        src={flagBra}
+        alt=""
+        aria-hidden
+        draggable={false}
+        style={{
+          position: "absolute",
+          inset: 0,
+          width: "100%",
+          height: "100%",
+          objectFit: "cover",
+          clipPath: "polygon(0 0, 100% 0, 100% 100%)",
+        }}
+      />
+    </span>
+  );
+}
 
 export function Flag({
   language,
+  code,
   size = "md",
   showLabel = true,
 }: {
   language: string;
+  code?: string;
   size?: FlagSize;
   showLabel?: boolean;
 }) {
@@ -122,9 +215,9 @@ export function Flag({
     );
   }
 
-  const h = FLAG_HEIGHT[size];
-
-  const src = FLAG[language] ?? bridgeFlagSrc(language);
+  const normalizedCode = normalizeLang(code ?? language);
+  const src =
+    FLAG_BY_CODE[normalizedCode] ?? FLAG[language] ?? bridgeFlagSrc(normalizedCode || language);
 
   if (!src) {
     return (
@@ -144,19 +237,11 @@ export function Flag({
 
   return (
     <span className="inline-flex items-center gap-1.5">
-      <img
+      <FlagImage
+        language={language}
         src={src}
-        alt={language}
-        height={h}
-        style={{
-          height: h,
-          width: h * 1.5,
-          display: "block",
-          borderRadius: 2,
-          objectFit: "cover",
-          boxShadow: FLAG_RING,
-        }}
-        draggable={false}
+        size={size}
+        splitPortuguese={normalizedCode === "pt"}
       />
       {showLabel && (
         <span

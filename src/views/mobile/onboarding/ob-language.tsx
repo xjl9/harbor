@@ -96,7 +96,12 @@ export function ObLanguage() {
                 {selected && <span className="h-2.5 w-2.5 rounded-full bg-ink" />}
               </span>
               <span className="shrink-0">
-                <Flag language={lang.label} size="xl" showLabel={false} />
+                <Flag
+                  language={lang.label}
+                  code={lang.code}
+                  size="xl"
+                  showLabel={false}
+                />
               </span>
               <span className="flex min-w-0 flex-1 flex-col gap-0.5">
                 {/* dir is what makes the glyphs shape and order correctly, but it
