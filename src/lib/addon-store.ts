@@ -9,14 +9,32 @@ const DISABLED_KEY = "harbor.addons.disabled";
 
 const DEFAULT_ADDONS: Array<{ id: string; transportUrl: string }> = [];
 
+// Ties the "already seeded" mark to WHICH addons the build seeds. The mark used to
+// be the constant "1", so an install that carried it forward from an earlier build
+// skipped a different seed set entirely - upgrading in place left the app with the
+// old sources and no sign that anything had been withheld.
+function seedFingerprint(): string {
+  return DEFAULT_ADDONS.map((a) => normalizeTransportUrl(a.transportUrl))
+    .sort()
+    .join("|");
+}
+
+function normalizeTransportUrl(url: string): string {
+  return url.replace(/\/$/, "");
+}
+
 export async function seedDefaultAddonsIfFirstRun(): Promise<void> {
   try {
-    if (localStorage.getItem(SEEDED_KEY) === "1") return;
-    if (loadInstalled().length > 0) {
-      localStorage.setItem(SEEDED_KEY, "1");
-      return;
-    }
+    if (DEFAULT_ADDONS.length === 0) return;
+    const fingerprint = seedFingerprint();
+    if (localStorage.getItem(SEEDED_KEY) === fingerprint) return;
+
+    // Merge rather than bail. Returning early whenever ANY addon was installed meant
+    // a single manually added source suppressed every seeded one.
+    const have = new Set(loadInstalled().map((a) => normalizeTransportUrl(a.transportUrl)));
+    let failed = 0;
     for (const def of DEFAULT_ADDONS) {
+      if (have.has(normalizeTransportUrl(def.transportUrl))) continue;
       try {
         const manifest = await fetchManifestAt(def.transportUrl);
         const next = loadInstalled().filter((a) => a.transportUrl !== def.transportUrl);
@@ -28,10 +46,14 @@ export async function seedDefaultAddonsIfFirstRun(): Promise<void> {
         });
         saveInstalled(next);
       } catch (e) {
+        failed += 1;
         console.warn(`[addons] failed to seed ${def.id}`, e);
       }
     }
-    localStorage.setItem(SEEDED_KEY, "1");
+    // Only claim the set is seeded once nothing is outstanding. Marking it after a
+    // failed fetch left the app permanently sourceless, with no retry on any later
+    // launch and nothing on screen to say why.
+    if (failed === 0) localStorage.setItem(SEEDED_KEY, fingerprint);
   } catch (e) {
     console.warn("[addons] seed default failed", e);
   }
