@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { usePlaybackPosition } from "@/lib/player/playback-clock";
 import { SkipPill } from "@/components/player/skip-pill";
+import { MobileUpNextCard } from "@/components/player/mobile-up-next-card";
 import { activeSegment, type SkipSegment } from "@/lib/skip-intro";
 import { useSettings } from "@/lib/settings";
+import { isMobileNative } from "@/lib/platform";
 import type { SpoilerMask } from "@/lib/spoilers";
 import type { PlayEpisode } from "@/lib/view";
 
@@ -105,6 +107,33 @@ export function SkipPillContainer({
     buttonKey != null && (buttonKey === autoHiddenKey || dismissedKeys.has(buttonKey));
   const displaySkip = settings.showSkipButton && !skipHidden ? realActiveSkip : null;
   const activeSkip = displaySkip ?? syntheticOutro;
+  const mobileUpNextActive =
+    isMobileNative() &&
+    hasNextEpDisplay &&
+    nextEp != null &&
+    durationSec > 0 &&
+    leadSec > 0 &&
+    remainingSec <= leadSec &&
+    // A real skippable segment (ad/intro/outro) in the final window must keep its
+    // own button; do not let the up-next card hide a skip the user needs to tap.
+    !displaySkip;
+
+  if (mobileUpNextActive) {
+    return (
+      <MobileUpNextCard
+        nextEp={nextEp}
+        nextEpMask={nextEpMask}
+        remainingSec={remainingSec}
+        leadSec={leadSec}
+        // The card never advances on its own; useAutoNextEpisode owns the gated
+        // auto-advance. This flag only mirrors that path for the countdown ring.
+        autoAdvancing={settings.autoPlayNextEpisode && durationSec >= 150}
+        visible={visible}
+        onNextEpisode={onNextEpisode}
+        onCancelAutoNext={onCancelAutoNext}
+      />
+    );
+  }
 
   return (
     <SkipPill

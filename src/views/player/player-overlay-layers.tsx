@@ -12,7 +12,7 @@ import { XrayOverlay } from "@/components/player/xray/xray-overlay";
 import { P2pStatusChip } from "@/components/player/p2p-status-chip";
 import type { VolumeHudPosition, VolumeIndicatorState } from "@/components/player/volume-indicator";
 import type { ParentalCategory } from "@/lib/providers/harbor-imdb";
-import type { PlayerBridge, PlayerSnapshot } from "@/lib/player/bridge";
+import { capabilityFlags, type PlayerBridge, type PlayerSnapshot } from "@/lib/player/bridge";
 import { writePlayerPrefs } from "@/lib/player-prefs";
 import type { PlayerSrc, PlayEpisode } from "@/lib/view";
 import { CastLayer } from "./cast-layer";
@@ -204,6 +204,7 @@ export const PlayerOverlayLayers = memo(function PlayerOverlayLayers(p: PlayerOv
     window.addEventListener(MOBILE_OPEN_EPISODES_EVENT, onOpen);
     return () => window.removeEventListener(MOBILE_OPEN_EPISODES_EVENT, onOpen);
   }, [mobile, setEpisodePanelOpen]);
+  const flags = capabilityFlags(p.bridgeRef.current?.capabilities());
   return (
     <>
       <StageOverlays
@@ -248,6 +249,8 @@ export const PlayerOverlayLayers = memo(function PlayerOverlayLayers(p: PlayerOv
             rate={p.snap.rate}
             onHoldRate={(r) => p.bridgeRef.current?.setRate(r)}
             onFill={(fill) => p.onCropMode?.(fill ? "fill" : "fit")}
+            canVolume={flags.volume}
+            canRate={flags.rate}
           />
         )
       ) : (

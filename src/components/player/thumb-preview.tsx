@@ -81,7 +81,7 @@ export function ThumbPreview({
   if (!src && !loading) {
     return (
       <div
-        className="pointer-events-none absolute -top-9 flex -translate-x-1/2 items-center gap-1 rounded-md border border-white/10 bg-black/90 px-2 py-1 font-mono text-[12px] font-semibold tabular-nums text-white shadow-lg backdrop-blur-md"
+        className="pointer-events-none absolute -top-9 flex -translate-x-1/2 items-center gap-1 rounded-[10px] border border-white/[0.08] bg-[color-mix(in_srgb,var(--color-canvas)_72%,transparent)] px-2.5 py-1 font-mono text-[13px] font-semibold tabular-nums text-ink backdrop-blur-xl"
         style={{ left: `${pct}%` }}
       >
         {segLabel && (
@@ -100,7 +100,7 @@ export function ThumbPreview({
       style={{ left: `${pct}%`, bottom: "calc(100% + 8px)" }}
     >
       <div
-        className="relative overflow-hidden rounded-lg border border-white/10 bg-black/85 shadow-[0_18px_40px_-15px_rgba(0,0,0,0.7)] backdrop-blur-md"
+        className="relative overflow-hidden rounded-[10px] border border-white/[0.08] bg-[color-mix(in_srgb,var(--color-canvas)_72%,transparent)] backdrop-blur-xl"
         style={{ width: CARD_WIDTH, height: CARD_HEIGHT }}
       >
         {src ? (
@@ -127,7 +127,7 @@ export function ThumbPreview({
             {segLabel}
           </span>
         )}
-        <span className="inline-block rounded-md bg-black/85 px-1.5 py-0.5 font-mono text-[11px] text-white">
+        <span className="inline-block rounded-[10px] border border-white/[0.08] bg-[color-mix(in_srgb,var(--color-canvas)_72%,transparent)] px-2.5 py-1 font-mono text-[13px] font-semibold tabular-nums text-ink backdrop-blur-xl">
           {label}
         </span>
       </div>

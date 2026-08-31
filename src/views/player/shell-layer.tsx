@@ -6,6 +6,8 @@ import { writePlayerPrefs } from "@/lib/player-prefs";
 import type { SubChoiceInput } from "@/lib/subtitles/subtitle-memory";
 import { writePlayerVolume } from "@/lib/player-volume";
 import type { useVideoDownload } from "./hooks/use-video-download";
+import { showNativeRoutePicker } from "@/lib/player/android-native";
+import { osClass } from "@/lib/platform";
 
 export const ShellLayer = memo(function ShellLayer({
   shellId,
@@ -195,6 +197,12 @@ export const ShellLayer = memo(function ShellLayer({
       onPiP={onPiP}
       onFullscreen={onFullscreen}
       onCast={() => {
+        // iOS native: AirPlay goes through the system route picker, not the
+        // Chromecast menu.
+        if (engine === "native" && osClass() === "ios") {
+          showNativeRoutePicker();
+          return;
+        }
         const btn = (document.querySelector(
           '[aria-label="Cast"],[aria-label="AirPlay"]',
         ) as HTMLElement | null);

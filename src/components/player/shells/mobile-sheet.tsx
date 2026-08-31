@@ -1,3 +1,4 @@
+import { Check } from "lucide-react";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useT } from "@/lib/i18n";
 import { projectEndpoint, rubberBand, springBack } from "@/lib/player/gesture-physics";
@@ -7,7 +8,7 @@ import { haptics } from "@/lib/player/haptics";
 // grabber handle, and a direct-manipulation drag-to-dismiss. The WHOLE sheet body
 // is draggable (not just the grabber); a drag that begins on a scrolled list is
 // yielded to native scrolling. Release commits on velocity OR projected travel and
-// otherwise springs back — the same physics the gesture stage uses, so dismiss
+// otherwise springs back with the same physics the gesture stage uses, so dismiss
 // feels identical everywhere. Enter springs with a faint overshoot; exit is a
 // crisp 200ms ease-in. prefers-reduced-motion collapses both to a plain fade.
 
@@ -19,6 +20,16 @@ const EXIT_MS = 200;
 // one-sided inset would visibly shift the grabber: pad both edges by the larger
 // inset instead. Resolves to 0px on desktop and non-notched devices.
 const SAFE_X = "max(env(safe-area-inset-left, 0px), env(safe-area-inset-right, 0px))";
+
+// Sheet height cap lives on the panel as an inline max-height (through a var
+// that flips by orientation) so no caller's heightClass can override it.
+const SHEET_MAX_H = "var(--mobile-sheet-max)";
+const SHEET_MAX_CSS = `
+.harbor-mobile-sheet { --mobile-sheet-max: 60vh; }
+@media (orientation: landscape) {
+  .harbor-mobile-sheet { --mobile-sheet-max: min(60vh, 320px); }
+}
+`;
 
 function reducedMotion(): boolean {
   return (
@@ -228,7 +239,8 @@ export function MobileSheet({
   };
 
   return (
-    <div className="pointer-events-auto absolute inset-0 z-[70] flex flex-col justify-end">
+    <div className="harbor-mobile-sheet pointer-events-auto absolute inset-0 z-[70] flex flex-col justify-end">
+      <style>{SHEET_MAX_CSS}</style>
       <button
         type="button"
         aria-label={t("Close")}
@@ -244,26 +256,62 @@ export function MobileSheet({
         onPointerMove={onMove}
         onPointerUp={() => endDrag(true)}
         onPointerCancel={() => endDrag(false)}
-        className={`relative flex ${heightClass} touch-pan-y flex-col overflow-hidden rounded-t-[20px] border-t border-edge bg-elevated shadow-[0_-20px_60px_-12px_rgba(0,0,0,0.85)]`}
+        className={`relative flex ${heightClass} touch-pan-y flex-col overflow-hidden rounded-t-[28px] border-t border-edge-soft/60 bg-elevated shadow-[0_-20px_60px_-12px_rgba(0,0,0,0.85)]`}
         style={{
           transform: `translateY(${ty}px)`,
           opacity: panelOpacity,
           transition: panelTransition,
+          maxHeight: SHEET_MAX_H,
           paddingBottom: "env(safe-area-inset-bottom, 0px)",
           paddingLeft: SAFE_X,
           paddingRight: SAFE_X,
         }}
       >
-        <div className="flex shrink-0 items-center justify-center pt-2.5 pb-1">
+        <div className="flex shrink-0 items-center justify-center pt-3">
           <span aria-hidden className="h-1 w-10 rounded-full bg-ink/20" />
         </div>
-        {title && (
-          <div className="shrink-0 px-5 pb-2 text-[13px] font-semibold uppercase tracking-[0.14em] text-ink-subtle">
-            {title}
-          </div>
-        )}
+        {title && <div className="shrink-0 px-5 pt-4 pb-2 text-[16px] font-semibold text-ink">{title}</div>}
         <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain">{children}</div>
       </div>
     </div>
+  );
+}
+
+// Section label inside a sheet ("Subtitles", "Audio").
+export function MobileSheetEyebrow({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="px-5 pt-3 pb-1 text-[11.5px] font-semibold uppercase tracking-[0.14em] text-ink-subtle">
+      {children}
+    </div>
+  );
+}
+
+// One pickable row. Selection is carried by color and a check, never a fill,
+// so a long list stays calm.
+export function MobileSheetRow({
+  selected,
+  onClick,
+  children,
+  trailing,
+}: {
+  selected?: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+  trailing?: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      role={selected === undefined ? undefined : "radio"}
+      aria-checked={selected}
+      onClick={onClick}
+      className={`flex min-h-[52px] w-full items-center gap-3 rounded-2xl px-4 text-left text-[15px] active:bg-raised/60 ${
+        selected ? "text-accent" : "text-ink"
+      }`}
+    >
+      <span className="min-w-0 flex-1 truncate">{children}</span>
+      {trailing}
+      {selected && <Check size={19} strokeWidth={2.6} className="shrink-0 text-accent" />}
+    </button>
   );
 }

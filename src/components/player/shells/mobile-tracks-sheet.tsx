@@ -1,5 +1,6 @@
 import { useState } from "react";
-import type { TrackInfo } from "@/lib/player/bridge";
+import { capabilityFlags, type PlayerCapabilities, type TrackInfo } from "@/lib/player/bridge";
+import { nativeCapabilities } from "@/lib/player/native-host";
 import type { SubtitleAddHandler } from "@/lib/player/subtitle-load";
 import { useSettings } from "@/lib/settings";
 import { useT } from "@/lib/i18n";
@@ -7,6 +8,7 @@ import { haptics } from "@/lib/player/haptics";
 import { AudioMenuBody } from "../audio-menu";
 import { SubtitleMenuBody } from "../subtitle-menu";
 import { MobileSheet } from "./mobile-sheet";
+import { NativeTrackList } from "./mobile-tracks-native";
 
 type Tab = "subtitles" | "audio";
 
@@ -18,6 +20,7 @@ export function MobileTracksSheet({
   onClose,
   initialTab,
   engine,
+  capabilities,
   audioTracks,
   subtitleTracks,
   audioDelaySec,
@@ -39,6 +42,9 @@ export function MobileTracksSheet({
   onClose: () => void;
   initialTab: Tab;
   engine: "html5" | "mpv" | "native";
+  // Optional so the shell can omit it; the native engine then reads its live
+  // flags directly, the only case where they differ from the defaults.
+  capabilities?: PlayerCapabilities;
   audioTracks: TrackInfo[];
   subtitleTracks: TrackInfo[];
   audioDelaySec: number;
@@ -63,6 +69,10 @@ export function MobileTracksSheet({
   const activeTab: Tab = showAudioTab ? tab : "subtitles";
   const preferredLanguages =
     settings.preferredSubLangs.length > 0 ? settings.preferredSubLangs : settings.preferredLanguages;
+  const flags = capabilityFlags(capabilities ?? (engine === "native" ? nativeCapabilities() : undefined));
+  // Search, sync and the style bar all live in the desktop body; when the
+  // engine can honor none of them, the plain native picker replaces it.
+  const nativeBody = !flags.addSubtitle && !flags.subSync && !flags.subStyle;
 
   return (
     <MobileSheet open={open} onClose={onClose} heightClass="h-[68vh]">
@@ -76,24 +86,48 @@ export function MobileTracksSheet({
       )}
       <div className="flex h-full min-h-0 flex-col">
         {activeTab === "subtitles" ? (
-          <SubtitleMenuBody
-            tracks={subtitleTracks}
-            selectedId={subtitleTracks.find((x) => x.selected)?.id ?? null}
-            delaySec={subDelaySec}
+          nativeBody ? (
+            <NativeTrackList
+              kind="subtitle"
+              tracks={subtitleTracks}
+              selectedId={subtitleTracks.find((x) => x.selected)?.id ?? null}
+              onSelect={onSubtitle}
+              delaySec={flags.subDelay ? subDelaySec : undefined}
+              onDelay={flags.subDelay ? onSubDelay : undefined}
+              onClose={onClose}
+            />
+          ) : (
+            <SubtitleMenuBody
+              tracks={subtitleTracks}
+              selectedId={subtitleTracks.find((x) => x.selected)?.id ?? null}
+              delaySec={subDelaySec}
+              onSelect={(id) => {
+                haptics.select();
+                onSubtitle(id);
+              }}
+              onDelay={onSubDelay}
+              onEnterSync={flags.subSync ? onEnterSync : undefined}
+              onAddSubtitle={onAddSubtitle}
+              metaImdbId={metaImdbId}
+              metaTitle={metaTitle}
+              metaReleaseDate={metaReleaseDate}
+              season={season}
+              episode={episode}
+              preferredLanguages={preferredLanguages}
+              onOpenStyleBar={flags.subStyle ? onOpenSubStyle : undefined}
+              onClose={onClose}
+            />
+          )
+        ) : nativeBody ? (
+          <NativeTrackList
+            kind="audio"
+            tracks={audioTracks}
+            selectedId={audioTracks.find((x) => x.selected)?.id ?? null}
             onSelect={(id) => {
-              haptics.select();
-              onSubtitle(id);
+              if (id != null) onAudio(id);
             }}
-            onDelay={onSubDelay}
-            onEnterSync={onEnterSync}
-            onAddSubtitle={onAddSubtitle}
-            metaImdbId={metaImdbId}
-            metaTitle={metaTitle}
-            metaReleaseDate={metaReleaseDate}
-            season={season}
-            episode={episode}
-            preferredLanguages={preferredLanguages}
-            onOpenStyleBar={onOpenSubStyle}
+            delaySec={flags.audioDelay ? audioDelaySec : undefined}
+            onDelay={flags.audioDelay ? onAudioDelay : undefined}
             onClose={onClose}
           />
         ) : (

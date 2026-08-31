@@ -89,6 +89,23 @@ html[data-mpv-embed="1"] #root {
   background: transparent;
 }
 
+/* iOS native playback: the video view sits behind the web view, so everything
+   between <html> and the player stage must let it through. The shell's own
+   scrims still paint; only the solid stage/backdrop fills are cleared. */
+html.native-video-behind,
+html.native-video-behind body,
+html.native-video-behind #root,
+html.native-video-behind body > :has(> [data-harbor-player]),
+html.native-video-behind [data-harbor-player] {
+  background: transparent !important;
+}
+
+/* The mobile app portals the player next to #root; the app tree underneath
+   would otherwise paint over the video. */
+html.native-video-behind #root:not(:has([data-harbor-player])) {
+  visibility: hidden;
+}
+
 html[data-os="linux"]:not([data-mpv-embed="1"]),
 html[data-os="linux"]:not([data-mpv-embed="1"]) body,
 html[data-os="linux"]:not([data-mpv-embed="1"]) #root {
