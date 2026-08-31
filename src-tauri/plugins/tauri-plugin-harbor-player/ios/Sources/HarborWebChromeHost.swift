@@ -16,12 +16,23 @@ final class HarborWebChromeHost {
   func embed(_ vc: UIViewController, in root: UIViewController) {
     guard vc.parent == nil else { return }
     root.addChild(vc)
-    vc.view.frame = root.view.bounds
-    vc.view.autoresizingMask = [.flexibleWidth, .flexibleHeight]
     // Index 0 keeps the web view (and anything Tauri adds later) on top; the
     // surface is purely a backdrop and must never receive a touch.
     vc.view.isUserInteractionEnabled = false
     root.view.insertSubview(vc.view, at: 0)
+    // Pinned, not autoresized. An autoresizing mask scales the view PROPORTIONALLY
+    // from whatever frame it had when it was embedded, so if the embed landed before
+    // the root had settled its bounds - or across a rotation - the surface kept a
+    // stale aspect forever: the picture rendered jammed to the top in portrait, or
+    // as a sliver in one corner in landscape, with the chrome floating over dead
+    // black. Constraints make it exactly the root's bounds in every orientation.
+    vc.view.translatesAutoresizingMaskIntoConstraints = false
+    NSLayoutConstraint.activate([
+      vc.view.leadingAnchor.constraint(equalTo: root.view.leadingAnchor),
+      vc.view.trailingAnchor.constraint(equalTo: root.view.trailingAnchor),
+      vc.view.topAnchor.constraint(equalTo: root.view.topAnchor),
+      vc.view.bottomAnchor.constraint(equalTo: root.view.bottomAnchor),
+    ])
     vc.didMove(toParent: root)
     makeWebViewTransparent(under: root.view)
   }
@@ -33,6 +44,9 @@ final class HarborWebChromeHost {
       vc.willMove(toParent: nil)
       vc.view.removeFromSuperview()
       vc.removeFromParent()
+      // Removing the view drops its constraints; hand the controller back in the
+      // frame-driven state the modal path expects.
+      vc.view.translatesAutoresizingMaskIntoConstraints = true
     }
     if restoreWebView { restore() }
   }

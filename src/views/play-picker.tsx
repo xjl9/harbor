@@ -28,8 +28,6 @@ import type { ScoredStream, Tier } from "@/lib/streams/types";
 import { isAddonRanked } from "@/lib/streams/addon-detect";
 import { isFilterEmpty, matchesCustomFilter } from "@/lib/streams/custom-filters";
 import { useScrollMemory, useView, type PlayEpisode, type PlayerSrc } from "@/lib/view";
-import { setOrientation } from "@/lib/player/android-native";
-import { isMobileNative } from "@/lib/platform";
 import { prefetchSegments } from "@/lib/skip-intro";
 import { exitWindowFullscreen } from "@/lib/fullscreen-state";
 import { useWindowFullscreen } from "@/lib/use-window-fullscreen";
@@ -689,25 +687,9 @@ export function PlayPicker({
 
   const noSourcesConfigured = addons !== null && addons.length === 0 && debrids.length === 0;
 
-  // Force landscape the moment the play flow commits (stream resolving / auto-fire),
-  // so the connecting screen is already landscape before the native player mounts.
-  // The player re-locks on its own mount; the deferred restore in setOrientation
-  // keeps the picker->player handoff from flashing portrait. Restore on cancel /
-  // exhausted / back, which unmount this screen without a player following.
-  //
-  // Only once something is actually going to play. showAutoTransition is true from
-  // the first frame of the flow, including while streamIds is still null, so gating
-  // on it rotated the phone before knowing whether any stream existed: a device with
-  // no source configured turned sideways just to show the "No streaming sources yet"
-  // dialog, and stayed that way.
-  const playbackImminent = resolving != null || (showAutoTransition && autoCandidates.length > 0);
-  useEffect(() => {
-    if (!isMobileNative() || !playbackImminent || noSourcesConfigured) return;
-    void setOrientation("landscape");
-    return () => {
-      void setOrientation("auto");
-    };
-  }, [playbackImminent, noSourcesConfigured]);
+  // No orientation lock on the play flow either: the connecting screen used to
+  // rotate the phone before the player even mounted, which is where the stuck
+  // orientation began.
 
   if (pendingPreselect) {
     return (

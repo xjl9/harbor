@@ -29,8 +29,9 @@ function useSeekDragSec(): number | null {
   return useSyncExternalStore(subscribeDragSec, () => dragSecStore, () => null);
 }
 
-// Full-width touch scrubber for the mobile shell. Hairline at rest, thickens on
-// grab with the thumb blooming in, a live time bezel above the finger. Seeks
+// Full-width touch scrubber for the mobile shell. A hairline with an invisible
+// thumb read as decoration rather than a control, so the bar carries real weight
+// at rest and a visible head, then thickens and blooms under the finger. Seeks
 // once, on release: emitting mid-drag makes the native engine stutter behind
 // the thumb.
 export function MobileSeekBar({
@@ -125,8 +126,8 @@ export function MobileSeekBar({
       }}
     >
       <div
-        className={`relative w-full overflow-hidden rounded-full bg-white/20 transition-[height] duration-[160ms] ease-out ${
-          dragging ? "h-[6px]" : "h-[3px]"
+        className={`relative w-full overflow-hidden rounded-full bg-white/25 transition-[height] duration-[160ms] ease-out ${
+          dragging ? "h-[10px]" : "h-[6px]"
         }`}
       >
         <div className="absolute inset-y-0 left-0 bg-white/45" style={{ width: `${bufRatio * 100}%` }} />
@@ -134,8 +135,8 @@ export function MobileSeekBar({
       </div>
       <div
         aria-hidden
-        className={`absolute top-1/2 h-5 w-5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-accent ring-4 ring-canvas/60 transition-transform duration-[160ms] ease-out ${
-          dragging ? "scale-100" : "scale-0"
+        className={`absolute top-1/2 h-6 w-6 -translate-x-1/2 -translate-y-1/2 rounded-full bg-accent shadow-[0_1px_6px_rgba(0,0,0,0.55)] transition-transform duration-[160ms] ease-out ${
+          dragging ? "scale-100" : "scale-[0.58]"
         }`}
         style={{ left: `${ratio * 100}%` }}
       />

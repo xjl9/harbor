@@ -79,8 +79,17 @@ export function MobileShell(props: PlayerShellProps) {
   const [spinBack, setSpinBack] = useState(0);
   const [spinFwd, setSpinFwd] = useState(0);
 
-  const playing = snap.status === "playing";
+  const enginePlaying = snap.status === "playing";
   const buffering = snap.buffering || snap.status === "loading";
+  // The engine is across a bridge, so its status lags the tap by a frame or several
+  // and the button sat on the old glyph the whole time - which reads as the control
+  // being slow rather than the pipeline being asynchronous. Show the intent
+  // immediately and let the engine's own state take over as soon as it agrees.
+  const [pendingPlaying, setPendingPlaying] = useState<boolean | null>(null);
+  useEffect(() => {
+    if (pendingPlaying !== null && pendingPlaying === enginePlaying) setPendingPlaying(null);
+  }, [pendingPlaying, enginePlaying]);
+  const playing = pendingPlaying ?? enginePlaying;
   const isSeries = meta?.type === "series" || hasNextEp || hasPrevEp;
   const rate = snap.rate;
 
@@ -160,20 +169,21 @@ export function MobileShell(props: PlayerShellProps) {
           aria-label={buffering ? t("Loading") : playing ? t("Pause") : t("Play")}
           onClick={() => {
             haptics.select();
+            setPendingPlaying(!playing);
             onPlayPause();
           }}
           className={`flex h-20 w-20 items-center justify-center rounded-full ${press} ${hit}`}
         >
-          <span className={`${CHROME_SURFACE} flex h-16 w-16 items-center justify-center rounded-full text-ink`}>
+          <span className={`${CHROME_SURFACE} flex h-14 w-14 items-center justify-center rounded-full text-ink`}>
             {buffering ? (
               <span
                 aria-hidden
                 className="h-7 w-7 animate-spin rounded-full border-2 border-ink-muted border-t-transparent"
               />
             ) : playing ? (
-              <Pause size={30} strokeWidth={2} fill="currentColor" />
+              <Pause size={26} strokeWidth={2} fill="currentColor" />
             ) : (
-              <Play size={30} strokeWidth={2} fill="currentColor" className="ml-1" />
+              <Play size={26} strokeWidth={2} fill="currentColor" className="ml-0.5" />
             )}
           </span>
         </button>

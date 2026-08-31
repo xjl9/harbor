@@ -19,7 +19,6 @@ import { embedFlags } from "./player/player-utils";
 import {
   NATIVE_PLAYER_ACTION_EVENT,
   setNativeCanNext,
-  setOrientation,
 } from "@/lib/player/android-native";
 import { useFullscreen } from "./player/hooks/use-fullscreen";
 import { useSvpGuard } from "./player/hooks/use-svp-guard";
@@ -114,14 +113,12 @@ export function PlayerView({ src }: { src: PlayerSrc }) {
       delete root.dataset.playerBlack;
     };
   }, [settings.playerMenuBlack]);
-  // Landscape for the whole player session; restore free rotation on exit. No-op
-  // off native mobile. Single orientation call site in this view (see task P2).
-  useEffect(() => {
-    void setOrientation("landscape");
-    return () => {
-      void setOrientation("auto");
-    };
-  }, []);
+  // The player follows the device. It used to pin the whole session to landscape,
+  // which meant a session that opened in portrait STAYED in portrait and could not
+  // be turned, and one that opened in landscape could not be turned back - the
+  // orientation you happened to start in was the one you were stuck with. Watching
+  // in portrait is a legitimate choice, so the shell lays out for both instead of
+  // the app overriding the viewer.
   const {
     avatarsCorner,
     chatCorner,
