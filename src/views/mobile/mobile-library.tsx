@@ -30,6 +30,7 @@ import { useTrakt } from "@/lib/trakt/provider";
 import type { RemoteLibraryItem } from "@/lib/remote/protocol";
 import { useMobileRemote } from "./mobile-remote";
 import { MobileDetail } from "./mobile-detail";
+import { TILE_CULL } from "./tile-cull";
 
 type SectionId = "watchlist" | "history" | "favorites";
 type Entry = { meta: Meta; date: number };
@@ -257,7 +258,7 @@ function GridTile({ meta, onOpenDetail }: { meta: Meta; onOpenDetail: (m: Meta) 
     <button
       type="button"
       onClick={() => onOpenDetail(meta)}
-      className="text-start"
+      className={`text-start ${TILE_CULL}`}
     >
       <Poster src={src} onError={onError} seed={meta.id} ratio="portrait" lazy className="rounded-[12px]" />
       {meta.name && (

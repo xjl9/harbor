@@ -17,6 +17,7 @@ import { rpdbPoster } from "@/lib/providers/rpdb";
 import { listBrowseCatalogs, browseFetcher } from "@/lib/catalog-browse";
 import { fetchAddonCatalogPage, fetchAddonMeta, isCollectionCatalog } from "@/lib/addons";
 import { MobileDetail } from "./mobile-detail";
+import { TILE_CULL } from "./tile-cull";
 import { MobileAwards } from "./mobile-awards";
 import { MobileGenrePage } from "./mobile-genre-page";
 import { requestMobileIntent } from "./mobile-intent";
@@ -791,18 +792,6 @@ function CollectionsBrowser({
     </div>
   );
 }
-
-// Search is the only tile surface in the mobile shell without content-visibility
-// culling; every rail already has it. A long result set otherwise pays full
-// layout and paint for rows several screens away, which is the scroll roughness
-// the tester reported.
-//
-// The intrinsic sizes are the real tile heights so skipped rows reserve the right
-// box and the scrollbar does not jump. Phone: 3 columns gives a ~111pt tile and a
-// 2:3 poster is 167pt, plus a two line label. Tablet hits the 5 column breakpoint
-// at ~146pt wide, so the poster grows to 219pt.
-const TILE_CULL =
-  "[content-visibility:auto] [contain-intrinsic-size:auto_200px] [@media(min-width:700px)_and_(min-height:600px)]:[contain-intrinsic-size:auto_252px]";
 
 function Grid({ metas, onOpenDetail }: { metas: Meta[]; onOpenDetail: (m: Meta) => void }) {
   return (
