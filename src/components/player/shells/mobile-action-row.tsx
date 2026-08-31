@@ -1,6 +1,7 @@
-import { Layers, ListVideo, PictureInPicture2, SkipBack, SkipForward } from "lucide-react";
 import { useT } from "@/lib/i18n";
 import { fmtRate } from "./mobile-chrome";
+import { MobileGlyph } from "./mobile-glyph";
+import { MOBILE_GLYPH } from "./mobile-icons";
 import { MobileTimeLabel } from "./mobile-seek-bar";
 
 // Row under the scrubber. Left: where we are and how fast. Right: two groups
@@ -62,28 +63,28 @@ export function MobileActionRow({
       <div className="flex items-center gap-1">
         {canPickAnother && (
           <ActionButton label={t("Switch source")} onClick={onPickAnother}>
-            <Layers size={22} strokeWidth={2} />
+            <MobileGlyph url={MOBILE_GLYPH.pickAnother} size={22} />
           </ActionButton>
         )}
         {isSeries && (
           <ActionButton label={t("Episodes")} onClick={onEpisodes}>
-            <ListVideo size={22} strokeWidth={2} />
+            <MobileGlyph url={MOBILE_GLYPH.episodes} size={22} />
           </ActionButton>
         )}
         {leftGroup && rightGroup && <span aria-hidden className="mx-1 h-5 w-px bg-white/10" />}
         {hasPrevEp && (
           <ActionButton label={t("Previous episode")} onClick={onPrevEp}>
-            <SkipBack size={22} strokeWidth={2} />
+            <MobileGlyph url={MOBILE_GLYPH.prevEpisode} size={22} />
           </ActionButton>
         )}
         {hasNextEp && (
           <ActionButton label={t("Next episode")} onClick={onNextEp}>
-            <SkipForward size={22} strokeWidth={2} />
+            <MobileGlyph url={MOBILE_GLYPH.nextEpisode} size={22} />
           </ActionButton>
         )}
         {showPiP && (
           <ActionButton label={t("Picture in picture")} onClick={onPiP}>
-            <PictureInPicture2 size={22} strokeWidth={2} />
+            <MobileGlyph url={MOBILE_GLYPH.pipInactive} size={22} />
           </ActionButton>
         )}
       </div>

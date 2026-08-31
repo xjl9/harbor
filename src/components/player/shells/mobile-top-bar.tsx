@@ -1,7 +1,11 @@
-import { Airplay, Cast, Lock, Subtitles as SubsIcon, X } from "lucide-react";
+// Lock and subtitles have no artwork in public/player-icons, so they keep their
+// lucide glyphs rather than being handed a lookalike from a different family.
+import { Lock, Subtitles as SubsIcon } from "lucide-react";
 import type { CSSProperties } from "react";
 import { useT } from "@/lib/i18n";
 import { SAFE_INLINE_20 } from "./mobile-chrome";
+import { MobileGlyph } from "./mobile-glyph";
+import { MOBILE_GLYPH } from "./mobile-icons";
 
 // Top zone of the mobile shell: vignette scrim plus a single 44px row. Landscape
 // is the steady state, so the title never wraps; it truncates between the close
@@ -52,7 +56,7 @@ export function MobileTopBar({
         }}
       >
         <TopButton label={t("Close")} onClick={onBack}>
-          <X size={22} strokeWidth={2} />
+          <MobileGlyph url={MOBILE_GLYPH.close} size={26} />
         </TopButton>
         <div className="pointer-events-none mx-2 flex min-w-0 flex-1 flex-col justify-center">
           <span className="truncate font-display text-[17px] font-medium leading-tight tracking-tight text-ink">
@@ -65,11 +69,11 @@ export function MobileTopBar({
         </TopButton>
         {showAirplay ? (
           <TopButton label={t("AirPlay")} onClick={onCast}>
-            <Airplay size={22} strokeWidth={2} />
+            <MobileGlyph url={MOBILE_GLYPH.castIdle} size={22} />
           </TopButton>
         ) : showCast ? (
           <TopButton label={t("Cast")} onClick={onCast}>
-            <Cast size={22} strokeWidth={2} />
+            <MobileGlyph url={MOBILE_GLYPH.castIdle} size={22} />
           </TopButton>
         ) : null}
         <TopButton label={t("Audio & Subtitles")} onClick={onTracks}>

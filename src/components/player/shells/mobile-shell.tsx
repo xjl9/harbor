@@ -1,4 +1,3 @@
-import { Pause, Play } from "lucide-react";
 import { useEffect, useState, type CSSProperties } from "react";
 import { capabilityFlags } from "@/lib/player/bridge";
 import type { PlayerShellProps } from "@/lib/player-shells/types";
@@ -8,6 +7,8 @@ import { haptics } from "@/lib/player/haptics";
 import { useSettings } from "@/lib/settings";
 import { useT } from "@/lib/i18n";
 import { MobileActionRow } from "./mobile-action-row";
+import { MobileGlyph } from "./mobile-glyph";
+import { MOBILE_GLYPH, seekGlyph } from "./mobile-icons";
 import {
   CHROME_SURFACE,
   HIDE_EASE,
@@ -17,7 +18,6 @@ import {
   SHOW_MS,
 } from "./mobile-chrome";
 import { MobileLockPill } from "./mobile-lock-pill";
-import { RotatingSeekIcon } from "./mobile-seek-icon";
 import { MobilePeekBar, MobileSeekBar } from "./mobile-seek-bar";
 import { MobileSpeedSheet } from "./mobile-speed-sheet";
 import { MobileSubStyleSheet } from "./mobile-sub-style-sheet";
@@ -76,8 +76,6 @@ export function MobileShell(props: PlayerShellProps) {
   const [subStyleOpen, setSubStyleOpen] = useState(false);
   const locked = useMobileLocked();
   const reduce = usePrefersReducedMotion();
-  const [spinBack, setSpinBack] = useState(0);
-  const [spinFwd, setSpinFwd] = useState(0);
 
   const enginePlaying = snap.status === "playing";
   const buffering = snap.buffering || snap.status === "loading";
@@ -170,12 +168,11 @@ export function MobileShell(props: PlayerShellProps) {
           aria-label={t("Rewind")}
           onClick={() => {
             haptics.light();
-            setSpinBack((n) => n + 1);
             onSeekStep(-settings.seekBackStepSec);
           }}
           className={`flex h-14 w-14 items-center justify-center rounded-full text-ink ${press} ${hit}`}
         >
-          <RotatingSeekIcon direction="back" seconds={settings.seekBackStepSec} spin={spinBack} />
+          <MobileGlyph url={seekGlyph("back", settings.seekBackStepSec)} size={34} />
         </button>
         <button
           type="button"
@@ -193,10 +190,8 @@ export function MobileShell(props: PlayerShellProps) {
                 aria-hidden
                 className="h-7 w-7 animate-spin rounded-full border-2 border-ink-muted border-t-transparent"
               />
-            ) : playing ? (
-              <Pause size={26} strokeWidth={2} fill="currentColor" />
             ) : (
-              <Play size={26} strokeWidth={2} fill="currentColor" className="ml-0.5" />
+              <MobileGlyph url={playing ? MOBILE_GLYPH.playing : MOBILE_GLYPH.paused} size={26} />
             )}
           </span>
         </button>
@@ -205,12 +200,11 @@ export function MobileShell(props: PlayerShellProps) {
           aria-label={t("Fast forward")}
           onClick={() => {
             haptics.light();
-            setSpinFwd((n) => n + 1);
             onSeekStep(settings.seekForwardStepSec);
           }}
           className={`flex h-14 w-14 items-center justify-center rounded-full text-ink ${press} ${hit}`}
         >
-          <RotatingSeekIcon direction="forward" seconds={settings.seekForwardStepSec} spin={spinFwd} />
+          <MobileGlyph url={seekGlyph("forward", settings.seekForwardStepSec)} size={34} />
         </button>
       </div>
 
