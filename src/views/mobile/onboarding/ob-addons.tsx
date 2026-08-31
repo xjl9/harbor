@@ -1,6 +1,6 @@
 import { AlertCircle, Check, Loader2, Puzzle } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
-import { installFromUrl, loadInstalled } from "@/lib/addon-store";
+import { installFromUrl, loadInstalled, parseAddonUrl } from "@/lib/addon-store";
 import { useT } from "@/lib/i18n";
 import { ADDON_SUGGESTIONS } from "../mobile-addons";
 import { FOCUS, tapHaptic } from "./ob-shared";
@@ -41,6 +41,13 @@ export function ObAddons() {
   };
 
   const any = installed.size > 0;
+  const [manual, setManual] = useState("");
+  const manualParsed = parseAddonUrl(manual);
+  const addManual = async () => {
+    if (manualParsed.kind !== "ok") return;
+    await add(manualParsed.url);
+    setManual("");
+  };
 
   return (
     <div className="flex flex-col gap-6">
@@ -95,6 +102,35 @@ export function ObAddons() {
         })}
       </div>
 
+      <div className="flex flex-col gap-2">
+        <span className="text-[12.5px] font-medium uppercase tracking-[0.16em] text-ink-subtle">
+          {t("Have an addon link?")}
+        </span>
+        <div className="flex items-center gap-2">
+          <input
+            value={manual}
+            onChange={(e) => setManual(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") void addManual();
+            }}
+            inputMode="url"
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
+            placeholder={t("Paste an addon manifest URL")}
+            className={`min-w-0 flex-1 rounded-xl border border-edge-soft bg-canvas/40 px-3.5 py-3 text-[15px] text-ink placeholder:text-ink-subtle ${FOCUS}`}
+          />
+          <button
+            type="button"
+            disabled={manualParsed.kind !== "ok" || busy !== null}
+            onClick={() => void addManual()}
+            className={`shrink-0 rounded-full bg-ink px-3.5 py-2.5 text-[13px] font-semibold text-canvas transition-transform active:scale-95 disabled:opacity-40 ${FOCUS}`}
+          >
+            {t("Add")}
+          </button>
+        </div>
+      </div>
+
       {error && (
         <p className="flex items-start gap-1.5 text-[13px] text-danger">
           <AlertCircle size={14} strokeWidth={2.2} className="mt-0.5 shrink-0" />
@@ -105,9 +141,7 @@ export function ObAddons() {
       <p className="text-[13px] text-ink-subtle">
         {any
           ? t("Add or remove sources anytime from Profile, under Addons.")
-          : t(
-              "Not sure which? Torrentio and Cinemeta cover most people. You can change this later in Profile, under Addons.",
-            )}
+          : t("Cinemeta covers catalogs. Paste any addon link you already use. You can change this later in Profile, under Addons.")}
       </p>
     </div>
   );

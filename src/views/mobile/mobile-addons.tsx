@@ -31,18 +31,6 @@ export const ADDON_SUGGESTIONS: Array<{
   url: string;
 }> = [
   {
-    id: "com.stremio.torrentio.addon",
-    name: "Torrentio",
-    note: "Torrent + debrid streams",
-    url: "https://torrentio.strem.fun/manifest.json",
-  },
-  {
-    id: "comet.elfhosted.com",
-    name: "Comet",
-    note: "Debrid-first, fast cached results",
-    url: "https://comet.elfhosted.com/manifest.json",
-  },
-  {
     id: "com.linvo.cinemeta",
     name: "Cinemeta",
     note: "Official catalogs + metadata",

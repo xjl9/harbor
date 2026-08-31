@@ -146,7 +146,7 @@ export function DebridSheet({
 
   return (
     <div
-      className="fixed inset-0 z-[70] flex items-end justify-center transition-[padding] duration-150"
+      className="fixed inset-0 z-[120] flex items-end justify-center transition-[padding] duration-150"
       style={{ paddingBottom: keyboardInset }}
     >
       <button
