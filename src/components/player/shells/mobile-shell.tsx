@@ -103,6 +103,19 @@ export function MobileShell(props: PlayerShellProps) {
   // Clear lock on unmount so a new playback never starts locked.
   useEffect(() => () => setMobileLocked(false), []);
 
+  // Publish how much room the bottom chrome is taking so the subtitle overlay can
+  // sit above it instead of underneath the scrubber and the clock. Cleared when the
+  // controls hide, so dialogue returns to its configured margin.
+  useEffect(() => {
+    const root = document.querySelector<HTMLElement>("[data-harbor-player]");
+    if (!root) return;
+    const set = (v: string) => root.style.setProperty("--player-chrome-lift", v);
+    set(chromeShown ? "104px" : "0px");
+    return () => {
+      root.style.removeProperty("--player-chrome-lift");
+    };
+  }, [chromeShown]);
+
   if (pipMode) return null;
   if (locked) return <MobileLockPill />;
 

@@ -144,7 +144,11 @@ export const SubtitleOverlay = memo(function SubtitleOverlay({
         key={startSec}
         ref={wrapRef}
         className={`pointer-events-none absolute inset-x-0 z-10 flex flex-col gap-1.5 ${alignItems} px-[6%]`}
-        style={{ bottom: `${marginY}%`, opacity }}
+        // Lifted clear of whatever chrome is showing. The mobile shell publishes its
+        // own height into --player-chrome-lift while its controls are up; without
+        // this the dialogue sat on top of the scrubber and the clock, which is where
+        // a viewer looks to read either one. Zero elsewhere, so desktop is unchanged.
+        style={{ bottom: `calc(${marginY}% + var(--player-chrome-lift, 0px))`, opacity }}
       >
         {secondBlock && !secondTop && secondBlock}
         {text && (
