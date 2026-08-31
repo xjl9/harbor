@@ -8,9 +8,16 @@
 //   medium() — a committing action (dismiss, snap, detent select)
 //   select() — a selection landing (radio pick, play/pause, source swap)
 
-function buzz(pattern: number | number[]): void {
+import { isMobileNative } from "@/lib/platform";
+import { nativeHaptic, type NativeHapticKind } from "./native-host";
+
+function buzz(pattern: number | number[], kind: NativeHapticKind): void {
   if (typeof navigator === "undefined") return;
-  if (!("vibrate" in navigator)) return;
+  if (!("vibrate" in navigator)) {
+    // WKWebView has no vibrate API; the native plugin drives UIFeedbackGenerator.
+    if (isMobileNative()) nativeHaptic(kind);
+    return;
+  }
   try {
     navigator.vibrate(pattern);
   } catch {
@@ -19,15 +26,15 @@ function buzz(pattern: number | number[]): void {
 }
 
 export function light(): void {
-  buzz(7);
+  buzz(7, "light");
 }
 
 export function medium(): void {
-  buzz(14);
+  buzz(14, "medium");
 }
 
 export function select(): void {
-  buzz(10);
+  buzz(10, "select");
 }
 
 export const haptics = { light, medium, select };

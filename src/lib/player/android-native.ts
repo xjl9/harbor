@@ -1,6 +1,6 @@
 import { invoke, addPluginListener, type PluginListener } from "@tauri-apps/api/core";
 
-/// Raised when the native overlay asks for something only the React side can do.
+// Raised when the native overlay asks for something only the React side can do.
 export const NATIVE_PLAYER_ACTION_EVENT = "harbor:native-player-action";
 
 // Whether a following episode exists. Current state rather than a property of a
@@ -9,8 +9,15 @@ let canNextEpisode = false;
 export function setNativeCanNext(value: boolean): void {
   canNextEpisode = value;
 }
-import { isMobileNative } from "@/lib/platform";
 import type { SubCue } from "@/lib/subtitles/parser";
+import {
+  nativeCapabilities,
+  nativeInvoke,
+  nativeWebChrome,
+  setNativeEngine,
+  setNativeVideoBehind,
+  type NativeEngine,
+} from "./native-host";
 import {
   emptySnapshot,
   type PlayerBridge,
@@ -20,8 +27,11 @@ import {
   type TrackInfo,
 } from "./bridge";
 
-type Tick = { positionSec: number; durationSec: number; bufferedSec: number; playing: boolean };
-type State = { status: "loading" | "ready" | "ended" | "error"; errorCode?: string };
+export { setOrientation, type OrientationLock } from "./native-orientation";
+export { nativeEngine, showNativeRoutePicker } from "./native-host";
+
+type Tick = { positionSec: number; durationSec: number; bufferedSec: number; playing: boolean; rate?: number };
+type State = { status: "loading" | "ready" | "ended" | "error"; errorCode?: string; engine?: NativeEngine };
 type Closed = { positionSec: number; durationSec: number };
 type NativeTrack = {
   id: string;
@@ -32,52 +42,12 @@ type NativeTrack = {
 };
 type TracksEvent = { audio: NativeTrack[]; subtitle: NativeTrack[] };
 
-export type OrientationLock = "landscape" | "portrait" | "auto";
-
-let pendingRestore: ReturnType<typeof setTimeout> | null = null;
-
-/**
- * Forces device orientation on native mobile builds. "landscape" locks the play
- * flow (connecting screen through playback) the way every streaming app does;
- * "auto" restores free rotation on exit. No-op on desktop/web. Despite the file
- * name this drives both iOS and Android (see createNativeBridge).
- *
- * The connecting screen and the player are separate nav frames, so committing to
- * a stream unmounts the first (which restores) and mounts the second (which
- * re-locks) back to back. Deferring the "auto" restore one frame lets an
- * immediately following "landscape" cancel it, so that handoff never flashes
- * portrait; a genuine exit has no follow-up lock and the restore lands.
- */
-export async function setOrientation(mode: OrientationLock): Promise<void> {
-  if (!isMobileNative()) return;
-  if (pendingRestore) {
-    clearTimeout(pendingRestore);
-    pendingRestore = null;
-  }
-  if (mode === "auto") {
-    pendingRestore = setTimeout(() => {
-      pendingRestore = null;
-      void invoke("plugin:harbor-player|set_orientation", { payload: { mode: "auto" } }).catch(() => {});
-    }, 260);
-    return;
-  }
-  await invoke("plugin:harbor-player|set_orientation", { payload: { mode } }).catch(() => {});
-}
-
-const CAPS: PlayerCapabilities = {
-  engine: "native",
-  pictureInPicture: true,
-  airplay: false,
-  chromecast: false,
-  hdrPassthrough: true,
-  hardwareDecode: true,
-};
-
 /**
  * PlayerBridge backed by the native mobile plugin (tauri-plugin-harbor-player):
- * media3/ExoPlayer in its own fullscreen Android Activity, AVPlayer in its own
- * fullscreen iOS view controller. This bridge forwards load/transport commands
- * and mirrors the player's position/state into a PlayerSnapshot so resume +
+ * media3/ExoPlayer in its own fullscreen Android Activity; on iOS an AVPlayer
+ * or mpv view mounted behind a transparent web view so the React shell draws
+ * the chrome (webChrome). This bridge forwards load/transport commands and
+ * mirrors the player's position/state into a PlayerSnapshot so resume +
  * scrobble work.
  */
 export function createNativeBridge(): PlayerBridge {
@@ -91,6 +61,11 @@ export function createNativeBridge(): PlayerBridge {
   // its effect while useBridgeLoad's load fires after an await, so the stash is
   // populated in time, and it survives auto-retry / stream-switch reloads.
   let mediaTitle: string | undefined;
+  // Mirrored locally: the plugin reports position/rate on tick but never
+  // volume, and mute is expressed as volume 0 on the native side.
+  let volume = 1;
+  let muted = false;
+  let rate = 1;
 
   const emit = () => {
     const s = snap;
@@ -109,6 +84,7 @@ export function createNativeBridge(): PlayerBridge {
           positionSec: t.positionSec,
           durationSec: t.durationSec || snap.durationSec,
           bufferedSec: t.bufferedSec,
+          rate: typeof t.rate === "number" && t.rate > 0 ? t.rate : snap.rate,
           status: t.playing
             ? "playing"
             : snap.status === "loading"
@@ -120,6 +96,7 @@ export function createNativeBridge(): PlayerBridge {
         });
       }),
       await addPluginListener("harbor-player", "state", (st: State) => {
+        if (st.engine === "mpv" || st.engine === "av") setNativeEngine(st.engine);
         if (st.status === "error") {
           patch({ status: "error", errorCode: mapError(st.errorCode), errorMessage: st.errorCode ?? "Playback error" });
         } else if (st.status === "ready") {
@@ -168,8 +145,10 @@ export function createNativeBridge(): PlayerBridge {
     detach: noop,
     async load(src: PlayerSource) {
       await ensureListeners();
-      snap = { ...emptySnapshot, status: "loading" };
+      snap = { ...emptySnapshot, status: "loading", volume, muted, rate };
       emit();
+      const webChrome = nativeWebChrome();
+      setNativeVideoBehind(webChrome);
       // Undefined title is dropped by JSON serialization, and the Rust
       // LoadRequest treats a missing title as None.
       await invoke("plugin:harbor-player|load", {
@@ -184,8 +163,12 @@ export function createNativeBridge(): PlayerBridge {
           startAtSec: src.startAtSec ?? 0,
           title: mediaTitle,
           canNext: canNextEpisode,
+          webChrome,
         },
       });
+      // A reload keeps the user's transport settings; the plugin starts fresh.
+      if (rate !== 1) nativeInvoke("set_rate", { rate });
+      if (muted || volume !== 1) nativeInvoke("set_volume", { volume: muted ? 0 : volume });
     },
     async play() {
       await invoke("plugin:harbor-player|play").catch(noop);
@@ -196,9 +179,21 @@ export function createNativeBridge(): PlayerBridge {
     seek(sec: number) {
       void invoke("plugin:harbor-player|seek", { payload: { positionSec: sec } }).catch(noop);
     },
-    setVolume: noop,
-    setMuted: noop,
-    setRate: noop,
+    setVolume(v: number) {
+      volume = Math.max(0, Math.min(1, v));
+      patch({ volume });
+      if (!muted) nativeInvoke("set_volume", { volume });
+    },
+    setMuted(m: boolean) {
+      muted = m;
+      patch({ muted });
+      nativeInvoke("set_volume", { volume: m ? 0 : volume });
+    },
+    setRate(r: number) {
+      rate = r > 0 ? r : 1;
+      patch({ rate });
+      nativeInvoke("set_rate", { rate });
+    },
     setAudioTrack(id: string) {
       void invoke("plugin:harbor-player|set_audio_track", { payload: { trackId: id } }).catch(noop);
     },
@@ -207,8 +202,14 @@ export function createNativeBridge(): PlayerBridge {
     },
     setSecondarySubtitleTrack: noop,
     setSubVisible: noop,
-    setSubDelay: noop,
-    setAudioDelay: noop,
+    setSubDelay(sec: number) {
+      patch({ subDelaySec: sec });
+      nativeInvoke("set_sub_delay", { seconds: sec });
+    },
+    setAudioDelay(sec: number) {
+      patch({ audioDelaySec: sec });
+      nativeInvoke("set_audio_delay", { seconds: sec });
+    },
     setPanscan: noop,
     setVideoZoom: noop,
     setAspectOverride: noop,
@@ -239,7 +240,7 @@ export function createNativeBridge(): PlayerBridge {
     requestFullscreen: noopAsync,
     exitFullscreen: noopAsync,
     capabilities(): PlayerCapabilities {
-      return CAPS;
+      return nativeCapabilities();
     },
     subscribe(listener) {
       listeners.add(listener);
@@ -248,6 +249,8 @@ export function createNativeBridge(): PlayerBridge {
     },
     destroy() {
       disposed = true;
+      setNativeVideoBehind(false);
+      setNativeEngine(null);
       void invoke("plugin:harbor-player|stop").catch(noop);
       for (const pl of pluginListeners) void pl.unregister().catch(noop);
       pluginListeners.length = 0;

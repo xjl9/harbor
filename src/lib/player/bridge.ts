@@ -127,7 +127,35 @@ export type PlayerCapabilities = {
   chromecast: boolean;
   hdrPassthrough: boolean;
   hardwareDecode: boolean;
+  // Feature flags the shells read to hide controls an engine cannot honor.
+  // Optional so the desktop bridges stay untouched; a missing flag means
+  // supported (see capabilityFlags).
+  rate?: boolean;
+  volume?: boolean;
+  subDelay?: boolean;
+  audioDelay?: boolean;
+  addSubtitle?: boolean;
+  subStyle?: boolean;
+  subSync?: boolean;
 };
+
+export type PlayerCapabilityFlags = Required<
+  Pick<PlayerCapabilities, "rate" | "volume" | "subDelay" | "audioDelay" | "addSubtitle" | "subStyle" | "subSync">
+>;
+
+// Resolves the optional feature flags, defaulting every unset one to true so
+// mpv/html5 bridges that predate the flags keep their full control set.
+export function capabilityFlags(caps?: PlayerCapabilities): PlayerCapabilityFlags {
+  return {
+    rate: caps?.rate ?? true,
+    volume: caps?.volume ?? true,
+    subDelay: caps?.subDelay ?? true,
+    audioDelay: caps?.audioDelay ?? true,
+    addSubtitle: caps?.addSubtitle ?? true,
+    subStyle: caps?.subStyle ?? true,
+    subSync: caps?.subSync ?? true,
+  };
+}
 
 export const emptySnapshot: PlayerSnapshot = {
   status: "idle",
