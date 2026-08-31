@@ -361,9 +361,10 @@ class HarborPlayerPlugin: Plugin {
 
   // Forces the whole app (webview connecting screen + presented native player) to
   // landscape during playback and restores free rotation on exit. requestGeometryUpdate
-  // rotates immediately; the mask written to UserDefaults is what the injected
-  // AppDelegate returns from supportedInterfaceOrientationsFor, which is what keeps
-  // iOS from rotating back when the plist still permits portrait.
+  // rotates immediately, but it is CONSTRAINED by the orientations the app reports as
+  // supported, so the rotation only holds because HarborOrientationSupport answers
+  // supportedInterfaceOrientationsFor with this mask. Without that the plist's portrait
+  // entry stays valid and iOS rotates straight back.
   @objc public func setOrientation(_ invoke: Invoke) throws {
     let args = try invoke.parseArgs(OrientationArgs.self)
     DispatchQueue.main.async {
@@ -380,9 +381,10 @@ class HarborPlayerPlugin: Plugin {
         mask = .allButUpsideDown
         preferred = .unknown
       }
+      HarborOrientationSupport.installIfNeeded()
       UserDefaults.standard.set(Int(mask.rawValue), forKey: harborOrientationDefaultsKey)
       if #available(iOS 16.0, *) {
-        // Re-query the AppDelegate now that the mask changed. Walk to the topmost
+        // Re-query the delegate now that the mask changed. Walk to the topmost
         // presented controller so a fullscreen native player VC is included.
         self.topmostViewController()?.setNeedsUpdateOfSupportedInterfaceOrientations()
         let scene = UIApplication.shared.connectedScenes
@@ -390,7 +392,29 @@ class HarborPlayerPlugin: Plugin {
           .first { $0.activationState == .foregroundActive }
           ?? UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.first
         if let scene = scene {
-          scene.requestGeometryUpdate(.iOS(interfaceOrientations: mask)) { _ in }
+          // Restoring has to name ONE orientation, not just widen the mask. A
+          // permissive mask only tells iOS what is allowed; it does not ask it to
+          // leave the orientation it is already in, so exiting the play flow left
+          // the whole app stuck sideways on the browse screens. Aim at however the
+          // device is actually being held, falling back to portrait when the sensor
+          // says flat/unknown.
+          let target: UIInterfaceOrientationMask
+          if args.mode == "auto" {
+            switch UIDevice.current.orientation {
+            case .landscapeLeft: target = .landscapeRight
+            case .landscapeRight: target = .landscapeLeft
+            default: target = .portrait
+            }
+          } else {
+            target = mask
+          }
+          scene.requestGeometryUpdate(.iOS(interfaceOrientations: target)) { _ in }
+          // Then relax to the full mask so the viewer can turn the phone freely again.
+          if args.mode == "auto" {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+              scene.requestGeometryUpdate(.iOS(interfaceOrientations: mask)) { _ in }
+            }
+          }
         }
       } else if preferred != .unknown {
         // Pre-16 devices honor the KVC device-orientation nudge; the old
@@ -455,6 +479,9 @@ class HarborPlayerPlugin: Plugin {
 func initPlugin() -> Plugin {
   // The mask persists in UserDefaults and would survive a crash mid-playback,
   // launching the app locked to landscape with no player to unlock it.
-  UserDefaults.standard.removeObject(forKey: harborOrientationDefaultsKey)
+  HarborOrientationSupport.clearStaleMask()
+  // The delegate exists by the time the app finishes launching; installing on the
+  // main queue keeps this off whatever thread registers the plugin.
+  DispatchQueue.main.async { HarborOrientationSupport.installIfNeeded() }
   return HarborPlayerPlugin()
 }

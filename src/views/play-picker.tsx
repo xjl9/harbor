@@ -687,20 +687,27 @@ export function PlayPicker({
   }, [attempt, episode, meta.id]);
   useScrollMemory(pickerScrollKey, mainRef, !showAutoTransition);
 
+  const noSourcesConfigured = addons !== null && addons.length === 0 && debrids.length === 0;
+
   // Force landscape the moment the play flow commits (stream resolving / auto-fire),
   // so the connecting screen is already landscape before the native player mounts.
   // The player re-locks on its own mount; the deferred restore in setOrientation
   // keeps the picker->player handoff from flashing portrait. Restore on cancel /
   // exhausted / back, which unmount this screen without a player following.
+  //
+  // Only once something is actually going to play. showAutoTransition is true from
+  // the first frame of the flow, including while streamIds is still null, so gating
+  // on it rotated the phone before knowing whether any stream existed: a device with
+  // no source configured turned sideways just to show the "No streaming sources yet"
+  // dialog, and stayed that way.
+  const playbackImminent = resolving != null || (showAutoTransition && autoCandidates.length > 0);
   useEffect(() => {
-    if (!isMobileNative() || !showAutoTransition) return;
+    if (!isMobileNative() || !playbackImminent || noSourcesConfigured) return;
     void setOrientation("landscape");
     return () => {
       void setOrientation("auto");
     };
-  }, [showAutoTransition]);
-
-  const noSourcesConfigured = addons !== null && addons.length === 0 && debrids.length === 0;
+  }, [playbackImminent, noSourcesConfigured]);
 
   if (pendingPreselect) {
     return (
