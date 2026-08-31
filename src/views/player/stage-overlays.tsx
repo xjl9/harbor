@@ -70,20 +70,20 @@ export const StageOverlays = memo(function StageOverlays({
       {!pipMode && <SubtitleOffsetIndicator delaySec={subtitleOffsetSec} />}
       {!pipMode && <Anime4kIndicator engine={engine} chromeVisible={chromeVisible} suppressed={topVolumeShowing} />}
       {!pipMode && <SvpIndicator engine={engine} chromeVisible={chromeVisible} suppressed={topVolumeShowing} />}
-      {holdSpeedActive && !pipMode && (
+      {holdSpeedActive && !pipMode && !isMobileNative() && (
         <div className="pointer-events-none absolute left-1/2 top-8 z-30 flex -translate-x-1/2 items-center gap-1.5 rounded-full bg-canvas/85 px-3.5 py-1.5 text-[13px] font-semibold text-ink backdrop-blur-md">
           {snap.rate}x
           <span className="font-normal text-ink-muted">{t("speed")}</span>
         </div>
       )}
-      {!holdSpeedActive && !pipMode && (
+      {!holdSpeedActive && !pipMode && !isMobileNative() && (
         <VolumeIndicator
           state={{ ...volumeIndicator, visible: showVolumeIndicator }}
           allowBoost={engine === "mpv"}
           position={volumeHudPosition}
         />
       )}
-      {videoFillPill && !holdSpeedActive && !pipMode && !(showVolumeIndicator && volumeHudPosition === "top") && (
+      {videoFillPill && !holdSpeedActive && !pipMode && !isMobileNative() && !(showVolumeIndicator && volumeHudPosition === "top") && (
         <div className="pointer-events-none absolute left-1/2 top-8 z-30 -translate-x-1/2 rounded-full bg-canvas/85 px-3.5 py-1.5 text-[13px] font-semibold text-ink backdrop-blur-md">
           {videoFillPill}
         </div>

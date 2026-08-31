@@ -9,6 +9,9 @@ import { rubberBand, springBack } from "@/lib/player/gesture-physics";
 import { clearDismissVars, dismissCommits, setDismissVars } from "./mobile-gesture-dismiss";
 import { DoubleTapHud, HoldPill, ScrubHud, VerticalMeter, type TapHud } from "./mobile-gesture-huds";
 
+// A dismiss sample older than this is stale; treat the finger as stopped.
+const DISMISS_VEL_WINDOW_MS = 90;
+
 const AXIS_LOCK_PX = 12;
 const DOUBLE_TAP_MS = 300;
 const LONG_PRESS_MS = 500;
@@ -365,7 +368,13 @@ export function MobileGestureStage({
     } else if (gg.mode === "dismiss") {
       const h = r.height;
       const dist = dismissRaw.current;
-      const vel = dismissVel.current;
+      // The EMA only advances on touchmove, so a finger that stops and rests keeps
+      // whatever velocity it last had. projectEndpoint multiplies that by ~499, so
+      // dragging down a little, pausing, then lifting used to project past the commit
+      // threshold and close the player on a gesture the viewer had visibly abandoned.
+      // A sample older than the window is not evidence of motion.
+      const sinceMove = performance.now() - lastMoveT.current;
+      const vel = sinceMove > DISMISS_VEL_WINDOW_MS ? 0 : dismissVel.current;
       if (dismissCommits(dist, vel, h)) {
         haptics.medium();
         onDismiss();

@@ -149,7 +149,7 @@ export function MobileShell(props: PlayerShellProps) {
           onClick={() => {
             haptics.light();
             setSpinBack((n) => n + 1);
-            onSeekStep(-1);
+            onSeekStep(-settings.seekBackStepSec);
           }}
           className={`flex h-14 w-14 items-center justify-center rounded-full text-ink ${press} ${hit}`}
         >
@@ -183,7 +183,7 @@ export function MobileShell(props: PlayerShellProps) {
           onClick={() => {
             haptics.light();
             setSpinFwd((n) => n + 1);
-            onSeekStep(1);
+            onSeekStep(settings.seekForwardStepSec);
           }}
           className={`flex h-14 w-14 items-center justify-center rounded-full text-ink ${press} ${hit}`}
         >
