@@ -54,7 +54,7 @@ export function BottomTabBar({
       style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 10px)" }}
     >
       <style>{TAB_BAR_SLIDE_CSS}</style>
-      <div className="pointer-events-auto flex w-[min(400px,100%)] items-center justify-between rounded-[20px] border border-white/[0.08] bg-[oklch(0.135_0.006_48/0.9)] px-2 py-2 shadow-[0_16px_40px_-12px_rgba(0,0,0,0.7)] backdrop-blur-2xl">
+      <div className="pointer-events-auto flex w-[min(400px,100%)] items-center justify-between rounded-[20px] border border-white/[0.08] bg-[oklch(0.135_0.006_48/0.94)] px-2 py-2 shadow-[0_16px_40px_-12px_rgba(0,0,0,0.7)]">
         {TABS.map((t) => {
           const on = t.id === active;
           const Icon = t.icon;

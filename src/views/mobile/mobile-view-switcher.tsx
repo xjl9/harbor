@@ -72,7 +72,7 @@ export function MobileViewSwitcher({ view, onSelect }: { view: View; onSelect: (
         aria-expanded={open}
         aria-label={`Browsing ${current.label}. Change section`}
         onClick={() => setOpen((o) => !o)}
-        className="flex h-11 items-center gap-1 rounded-full border border-white/10 bg-black/25 pe-2 ps-3.5 text-ink backdrop-blur-xl"
+        className="flex h-11 items-center gap-1 rounded-full border border-white/10 bg-black/25 pe-2 ps-3.5 text-ink backdrop-blur-md"
       >
         <span className="text-[13.5px] font-semibold">{current.label}</span>
         <ChevronDown
@@ -87,7 +87,7 @@ export function MobileViewSwitcher({ view, onSelect }: { view: View; onSelect: (
         <div
           role="menu"
           aria-label="Sections"
-          className="harbor-vs-panel absolute right-0 top-[calc(100%+8px)] flex w-[186px] flex-col gap-0.5 rounded-[18px] border border-edge-soft/60 bg-elevated/95 p-1.5 shadow-[0_20px_46px_-16px_rgba(0,0,0,0.62)] backdrop-blur-xl"
+          className="harbor-vs-panel absolute right-0 top-[calc(100%+8px)] flex w-[186px] flex-col gap-0.5 rounded-[18px] border border-edge-soft/60 bg-elevated/95 p-1.5 shadow-[0_20px_46px_-16px_rgba(0,0,0,0.62)]"
         >
           {views.map((v, i) => {
             const on = v.id === view;
