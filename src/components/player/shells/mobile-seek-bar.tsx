@@ -6,6 +6,7 @@ import {
   usePlaybackBufferedGated,
   usePlaybackPositionGated,
 } from "@/lib/player/playback-clock";
+import { useT } from "@/lib/i18n";
 import { useTrickplayState } from "@/lib/trickplay";
 import { fmtTime, SAFE_INLINE_20, TIME_BEZEL } from "./mobile-chrome";
 
@@ -48,6 +49,7 @@ export function MobileSeekBar({
   const [dragging, setDragging] = useState(false);
   const [dragSec, setDragSec] = useState<number | null>(null);
   const { active: trickplayActive, bufferedOnly } = useTrickplayState();
+  const t = useT();
 
   const shown = dragSec ?? positionSec;
   const ratio = clamp01(shown / duration);
@@ -75,7 +77,18 @@ export function MobileSeekBar({
   return (
     <div
       ref={trackRef}
-      className="relative cursor-pointer touch-none py-3"
+      role="slider"
+      tabIndex={0}
+      aria-label={t("Seek")}
+      aria-valuemin={0}
+      aria-valuemax={Math.round(duration)}
+      aria-valuenow={Math.round(shown)}
+      aria-valuetext={`${fmtTime(shown)} of ${fmtTime(duration)}`}
+      // The visible track is a hairline, but a drag target has to clear the 44pt
+      // touch floor or people grab the video instead of the scrubber. The extra
+      // band is added ABOVE only: below sits the action row, and stealing its
+      // taps would trade one miss for another.
+      className="relative cursor-pointer touch-none py-3 before:absolute before:inset-x-0 before:-top-4 before:bottom-0 before:content-['']"
       onPointerDown={(e) => {
         (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
         setDragging(true);
@@ -93,6 +106,23 @@ export function MobileSeekBar({
         onSeek(sec);
       }}
       onPointerCancel={end}
+      // VoiceOver's increment/decrement on a slider arrives as arrow keys, so
+      // without this the scrubber is readable but not operable.
+      onKeyDown={(e) => {
+        const step = e.key === "ArrowRight" || e.key === "ArrowUp" ? 10 : e.key === "ArrowLeft" || e.key === "ArrowDown" ? -10 : 0;
+        if (step !== 0) {
+          e.preventDefault();
+          onSeek(Math.min(duration, Math.max(0, shown + step)));
+          return;
+        }
+        if (e.key === "Home") {
+          e.preventDefault();
+          onSeek(0);
+        } else if (e.key === "End") {
+          e.preventDefault();
+          onSeek(duration);
+        }
+      }}
     >
       <div
         className={`relative w-full overflow-hidden rounded-full bg-white/20 transition-[height] duration-[160ms] ease-out ${

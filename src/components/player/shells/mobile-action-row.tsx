@@ -5,7 +5,9 @@ import { MobileTimeLabel } from "./mobile-seek-bar";
 
 // Row under the scrubber. Left: where we are and how fast. Right: two groups
 // split by a hairline, "this stream" (source, episodes) and "move on" (prev,
-// next, PiP). Nothing here is a primary action; it all stays 40px and quiet.
+// next, PiP). Nothing here is a primary action, so it all stays quiet: no rest
+// background, 22px icons. The boxes are 44pt because that is the platform's
+// touch floor, not because the controls want the weight.
 export function MobileActionRow({
   durationSec,
   active,
@@ -43,7 +45,7 @@ export function MobileActionRow({
   const leftGroup = canPickAnother || isSeries;
   const rightGroup = hasPrevEp || hasNextEp || showPiP;
   return (
-    <div className="flex h-10 items-center justify-between">
+    <div className="flex h-11 items-center justify-between">
       <div className="flex items-center gap-3">
         <MobileTimeLabel durationSec={durationSec} active={active} />
         {showRate && (
@@ -51,7 +53,7 @@ export function MobileActionRow({
             type="button"
             aria-label={t("Playback speed")}
             onClick={onSpeed}
-            className="flex h-8 items-center rounded-full bg-white/10 px-2.5 font-mono text-[13px] font-semibold tabular-nums text-ink active:bg-white/20"
+            className="relative flex h-8 items-center rounded-full bg-white/10 px-2.5 font-mono text-[13px] font-semibold tabular-nums text-ink active:bg-white/20 before:absolute before:-inset-y-2 before:-inset-x-1 before:content-['']"
           >
             {fmtRate(rate)}
           </button>
@@ -95,7 +97,7 @@ function ActionButton({ label, onClick, children }: { label: string; onClick: ()
       type="button"
       aria-label={label}
       onClick={onClick}
-      className="flex h-10 w-10 items-center justify-center rounded-full text-ink active:bg-white/10"
+      className="flex h-11 w-11 items-center justify-center rounded-full text-ink active:bg-white/10"
     >
       {children}
     </button>
