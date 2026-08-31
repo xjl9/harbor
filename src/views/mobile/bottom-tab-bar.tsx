@@ -49,12 +49,15 @@ export function BottomTabBar({
   return (
     <nav
       data-mobile-chrome
+      // Compact in landscape: the same bar that reads as comfortable over a 850px
+      // portrait screen eats close to a fifth of a 390px landscape one, floating
+      // over the rows it is supposed to sit beneath.
       className="harbor-tabbar-slide pointer-events-none fixed inset-x-0 bottom-0 z-40 flex justify-center px-4"
       data-hidden={sheetOpen ? "true" : undefined}
       style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 10px)" }}
     >
       <style>{TAB_BAR_SLIDE_CSS}</style>
-      <div className="pointer-events-auto flex w-[min(400px,100%)] items-center justify-between rounded-[20px] border border-white/[0.08] bg-[oklch(0.135_0.006_48/0.94)] px-2 py-2 shadow-[0_16px_40px_-12px_rgba(0,0,0,0.7)]">
+      <div className="pointer-events-auto flex w-[min(400px,100%)] items-center justify-between rounded-[20px] border border-white/[0.08] bg-[oklch(0.135_0.006_48/0.94)] px-2 py-2 shadow-[0_16px_40px_-12px_rgba(0,0,0,0.7)] [@media(max-height:500px)]:w-[min(340px,100%)] [@media(max-height:500px)]:rounded-[16px] [@media(max-height:500px)]:py-1">
         {TABS.map((t) => {
           const on = t.id === active;
           const Icon = t.icon;
@@ -68,7 +71,7 @@ export function BottomTabBar({
               className="no-press flex flex-1 items-center justify-center"
             >
               <span
-                className={`flex h-10 w-[52px] items-center justify-center rounded-[13px] transition-[background-color,transform] duration-200 active:scale-95 ${
+                className={`flex h-10 w-[52px] items-center justify-center rounded-[13px] transition-[background-color,transform] duration-200 active:scale-95 [@media(max-height:500px)]:h-8 [@media(max-height:500px)]:w-[46px] [@media(max-height:500px)]:rounded-[11px] ${
                   on ? "bg-ink" : "bg-transparent"
                 }`}
               >
