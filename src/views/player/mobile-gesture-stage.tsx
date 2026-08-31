@@ -21,6 +21,10 @@ const TAP_HUD_FADE_MS = 320;
 type Mode = null | "scrub" | "volume" | "brightness" | "dismiss" | "none";
 
 type Gesture = {
+  // The finger that started this gesture. Every later read must resolve THIS
+  // touch, never touches[0]: with a second finger down the list order is not
+  // ours to assume.
+  touchId: number;
   startX: number;
   startY: number;
   region: "left" | "center" | "right";
@@ -31,6 +35,19 @@ type Gesture = {
 };
 
 const clamp = (v: number, lo: number, hi: number) => (v < lo ? lo : v > hi ? hi : v);
+
+// A second finger landing this soon after the first is a deliberate two-finger
+// gesture. Later than this it is the hand holding the phone: in landscape a thumb
+// rests on the glass constantly, and counting it as a gesture partner made the
+// player ignore every touch until the hand was lifted off entirely.
+const MULTI_INTENT_MS = 250;
+
+function findTouch(list: React.TouchList, id: number): React.Touch | null {
+  for (let i = 0; i < list.length; i++) {
+    if (list[i].identifier === id) return list[i];
+  }
+  return null;
+}
 
 // The touch model for the native player. Sits above the video (and above the
 // mouse-only DragClickStage, which is not rendered on mobile) but below the
@@ -68,6 +85,8 @@ export function MobileGestureStage({
   const g = useRef<Gesture | null>(null);
   const rect = useRef<DOMRect | null>(null);
   const maxTouches = useRef(0);
+  // When the current finger-down sequence began, for the deliberate-multi window.
+  const firstTouchAt = useRef(0);
   // Set when a second finger interrupts an in-progress single-finger drag, so the
   // all-fingers-lifted handler clears that drag's UI and does not misfire play/pause.
   const dragAbandonedByMulti = useRef(false);
@@ -224,8 +243,18 @@ export function MobileGestureStage({
     // A new touch overrides any in-flight spring-back from a released drag.
     dismissSpringStop.current?.();
     dismissSpringStop.current = null;
-    maxTouches.current = Math.max(maxTouches.current, e.touches.length);
-    if (e.touches.length >= 2) {
+    const nowTs = performance.now();
+    if (e.touches.length === 1) firstTouchAt.current = nowTs;
+    const deliberateMulti = e.touches.length >= 2 && nowTs - firstTouchAt.current <= MULTI_INTENT_MS;
+    // Only a deliberate multi-touch raises the watermark. An incidental finger must
+    // not latch this, or every later single-finger gesture is discarded by the
+    // maxTouches guards until all fingers lift.
+    if (deliberateMulti) maxTouches.current = Math.max(maxTouches.current, e.touches.length);
+    if (e.touches.length >= 2 && !deliberateMulti) {
+      // Resting hand. Leave any in-flight gesture alone; if none is running, fall
+      // through and start one from the finger that actually just landed.
+      if (g.current) return;
+    } else if (e.touches.length >= 2) {
       if (undoTimer.current) window.clearTimeout(undoTimer.current);
       cancelLongPress();
       // A second finger during an active single-finger drag abandons it.
@@ -237,7 +266,8 @@ export function MobileGestureStage({
       g.current = null;
       return;
     }
-    const t0 = e.touches[0];
+    const t0 = e.changedTouches[0] ?? e.touches[0];
+    if (!t0) return;
     dismissRaw.current = 0;
     dismissVel.current = 0;
     lastMoveY.current = t0.clientY;
@@ -255,6 +285,7 @@ export function MobileGestureStage({
       }, LONG_PRESS_MS);
     }
     g.current = {
+      touchId: t0.identifier,
       startX: t0.clientX,
       startY: t0.clientY,
       region: regionOf(t0.clientX - (rect.current?.left ?? 0), rect.current?.width ?? 1),
@@ -280,7 +311,8 @@ export function MobileGestureStage({
     const gg = g.current;
     const r = rect.current;
     if (!gg || !r || maxTouches.current >= 2) return;
-    const t0 = e.touches[0];
+    const t0 = findTouch(e.touches, gg.touchId);
+    if (!t0) return;
     const dx = t0.clientX - gg.startX;
     const dy = t0.clientY - gg.startY;
     if (gg.mode === null) {
