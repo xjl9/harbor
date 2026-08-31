@@ -41,4 +41,22 @@ impl<R: Runtime> HarborPlayer<R> {
     pub fn set_orientation(&self, _payload: OrientationRequest) -> crate::Result<EmptyResponse> {
         Ok(EmptyResponse {})
     }
+    pub fn set_rate(&self, _payload: RateRequest) -> crate::Result<EmptyResponse> {
+        Ok(EmptyResponse {})
+    }
+    pub fn set_volume(&self, _payload: VolumeRequest) -> crate::Result<EmptyResponse> {
+        Ok(EmptyResponse {})
+    }
+    pub fn set_sub_delay(&self, _payload: DelayRequest) -> crate::Result<EmptyResponse> {
+        Ok(EmptyResponse {})
+    }
+    pub fn set_audio_delay(&self, _payload: DelayRequest) -> crate::Result<EmptyResponse> {
+        Ok(EmptyResponse {})
+    }
+    pub fn show_route_picker(&self) -> crate::Result<EmptyResponse> {
+        Ok(EmptyResponse {})
+    }
+    pub fn haptic(&self, _payload: HapticRequest) -> crate::Result<EmptyResponse> {
+        Ok(EmptyResponse {})
+    }
 }

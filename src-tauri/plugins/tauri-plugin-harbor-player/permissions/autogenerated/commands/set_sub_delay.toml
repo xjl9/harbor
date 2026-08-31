@@ -1,0 +1,13 @@
+# Automatically generated - DO NOT EDIT!
+
+"$schema" = "../../schemas/schema.json"
+
+[[permission]]
+identifier = "allow-set-sub-delay"
+description = "Enables the set_sub_delay command without any pre-configured scope."
+commands.allow = ["set_sub_delay"]
+
+[[permission]]
+identifier = "deny-set-sub-delay"
+description = "Denies the set_sub_delay command without any pre-configured scope."
+commands.deny = ["set_sub_delay"]

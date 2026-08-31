@@ -8,6 +8,9 @@ export type NativeLoadRequest = {
   subtitles?: NativeSubtitle[];
   startAtSec?: number;
   title?: string;
+  canNext?: boolean;
+  /** iOS: native video behind a transparent web view, JS draws all controls. */
+  webChrome?: boolean;
 };
 
 export type NativeTick = {
@@ -15,8 +18,16 @@ export type NativeTick = {
   durationSec: number;
   bufferedSec: number;
   playing: boolean;
+  /** Configured playback rate (not zeroed while paused). */
+  rate: number;
 };
-export type NativeState = { status: "loading" | "ready" | "ended" | "error"; errorCode?: string };
+export type NativeState = {
+  status: "loading" | "ready" | "ended" | "error";
+  errorCode?: string;
+  /** iOS engine that emitted the state; absent on Android. */
+  engine?: "mpv" | "av";
+};
+export type NativeHaptic = "light" | "medium" | "heavy" | "select";
 export type NativeClosed = { positionSec: number; durationSec: number };
 
 export async function load(req: NativeLoadRequest): Promise<void> {
@@ -33,6 +44,24 @@ export async function seek(positionSec: number): Promise<void> {
 }
 export async function stop(): Promise<void> {
   await invoke("plugin:harbor-player|stop");
+}
+export async function setRate(rate: number): Promise<void> {
+  await invoke("plugin:harbor-player|set_rate", { payload: { rate } });
+}
+export async function setVolume(volume: number): Promise<void> {
+  await invoke("plugin:harbor-player|set_volume", { payload: { volume } });
+}
+export async function setSubDelay(seconds: number): Promise<void> {
+  await invoke("plugin:harbor-player|set_sub_delay", { payload: { seconds } });
+}
+export async function setAudioDelay(seconds: number): Promise<void> {
+  await invoke("plugin:harbor-player|set_audio_delay", { payload: { seconds } });
+}
+export async function showRoutePicker(): Promise<void> {
+  await invoke("plugin:harbor-player|show_route_picker");
+}
+export async function haptic(kind: NativeHaptic): Promise<void> {
+  await invoke("plugin:harbor-player|haptic", { payload: { kind } });
 }
 
 export function onTick(cb: (t: NativeTick) => void): Promise<PluginListener> {

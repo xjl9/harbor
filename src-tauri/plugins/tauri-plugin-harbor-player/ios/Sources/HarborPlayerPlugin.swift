@@ -21,9 +21,12 @@ struct LoadArgs: Decodable {
   let startAtSec: Double
   let title: String?
   let canNext: Bool
+  /// True hosts the surface behind a transparent web view with no native chrome,
+  /// leaving every control to the JS shell. False is the modal fullscreen player.
+  let webChrome: Bool
 
   private enum CodingKeys: String, CodingKey {
-    case url, headers, subtitles, startAtSec, title, canNext
+    case url, headers, subtitles, startAtSec, title, canNext, webChrome
   }
 
   // decodeIfPresent plus defaults mirror the Kotlin @InvokeArg defaults. The Rust serde
@@ -36,6 +39,7 @@ struct LoadArgs: Decodable {
     startAtSec = try c.decodeIfPresent(Double.self, forKey: .startAtSec) ?? 0
     title = try c.decodeIfPresent(String.self, forKey: .title)
     canNext = try c.decodeIfPresent(Bool.self, forKey: .canNext) ?? false
+    webChrome = try c.decodeIfPresent(Bool.self, forKey: .webChrome) ?? false
   }
 }
 
@@ -60,6 +64,22 @@ struct OrientationArgs: Decodable {
   let mode: String
 }
 
+struct RateArgs: Decodable {
+  let rate: Double
+}
+
+struct VolumeArgs: Decodable {
+  let volume: Double
+}
+
+struct DelayArgs: Decodable {
+  let seconds: Double
+}
+
+struct HapticArgs: Decodable {
+  let kind: String
+}
+
 // Shared with the AppDelegate orientation override injected at iOS build time
 // (see .github/workflows/ios-build.yml "Inject orientation AppDelegate"). The
 // plugin compiles into the Rust staticlib, a separate Swift module from the app
@@ -70,10 +90,16 @@ let harborOrientationDefaultsKey = "harbor.player.orientationMask"
 // One engine at a time behind the single wire contract. The plugin picks the
 // engine per URL in routesToMpv; everything downstream is engine-agnostic.
 protocol HarborPlayerEngine: AnyObject {
-  var onTick: ((Double, Double, Double, Bool) -> Void)? { get set }
+  /// position, duration, buffered, playing, configured playback rate.
+  var onTick: ((Double, Double, Double, Bool, Double) -> Void)? { get set }
   var onState: ((String, String?) -> Void)? { get set }
   var onClosed: ((Double, Double) -> Void)? { get set }
   var onTracks: (([NativeTrackEntry], [NativeTrackEntry]) -> Void)? { get set }
+  /// "mpv" or "av"; the JS shell gates engine-specific controls on it.
+  var engineName: String { get }
+  /// Must be set before the first configure: viewDidLoad reads it to decide
+  /// whether any native chrome is built at all.
+  var webChrome: Bool { get set }
   func configure(_ args: LoadArgs)
   func doPlay()
   func doPause()
@@ -81,11 +107,23 @@ protocol HarborPlayerEngine: AnyObject {
   func doStop()
   func doSetAudioTrack(_ id: String?)
   func doSetSubtitleTrack(_ id: String?)
+  func doSetRate(_ rate: Double)
+  func doSetVolume(_ volume: Double)
+  func doSetSubDelay(_ seconds: Double)
+  func doSetAudioDelay(_ seconds: Double)
   func enterPip()
+}
+
+// Delay offsets only exist on the mpv engine; AVFoundation has no equivalent.
+extension HarborPlayerEngine {
+  func doSetSubDelay(_ seconds: Double) {}
+  func doSetAudioDelay(_ seconds: Double) {}
 }
 
 class HarborPlayerPlugin: Plugin {
   private var controller: (UIViewController & HarborPlayerEngine)?
+  private let chromeHost = HarborWebChromeHost()
+  private let routePicker = HarborRoutePicker()
 
   // AVPlayer keeps the containers it is genuinely good at; mpv takes everything
   // else, including extensionless URLs. Reasoning in ios/README.md.
@@ -95,7 +133,14 @@ class HarborPlayerPlugin: Plugin {
   // strings Android happily plays (unencoded spaces, some IPv6/userinfo
   // shapes), and routing must never be the reason a stream fails. mpv does its
   // own URL handling, so the default engine needs no parseable URL at all.
-  private static func routesToMpv(_ url: String) -> Bool {
+  private static func routesToMpv(_ url: String, hasExternalSubtitles: Bool) -> Bool {
+    // Sidecar subtitles decide before the container does. AVFoundation cannot
+    // attach an external subtitle file to a remote asset, so HarborPlayerViewController
+    // accepts the tracks and drops them: the viewer picks subtitles, gets none, and
+    // nothing reports why. mpv plays these containers just as well, so routing a
+    // subtitled source there costs only PiP and hardware HLS on the sources that
+    // carry subs, which is cheaper than losing the subtitles.
+    if hasExternalSubtitles { return true }
     var base = url
     if let cut = base.firstIndex(where: { $0 == "?" || $0 == "#" }) {
       base = String(base[..<cut])
@@ -109,8 +154,14 @@ class HarborPlayerPlugin: Plugin {
   @objc public func load(_ invoke: Invoke) throws {
     let args = try invoke.parseArgs(LoadArgs.self)
     DispatchQueue.main.async {
-      let wantsMpv = HarborPlayerPlugin.routesToMpv(args.url)
-      if let existing = self.controller, (existing is HarborMpvViewController) != wantsMpv {
+      let wantsMpv = HarborPlayerPlugin.routesToMpv(
+        args.url, hasExternalSubtitles: !args.subtitles.isEmpty)
+      // A chrome-mode flip is retired the same way as an engine flip: the
+      // hosting shape is fixed at viewDidLoad and cannot be changed in place.
+      var outgoing: (UIViewController & HarborPlayerEngine)?
+      if let existing = self.controller,
+        (existing is HarborMpvViewController) != wantsMpv || existing.webChrome != args.webChrome
+      {
         // Cross-engine source switch: replace the surface with no closed event,
         // the same contract as the in-place swap. Silencing every callback keeps
         // the outgoing engine's dismissal-driven teardown from popping the JS
@@ -120,6 +171,7 @@ class HarborPlayerPlugin: Plugin {
         existing.onTracks = nil
         existing.onClosed = nil
         self.controller = nil
+        outgoing = existing
       }
       let vc: UIViewController & HarborPlayerEngine
       if let existing = self.controller {
@@ -130,17 +182,23 @@ class HarborPlayerPlugin: Plugin {
         } else {
           vc = HarborPlayerViewController()
         }
+        vc.webChrome = args.webChrome
         self.controller = vc
-        vc.onTick = { [weak self] pos, dur, buf, playing in
-          self?.sendTick(pos, dur, buf, playing)
+        let engine = vc.engineName
+        vc.onTick = { [weak self] pos, dur, buf, playing, rate in
+          self?.sendTick(pos, dur, buf, playing, rate)
         }
-        vc.onState = { [weak self] status, code in self?.sendState(status, code) }
+        vc.onState = { [weak self] status, code in self?.sendState(status, code, engine: engine) }
         vc.onTracks = { [weak self] audio, subtitle in self?.sendTracks(audio, subtitle) }
         // weak vc: the closure is stored on vc itself, a strong capture would leak it.
         vc.onClosed = { [weak self, weak vc] pos, dur in
           guard let self = self else { return }
           self.sendClosed(pos, dur)
-          if let vc = vc, self.controller === vc { self.controller = nil }
+          guard let vc = vc else { return }
+          if self.controller === vc { self.controller = nil }
+          // A child-hosted surface has no dismissal to unwind it; the modal
+          // path leaves this a no-op apart from the (idempotent) restore.
+          self.chromeHost.detach(vc, restoreWebView: self.controller == nil)
         }
       }
       // Set on every load, not just when the controller is created: advancing to
@@ -152,7 +210,7 @@ class HarborPlayerPlugin: Plugin {
           mpv.onNextEpisode = { [weak self] in self?.sendAction("next") }
         }
       }
-      if vc.presentingViewController == nil {
+      if vc.presentingViewController == nil && vc.parent == nil {
         // Reject rather than leave the JS await hanging when there is nothing to
         // present on (webview not created yet, or torn down).
         guard let root = self.manager.viewController else {
@@ -160,16 +218,31 @@ class HarborPlayerPlugin: Plugin {
           invoke.reject("Cannot present the native player: no root view controller")
           return
         }
-        vc.modalPresentationStyle = .fullScreen
-        if let replaced = root.presentedViewController {
-          // Cross-engine swap: the outgoing engine is still on screen. Presenting
-          // during its dismissal fails, so present from the completion; the
-          // dismissal itself drives the old controller's teardown.
-          replaced.dismiss(animated: false) {
-            root.present(vc, animated: true)
+        if let outgoing = outgoing, outgoing.parent != nil {
+          // Callbacks are already silent, so this tears the old engine down
+          // without a closed event; a child has no dismissal to do it for us.
+          outgoing.doStop()
+          self.chromeHost.detach(outgoing, restoreWebView: !args.webChrome)
+        }
+        if args.webChrome {
+          let attach = { self.chromeHost.embed(vc, in: root) }
+          if let replaced = root.presentedViewController {
+            replaced.dismiss(animated: false, completion: attach)
+          } else {
+            attach()
           }
         } else {
-          root.present(vc, animated: true)
+          vc.modalPresentationStyle = .fullScreen
+          if let replaced = root.presentedViewController {
+            // Cross-engine swap: the outgoing engine is still on screen. Presenting
+            // during its dismissal fails, so present from the completion; the
+            // dismissal itself drives the old controller's teardown.
+            replaced.dismiss(animated: false) {
+              root.present(vc, animated: true)
+            }
+          } else {
+            root.present(vc, animated: true)
+          }
         }
       }
       // A live controller swaps the stream in place with no closed event, mirroring
@@ -227,6 +300,58 @@ class HarborPlayerPlugin: Plugin {
     }
   }
 
+  @objc public func setRate(_ invoke: Invoke) throws {
+    let args = try invoke.parseArgs(RateArgs.self)
+    DispatchQueue.main.async {
+      self.controller?.doSetRate(args.rate)
+      invoke.resolve(JsonObject())
+    }
+  }
+
+  @objc public func setVolume(_ invoke: Invoke) throws {
+    let args = try invoke.parseArgs(VolumeArgs.self)
+    DispatchQueue.main.async {
+      self.controller?.doSetVolume(args.volume)
+      invoke.resolve(JsonObject())
+    }
+  }
+
+  @objc public func setSubDelay(_ invoke: Invoke) throws {
+    let args = try invoke.parseArgs(DelayArgs.self)
+    DispatchQueue.main.async {
+      self.controller?.doSetSubDelay(args.seconds)
+      invoke.resolve(JsonObject())
+    }
+  }
+
+  @objc public func setAudioDelay(_ invoke: Invoke) throws {
+    let args = try invoke.parseArgs(DelayArgs.self)
+    DispatchQueue.main.async {
+      self.controller?.doSetAudioDelay(args.seconds)
+      invoke.resolve(JsonObject())
+    }
+  }
+
+  // AirPlay is an AVPlayer-engine feature; mpv renders its own frames and has
+  // nothing to hand a route, so the picker is only raised for the AV engine.
+  @objc public func showRoutePicker(_ invoke: Invoke) {
+    DispatchQueue.main.async {
+      if self.controller?.engineName == "av", let host = self.topmostView() {
+        self.routePicker.present(in: host)
+      }
+      invoke.resolve(JsonObject())
+    }
+  }
+
+  // WKWebView has no navigator.vibrate, so the JS shell's haptics come through here.
+  @objc public func haptic(_ invoke: Invoke) throws {
+    let args = try invoke.parseArgs(HapticArgs.self)
+    DispatchQueue.main.async {
+      HarborHaptics.play(args.kind)
+      invoke.resolve(JsonObject())
+    }
+  }
+
   @objc public func enterPip(_ invoke: Invoke) {
     DispatchQueue.main.async {
       self.controller?.enterPip()
@@ -259,9 +384,7 @@ class HarborPlayerPlugin: Plugin {
       if #available(iOS 16.0, *) {
         // Re-query the AppDelegate now that the mask changed. Walk to the topmost
         // presented controller so a fullscreen native player VC is included.
-        var top = self.manager.viewController
-        while let presented = top?.presentedViewController { top = presented }
-        top?.setNeedsUpdateOfSupportedInterfaceOrientations()
+        self.topmostViewController()?.setNeedsUpdateOfSupportedInterfaceOrientations()
         let scene = UIApplication.shared.connectedScenes
           .compactMap { $0 as? UIWindowScene }
           .first { $0.activationState == .foregroundActive }
@@ -278,15 +401,26 @@ class HarborPlayerPlugin: Plugin {
     }
   }
 
-  private func sendTick(_ pos: Double, _ dur: Double, _ buf: Double, _ playing: Bool) {
+  private func topmostViewController() -> UIViewController? {
+    var top = manager.viewController
+    while let presented = top?.presentedViewController { top = presented }
+    return top
+  }
+
+  private func topmostView() -> UIView? {
+    topmostViewController()?.view
+  }
+
+  private func sendTick(_ pos: Double, _ dur: Double, _ buf: Double, _ playing: Bool, _ rate: Double) {
     let payload: JSObject = [
       "positionSec": pos, "durationSec": dur, "bufferedSec": buf, "playing": playing,
+      "rate": rate,
     ]
     trigger("tick", data: payload)
   }
 
-  private func sendState(_ status: String, _ errorCode: String?) {
-    var payload: JSObject = ["status": status]
+  private func sendState(_ status: String, _ errorCode: String?, engine: String) {
+    var payload: JSObject = ["status": status, "engine": engine]
     if let code = errorCode { payload["errorCode"] = code }
     trigger("state", data: payload)
   }
@@ -319,5 +453,8 @@ class HarborPlayerPlugin: Plugin {
 
 @_cdecl("init_plugin_harbor_player")
 func initPlugin() -> Plugin {
+  // The mask persists in UserDefaults and would survive a crash mid-playback,
+  // launching the app locked to landscape with no player to unlock it.
+  UserDefaults.standard.removeObject(forKey: harborOrientationDefaultsKey)
   return HarborPlayerPlugin()
 }

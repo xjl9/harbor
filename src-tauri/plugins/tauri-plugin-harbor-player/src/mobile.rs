@@ -74,4 +74,34 @@ impl<R: Runtime> HarborPlayer<R> {
             .run_mobile_plugin("setOrientation", payload)
             .map_err(Into::into)
     }
+    pub fn set_rate(&self, payload: RateRequest) -> crate::Result<EmptyResponse> {
+        self.0
+            .run_mobile_plugin("setRate", payload)
+            .map_err(Into::into)
+    }
+    pub fn set_volume(&self, payload: VolumeRequest) -> crate::Result<EmptyResponse> {
+        self.0
+            .run_mobile_plugin("setVolume", payload)
+            .map_err(Into::into)
+    }
+    pub fn set_sub_delay(&self, payload: DelayRequest) -> crate::Result<EmptyResponse> {
+        self.0
+            .run_mobile_plugin("setSubDelay", payload)
+            .map_err(Into::into)
+    }
+    pub fn set_audio_delay(&self, payload: DelayRequest) -> crate::Result<EmptyResponse> {
+        self.0
+            .run_mobile_plugin("setAudioDelay", payload)
+            .map_err(Into::into)
+    }
+    pub fn show_route_picker(&self) -> crate::Result<EmptyResponse> {
+        self.0
+            .run_mobile_plugin("showRoutePicker", ())
+            .map_err(Into::into)
+    }
+    pub fn haptic(&self, payload: HapticRequest) -> crate::Result<EmptyResponse> {
+        self.0
+            .run_mobile_plugin("haptic", payload)
+            .map_err(Into::into)
+    }
 }

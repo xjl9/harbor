@@ -1,0 +1,13 @@
+# Automatically generated - DO NOT EDIT!
+
+"$schema" = "../../schemas/schema.json"
+
+[[permission]]
+identifier = "allow-show-route-picker"
+description = "Enables the show_route_picker command without any pre-configured scope."
+commands.allow = ["show_route_picker"]
+
+[[permission]]
+identifier = "deny-show-route-picker"
+description = "Denies the show_route_picker command without any pre-configured scope."
+commands.deny = ["show_route_picker"]

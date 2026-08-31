@@ -30,10 +30,14 @@ private final class HarborMetalLayer: CAMetalLayer {
 }
 
 final class HarborMpvViewController: UIViewController, HarborPlayerEngine {
-  var onTick: ((Double, Double, Double, Bool) -> Void)?
+  var onTick: ((Double, Double, Double, Bool, Double) -> Void)?
   var onState: ((String, String?) -> Void)?
   var onClosed: ((Double, Double) -> Void)?
   var onTracks: (([NativeTrackEntry], [NativeTrackEntry]) -> Void)?
+  /// Read once in viewDidLoad: true builds no native chrome at all.
+  var webChrome = false
+  /// Last speed handed to mpv; see HarborMpvViewController+Commands.swift.
+  var currentRate = 1.0
   /// Raised when the viewer asks for the following episode from the overlay.
   /// Loading it is the JS side's job, the same path auto-advance already uses.
   var onNextEpisode: (() -> Void)?
@@ -124,6 +128,9 @@ final class HarborMpvViewController: UIViewController, HarborPlayerEngine {
       metalLayer.contentsScale = screen.nativeScale
     }
     view.layer.addSublayer(metalLayer)
+    // Web chrome: the JS shell draws every control, so no button, bar, or
+    // recognizer is ever built on this surface.
+    guard !webChrome else { return }
     setupCloseButton()
     setupTransportOverlay()
     let tap = UITapGestureRecognizer(target: self, action: #selector(surfaceTapped(_:)))
@@ -222,7 +229,7 @@ final class HarborMpvViewController: UIViewController, HarborPlayerEngine {
     registerLifecycleObservers()
     registerRemoteCommands()
     startTicking()
-    updateNowPlaying()
+    updateNowPlaying(force: true)
   }
 
   func doPlay() {
@@ -239,12 +246,17 @@ final class HarborMpvViewController: UIViewController, HarborPlayerEngine {
   func doSeek(_ sec: Double) {
     lastSeekTargetSec = sec
     runCommand("seek", [String(format: "%.3f", sec), "absolute"])
+    // time-pos lands asynchronously; the lock screen gets the target now
+    // rather than the stale playhead for the next heartbeat.
+    updateNowPlaying(force: true, position: sec)
   }
 
   func doStop() {
     reportClosed()
     teardown()
-    dismiss(animated: true)
+    // A child-hosted surface is unwound by the plugin; only a modal has a
+    // presentation to dismiss.
+    if presentingViewController != nil { dismiss(animated: true) }
   }
 
   func doSetAudioTrack(_ id: String?) {
@@ -486,7 +498,8 @@ final class HarborMpvViewController: UIViewController, HarborPlayerEngine {
     addSidecarSubtitles()
     emitState("ready")
     emitTracks()
-    updateNowPlaying()
+    updateNowPlaying(force: true)
+    guard !webChrome else { return }
     // The overlay controls were inert until now; enable them and start the
     // idle-hide clock so the chrome fades once playback is underway.
     setTransportEnabled(true)
@@ -637,9 +650,9 @@ final class HarborMpvViewController: UIViewController, HarborPlayerEngine {
     // the reported duration; media3 reports position == duration at ENDED, so
     // clamp for parity while the end screen is up.
     let position = cachedEofReached && cachedDuration > 0 ? cachedDuration : cachedPosition
-    onTick?(position, cachedDuration, cachedBuffered, isPlayingNow)
+    onTick?(position, cachedDuration, cachedBuffered, isPlayingNow, currentRate)
     updateNowPlaying()
-    updateTransport(position: position)
+    if !webChrome { updateTransport(position: position) }
   }
 
   private var isPlayingNow: Bool {
@@ -791,12 +804,12 @@ final class HarborMpvViewController: UIViewController, HarborPlayerEngine {
       })
   }
 
-  private func updateNowPlaying() {
+  private func updateNowPlaying(force: Bool = false, position: Double? = nil) {
     nowPlaying.update(
       title: currentTitle,
-      positionSec: cachedPosition,
+      positionSec: position ?? cachedPosition,
       durationSec: cachedDuration > 0 ? cachedDuration : nil,
-      playing: isPlayingNow)
+      playing: isPlayingNow, rate: currentRate, force: force)
   }
 
   private func setupCloseButton() {
@@ -993,7 +1006,7 @@ final class HarborMpvViewController: UIViewController, HarborPlayerEngine {
   // the chrome never vanishes mid-interaction.
   private func armAutoHide() {
     autoHideTimer?.invalidate()
-    guard fileLoaded, chromeVisible else { return }
+    guard fileLoaded, chromeVisible, !webChrome else { return }
     let timer = Timer(timeInterval: 3.0, repeats: false) { [weak self] _ in
       self?.setChromeVisible(false, animated: true)
     }
@@ -1151,9 +1164,17 @@ final class HarborMpvViewController: UIViewController, HarborPlayerEngine {
     return status
   }
 
-  private func setString(_ name: String, _ value: String) {
+  // Internal, not private: the command extension in
+  // HarborMpvViewController+Commands.swift drives mpv through these two.
+  func setString(_ name: String, _ value: String) {
     guard let handle = mpv, !shuttingDown else { return }
     mpv_set_property_string(handle, name, value)
+  }
+
+  func setDouble(_ name: String, _ value: Double) {
+    guard let handle = mpv, !shuttingDown else { return }
+    var number = value
+    mpv_set_property(handle, name, MPV_FORMAT_DOUBLE, &number)
   }
 
   private func setFlag(_ name: String, _ value: Bool) {

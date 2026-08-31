@@ -22,12 +22,18 @@ struct NativeTrackEntry {
 final class HarborPlayerViewController: AVPlayerViewController, AVPlayerViewControllerDelegate,
   HarborPlayerEngine
 {
-  var onTick: ((Double, Double, Double, Bool) -> Void)?
+  var onTick: ((Double, Double, Double, Bool, Double) -> Void)?
   var onState: ((String, String?) -> Void)?
   var onClosed: ((Double, Double) -> Void)?
   var onTracks: (([NativeTrackEntry], [NativeTrackEntry]) -> Void)?
+  var webChrome = false
+  // Reapplied by doPlay; see HarborPlayerViewController+Commands.swift.
+  var desiredRate: Float = 1
 
   private var tickTimer: Timer?
+  // Resume target, applied once the item is ready. Seeking the item earlier is
+  // silently dropped by AVFoundation and playback starts from zero.
+  private var pendingStartSec = 0.0
   private var itemStatusObs: NSKeyValueObservation?
   private var timeControlObs: NSKeyValueObservation?
   private var endToken: NSObjectProtocol?
@@ -45,6 +51,12 @@ final class HarborPlayerViewController: AVPlayerViewController, AVPlayerViewCont
     delegate = self
     if #available(iOS 14.2, *) {
       canStartPictureInPictureAutomaticallyFromInline = true
+    }
+    if webChrome {
+      // The JS shell owns every control; AVKit's chrome and gestures stay off
+      // so nothing native can ever surface over the web view.
+      showsPlaybackControls = false
+      view.isUserInteractionEnabled = false
     }
   }
 
@@ -88,10 +100,7 @@ final class HarborPlayerViewController: AVPlayerViewController, AVPlayerViewCont
       field.extendedLanguageTag = "und"
       item.externalMetadata = [field]
     }
-    if args.startAtSec > 0 {
-      // Resume position is part of the load itself, before playback starts.
-      item.seek(to: CMTime(seconds: args.startAtSec, preferredTimescale: 1000), completionHandler: nil)
-    }
+    pendingStartSec = args.startAtSec
 
     if let existing = player {
       existing.replaceCurrentItem(with: item)
@@ -103,9 +112,19 @@ final class HarborPlayerViewController: AVPlayerViewController, AVPlayerViewCont
 
     attachObservers(item: item)
     registerRemoteCommands()
-    player?.play()
+    // Playback starts from the readyToPlay branch, after the resume seek.
+    emitState("loading")
     startTicking()
-    updateNowPlaying()
+    updateNowPlaying(force: true)
+  }
+
+  // Runs once per item after readyToPlay (and after the resume seek landed).
+  private func beginPlayback(for item: AVPlayerItem) {
+    guard player?.currentItem === item else { return }
+    doPlay()
+    emitState("ready")
+    emitTracks()
+    updateNowPlaying(force: true)
   }
 
   // Routing no longer pre-validates with Foundation (mpv needs no parseable
@@ -120,17 +139,26 @@ final class HarborPlayerViewController: AVPlayerViewController, AVPlayerViewCont
     return URL(string: encoded)
   }
 
-  func doPlay() { player?.play() }
+  func doPlay() {
+    guard let p = player else { return }
+    p.play()
+    if desiredRate != 1 { p.rate = desiredRate }
+  }
+
   func doPause() { player?.pause() }
 
   func doSeek(_ sec: Double) {
-    player?.seek(to: CMTime(seconds: sec, preferredTimescale: 1000))
+    player?.seek(to: CMTime(seconds: sec, preferredTimescale: 1000)) { [weak self] _ in
+      self?.updateNowPlaying(force: true)
+    }
   }
 
   func doStop() {
     reportClosed()
     teardown()
-    dismiss(animated: true)
+    // A child-hosted surface is unwound by the plugin; only a modal has a
+    // presentation to dismiss.
+    if presentingViewController != nil { dismiss(animated: true) }
   }
 
   func doSetAudioTrack(_ id: String?) {
@@ -218,9 +246,18 @@ final class HarborPlayerViewController: AVPlayerViewController, AVPlayerViewCont
         guard let self = self else { return }
         switch observed.status {
         case .readyToPlay:
-          self.emitState("ready")
-          self.emitTracks()
-          self.updateNowPlaying()
+          let start = self.pendingStartSec
+          self.pendingStartSec = 0
+          if start > 0 {
+            observed.seek(
+              to: CMTime(seconds: start, preferredTimescale: 1000),
+              toleranceBefore: .zero, toleranceAfter: .zero
+            ) { [weak self] _ in
+              self?.beginPlayback(for: observed)
+            }
+          } else {
+            self.beginPlayback(for: observed)
+          }
         case .failed:
           self.emitState("error", self.media3ErrorCode(observed.error))
         default:
@@ -305,7 +342,7 @@ final class HarborPlayerViewController: AVPlayerViewController, AVPlayerViewCont
       if rawDur.isNumeric && rawDur.seconds > 0 { dur = rawDur.seconds }
       buf = bufferedEnd(of: item, position: pos)
     }
-    onTick?(pos, dur, buf, p.timeControlStatus == .playing)
+    onTick?(pos, dur, buf, p.timeControlStatus == .playing, Double(desiredRate))
     updateNowPlaying()
   }
 
@@ -378,7 +415,7 @@ final class HarborPlayerViewController: AVPlayerViewController, AVPlayerViewCont
       })
   }
 
-  private func updateNowPlaying() {
+  private func updateNowPlaying(force: Bool = false) {
     var position: Double?
     var duration: Double?
     if let item = player?.currentItem {
@@ -389,7 +426,7 @@ final class HarborPlayerViewController: AVPlayerViewController, AVPlayerViewCont
     }
     nowPlaying.update(
       title: currentTitle, positionSec: position, durationSec: duration,
-      playing: player?.timeControlStatus == .playing)
+      playing: player?.timeControlStatus == .playing, rate: Double(desiredRate), force: force)
   }
 
   // AVKit's default dismisses a fullscreen-presented controller the moment PiP

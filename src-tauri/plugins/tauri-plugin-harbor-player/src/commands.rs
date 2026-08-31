@@ -62,3 +62,50 @@ pub(crate) async fn set_orientation<R: Runtime>(
 ) -> crate::Result<EmptyResponse> {
     app.harbor_player().set_orientation(payload)
 }
+
+#[tauri::command]
+pub(crate) async fn set_rate<R: Runtime>(
+    app: AppHandle<R>,
+    payload: RateRequest,
+) -> crate::Result<EmptyResponse> {
+    app.harbor_player().set_rate(payload)
+}
+
+#[tauri::command]
+pub(crate) async fn set_volume<R: Runtime>(
+    app: AppHandle<R>,
+    payload: VolumeRequest,
+) -> crate::Result<EmptyResponse> {
+    app.harbor_player().set_volume(payload)
+}
+
+#[tauri::command]
+pub(crate) async fn set_sub_delay<R: Runtime>(
+    app: AppHandle<R>,
+    payload: DelayRequest,
+) -> crate::Result<EmptyResponse> {
+    app.harbor_player().set_sub_delay(payload)
+}
+
+#[tauri::command]
+pub(crate) async fn set_audio_delay<R: Runtime>(
+    app: AppHandle<R>,
+    payload: DelayRequest,
+) -> crate::Result<EmptyResponse> {
+    app.harbor_player().set_audio_delay(payload)
+}
+
+#[tauri::command]
+pub(crate) async fn show_route_picker<R: Runtime>(
+    app: AppHandle<R>,
+) -> crate::Result<EmptyResponse> {
+    app.harbor_player().show_route_picker()
+}
+
+#[tauri::command]
+pub(crate) async fn haptic<R: Runtime>(
+    app: AppHandle<R>,
+    payload: HapticRequest,
+) -> crate::Result<EmptyResponse> {
+    app.harbor_player().haptic(payload)
+}

@@ -13,6 +13,12 @@ Allows the Harbor native player commands.
 - `allow-set-subtitle-track`
 - `allow-enter-pip`
 - `allow-set-orientation`
+- `allow-set-rate`
+- `allow-set-volume`
+- `allow-set-sub-delay`
+- `allow-set-audio-delay`
+- `allow-show-route-picker`
+- `allow-haptic`
 - `allow-registerListener`
 - `allow-removeListener`
 - `allow-remove-listener`
@@ -48,6 +54,32 @@ Enables the enter_pip command without any pre-configured scope.
 <td>
 
 Denies the enter_pip command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`harbor-player:allow-haptic`
+
+</td>
+<td>
+
+Enables the haptic command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`harbor-player:deny-haptic`
+
+</td>
+<td>
+
+Denies the haptic command without any pre-configured scope.
 
 </td>
 </tr>
@@ -237,6 +269,32 @@ Denies the seek command without any pre-configured scope.
 <tr>
 <td>
 
+`harbor-player:allow-set-audio-delay`
+
+</td>
+<td>
+
+Enables the set_audio_delay command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`harbor-player:deny-set-audio-delay`
+
+</td>
+<td>
+
+Denies the set_audio_delay command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
 `harbor-player:allow-set-audio-track`
 
 </td>
@@ -289,6 +347,58 @@ Denies the set_orientation command without any pre-configured scope.
 <tr>
 <td>
 
+`harbor-player:allow-set-rate`
+
+</td>
+<td>
+
+Enables the set_rate command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`harbor-player:deny-set-rate`
+
+</td>
+<td>
+
+Denies the set_rate command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`harbor-player:allow-set-sub-delay`
+
+</td>
+<td>
+
+Enables the set_sub_delay command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`harbor-player:deny-set-sub-delay`
+
+</td>
+<td>
+
+Denies the set_sub_delay command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
 `harbor-player:allow-set-subtitle-track`
 
 </td>
@@ -308,6 +418,58 @@ Enables the set_subtitle_track command without any pre-configured scope.
 <td>
 
 Denies the set_subtitle_track command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`harbor-player:allow-set-volume`
+
+</td>
+<td>
+
+Enables the set_volume command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`harbor-player:deny-set-volume`
+
+</td>
+<td>
+
+Denies the set_volume command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`harbor-player:allow-show-route-picker`
+
+</td>
+<td>
+
+Enables the show_route_picker command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`harbor-player:deny-show-route-picker`
+
+</td>
+<td>
+
+Denies the show_route_picker command without any pre-configured scope.
 
 </td>
 </tr>

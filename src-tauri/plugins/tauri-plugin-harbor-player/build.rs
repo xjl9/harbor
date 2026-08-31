@@ -8,6 +8,12 @@ const COMMANDS: &[&str] = &[
     "set_subtitle_track",
     "enter_pip",
     "set_orientation",
+    "set_rate",
+    "set_volume",
+    "set_sub_delay",
+    "set_audio_delay",
+    "show_route_picker",
+    "haptic",
     // Built-in mobile listener commands backing `addPluginListener`; handled by the
     // Tauri Kotlin/Swift Plugin base class. Listed here so the ACL permits them.
     "registerListener",

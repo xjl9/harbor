@@ -307,6 +307,18 @@
           "markdownDescription": "Denies the enter_pip command without any pre-configured scope."
         },
         {
+          "description": "Enables the haptic command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-haptic",
+          "markdownDescription": "Enables the haptic command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the haptic command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-haptic",
+          "markdownDescription": "Denies the haptic command without any pre-configured scope."
+        },
+        {
           "description": "Enables the load command without any pre-configured scope.",
           "type": "string",
           "const": "allow-load",
@@ -391,6 +403,18 @@
           "markdownDescription": "Denies the seek command without any pre-configured scope."
         },
         {
+          "description": "Enables the set_audio_delay command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-set-audio-delay",
+          "markdownDescription": "Enables the set_audio_delay command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the set_audio_delay command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-set-audio-delay",
+          "markdownDescription": "Denies the set_audio_delay command without any pre-configured scope."
+        },
+        {
           "description": "Enables the set_audio_track command without any pre-configured scope.",
           "type": "string",
           "const": "allow-set-audio-track",
@@ -415,6 +439,30 @@
           "markdownDescription": "Denies the set_orientation command without any pre-configured scope."
         },
         {
+          "description": "Enables the set_rate command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-set-rate",
+          "markdownDescription": "Enables the set_rate command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the set_rate command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-set-rate",
+          "markdownDescription": "Denies the set_rate command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the set_sub_delay command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-set-sub-delay",
+          "markdownDescription": "Enables the set_sub_delay command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the set_sub_delay command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-set-sub-delay",
+          "markdownDescription": "Denies the set_sub_delay command without any pre-configured scope."
+        },
+        {
           "description": "Enables the set_subtitle_track command without any pre-configured scope.",
           "type": "string",
           "const": "allow-set-subtitle-track",
@@ -425,6 +473,30 @@
           "type": "string",
           "const": "deny-set-subtitle-track",
           "markdownDescription": "Denies the set_subtitle_track command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the set_volume command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-set-volume",
+          "markdownDescription": "Enables the set_volume command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the set_volume command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-set-volume",
+          "markdownDescription": "Denies the set_volume command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the show_route_picker command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-show-route-picker",
+          "markdownDescription": "Enables the show_route_picker command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the show_route_picker command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-show-route-picker",
+          "markdownDescription": "Denies the show_route_picker command without any pre-configured scope."
         },
         {
           "description": "Enables the stop command without any pre-configured scope.",
@@ -439,10 +511,10 @@
           "markdownDescription": "Denies the stop command without any pre-configured scope."
         },
         {
-          "description": "Allows the Harbor native player commands.\n#### This default permission set includes:\n\n- `allow-load`\n- `allow-play`\n- `allow-pause`\n- `allow-seek`\n- `allow-stop`\n- `allow-set-audio-track`\n- `allow-set-subtitle-track`\n- `allow-enter-pip`\n- `allow-set-orientation`\n- `allow-registerListener`\n- `allow-removeListener`\n- `allow-remove-listener`",
+          "description": "Allows the Harbor native player commands.\n#### This default permission set includes:\n\n- `allow-load`\n- `allow-play`\n- `allow-pause`\n- `allow-seek`\n- `allow-stop`\n- `allow-set-audio-track`\n- `allow-set-subtitle-track`\n- `allow-enter-pip`\n- `allow-set-orientation`\n- `allow-set-rate`\n- `allow-set-volume`\n- `allow-set-sub-delay`\n- `allow-set-audio-delay`\n- `allow-show-route-picker`\n- `allow-haptic`\n- `allow-registerListener`\n- `allow-removeListener`\n- `allow-remove-listener`",
           "type": "string",
           "const": "default",
-          "markdownDescription": "Allows the Harbor native player commands.\n#### This default permission set includes:\n\n- `allow-load`\n- `allow-play`\n- `allow-pause`\n- `allow-seek`\n- `allow-stop`\n- `allow-set-audio-track`\n- `allow-set-subtitle-track`\n- `allow-enter-pip`\n- `allow-set-orientation`\n- `allow-registerListener`\n- `allow-removeListener`\n- `allow-remove-listener`"
+          "markdownDescription": "Allows the Harbor native player commands.\n#### This default permission set includes:\n\n- `allow-load`\n- `allow-play`\n- `allow-pause`\n- `allow-seek`\n- `allow-stop`\n- `allow-set-audio-track`\n- `allow-set-subtitle-track`\n- `allow-enter-pip`\n- `allow-set-orientation`\n- `allow-set-rate`\n- `allow-set-volume`\n- `allow-set-sub-delay`\n- `allow-set-audio-delay`\n- `allow-show-route-picker`\n- `allow-haptic`\n- `allow-registerListener`\n- `allow-removeListener`\n- `allow-remove-listener`"
         }
       ]
     }

@@ -1,0 +1,13 @@
+# Automatically generated - DO NOT EDIT!
+
+"$schema" = "../../schemas/schema.json"
+
+[[permission]]
+identifier = "allow-set-audio-delay"
+description = "Enables the set_audio_delay command without any pre-configured scope."
+commands.allow = ["set_audio_delay"]
+
+[[permission]]
+identifier = "deny-set-audio-delay"
+description = "Denies the set_audio_delay command without any pre-configured scope."
+commands.deny = ["set_audio_delay"]
