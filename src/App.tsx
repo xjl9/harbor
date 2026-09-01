@@ -353,6 +353,7 @@ export function App({ onReady }: { onReady?: () => void }) {
                                                   <MiddleClickScroll />
                                                   <ThemeBackdrop />
                                                   <WatchlistSync />
+                                                  <AddonSeedMount />
                                                   {isMobileWeb() || isMobileNative() || isRemoteRoute() ? (
                                                     <>
                                                       <Suspense fallback={null}>
@@ -653,6 +654,20 @@ function parseDeepLinkEpisode(videoId?: string): { season: number; episode: numb
   const episode = Number(parts[parts.length - 1]);
   if (!Number.isFinite(season) || !Number.isFinite(episode)) return undefined;
   return { season, episode };
+}
+
+// Seeding lived in an effect inside Shell, and Shell is the DESKTOP branch of the
+// surface switch below - mobile renders MobileShell instead. So on a phone the
+// seeder was never called once, and a build carrying a seed set arrived with no
+// sources and no way to tell why. Mounted beside the switch so every surface runs
+// it, rather than trusting whichever branch happens to be rendered.
+function AddonSeedMount() {
+  useEffect(() => {
+    void import("@/lib/addon-store").then(({ seedDefaultAddonsIfFirstRun }) =>
+      seedDefaultAddonsIfFirstRun(),
+    );
+  }, []);
+  return null;
 }
 
 function RevealOnMount({ onReady }: { onReady?: () => void }) {
@@ -1024,12 +1039,6 @@ function Shell({ onReady }: { onReady?: () => void }) {
       void import("@/lib/multiview/bridge").then(({ mvStopAll }) => mvStopAll().catch(() => {}));
     }
   }, [topKind]);
-
-  useEffect(() => {
-    void import("@/lib/addon-store").then(({ seedDefaultAddonsIfFirstRun }) =>
-      seedDefaultAddonsIfFirstRun(),
-    );
-  }, []);
 
   useEffect(() => {
     let dispose: (() => void) | null = null;
