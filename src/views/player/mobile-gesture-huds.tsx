@@ -42,13 +42,39 @@ export function DoubleTapHud({ hud }: { hud: TapHud }) {
   );
 }
 
-export function ScrubHud({ sec, duration }: { sec: number; duration: number }) {
+export function ScrubHud({
+  sec,
+  duration,
+  tier,
+  delta,
+}: {
+  sec: number;
+  duration: number;
+  tier?: string | null;
+  delta?: number;
+}) {
+  // The delta is what a viewer is actually judging while scrubbing - "how far am I
+  // moving", not "what absolute timestamp is this" - and the tier tells them why the
+  // same finger travel is suddenly worth less, which is otherwise just a control
+  // that stopped responding properly.
+  const signed =
+    delta == null || Math.abs(delta) < 1
+      ? null
+      : `${delta > 0 ? "+" : "-"}${fmtTime(Math.abs(delta))}`;
   return (
     <div
-      className={`pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-[14px] px-5 py-2.5 font-mono text-[18px] font-semibold tabular-nums ${hudClass}`}
+      className={`pointer-events-none absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-1 rounded-[14px] px-5 py-2.5 ${hudClass}`}
     >
-      {fmtTime(sec)}
-      <span className="text-ink-muted"> / {fmtTime(duration)}</span>
+      <span className="font-mono text-[18px] font-semibold tabular-nums">
+        {fmtTime(sec)}
+        <span className="text-ink-muted"> / {fmtTime(duration)}</span>
+      </span>
+      {(signed || tier) && (
+        <span className="flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.14em] text-ink-muted">
+          {signed && <span className="text-accent">{signed}</span>}
+          {tier && <span>{tier}</span>}
+        </span>
+      )}
     </div>
   );
 }

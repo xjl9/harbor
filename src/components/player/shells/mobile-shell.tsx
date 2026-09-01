@@ -1,13 +1,18 @@
 import { useEffect, useState, type CSSProperties } from "react";
 import { capabilityFlags } from "@/lib/player/bridge";
 import type { PlayerShellProps } from "@/lib/player-shells/types";
-import { MOBILE_OPEN_EPISODES_EVENT } from "@/lib/player/mobile-events";
+import {
+  MOBILE_OPEN_EPISODES_EVENT,
+  MOBILE_SEEK_COMMITTED_EVENT,
+  type MobileSeekCommittedDetail,
+} from "@/lib/player/mobile-events";
 import { setMobileLocked, useMobileLocked } from "@/lib/player/mobile-lock";
 import { haptics } from "@/lib/player/haptics";
 import { useSettings } from "@/lib/settings";
 import { useT } from "@/lib/i18n";
 import { MobileActionRow } from "./mobile-action-row";
 import { MobileCoach } from "./mobile-coach";
+import { MobileSeekUndo, SEEK_UNDO_MIN_JUMP_SEC, type SeekUndo } from "./mobile-seek-undo";
 import { MobileGlyph } from "./mobile-glyph";
 import { MOBILE_GLYPH, seekGlyph } from "./mobile-icons";
 import {
@@ -98,6 +103,20 @@ export function MobileShell(props: PlayerShellProps) {
   useEffect(() => {
     onMenuOpenChange?.(sheet.kind !== "none" || subStyleOpen);
   }, [sheet.kind, subStyleOpen, onMenuOpenChange]);
+
+  // Offer the way back after a jump big enough to have been a mistake. Small
+  // corrections are not worth a pill; losing forty minutes of your place is.
+  const [seekUndo, setSeekUndo] = useState<SeekUndo>(null);
+  useEffect(() => {
+    const onCommitted = (e: Event) => {
+      const d = (e as CustomEvent<MobileSeekCommittedDetail>).detail;
+      if (!d) return;
+      if (Math.abs(d.toSec - d.fromSec) < SEEK_UNDO_MIN_JUMP_SEC) return;
+      setSeekUndo({ from: d.fromSec, at: Date.now() });
+    };
+    window.addEventListener(MOBILE_SEEK_COMMITTED_EVENT, onCommitted);
+    return () => window.removeEventListener(MOBILE_SEEK_COMMITTED_EVENT, onCommitted);
+  }, []);
 
   // Clear lock on unmount so a new playback never starts locked.
   useEffect(() => () => setMobileLocked(false), []);
@@ -270,6 +289,15 @@ export function MobileShell(props: PlayerShellProps) {
       </div>
 
       <MobileCoach visible={chromeShown} />
+
+      <MobileSeekUndo
+        undo={seekUndo}
+        onUndo={(sec) => {
+          haptics.select();
+          onSeek(sec);
+        }}
+        onDismiss={() => setSeekUndo(null)}
+      />
 
       <MobileTracksSheet
         open={sheet.kind === "tracks"}

@@ -2,7 +2,10 @@ import { ChevronDown } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { getPlaybackPosition } from "@/lib/player/playback-clock";
 import { useSettings } from "@/lib/settings";
-import { MOBILE_CHROME_TOGGLE_EVENT } from "@/lib/player/mobile-events";
+import {
+  MOBILE_CHROME_TOGGLE_EVENT,
+  MOBILE_SEEK_COMMITTED_EVENT,
+} from "@/lib/player/mobile-events";
 import { getMobileLocked, subscribeMobileLocked, MOBILE_LOCK_PEEK_EVENT } from "@/lib/player/mobile-lock";
 import { haptics } from "@/lib/player/haptics";
 import { rubberBand, springBack } from "@/lib/player/gesture-physics";
@@ -30,6 +33,12 @@ type Gesture = {
   region: "left" | "center" | "right";
   mode: Mode;
   basePos: number;
+  // Scrubbing integrates per move instead of recomputing from basePos, because the
+  // rate changes mid-drag and a recompute would jump the playhead the instant you
+  // crossed a tier.
+  scrubSec: number;
+  scrubLastX: number;
+  scrubTier: number;
   baseVol: number;
   baseBright: number;
 };
@@ -41,6 +50,25 @@ const clamp = (v: number, lo: number, hi: number) => (v < lo ? lo : v > hi ? hi 
 // rests on the glass constantly, and counting it as a gesture partner made the
 // player ignore every touch until the hand was lifted off entirely.
 const MULTI_INTENT_MS = 250;
+
+// Variable-rate scrubbing. At full rate a two and a half hour film crosses the
+// screen in one swipe, which is about eleven seconds per pixel - fine for "somewhere
+// near the middle" and useless for finding a moment. Sliding DOWN while scrubbing
+// trades range for precision, the way a physical jog wheel does, so the same gesture
+// covers both without a second control.
+const SCRUB_TIERS: Array<{ from: number; rate: number; label: string }> = [
+  { from: 0, rate: 1, label: "FULL" },
+  { from: 60, rate: 0.5, label: "HALF" },
+  { from: 130, rate: 0.25, label: "FINE" },
+  { from: 210, rate: 0.08, label: "EXACT" },
+];
+
+function scrubTierFor(dy: number): number {
+  const d = Math.abs(dy);
+  let i = 0;
+  for (let k = 0; k < SCRUB_TIERS.length; k += 1) if (d >= SCRUB_TIERS[k].from) i = k;
+  return i;
+}
 
 function findTouch(list: React.TouchList, id: number): React.Touch | null {
   for (let i = 0; i < list.length; i++) {
@@ -119,6 +147,7 @@ export function MobileGestureStage({
 
   const [tapHud, setTapHud] = useState<TapHud | null>(null);
   const [scrubUi, setScrubUi] = useState<number | null>(null);
+  const [scrubTierLabel, setScrubTierLabel] = useState<string | null>(null);
   const [volUi, setVolUi] = useState<number | null>(null);
   const [brightUi, setBrightUi] = useState<number | null>(null);
   const [dismissUi, setDismissUi] = useState(0);
@@ -146,6 +175,7 @@ export function MobileGestureStage({
   };
   const clearDragUi = () => {
     setScrubUi(null);
+    setScrubTierLabel(null);
     setVolUi(null);
     setBrightUi(null);
     setDim(0);
@@ -291,6 +321,9 @@ export function MobileGestureStage({
       region: regionOf(t0.clientX - (rect.current?.left ?? 0), rect.current?.width ?? 1),
       mode: null,
       basePos: getPlaybackPosition(),
+      scrubSec: 0,
+      scrubLastX: t0.clientX,
+      scrubTier: 0,
       baseVol: volume,
       baseBright: brightness.current,
     };
@@ -318,15 +351,36 @@ export function MobileGestureStage({
     if (gg.mode === null) {
       if (Math.hypot(dx, dy) < AXIS_LOCK_PX) return;
       cancelLongPress();
-      if (Math.abs(dx) > Math.abs(dy)) gg.mode = "scrub";
+      if (Math.abs(dx) > Math.abs(dy)) {
+        gg.mode = "scrub";
+        // Start from where playback actually is, and from the finger's position now,
+        // so the first integrated step is not the whole axis-lock distance.
+        gg.scrubSec = gg.basePos;
+        gg.scrubLastX = t0.clientX;
+        gg.scrubTier = 0;
+        setScrubTierLabel(SCRUB_TIERS[0].label);
+      }
       else if (gg.region === "left") gg.mode = "brightness";
       else if (gg.region === "right") gg.mode = canVolume ? "volume" : "none";
       else gg.mode = dy > 0 ? "dismiss" : "none";
     }
     if (gg.mode === "scrub") {
-      const target = clamp(gg.basePos + (dx / r.width) * duration, 0, duration);
-      scrubTarget.current = target;
-      setScrubUi(target);
+      const tier = scrubTierFor(dy);
+      if (tier !== gg.scrubTier) {
+        gg.scrubTier = tier;
+        // A rate change you cannot feel is a rate change you will fight.
+        haptics.light();
+        setScrubTierLabel(SCRUB_TIERS[tier].label);
+      }
+      const stepPx = t0.clientX - gg.scrubLastX;
+      gg.scrubLastX = t0.clientX;
+      gg.scrubSec = clamp(
+        gg.scrubSec + (stepPx / r.width) * duration * SCRUB_TIERS[tier].rate,
+        0,
+        duration,
+      );
+      scrubTarget.current = gg.scrubSec;
+      setScrubUi(gg.scrubSec);
     } else if (gg.mode === "volume") {
       const v = clamp(gg.baseVol - dy / r.height, 0, 1);
       onVolume(v);
@@ -395,8 +449,14 @@ export function MobileGestureStage({
       handleTap(gg.startX - r.left, r.width);
     } else if (gg.mode === "scrub") {
       e.preventDefault();
-      onSeek(scrubTarget.current);
+      const from = gg.basePos;
+      const to = scrubTarget.current;
+      onSeek(to);
       setScrubUi(null);
+      setScrubTierLabel(null);
+      window.dispatchEvent(
+        new CustomEvent(MOBILE_SEEK_COMMITTED_EVENT, { detail: { fromSec: from, toSec: to } }),
+      );
     } else if (gg.mode === "dismiss") {
       const h = r.height;
       const dist = dismissRaw.current;
@@ -494,7 +554,14 @@ export function MobileGestureStage({
         </div>
       )}
       {tapHud && <DoubleTapHud hud={tapHud} />}
-      {scrubUi != null && <ScrubHud sec={scrubUi} duration={duration} />}
+      {scrubUi != null && (
+        <ScrubHud
+          sec={scrubUi}
+          duration={duration}
+          tier={scrubTierLabel}
+          delta={scrubUi - (g.current?.basePos ?? scrubUi)}
+        />
+      )}
       {volUi != null && <VerticalMeter side="right" value={volUi} />}
       {brightUi != null && <VerticalMeter side="left" value={brightUi} />}
     </div>
