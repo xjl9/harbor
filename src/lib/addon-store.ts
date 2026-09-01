@@ -60,6 +60,14 @@ async function seedPass(): Promise<number> {
 }
 
 export async function seedDefaultAddonsIfFirstRun(): Promise<void> {
+  // Written before anything can return, so the three outcomes are distinguishable
+  // from outside the app. Absent means this was never called at all; "n=0" means
+  // the build carries no seed set; anything else means it ran with sources and the
+  // failure is further down. Telling those apart by their symptom is impossible -
+  // all three look like an empty addon list.
+  try {
+    localStorage.setItem(SEED_DIAG_KEY, `entered n=${DEFAULT_ADDONS.length}`);
+  } catch {}
   try {
     if (DEFAULT_ADDONS.length === 0) return;
     const fingerprint = seedFingerprint();
