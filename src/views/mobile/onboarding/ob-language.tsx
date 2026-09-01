@@ -125,23 +125,43 @@ export function ObLanguage() {
   );
 }
 
+// Every greeting is stacked in one grid cell so the block keeps the width of the
+// longest one and nothing below it shifts as they cycle.
+//
+// They cross-fade in SEQUENCE, not together. Fading both at once means two
+// different words, left aligned and of different lengths, are painted over each
+// other for most of the transition - which does not read as a dissolve, it reads
+// as the text being broken. The outgoing one clears first, then the incoming one
+// arrives, so only one word is ever legible.
+const GREETING_FADE_MS = 420;
+
 function Greeting({ index, fade }: { index: number; fade: boolean }) {
   return (
     <div aria-hidden className="grid">
-      {LANGUAGES.map((lang, i) => (
-        <span
-          key={lang.code}
-          lang={lang.code}
-          dir={lang.rtl ? "rtl" : "ltr"}
-          className={`col-start-1 row-start-1 justify-self-start text-[32px] font-medium leading-[1.2] tracking-tight text-ink-muted ${
-            lang.rtl ? "font-arabic" : "font-display"
-          } ${fade ? "transition-opacity duration-[900ms] ease-in-out" : ""} ${
-            i === index ? "opacity-100" : "opacity-0"
-          }`}
-        >
-          {lang.greeting}
-        </span>
-      ))}
+      {LANGUAGES.map((lang, i) => {
+        const active = i === index;
+        return (
+          <span
+            key={lang.code}
+            lang={lang.code}
+            dir={lang.rtl ? "rtl" : "ltr"}
+            className={`col-start-1 row-start-1 justify-self-start text-[32px] font-medium leading-[1.2] tracking-tight text-ink-muted ${
+              lang.rtl ? "font-arabic" : "font-display"
+            } ${active ? "opacity-100" : "opacity-0"}`}
+            style={
+              fade
+                ? {
+                    transition: `opacity ${GREETING_FADE_MS}ms ease-in-out`,
+                    // The incoming word waits for the outgoing one to finish.
+                    transitionDelay: active ? `${GREETING_FADE_MS}ms` : "0ms",
+                  }
+                : undefined
+            }
+          >
+            {lang.greeting}
+          </span>
+        );
+      })}
     </div>
   );
 }

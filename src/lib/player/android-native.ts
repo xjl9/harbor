@@ -101,6 +101,15 @@ export function createNativeBridge(): PlayerBridge {
           t.videoHeight > 0 &&
           (t.videoWidth !== snap.videoWidth || t.videoHeight !== snap.videoHeight)
         ) {
+          // Once per change, into the buffer the Diagnostics screen shows. Where the
+          // picture SITS cannot be read reliably from a screenshot - twice now a
+          // layout has been called broken from one and turned out correct - but the
+          // decoded size against the viewport states it exactly. If a rotation leaves
+          // the picture wrong, this is the difference between a measurement and
+          // another guess.
+          console.warn(
+            `[player] picture ${t.videoWidth}x${t.videoHeight} viewport ${window.innerWidth}x${window.innerHeight}`,
+          );
           patch({ videoWidth: t.videoWidth, videoHeight: t.videoHeight });
         }
         patch({
