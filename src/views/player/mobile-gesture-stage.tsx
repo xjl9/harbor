@@ -453,6 +453,28 @@ export function MobileGestureStage({
     resetMulti();
   };
 
+  // WKWebView does not guarantee touchcancel when the app leaves the foreground, and
+  // touchcancel is the only thing that released a hold. Take a call while holding for
+  // 2x and playback stayed at 2x with the pill up, permanently, because the finger
+  // that would have ended it was gone. Backgrounding runs the same teardown.
+  const cancelRef = useRef(onTouchCancel);
+  cancelRef.current = onTouchCancel;
+  useEffect(() => {
+    const teardown = () => cancelRef.current();
+    const onVisibility = () => {
+      if (document.visibilityState === "hidden") teardown();
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+    window.addEventListener("pagehide", teardown);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisibility);
+      window.removeEventListener("pagehide", teardown);
+      // Unmounting mid-gesture must not leave a rate, a HUD or a half-finished
+      // dismiss transform behind on the player root either.
+      teardown();
+    };
+  }, []);
+
   return (
     <div
       ref={stageRef}

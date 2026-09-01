@@ -20,6 +20,7 @@ import masthead from "./ru/masthead";
 import discover from "./ru/discover";
 import spotlights from "./ru/spotlights";
 import misc from "./ru/misc";
+import mobilePlayer from "./ru/mobile-player";
 import awards from "./ru/awards";
 import addons from "./ru/addons";
 import extra from "./ru/extra";
@@ -52,6 +53,7 @@ const ru: Record<string, string> = {
   ...discover,
   ...spotlights,
   ...misc,
+  ...mobilePlayer,
   ...awards,
   ...addons,
   ...extra,

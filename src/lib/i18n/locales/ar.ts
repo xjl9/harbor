@@ -13,6 +13,7 @@ import live from "./ar/live";
 import manga from "./ar/manga";
 import masthead from "./ar/masthead";
 import misc from "./ar/misc";
+import mobilePlayer from "./ar/mobile-player";
 import player from "./ar/player";
 import rails from "./ar/rails";
 import settings from "./ar/settings";
@@ -49,6 +50,7 @@ const ar: Record<string, string> = {
   ...discover,
   ...spotlights,
   ...misc,
+  ...mobilePlayer,
   ...awards,
   ...addons,
   ...controllers,

@@ -19,6 +19,7 @@ import masthead from "./pt/masthead";
 import discover from "./pt/discover";
 import spotlights from "./pt/spotlights";
 import misc from "./pt/misc";
+import mobilePlayer from "./pt/mobile-player";
 import awards from "./pt/awards";
 import addons from "./pt/addons";
 import extra from "./pt/extra";
@@ -48,6 +49,7 @@ const pt: Record<string, string> = {
   ...discover,
   ...spotlights,
   ...misc,
+  ...mobilePlayer,
   ...awards,
   ...addons,
   ...extra,

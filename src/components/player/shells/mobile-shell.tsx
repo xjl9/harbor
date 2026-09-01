@@ -7,6 +7,7 @@ import { haptics } from "@/lib/player/haptics";
 import { useSettings } from "@/lib/settings";
 import { useT } from "@/lib/i18n";
 import { MobileActionRow } from "./mobile-action-row";
+import { MobileCoach } from "./mobile-coach";
 import { MobileGlyph } from "./mobile-glyph";
 import { MOBILE_GLYPH, seekGlyph } from "./mobile-icons";
 import {
@@ -267,6 +268,8 @@ export function MobileShell(props: PlayerShellProps) {
       >
         <MobilePeekBar durationSec={snap.durationSec} active={!chromeShown} />
       </div>
+
+      <MobileCoach visible={chromeShown} />
 
       <MobileTracksSheet
         open={sheet.kind === "tracks"}
