@@ -8,6 +8,7 @@ import { writePlayerVolume } from "@/lib/player-volume";
 import type { useVideoDownload } from "./hooks/use-video-download";
 import { showNativeRoutePicker } from "@/lib/player/android-native";
 import { osClass } from "@/lib/platform";
+import type { SkipSegment } from "@/lib/skip-intro";
 
 export const ShellLayer = memo(function ShellLayer({
   shellId,
@@ -60,6 +61,7 @@ export const ShellLayer = memo(function ShellLayer({
   meta,
   tmdbKey,
   season,
+  skipSegments,
   episode,
   download,
   onOpenDvr,
@@ -116,6 +118,7 @@ export const ShellLayer = memo(function ShellLayer({
   meta: Meta;
   tmdbKey: string | null;
   season: number | null;
+  skipSegments?: SkipSegment[];
   episode: number | null;
   download?: ReturnType<typeof useVideoDownload>;
   onOpenDvr?: () => void;
@@ -236,6 +239,7 @@ export const ShellLayer = memo(function ShellLayer({
       meta={meta}
       tmdbKey={tmdbKey}
       season={season}
+      skipSegments={skipSegments}
       episode={episode}
       download={download?.status}
       onDownloadStart={download?.start}

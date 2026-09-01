@@ -2,6 +2,7 @@ import type { ComponentType } from "react";
 import type { Meta } from "@/lib/cinemeta";
 import type { PlayerCapabilities, PlayerSnapshot } from "@/lib/player/bridge";
 import type { SubtitleAddHandler } from "@/lib/player/subtitle-load";
+import type { SkipSegment } from "@/lib/skip-intro";
 
 export type PlayerShellProps = {
   snap: PlayerSnapshot;
@@ -57,6 +58,10 @@ export type PlayerShellProps = {
   tmdbKey?: string | null;
   season?: number | null;
   episode?: number | null;
+  // Intro/outro/recap/ad ranges the app already computes for the skip pill. The
+  // timeline is the one place they are worth DRAWING: knowing an intro ends at 1:42
+  // is what lets someone aim past it in a single movement.
+  skipSegments?: SkipSegment[];
   engine: "html5" | "mpv" | "native";
   useOverlayPopups?: boolean;
   onMenuOpenChange?: (open: boolean) => void;

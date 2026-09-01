@@ -345,6 +345,7 @@ export const PlayerOverlayLayers = memo(function PlayerOverlayLayers(p: PlayerOv
 
       {!p.loaderActive && p.syncMode === "idle" && (
         <ShellLayer
+          skipSegments={p.skipSegments}
           shellId={p.playerShellId}
           shellSnap={p.shellSnap}
           snapRef={p.snapRef}

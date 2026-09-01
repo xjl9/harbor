@@ -8,6 +8,7 @@ import {
 } from "@/lib/player/playback-clock";
 import { useT } from "@/lib/i18n";
 import { useTrickplayState } from "@/lib/trickplay";
+import type { SkipSegment } from "@/lib/skip-intro";
 import { fmtTime, SAFE_INLINE_20, TIME_BEZEL } from "./mobile-chrome";
 
 const BUFFER_PAD_SEC = 4;
@@ -38,10 +39,12 @@ export function MobileSeekBar({
   durationSec,
   active,
   onSeek,
+  segments,
 }: {
   durationSec: number;
   active: boolean;
   onSeek: (sec: number) => void;
+  segments?: SkipSegment[];
 }) {
   const positionSec = usePlaybackPositionGated(active);
   const bufferedSec = usePlaybackBufferedGated(active);
@@ -138,6 +141,23 @@ export function MobileSeekBar({
           className="absolute inset-y-0 left-0 bg-white/30 transition-[width] duration-300 ease-out"
           style={{ width: `${bufRatio * 100}%` }}
         />
+        {/* Intro, recap, outro and ad ranges the app already knows about. Drawing
+            them is what turns "skip intro" from a button you wait for into
+            something you can aim past in one movement, and it is the difference
+            between a timeline and a progress bar. Under the playhead fill so they
+            never obscure position. */}
+        {segments?.map((seg) => {
+          const left = clamp01(seg.startSec / duration) * 100;
+          const width = Math.max(0.6, clamp01((seg.endSec - seg.startSec) / duration) * 100);
+          return (
+            <div
+              key={`${seg.kind}-${seg.startSec}`}
+              aria-hidden
+              className={`absolute inset-y-0 ${seg.kind === "ad" ? "bg-danger/50" : "bg-white/45"}`}
+              style={{ left: `${left}%`, width: `${width}%` }}
+            />
+          );
+        })}
         <div className="absolute inset-y-0 left-0 bg-accent" style={{ width: `${ratio * 100}%` }} />
       </div>
       {/* A white head on an amber track: it stays the brightest thing on the bar at

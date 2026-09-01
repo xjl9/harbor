@@ -257,7 +257,12 @@ export function MobileShell(props: PlayerShellProps) {
             paddingInline: SAFE_INLINE_20,
           }}
         >
-          <MobileSeekBar durationSec={snap.durationSec} active={chromeShown} onSeek={onSeek} />
+          <MobileSeekBar
+            durationSec={snap.durationSec}
+            active={chromeShown}
+            onSeek={onSeek}
+            segments={props.skipSegments}
+          />
           <MobileActionRow
             durationSec={snap.durationSec}
             active={chromeShown}
