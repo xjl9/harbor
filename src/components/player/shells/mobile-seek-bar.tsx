@@ -1,4 +1,4 @@
-import { useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { ThumbPreview } from "@/components/player/thumb-preview";
 import {
   getPlaybackBuffered,
@@ -209,10 +209,30 @@ export function MobileTimeLabel({ durationSec, active }: { durationSec: number; 
 
 // Hairline timeline that survives after the chrome auto-hides, so playback never
 // loses its place. Subscribes only while it is the thing on screen.
+const PEEK_LINGER_MS = 2600;
+
 export function MobilePeekBar({ durationSec, active }: { durationSec: number; active: boolean }) {
   const positionSec = usePlaybackPositionGated(active);
   const duration = durationSec || 1;
   const ratio = clamp01(positionSec / duration);
+
+  // Hands over from the chrome and then leaves. It used to sit on the picture for
+  // the rest of the film: a permanent line along the bottom edge is the one piece of
+  // furniture you cannot dismiss, and on a dark frame it is the brightest thing on
+  // screen. Now it carries the position across the handoff, holds a moment so the
+  // change is legible, and fades out - so a hidden chrome means an actually clean
+  // frame. Any tap brings it, and everything else, straight back.
+  const [lingering, setLingering] = useState(false);
+  useEffect(() => {
+    if (!active) {
+      setLingering(false);
+      return;
+    }
+    setLingering(true);
+    const id = window.setTimeout(() => setLingering(false), PEEK_LINGER_MS);
+    return () => window.clearTimeout(id);
+  }, [active]);
+
   return (
     <div
       aria-hidden
@@ -220,6 +240,9 @@ export function MobilePeekBar({ durationSec, active }: { durationSec: number; ac
       style={{
         marginBottom: "calc(env(safe-area-inset-bottom, 0px) + 6px)",
         insetInline: SAFE_INLINE_20,
+        opacity: lingering ? 1 : 0,
+        // Slow on the way out so it reads as settling rather than blinking off.
+        transition: "opacity 700ms var(--ease-out)",
       }}
     >
       <div className="absolute inset-y-0 left-0 bg-accent" style={{ width: `${ratio * 100}%` }} />

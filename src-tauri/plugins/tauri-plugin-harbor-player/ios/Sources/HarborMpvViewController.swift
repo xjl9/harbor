@@ -147,6 +147,27 @@ final class HarborMpvViewController: UIViewController, HarborPlayerEngine {
     if let scale = view.window?.screen.nativeScale, metalLayer.contentsScale != scale {
       metalLayer.contentsScale = scale
     }
+    // Resize the DRAWABLE, not just the layer's frame.
+    //
+    // MoltenVK does not track layer resizes, so the swapchain keeps whatever size it
+    // had at VO init and contentsGravity merely rescales that stale buffer into the
+    // new bounds. Through a rotation - where the aspect inverts rather than nudges -
+    // that shows up as a picture rendered for the old geometry: a band anchored to
+    // one edge with the rest of the screen black, which reads as rotation being
+    // broken rather than as a stale buffer.
+    //
+    // Assigning drawableSize is what actually asks for a new swapchain. The layer
+    // subclass above already rejects the 1x1 value MoltenVK pokes in during
+    // presentation, so this cannot re-introduce that flicker, and the equality check
+    // keeps a normal layout pass from churning the swapchain every frame.
+    let scale = metalLayer.contentsScale
+    let target = CGSize(
+      width: (view.bounds.width * scale).rounded(),
+      height: (view.bounds.height * scale).rounded(),
+    )
+    if target.width > 1, target.height > 1, metalLayer.drawableSize != target {
+      metalLayer.drawableSize = target
+    }
   }
 
   override var prefersStatusBarHidden: Bool { true }

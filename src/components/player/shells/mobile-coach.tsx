@@ -1,17 +1,16 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useT } from "@/lib/i18n";
 import { CHROME_SURFACE } from "./mobile-chrome";
 
-// The touch player carries a real gesture vocabulary - double-tap either side to
-// skip, drag across to scrub, drag up and down at the edges for brightness and
-// volume, hold anywhere for 2x - and absolutely nothing on screen said so. A
-// feature nobody can find is indistinguishable from one that does not exist, and
-// "there is nothing here" is a fair reading of a player that looks like a play
-// button and a bar.
+// One hint, once, on the first three playbacks - then never again.
 //
-// One hint per playback, three playbacks, then never again. Deliberately not a
-// tutorial or an overlay you have to dismiss: it appears with the chrome, says one
-// thing, and leaves on its own.
+// The touch player has a real gesture vocabulary and nothing on screen said so, so
+// a viewer had no way to discover any of it. This teaches one thing per playback
+// and gets out of the way.
+//
+// It is deliberately fire-once-per-mount. Keying the effect on chrome visibility
+// re-showed the same hint every single time the controls came back, which turned a
+// teaching aid into something that would not go away.
 
 const KEY = "harbor.player.coach.v1";
 const SHOW_MS = 3200;
@@ -35,18 +34,24 @@ export function MobileCoach({ visible }: { visible: boolean }) {
   const t = useT();
   const [index] = useState(seen);
   const [shown, setShown] = useState(false);
+  const firedRef = useRef(false);
 
   useEffect(() => {
-    if (index >= 3 || !visible) return;
-    setShown(true);
+    if (index >= 3 || !visible || firedRef.current) return;
+    firedRef.current = true;
     bump(index + 1);
+    setShown(true);
     const id = window.setTimeout(() => setShown(false), SHOW_MS);
     return () => window.clearTimeout(id);
-    // Once per mount: a hint that reappeared every time the chrome came back would
-    // be nagging rather than teaching.
   }, [index, visible]);
 
-  if (index >= 3) return null;
+  // Goes with the chrome. Left on its own it outlived the controls it was
+  // describing and sat over the picture.
+  useEffect(() => {
+    if (!visible) setShown(false);
+  }, [visible]);
+
+  if (index >= 3 || !shown) return null;
   const lines = [
     t("Double-tap either side to skip"),
     t("Drag across the picture to scrub"),
@@ -54,10 +59,14 @@ export function MobileCoach({ visible }: { visible: boolean }) {
   ];
   return (
     <div
-      className="pointer-events-none absolute inset-x-0 top-1/2 z-30 flex justify-center px-6"
+      // Under the title, not across the middle. The centre of the frame is where the
+      // transport sits in landscape, and a hint that covers the play button is worse
+      // than no hint.
+      className="pointer-events-none absolute inset-x-0 z-30 flex justify-center px-6"
       style={{
+        top: "calc(env(safe-area-inset-top, 0px) + 68px)",
         opacity: shown ? 1 : 0,
-        transform: shown ? "translateY(0)" : "translateY(6px)",
+        transform: shown ? "translateY(0)" : "translateY(-6px)",
         transition: "opacity 240ms var(--ease-out), transform 240ms var(--ease-out)",
       }}
     >
