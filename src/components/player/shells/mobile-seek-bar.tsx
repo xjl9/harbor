@@ -125,18 +125,28 @@ export function MobileSeekBar({
         }
       }}
     >
+      {/* Three layers that have to stay legible over ANY frame, so the unplayed
+          track carries its own hairline rather than relying on the picture behind
+          it for contrast. Buffered sits between the two at a weight you can read
+          without it competing with elapsed. */}
       <div
-        className={`relative w-full overflow-hidden rounded-full bg-white/25 transition-[height] duration-[160ms] ease-out ${
-          dragging ? "h-[10px]" : "h-[6px]"
+        className={`relative w-full overflow-hidden rounded-full bg-white/[0.16] shadow-[inset_0_0_0_0.5px_rgba(255,255,255,0.10)] transition-[height] duration-[160ms] ease-out ${
+          dragging ? "h-[9px]" : "h-[5px]"
         }`}
       >
-        <div className="absolute inset-y-0 left-0 bg-white/45" style={{ width: `${bufRatio * 100}%` }} />
+        <div
+          className="absolute inset-y-0 left-0 bg-white/30 transition-[width] duration-300 ease-out"
+          style={{ width: `${bufRatio * 100}%` }}
+        />
         <div className="absolute inset-y-0 left-0 bg-accent" style={{ width: `${ratio * 100}%` }} />
       </div>
+      {/* A white head on an amber track: it stays the brightest thing on the bar at
+          any accent, reads at a glance against a bright frame, and does not turn the
+          scrubber into one saturated stripe. */}
       <div
         aria-hidden
-        className={`absolute top-1/2 h-6 w-6 -translate-x-1/2 -translate-y-1/2 rounded-full bg-accent shadow-[0_1px_6px_rgba(0,0,0,0.55)] transition-transform duration-[160ms] ease-out ${
-          dragging ? "scale-100" : "scale-[0.58]"
+        className={`absolute top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white shadow-[0_1px_4px_rgba(0,0,0,0.6)] transition-[width,height] duration-[160ms] ease-out ${
+          dragging ? "h-[15px] w-[15px]" : "h-[11px] w-[11px]"
         }`}
         style={{ left: `${ratio * 100}%` }}
       />

@@ -479,9 +479,12 @@ class HarborPlayerPlugin: Plugin {
 func initPlugin() -> Plugin {
   // The mask persists in UserDefaults and would survive a crash mid-playback,
   // launching the app locked to landscape with no player to unlock it.
+  // The mask is cleared, but the delegate hook is NOT installed at launch any more.
+  // Nothing forces an orientation now that the player follows the device, so the
+  // only thing overriding supportedInterfaceOrientationsFor would be us - and an
+  // app that answers that question is an app that can refuse to turn. Left to the
+  // plist, iOS rotates freely, which is the behaviour we actually want. The hook
+  // still installs lazily inside set_orientation if a caller ever asks for a lock.
   HarborOrientationSupport.clearStaleMask()
-  // The delegate exists by the time the app finishes launching; installing on the
-  // main queue keeps this off whatever thread registers the plugin.
-  DispatchQueue.main.async { HarborOrientationSupport.installIfNeeded() }
   return HarborPlayerPlugin()
 }

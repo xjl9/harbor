@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { isDesktopTauri } from "@/lib/platform";
 import { Search } from "lucide-react";
 import { HarborMark } from "@/components/icons/harbor-mark";
 import { RecordingPill } from "@/chrome/recording-pill";
@@ -16,8 +17,14 @@ import { NAV_ITEMS, applyNavCustomization, type NavItem } from "@/chrome/nav-ite
 import { NotificationCenter } from "@/components/notification-center/notification-center";
 import { AccountMenu } from "@/chrome/account-menu/account-menu";
 
-const IS_TAURI =
-  typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
+// Window buttons are DESKTOP chrome. __TAURI_INTERNALS__ is present on iOS and
+// Android too, so testing for it put minimize/maximize/close on a phone - which
+// is the exact confusion isDesktopTauri exists to prevent.
+//
+// Called per render rather than once at module load: osClass() caches its first
+// answer, and evaluating it before Tauri's internals are attached would cache
+// "web" and hide these on the desktop for the rest of the session.
+const isDesktopChrome = () => isDesktopTauri();
 
 export function CinematicOverlay() {
   const { view, setView, chromeHidden } = useView();
@@ -148,7 +155,7 @@ export function CinematicOverlay() {
               onOpenSettings={() => setView("settings")}
               settingsActive={view === "settings"}
             />
-            {IS_TAURI && !settings.useNativeTitleBar && !settings.hybridTitleBar && (
+            {isDesktopChrome() && !settings.useNativeTitleBar && !settings.hybridTitleBar && (
               <div className="ms-1 flex items-center gap-0.5">
                 <WinBtn onClick={minimize} label={t("chrome.minimize")}>
                   <path
