@@ -3,6 +3,7 @@ import { StrictMode, useCallback, useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { App } from "@/App";
 import { hydrateCustomThemes } from "@/lib/custom-themes";
+import { installBugReportErrorCapture } from "@/lib/bug-report";
 import { applyOsDataset } from "@/lib/platform";
 import { loadSecrets } from "@/lib/secret-store";
 import { initSubtitleCache } from "@/lib/subtitles/subtitle-cache";
@@ -10,6 +11,11 @@ import { ModalOverlayApp } from "@/views/modal-overlay-app";
 import { HdrOverlayApp } from "@/views/hdr-overlay-app";
 import { PipApp } from "@/views/pip";
 import "@/index.css";
+
+// Before anything else runs. This capture was only installed when a shell mounted,
+// so anything that failed during startup - the addon seeder that never ran was
+// exactly that shape - happened before anything was listening.
+installBugReportErrorCapture();
 
 function detectRemoteMode(): boolean {
   try {

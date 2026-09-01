@@ -48,6 +48,32 @@ let installed = false;
 export function installBugReportErrorCapture() {
   if (installed || typeof window === "undefined") return;
   installed = true;
+
+  // Mirror console.warn and console.error into the same buffer. Most of this app
+  // reports trouble by warning and carrying on - a failed addon seed, a manifest
+  // that would not fetch, a track that would not load - and none of that raises an
+  // error event. On a sideloaded build there is no inspector to read a console in,
+  // so those warnings went nowhere and every failure looked like silence. The
+  // originals still run, so anything already reading the console is unaffected.
+  for (const level of ["warn", "error"] as const) {
+    const original = console[level].bind(console);
+    console[level] = (...args: unknown[]) => {
+      try {
+        push(
+          args
+            .map((a) =>
+              a instanceof Error ? `${a.name}: ${a.message}` : typeof a === "string" ? a : safeJson(a),
+            )
+            .join(" "),
+          `console.${level}`,
+        );
+      } catch {
+        // Capturing must never be the reason a log call throws.
+      }
+      original(...args);
+    };
+  }
+
   window.addEventListener("error", (e) => {
     push(
       `${e.message}${e.filename ? ` (${e.filename}:${e.lineno ?? "?"})` : ""}`,
@@ -59,6 +85,14 @@ export function installBugReportErrorCapture() {
     const msg = r instanceof Error ? `${r.name}: ${r.message}` : String(r);
     push(msg, "unhandledrejection");
   });
+}
+
+function safeJson(v: unknown): string {
+  try {
+    return JSON.stringify(v) ?? String(v);
+  } catch {
+    return String(v);
+  }
 }
 
 function push(msg: string, src?: string) {
