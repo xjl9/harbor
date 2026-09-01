@@ -126,6 +126,19 @@ final class HarborMpvViewController: UIViewController, HarborPlayerEngine {
     let scenes = UIApplication.shared.connectedScenes
     if let screen = scenes.compactMap({ ($0 as? UIWindowScene)?.screen }).first {
       metalLayer.contentsScale = screen.nativeScale
+      // Seed the swapchain ONCE, at a size that suits either orientation.
+      //
+      // The swapchain is fixed at VO init and MoltenVK will not resize it later, so
+      // whatever it is created at is what the whole session gets. Sizing it to the
+      // screen's long edge in both directions means neither orientation is ever
+      // asking for more pixels than exist, and contentsGravity .resizeAspect scales
+      // that single buffer into whatever bounds the layer currently has - the right
+      // aspect in the right place, turned either way.
+      //
+      // Seeded here rather than in layout on purpose: a fast source can reach VO
+      // init before the first in-window layout, and by then the size is permanent.
+      let long = max(screen.nativeBounds.width, screen.nativeBounds.height)
+      metalLayer.drawableSize = CGSize(width: long, height: long)
     }
     view.layer.addSublayer(metalLayer)
     // Web chrome: the JS shell draws every control, so no button, bar, or
@@ -147,27 +160,21 @@ final class HarborMpvViewController: UIViewController, HarborPlayerEngine {
     if let scale = view.window?.screen.nativeScale, metalLayer.contentsScale != scale {
       metalLayer.contentsScale = scale
     }
-    // Resize the DRAWABLE, not just the layer's frame.
+    // Do NOT resize the drawable here.
     //
-    // MoltenVK does not track layer resizes, so the swapchain keeps whatever size it
-    // had at VO init and contentsGravity merely rescales that stale buffer into the
-    // new bounds. Through a rotation - where the aspect inverts rather than nudges -
-    // that shows up as a picture rendered for the old geometry: a band anchored to
-    // one edge with the rest of the screen black, which reads as rotation being
-    // broken rather than as a stale buffer.
+    // Assigning drawableSize on every layout was the obvious move and it is wrong:
+    // MoltenVK does not track layer resizes (MPVKit issue #3), so asking for a new
+    // swapchain mid-session does not give one - it leaves the old buffer being
+    // presented at a size nothing agrees on, which is how the picture ended up as a
+    // small rectangle in a corner after a rotation instead of merely soft.
     //
-    // Assigning drawableSize is what actually asks for a new swapchain. The layer
-    // subclass above already rejects the 1x1 value MoltenVK pokes in during
-    // presentation, so this cannot re-introduce that flicker, and the equality check
-    // keeps a normal layout pass from churning the swapchain every frame.
-    let scale = metalLayer.contentsScale
-    let target = CGSize(
-      width: (view.bounds.width * scale).rounded(),
-      height: (view.bounds.height * scale).rounded(),
-    )
-    if target.width > 1, target.height > 1, metalLayer.drawableSize != target {
-      metalLayer.drawableSize = target
-    }
+    // The swapchain is fixed at VO init, so the only way to be correct in BOTH
+    // orientations is to init it at a size that suits both and never touch it
+    // again. seedDrawableSize does that with the screen's long edge, and
+    // contentsGravity .resizeAspect scales that one buffer into whatever bounds the
+    // layer currently has - correct aspect, correct position, in either orientation.
+    // The cost is scaling rather than a native-resolution buffer per orientation,
+    // which is invisible next to a picture in the wrong place.
   }
 
   override var prefersStatusBarHidden: Bool { true }

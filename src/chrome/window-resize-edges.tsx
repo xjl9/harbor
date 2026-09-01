@@ -1,8 +1,14 @@
 import { useSettings } from "@/lib/settings";
+import { isDesktopTauri } from "@/lib/platform";
 import { startResize, useMaximized, type ResizeDir } from "@/lib/window";
 import { useWindowFullscreen } from "@/lib/use-window-fullscreen";
 
-const IS_TAURI = typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
+// Window buttons are DESKTOP chrome. __TAURI_INTERNALS__ is present on iOS and
+// Android too, so testing for it drew minimize/maximize/close on a phone. This
+// topbar is what renders when a theme HAS a top bar, which is exactly when
+// App.tsx does NOT render WindowControls - so fixing that one and stopping left
+// this path still drawing them.
+const isDesktopChrome = () => isDesktopTauri();
 
 const EDGES: Array<{ dir: ResizeDir; cls: string }> = [
   { dir: "North", cls: "inset-x-0 top-0 h-2 cursor-ns-resize" },
@@ -17,7 +23,7 @@ export function WindowResizeEdges() {
   const { settings } = useSettings();
   const fullscreen = useWindowFullscreen();
   const maximized = useMaximized();
-  if (!IS_TAURI || settings.useNativeTitleBar || fullscreen || maximized) return null;
+  if (!isDesktopChrome() || settings.useNativeTitleBar || fullscreen || maximized) return null;
   return (
     <div className="pointer-events-none fixed inset-0 z-[115]">
       {EDGES.map((e) => (

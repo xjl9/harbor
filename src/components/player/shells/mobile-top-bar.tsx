@@ -49,7 +49,12 @@ export function MobileTopBar({
       : episode != null
         ? `E${episode}`
         : null;
-  const deck = [coords, subtitle].filter(Boolean).join(" · ") || null;
+  // The subtitle often ALREADY carries the show and the episode numbers, which is
+  // how the deck ended up reading "S2 · E1 · REGULAR SHOW · S2 · E1". Only add the
+  // coordinates when the subtitle is not already stating them.
+  const subtitleHasCoords =
+    !!subtitle && !!coords && subtitle.replace(/\s+/g, " ").includes(coords);
+  const deck = (subtitleHasCoords ? subtitle : [coords, subtitle].filter(Boolean).join(" · ")) || null;
   return (
     <div className="pointer-events-none absolute inset-x-0 top-0 z-20">
       <div

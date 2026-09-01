@@ -1,4 +1,5 @@
 import { ArrowLeft, Search, Users } from "lucide-react";
+import { isDesktopTauri } from "@/lib/platform";
 import { useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { BackChrome } from "@/chrome/back-chrome";
@@ -28,7 +29,15 @@ import { useView } from "@/lib/view";
 import { useWindowFullscreen } from "@/lib/use-window-fullscreen";
 import { close, minimize, toggleMaximize, useMaximized } from "@/lib/window";
 
-const IS_TAURI = typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
+// Window buttons are DESKTOP chrome. __TAURI_INTERNALS__ is present on iOS and
+// Android too, so testing for it drew minimize/maximize/close on a phone. This
+// topbar is what renders when a theme HAS a top bar, which is exactly when
+// App.tsx does NOT render WindowControls - so fixing that one and stopping left
+// this path still drawing them.
+//
+// Called per render: osClass caches its first answer, and evaluating it before
+// Tauri's internals attach would cache "web" and hide these on the desktop.
+const isDesktopChrome = () => isDesktopTauri();
 
 export function Topbar({ connecting = false }: { connecting?: boolean } = {}) {
   const { chromeHidden, canGoBack, view, setView, topKind } = useView();
@@ -68,9 +77,9 @@ export function Topbar({ connecting = false }: { connecting?: boolean } = {}) {
   const searchWidth = canGoBack
     ? "w-[14rem] sm:w-[18rem] lg:w-[22rem] xl:w-[24rem]"
     : "w-[14rem] sm:w-[20rem] lg:w-[24rem] xl:w-[28rem] hover:w-[18rem] sm:hover:w-[24rem] lg:hover:w-[28rem] xl:hover:w-[34rem] focus-within:w-[18rem] sm:focus-within:w-[24rem] lg:focus-within:w-[28rem] xl:focus-within:w-[34rem]";
-  const dragProps = IS_TAURI && !fullscreen ? { "data-tauri-drag-region": true } : {};
+  const dragProps = isDesktopChrome() && !fullscreen ? { "data-tauri-drag-region": true } : {};
   const hybridBar =
-    IS_TAURI && !settings.useNativeTitleBar && settings.hybridTitleBar && !fullscreen;
+    isDesktopChrome() && !settings.useNativeTitleBar && settings.hybridTitleBar && !fullscreen;
   return (
     <header
       data-cleannav={settings.topbarAppearance === "transparent" ? "on" : undefined}
@@ -142,7 +151,7 @@ export function Topbar({ connecting = false }: { connecting?: boolean } = {}) {
           {!kid && <BookmarksButton />}
           {!onLiveRoot && !kid && <TogetherButton />}
           </div>
-            {IS_TAURI && !settings.useNativeTitleBar && !settings.hybridTitleBar && (
+            {isDesktopChrome() && !settings.useNativeTitleBar && !settings.hybridTitleBar && (
             <div className="ms-1 flex shrink-0 items-center gap-2">
               <Control label={t("chrome.minimize")} onClick={minimize}>
                 <svg width="18" height="18" viewBox="0 0 13 13" fill="none">
