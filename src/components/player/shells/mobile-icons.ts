@@ -6,8 +6,8 @@
 // into surfaces that do not render them. Mobile is a different control surface,
 // so it names its own.
 //
-// Controls with no matching asset (lock, subtitles) deliberately keep their lucide
-// glyph rather than getting a lookalike drawn for them.
+// Lock has no artwork in the set and deliberately keeps its lucide glyph rather
+// than getting a lookalike drawn for it. Everything else here is John's.
 
 const B = "/player-icons/";
 
@@ -18,12 +18,13 @@ export const MOBILE_GLYPH = {
   prevEpisode: `${B}prev-episode.svg`,
   nextEpisode: `${B}next-episode.svg`,
   pickAnother: `${B}pick-another.svg`,
-  episodes: `${B}aspect.svg`,
   pipInactive: `${B}pip--inactive.svg`,
   pipActive: `${B}pip--active.svg`,
   castIdle: `${B}cast--idle.svg`,
   castConnected: `${B}cast--connected.svg`,
   audio: `${B}audio.svg`,
+  subtitles: `${B}subtitle.svg`,
+  upNext: `${B}up-next.png`,
 } as const;
 
 // The set ships a glyph per seek step with the number drawn into it, so the button

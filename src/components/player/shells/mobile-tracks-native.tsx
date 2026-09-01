@@ -38,6 +38,11 @@ export function NativeTrackList({
         {kind === "subtitle" && (
           <Row label={t("Off")} selected={selectedId == null} onClick={() => pick(null)} />
         )}
+        {tracks.length === 0 && kind === "subtitle" && (
+          <div className="px-4 py-4 text-[13px] leading-relaxed text-ink-muted">
+            {t("No subtitles are built into this file.")}
+          </div>
+        )}
         {tracks.length === 0 && kind === "audio" && (
           <div className="px-4 py-4 text-[13px] leading-relaxed text-ink-muted">
             {t("This file has one audio track.")}

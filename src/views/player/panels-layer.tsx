@@ -1,6 +1,8 @@
 import { memo } from "react";
 import { EpisodePanel } from "@/components/player/episode-panel";
 import { ResumePrompt } from "@/components/player/resume-prompt";
+import { MobileGlyph } from "@/components/player/shells/mobile-glyph";
+import { MOBILE_GLYPH } from "@/components/player/shells/mobile-icons";
 import type { Meta } from "@/lib/cinemeta";
 import type { PanelCorner } from "@/lib/player-chrome";
 import type { PlayEpisode } from "@/lib/view";
@@ -73,15 +75,7 @@ export const PanelsLayer = memo(function PanelsLayer({
               : "right-0 rounded-l-2xl border-y border-l border-edge-soft pl-2.5 pr-2 hover:pl-3"
           }`}
         >
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden>
-            <path
-              d="M3 6h13M3 12h13M3 18h9M18 8l4 4-4 4"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
+          <MobileGlyph url={MOBILE_GLYPH.upNext} size={22} />
           <span
             className="text-[11px] font-semibold uppercase tracking-[0.28em]"
             style={{ writingMode: "vertical-rl", transform: "rotate(180deg)" }}

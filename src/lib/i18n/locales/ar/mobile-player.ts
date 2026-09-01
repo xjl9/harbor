@@ -44,6 +44,7 @@ const mobilePlayer: Record<string, string> = {
   "Cache": "التخزين المؤقت",
   "The touchpad controls Harbor running on a computer. Pick one on your Wi-Fi to start.":
     "تتحكم لوحة اللمس في Harbor على الحاسوب. اختر واحداً على شبكة Wi-Fi للبدء.",
+  "No subtitles are built into this file.": "لا توجد ترجمات مضمّنة في هذا الملف.",
   "Loading settings": "جارٍ تحميل الإعدادات",
 };
 

@@ -1,4 +1,3 @@
-import { Loader2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { thumbCacheGet, thumbCacheNearest, thumbCacheSet, trickplayGet } from "@/lib/trickplay";
 import { useSkipSegmentsView } from "@/lib/skip-intro/segment-store";
@@ -26,21 +25,15 @@ export function ThumbPreview({
   const liveBucketRef = useRef(bucket);
   liveBucketRef.current = bucket;
   const [fetchedSrc, setFetchedSrc] = useState<string | null>(() => thumbCacheGet(bucket) ?? null);
-  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     const cached = thumbCacheGet(bucket);
     if (cached) {
       setFetchedSrc(cached);
-      setLoading(false);
       return;
     }
     setFetchedSrc(null);
-    if (!canFetch) {
-      setLoading(false);
-      return;
-    }
-    setLoading(true);
+    if (!canFetch) return;
     let cancelled = false;
     let attempts = 0;
     let timer = 0;
@@ -51,14 +44,10 @@ export function ThumbPreview({
       if (url) {
         thumbCacheSet(bucket, url);
         setFetchedSrc(url);
-        setLoading(false);
         return;
       }
       attempts += 1;
-      if (attempts >= MAX_ATTEMPTS) {
-        setLoading(false);
-        return;
-      }
+      if (attempts >= MAX_ATTEMPTS) return;
       timer = window.setTimeout(attempt, RETRY_MS);
     };
     timer = window.setTimeout(attempt, SETTLE_MS);
@@ -78,7 +67,12 @@ export function ThumbPreview({
   const src = fetchedSrc ?? nearest ?? null;
   const approx = !fetchedSrc && !!nearest;
 
-  if (!src && !loading) {
+  // No frame, no card. Trickplay is absent for most streamed sources, and showing
+  // the 192x108 card with a spinner in it meant a scrub on those put a large empty
+  // grey box over the picture and the transport for the ten seconds the retries
+  // took. The time pill alone is the honest state; the card earns its space only
+  // once there is a frame to put in it.
+  if (!src) {
     return (
       <div
         className="pointer-events-none absolute -top-9 flex -translate-x-1/2 items-center gap-1 rounded-[10px] border border-white/[0.08] bg-[color-mix(in_srgb,var(--color-canvas)_72%,transparent)] px-2.5 py-1 font-mono text-[13px] font-semibold tabular-nums text-ink backdrop-blur-xl"
@@ -103,23 +97,14 @@ export function ThumbPreview({
         className="relative overflow-hidden rounded-[10px] border border-white/[0.08] bg-[color-mix(in_srgb,var(--color-canvas)_72%,transparent)] backdrop-blur-xl"
         style={{ width: CARD_WIDTH, height: CARD_HEIGHT }}
       >
-        {src ? (
-          <img
-            src={src}
-            alt=""
-            draggable={false}
-            className={`h-full w-full object-cover transition-opacity duration-100 ${
-              approx ? "opacity-60" : "opacity-100"
-            }`}
-          />
-        ) : (
-          <div className="h-full w-full bg-gradient-to-br from-white/5 to-transparent" />
-        )}
-        {loading && !src && (
-          <div className="absolute inset-0 flex items-center justify-center">
-            <Loader2 className="h-5 w-5 animate-spin text-white/70" />
-          </div>
-        )}
+        <img
+          src={src}
+          alt=""
+          draggable={false}
+          className={`h-full w-full object-cover transition-opacity duration-100 ${
+            approx ? "opacity-60" : "opacity-100"
+          }`}
+        />
       </div>
       <div className="mt-1 flex items-center justify-center gap-1">
         {segLabel && (

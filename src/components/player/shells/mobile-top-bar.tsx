@@ -1,6 +1,6 @@
-// Lock and subtitles have no artwork in public/player-icons, so they keep their
-// lucide glyphs rather than being handed a lookalike from a different family.
-import { Lock, Subtitles as SubsIcon } from "lucide-react";
+// Lock has no artwork in public/player-icons, so it keeps its lucide glyph rather
+// than being handed a lookalike from a different family. Subtitles does have one.
+import { Lock } from "lucide-react";
 import type { CSSProperties } from "react";
 import { useT } from "@/lib/i18n";
 import { SAFE_INLINE_20 } from "./mobile-chrome";
@@ -100,7 +100,7 @@ export function MobileTopBar({
           </TopButton>
         ) : null}
         <TopButton label={t("Audio & Subtitles")} onClick={onTracks}>
-          <SubsIcon size={22} strokeWidth={2} />
+          <MobileGlyph url={MOBILE_GLYPH.subtitles} size={22} />
         </TopButton>
       </div>
     </div>

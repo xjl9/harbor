@@ -75,7 +75,7 @@ export function MobileTracksSheet({
   const nativeBody = !flags.addSubtitle && !flags.subSync && !flags.subStyle;
 
   return (
-    <MobileSheet open={open} onClose={onClose} heightClass="h-[68vh]">
+    <MobileSheet open={open} onClose={onClose} heightClass="max-h-[68vh]">
       {showAudioTab && (
         <div className="px-4 pb-3">
           <div className="flex rounded-full bg-raised p-1">

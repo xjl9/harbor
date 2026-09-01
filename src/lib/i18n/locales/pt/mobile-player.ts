@@ -44,6 +44,7 @@ const mobilePlayer: Record<string, string> = {
   "Cache": "Cache",
   "The touchpad controls Harbor running on a computer. Pick one on your Wi-Fi to start.":
     "O touchpad controla o Harbor em um computador. Escolha um no seu Wi-Fi para começar.",
+  "No subtitles are built into this file.": "Este arquivo não tem legendas embutidas.",
   "Loading settings": "Carregando configurações",
 };
 
