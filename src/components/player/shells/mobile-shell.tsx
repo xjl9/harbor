@@ -2,7 +2,6 @@ import { useEffect, useState, type CSSProperties } from "react";
 import { capabilityFlags } from "@/lib/player/bridge";
 import type { PlayerShellProps } from "@/lib/player-shells/types";
 import {
-  MOBILE_OPEN_EPISODES_EVENT,
   MOBILE_SEEK_COMMITTED_EVENT,
   type MobileSeekCommittedDetail,
 } from "@/lib/player/mobile-events";
@@ -64,7 +63,6 @@ export function MobileShell(props: PlayerShellProps) {
     hasPrevEp,
     title,
     subtitle,
-    meta,
     metaImdbId,
     metaTitle,
     metaReleaseDate,
@@ -94,7 +92,6 @@ export function MobileShell(props: PlayerShellProps) {
     if (pendingPlaying !== null && pendingPlaying === enginePlaying) setPendingPlaying(null);
   }, [pendingPlaying, enginePlaying]);
   const playing = pendingPlaying ?? enginePlaying;
-  const isSeries = meta?.type === "series" || hasNextEp || hasPrevEp;
   const rate = snap.rate;
 
   const chromeShown = visible && sheet.kind === "none" && !subStyleOpen;
@@ -272,13 +269,11 @@ export function MobileShell(props: PlayerShellProps) {
             rate={rate}
             showRate={flags.rate}
             canPickAnother={canPickAnother}
-            isSeries={isSeries}
             hasPrevEp={hasPrevEp}
             hasNextEp={hasNextEp}
             showPiP={capabilities.pictureInPicture}
             onSpeed={() => setSheet({ kind: "speed" })}
             onPickAnother={onPickAnother}
-            onEpisodes={() => window.dispatchEvent(new CustomEvent(MOBILE_OPEN_EPISODES_EVENT))}
             onPrevEp={onPrevEp}
             onNextEp={onNextEp}
             onPiP={onPiP}

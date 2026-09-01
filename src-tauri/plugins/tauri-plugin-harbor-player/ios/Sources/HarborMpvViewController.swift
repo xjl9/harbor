@@ -48,6 +48,8 @@ final class HarborMpvViewController: UIViewController, HarborPlayerEngine {
   }
 
   private let metalLayer = HarborMetalLayer()
+  /// Side of the square render surface in points, fixed for the session.
+  private var surfaceSidePt: CGFloat = 0
   private let closeButton = UIButton(type: .system)
   private let titleLabel = UILabel()
   // Native transport overlay (mpv engine only; the AVPlayer engine uses AVKit's
@@ -111,36 +113,29 @@ final class HarborMpvViewController: UIViewController, HarborPlayerEngine {
   override func viewDidLoad() {
     super.viewDidLoad()
     view.backgroundColor = .black
-    metalLayer.frame = view.bounds
     metalLayer.framebufferOnly = true
     metalLayer.backgroundColor = UIColor.black.cgColor
-    // MoltenVK does not track layer resizes (MPVKit issue #3); resizeAspect at
-    // least keeps the picture scaled correctly through rotation.
-    metalLayer.contentsGravity = .resizeAspect
-    // Issue #3 also makes the scale at swapchain creation permanent, and a fast
-    // source can reach VO init before the first in-window layout (configure
-    // loads and starts the core before presentation settles), so the scale must
-    // be seeded here or the session sticks at the CALayer default of 1.0. No
-    // window exists yet; the scene's screen stands in for it (the demo's
-    // UIScreen.main works too but is deprecated since the iOS 16 SDK).
+    // The render surface is created ONCE, square, and its bounds are never touched
+    // again. Everything about this is load-bearing; see layoutSurface for why.
+    //
+    // The scale has to be seeded here too: a fast source can reach VO init before
+    // the first in-window layout (configure loads and starts the core before
+    // presentation settles), and by then the swapchain is permanent. No window
+    // exists yet, so the scene's screen stands in for it (the MPVKit demo uses
+    // UIScreen.main, deprecated since the iOS 16 SDK).
     let scenes = UIApplication.shared.connectedScenes
     if let screen = scenes.compactMap({ ($0 as? UIWindowScene)?.screen }).first {
-      metalLayer.contentsScale = screen.nativeScale
-      // Seed the swapchain ONCE, at a size that suits either orientation.
-      //
-      // The swapchain is fixed at VO init and MoltenVK will not resize it later, so
-      // whatever it is created at is what the whole session gets. Sizing it to the
-      // screen's long edge in both directions means neither orientation is ever
-      // asking for more pixels than exist, and contentsGravity .resizeAspect scales
-      // that single buffer into whatever bounds the layer currently has - the right
-      // aspect in the right place, turned either way.
-      //
-      // Seeded here rather than in layout on purpose: a fast source can reach VO
-      // init before the first in-window layout, and by then the size is permanent.
-      let long = max(screen.nativeBounds.width, screen.nativeBounds.height)
-      metalLayer.drawableSize = CGSize(width: long, height: long)
+      let scale = screen.nativeScale
+      let side = max(screen.nativeBounds.width, screen.nativeBounds.height)
+      metalLayer.contentsScale = scale
+      // Assigning bounds sets drawableSize to bounds x contentsScale, so these two
+      // agree by construction and must only ever be set together, here.
+      metalLayer.bounds = CGRect(x: 0, y: 0, width: side / scale, height: side / scale)
+      metalLayer.drawableSize = CGSize(width: side, height: side)
+      surfaceSidePt = side / scale
     }
     view.layer.addSublayer(metalLayer)
+    layoutSurface()
     // Web chrome: the JS shell draws every control, so no button, bar, or
     // recognizer is ever built on this surface.
     guard !webChrome else { return }
@@ -154,27 +149,45 @@ final class HarborMpvViewController: UIViewController, HarborPlayerEngine {
 
   override func viewDidLayoutSubviews() {
     super.viewDidLayoutSubviews()
-    metalLayer.frame = view.bounds
-    // Refinement of the viewDidLoad seed; only effective while VO init has not
-    // yet fixed the swapchain size (MPVKit issue #3).
-    if let scale = view.window?.screen.nativeScale, metalLayer.contentsScale != scale {
-      metalLayer.contentsScale = scale
-    }
-    // Do NOT resize the drawable here.
-    //
-    // Assigning drawableSize on every layout was the obvious move and it is wrong:
-    // MoltenVK does not track layer resizes (MPVKit issue #3), so asking for a new
-    // swapchain mid-session does not give one - it leaves the old buffer being
-    // presented at a size nothing agrees on, which is how the picture ended up as a
-    // small rectangle in a corner after a rotation instead of merely soft.
-    //
-    // The swapchain is fixed at VO init, so the only way to be correct in BOTH
-    // orientations is to init it at a size that suits both and never touch it
-    // again. seedDrawableSize does that with the screen's long edge, and
-    // contentsGravity .resizeAspect scales that one buffer into whatever bounds the
-    // layer currently has - correct aspect, correct position, in either orientation.
-    // The cost is scaling rather than a native-resolution buffer per orientation,
-    // which is invisible next to a picture in the wrong place.
+    layoutSurface()
+  }
+
+  /// Places the fixed-size render surface so the picture inside it lands exactly
+  /// where it belongs, in any orientation.
+  ///
+  /// The swapchain is fixed at VO init and MoltenVK never resizes it (MPVKit issue
+  /// #3), but a CAMetalLayer's drawableSize DOES follow its bounds. When the two
+  /// disagree MoltenVK crops from the origin rather than scaling, and
+  /// contentsGravity has no effect on a Metal layer, so it cannot rescue this.
+  /// Measured on device: `metalLayer.frame = view.bounds` in layout left portrait
+  /// showing the left 1179px of a 2556px-wide picture, and landscape showing the
+  /// picture from the stale swapchain's 559px letterbox offset down. Both matched
+  /// the crop prediction to the pixel.
+  ///
+  /// So bounds are set once, square, and only `position` and `transform` move -
+  /// neither of which feeds back into drawableSize. Square makes the geometry
+  /// aspect-independent: mpv letterboxes the picture inside the square, so scaling
+  /// the square uniformly reproduces the picture at its true aspect at any size.
+  /// Solving "the letterboxed picture exactly fills the view" for the square's
+  /// on-screen side gives the scale below. The cost is the black letterbox padding
+  /// inside the square being rendered and then clipped, against a black view.
+  private func layoutSurface() {
+    guard surfaceSidePt > 0 else { return }
+    let w = view.bounds.width
+    let h = view.bounds.height
+    guard w > 0, h > 0 else { return }
+    let decoded = decodedSize
+    // 16:9 until the decoder reports otherwise; the dwidth/dheight observer runs
+    // this again once it does.
+    let aspect =
+      decoded.width > 0 && decoded.height > 0 ? decoded.width / decoded.height : 16.0 / 9.0
+    let side = min(w, aspect * h) / min(1.0, aspect)
+    let k = side / surfaceSidePt
+    CATransaction.begin()
+    CATransaction.setDisableActions(true)
+    metalLayer.position = CGPoint(x: view.bounds.midX, y: view.bounds.midY)
+    metalLayer.transform = CATransform3DMakeScale(k, k, 1)
+    CATransaction.commit()
   }
 
   override var prefersStatusBarHidden: Bool { true }
@@ -354,6 +367,10 @@ final class HarborMpvViewController: UIViewController, HarborPlayerEngine {
     mpv_observe_property(handle, 0, "paused-for-cache", MPV_FORMAT_FLAG)
     mpv_observe_property(handle, 0, "eof-reached", MPV_FORMAT_FLAG)
     mpv_observe_property(handle, 0, "track-list", MPV_FORMAT_NONE)
+    // Not for display: the surface geometry depends on the decoded aspect, which
+    // is unknown until the first frame. See layoutSurface.
+    mpv_observe_property(handle, 0, "dwidth", MPV_FORMAT_NONE)
+    mpv_observe_property(handle, 0, "dheight", MPV_FORMAT_NONE)
 
     // The wakeup context holds a retain on self until mpv_terminate_destroy has
     // run, so the C callback can never see a dangling pointer; the event queue
@@ -463,6 +480,10 @@ final class HarborMpvViewController: UIViewController, HarborPlayerEngine {
   private func handlePropertyEvent(_ property: mpv_event_property) {
     guard let cName = property.name else { return }
     let name = String(cString: cName)
+    if name == "dwidth" || name == "dheight" {
+      DispatchQueue.main.async { self.view.setNeedsLayout() }
+      return
+    }
     // Values are copied here because the event data dies at the next
     // mpv_wait_event call; format is MPV_FORMAT_NONE when unavailable.
     var doubleValue: Double?

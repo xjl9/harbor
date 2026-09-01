@@ -6,10 +6,14 @@ import { MobileQualityBadges } from "./mobile-quality-badges";
 import { MobileTimeLabel } from "./mobile-seek-bar";
 
 // Row under the scrubber. Left: where we are and how fast. Right: two groups
-// split by a hairline, "this stream" (source, episodes) and "move on" (prev,
-// next, PiP). Nothing here is a primary action, so it all stays quiet: no rest
-// background, 22px icons. The boxes are 44pt because that is the platform's
-// touch floor, not because the controls want the weight.
+// split by a hairline, "this stream" (source) and "move on" (prev, next, PiP).
+// Nothing here is a primary action, so it all stays quiet: no rest background,
+// 22px icons. The boxes are 44pt because that is the platform's touch floor, not
+// because the controls want the weight.
+//
+// No Episodes button: the UP NEXT tab on the screen edge opens the same panel and
+// is visible whether the chrome is up or not, so a second way in only made the row
+// longer.
 export function MobileActionRow({
   durationSec,
   active,
@@ -19,13 +23,11 @@ export function MobileActionRow({
   rate,
   showRate,
   canPickAnother,
-  isSeries,
   hasPrevEp,
   hasNextEp,
   showPiP,
   onSpeed,
   onPickAnother,
-  onEpisodes,
   onPrevEp,
   onNextEp,
   onPiP,
@@ -38,19 +40,17 @@ export function MobileActionRow({
   rate: number;
   showRate: boolean;
   canPickAnother: boolean;
-  isSeries: boolean;
   hasPrevEp: boolean;
   hasNextEp: boolean;
   showPiP: boolean;
   onSpeed: () => void;
   onPickAnother: () => void;
-  onEpisodes: () => void;
   onPrevEp: () => void;
   onNextEp: () => void;
   onPiP: () => void;
 }) {
   const t = useT();
-  const leftGroup = canPickAnother || isSeries;
+  const leftGroup = canPickAnother;
   const rightGroup = hasPrevEp || hasNextEp || showPiP;
   return (
     <div className="flex h-11 items-center justify-between">
@@ -72,11 +72,6 @@ export function MobileActionRow({
         {canPickAnother && (
           <ActionButton label={t("Switch source")} onClick={onPickAnother}>
             <MobileGlyph url={MOBILE_GLYPH.pickAnother} size={22} />
-          </ActionButton>
-        )}
-        {isSeries && (
-          <ActionButton label={t("Episodes")} onClick={onEpisodes}>
-            <MobileGlyph url={MOBILE_GLYPH.episodes} size={22} />
           </ActionButton>
         )}
         {leftGroup && rightGroup && <span aria-hidden className="mx-1 h-5 w-px bg-white/10" />}
