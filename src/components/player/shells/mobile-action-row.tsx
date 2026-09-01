@@ -2,6 +2,7 @@ import { useT } from "@/lib/i18n";
 import { fmtRate } from "./mobile-chrome";
 import { MobileGlyph } from "./mobile-glyph";
 import { MOBILE_GLYPH } from "./mobile-icons";
+import { MobileQualityBadges } from "./mobile-quality-badges";
 import { MobileTimeLabel } from "./mobile-seek-bar";
 
 // Row under the scrubber. Left: where we are and how fast. Right: two groups
@@ -12,6 +13,9 @@ import { MobileTimeLabel } from "./mobile-seek-bar";
 export function MobileActionRow({
   durationSec,
   active,
+  videoWidth,
+  videoHeight,
+  hdrGamma,
   rate,
   showRate,
   canPickAnother,
@@ -28,6 +32,9 @@ export function MobileActionRow({
 }: {
   durationSec: number;
   active: boolean;
+  videoWidth: number;
+  videoHeight: number;
+  hdrGamma: string;
   rate: number;
   showRate: boolean;
   canPickAnother: boolean;
@@ -49,6 +56,7 @@ export function MobileActionRow({
     <div className="flex h-11 items-center justify-between">
       <div className="flex items-center gap-3">
         <MobileTimeLabel durationSec={durationSec} active={active} />
+        <MobileQualityBadges videoWidth={videoWidth} videoHeight={videoHeight} hdrGamma={hdrGamma} />
         {showRate && (
           <button
             type="button"

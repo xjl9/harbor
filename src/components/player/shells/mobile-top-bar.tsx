@@ -13,6 +13,8 @@ import { MOBILE_GLYPH } from "./mobile-icons";
 export function MobileTopBar({
   title,
   subtitle,
+  season,
+  episode,
   showAirplay,
   showCast,
   scrimStyle,
@@ -25,6 +27,8 @@ export function MobileTopBar({
 }: {
   title: string;
   subtitle?: string;
+  season?: number | null;
+  episode?: number | null;
   showAirplay: boolean;
   showCast: boolean;
   scrimStyle: CSSProperties;
@@ -36,6 +40,16 @@ export function MobileTopBar({
   onTracks: () => void;
 }) {
   const t = useT();
+  // Which episode is playing, not just which show. The bar used to carry the series
+  // name and a release year, so three episodes in a row looked identical and there
+  // was nothing on screen telling you where you were.
+  const coords =
+    season != null && episode != null
+      ? `S${season} · E${episode}`
+      : episode != null
+        ? `E${episode}`
+        : null;
+  const deck = [coords, subtitle].filter(Boolean).join(" · ") || null;
   return (
     <div className="pointer-events-none absolute inset-x-0 top-0 z-20">
       <div
@@ -62,7 +76,11 @@ export function MobileTopBar({
           <span className="truncate font-display text-[17px] font-medium leading-tight tracking-tight text-ink">
             {title}
           </span>
-          {subtitle && <span className="truncate text-[12px] leading-tight text-ink-muted">{subtitle}</span>}
+          {deck && (
+            <span className="truncate font-mono text-[11px] uppercase tracking-[0.14em] leading-tight text-ink-muted">
+              {deck}
+            </span>
+          )}
         </div>
         <TopButton label={t("Lock screen")} onClick={onLock}>
           <Lock size={22} strokeWidth={2} />

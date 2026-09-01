@@ -105,10 +105,12 @@ export function MobileShell(props: PlayerShellProps) {
   // sit above it instead of underneath the scrubber and the clock. Cleared when the
   // controls hide, so dialogue returns to its configured margin.
   useEffect(() => {
-    const root = document.querySelector<HTMLElement>("[data-harbor-player]");
-    if (!root) return;
-    const set = (v: string) => root.style.setProperty("--player-chrome-lift", v);
-    set(chromeShown ? "104px" : "0px");
+    // Published on the document root, not on [data-harbor-player]. The mobile player
+    // is portaled to body while another player root can still exist inside #root, so
+    // querySelector could hand back the wrong element and the variable never reached
+    // the overlay that needed it. Inheriting from :root cannot miss.
+    const root = document.documentElement;
+    root.style.setProperty("--player-chrome-lift", chromeShown ? "112px" : "0px");
     return () => {
       root.style.removeProperty("--player-chrome-lift");
     };
@@ -144,6 +146,8 @@ export function MobileShell(props: PlayerShellProps) {
       <MobileTopBar
         title={title}
         subtitle={subtitle}
+        season={season}
+        episode={episode}
         showAirplay={capabilities.airplay}
         showCast={capabilities.chromecast}
         scrimStyle={scrimStyle}
@@ -158,9 +162,15 @@ export function MobileShell(props: PlayerShellProps) {
         onTracks={() => setSheet({ kind: "tracks", tab: "subtitles" })}
       />
 
-      {/* Center transport: one baseline, 56px apart */}
+      {/* Center transport in landscape, where the picture fills the frame and the
+          middle of the screen is the middle of the picture.
+          In portrait it drops to sit just above the scrubber instead: a scope film
+          letterboxes to a band, so screen-centre is usually BLACK, and the controls
+          hung there in a void with the picture somewhere else entirely. Grouping
+          them with the rest of the chrome keeps the frame clear and puts every
+          control in one place. */}
       <div
-        className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center gap-14"
+        className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center gap-14 [@media(orientation:portrait)]:items-end [@media(orientation:portrait)]:pb-[150px]"
         style={zoneStyle("scale(0.96)")}
       >
         <button
@@ -231,6 +241,9 @@ export function MobileShell(props: PlayerShellProps) {
           <MobileActionRow
             durationSec={snap.durationSec}
             active={chromeShown}
+            videoWidth={snap.videoWidth}
+            videoHeight={snap.videoHeight}
+            hdrGamma={snap.hdrGamma}
             rate={rate}
             showRate={flags.rate}
             canPickAnother={canPickAnother}
