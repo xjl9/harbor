@@ -23,37 +23,66 @@ function normalizeTransportUrl(url: string): string {
   return url.replace(/\/$/, "");
 }
 
+const SEED_DIAG_KEY = "harbor.addons.seed.lastError";
+const SEED_ATTEMPTS = 4;
+
+// One pass over the seed set. Returns how many sources are still outstanding, so
+// the caller can decide whether the set is done or worth another attempt.
+async function seedPass(): Promise<number> {
+  const have = new Set(loadInstalled().map((a) => normalizeTransportUrl(a.transportUrl)));
+  let failed = 0;
+  let lastError = "";
+  for (const def of DEFAULT_ADDONS) {
+    if (have.has(normalizeTransportUrl(def.transportUrl))) continue;
+    try {
+      const manifest = await fetchManifestAt(def.transportUrl);
+      const next = loadInstalled().filter((a) => a.transportUrl !== def.transportUrl);
+      next.push({
+        id: manifest.id || def.id,
+        transportUrl: def.transportUrl,
+        installedAt: Date.now(),
+        manifest,
+      });
+      saveInstalled(next);
+    } catch (e) {
+      failed += 1;
+      lastError = `${def.id}: ${e instanceof Error ? e.message : String(e)}`;
+      console.warn(`[addons] failed to seed ${def.id}`, e);
+    }
+  }
+  // A breadcrumb, because every symptom of a failed seed looks identical from the
+  // outside: no sources, no flag, nothing on screen saying why.
+  try {
+    if (failed > 0) localStorage.setItem(SEED_DIAG_KEY, lastError);
+    else localStorage.removeItem(SEED_DIAG_KEY);
+  } catch {}
+  return failed;
+}
+
 export async function seedDefaultAddonsIfFirstRun(): Promise<void> {
   try {
     if (DEFAULT_ADDONS.length === 0) return;
     const fingerprint = seedFingerprint();
     if (localStorage.getItem(SEEDED_KEY) === fingerprint) return;
 
-    // Merge rather than bail. Returning early whenever ANY addon was installed meant
-    // a single manually added source suppressed every seeded one.
-    const have = new Set(loadInstalled().map((a) => normalizeTransportUrl(a.transportUrl)));
-    let failed = 0;
-    for (const def of DEFAULT_ADDONS) {
-      if (have.has(normalizeTransportUrl(def.transportUrl))) continue;
-      try {
-        const manifest = await fetchManifestAt(def.transportUrl);
-        const next = loadInstalled().filter((a) => a.transportUrl !== def.transportUrl);
-        next.push({
-          id: manifest.id || def.id,
-          transportUrl: def.transportUrl,
-          installedAt: Date.now(),
-          manifest,
-        });
-        saveInstalled(next);
-      } catch (e) {
-        failed += 1;
-        console.warn(`[addons] failed to seed ${def.id}`, e);
+    // Retried, not attempted once. This runs from an effect on the app's first
+    // render, which on native is early enough to lose a race with the fetch
+    // bridge: the very same request succeeds seconds later from a tap, so a
+    // single attempt at mount failed every launch and left the app permanently
+    // sourceless. Backing off and asking again costs nothing when the first
+    // attempt works, which is the normal case.
+    for (let attempt = 0; attempt < SEED_ATTEMPTS; attempt += 1) {
+      if (attempt > 0) {
+        await new Promise((r) => setTimeout(r, 1200 * attempt));
+      }
+      const failed = await seedPass();
+      if (failed === 0) {
+        // Only claim the set is seeded once nothing is outstanding. Marking it
+        // after a failed fetch left the app with no retry on any later launch.
+        localStorage.setItem(SEEDED_KEY, fingerprint);
+        return;
       }
     }
-    // Only claim the set is seeded once nothing is outstanding. Marking it after a
-    // failed fetch left the app permanently sourceless, with no retry on any later
-    // launch and nothing on screen to say why.
-    if (failed === 0) localStorage.setItem(SEEDED_KEY, fingerprint);
   } catch (e) {
     console.warn("[addons] seed default failed", e);
   }
