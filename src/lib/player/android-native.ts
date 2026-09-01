@@ -30,7 +30,10 @@ import {
 export { setOrientation, type OrientationLock } from "./native-orientation";
 export { nativeEngine, showNativeRoutePicker } from "./native-host";
 
-type Tick = { positionSec: number; durationSec: number; bufferedSec: number; playing: boolean; rate?: number };
+type Tick = { positionSec: number; durationSec: number; bufferedSec: number; playing: boolean; rate?: number   // Optional: iOS reports the decoded picture size, Android does not send these.
+  videoWidth?: number;
+  videoHeight?: number;
+};
 type State = {
   status: "loading" | "ready" | "ended" | "error";
   errorCode?: string;
@@ -88,6 +91,18 @@ export function createNativeBridge(): PlayerBridge {
     if (pluginListeners.length > 0 || disposed) return;
     pluginListeners.push(
       await addPluginListener("harbor-player", "tick", (t: Tick) => {
+        // Only once the engine reports a real size, and only when it changes: this
+        // runs about once a second and patching identical numbers would re-render
+        // the shell for nothing.
+        if (
+          typeof t.videoWidth === "number" &&
+          typeof t.videoHeight === "number" &&
+          t.videoWidth > 0 &&
+          t.videoHeight > 0 &&
+          (t.videoWidth !== snap.videoWidth || t.videoHeight !== snap.videoHeight)
+        ) {
+          patch({ videoWidth: t.videoWidth, videoHeight: t.videoHeight });
+        }
         patch({
           positionSec: t.positionSec,
           durationSec: t.durationSec || snap.durationSec,

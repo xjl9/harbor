@@ -439,10 +439,18 @@ class HarborPlayerPlugin: Plugin {
   }
 
   private func sendTick(_ pos: Double, _ dur: Double, _ buf: Double, _ playing: Bool, _ rate: Double) {
-    let payload: JSObject = [
+    var payload: JSObject = [
       "positionSec": pos, "durationSec": dur, "bufferedSec": buf, "playing": playing,
       "rate": rate,
     ]
+    // Carried on the tick, not just on state changes. The decoded size is not known
+    // when "ready" fires - AVPlayer reports presentationSize as zero until the item
+    // has actually loaded - and no further state event follows, so a badge fed only
+    // by state could never appear. Two integers on a once-a-second payload.
+    if let size = controller?.decodedSize, size.width > 0, size.height > 0 {
+      payload["videoWidth"] = Int(size.width)
+      payload["videoHeight"] = Int(size.height)
+    }
     trigger("tick", data: payload)
   }
 
