@@ -100,9 +100,22 @@ html.native-video-behind [data-harbor-player] {
   background: transparent !important;
 }
 
-/* The mobile app portals the player next to #root; the app tree underneath
-   would otherwise paint over the video. */
-html.native-video-behind #root:not(:has([data-harbor-player])) {
+/* The mobile app portals the player next to #root, and it is not the only thing
+   portaled there: the detail page, the picker and several sheets are body children
+   too. Hiding only #root left those siblings painting their own opaque bg-canvas
+   between the native video and the player chrome, which is why pressing play left
+   the film's own page on screen with the transport floating on top of it.
+
+   Any body child that does not CONTAIN the player is app tree, and app tree has no
+   business being visible while a fullscreen player is up. The player's own sheets
+   render inside its subtree rather than as body siblings, so they are unaffected.
+
+   The body:has() guard is not redundant. The class is cleared when the player
+   bridge is destroyed, so any path that tears the player down WITHOUT destroying
+   the bridge would leave it set - and a stale class on a rule this broad means an
+   app that is entirely invisible with no way back. Requiring a player to actually
+   be present makes the rule correct itself the moment one is gone. */
+html.native-video-behind body:has([data-harbor-player]) > *:not(:has([data-harbor-player])) {
   visibility: hidden;
 }
 

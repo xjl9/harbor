@@ -1,15 +1,21 @@
 import type { ReactNode } from "react";
+import { isDesktopTauri } from "@/lib/platform";
 import { close, minimize, toggleMaximize, useMaximized } from "@/lib/window";
 import { useSettings } from "@/lib/settings";
 import { useT } from "@/lib/i18n";
 
-const IS_TAURI = typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
+// Window buttons are DESKTOP chrome. __TAURI_INTERNALS__ is present on iOS and
+// Android too, so testing for it drew minimize/maximize/close on a phone. Called
+// per render, not once at module load: osClass caches its first answer, and
+// evaluating it before Tauri's internals attach would cache "web" and hide these
+// on the desktop for the rest of the session.
+const isDesktopChrome = () => isDesktopTauri();
 
 export function WindowControls() {
   const { settings } = useSettings();
   const maxed = useMaximized();
   const t = useT();
-  if (!IS_TAURI || settings.useNativeTitleBar || settings.hybridTitleBar) return null;
+  if (!isDesktopChrome() || settings.useNativeTitleBar || settings.hybridTitleBar) return null;
   return (
     <div data-tauri-drag-region="false" className="flex items-center gap-2">
       <Ctl label={t("chrome.minimize")} onClick={minimize}>

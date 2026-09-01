@@ -1,4 +1,5 @@
 import { ArrowLeft, Search } from "lucide-react";
+import { isDesktopTauri } from "@/lib/platform";
 import { HarborMark } from "@/components/icons/harbor-mark";
 import { NotificationCenter } from "@/components/notification-center/notification-center";
 import { AccountMenu } from "@/chrome/account-menu/account-menu";
@@ -11,7 +12,12 @@ import { getThemeById } from "@/lib/theme";
 import { useView } from "@/lib/view";
 import { close, minimize, toggleMaximize } from "@/lib/window";
 
-const IS_TAURI = typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
+// Window buttons are DESKTOP chrome. __TAURI_INTERNALS__ is present on iOS and
+// Android too, so testing for it drew minimize/maximize/close on a phone. Called
+// per render, not once at module load: osClass caches its first answer, and
+// evaluating it before Tauri's internals attach would cache "web" and hide these
+// on the desktop for the rest of the session.
+const isDesktopChrome = () => isDesktopTauri();
 
 export function FloatingTop() {
   const { view, setView, chromeHidden, canGoBack, goBack, topKind, exitPlayback } = useView();
@@ -65,7 +71,7 @@ export function FloatingTop() {
           <span className="hidden sm:inline">{t("common.search")}</span>
         </PillBtn>
         <AccountMenu trigger="pill" placement="down" align="end" showSettings onOpenSettings={() => setView("settings")} settingsActive={view === "settings"} />
-        {IS_TAURI && !settings.useNativeTitleBar && !settings.hybridTitleBar && (
+        {isDesktopChrome() && !settings.useNativeTitleBar && !settings.hybridTitleBar && (
           <div className="ms-1 flex items-center gap-1">
             <WinBtn onClick={minimize} label={t("chrome.minimize")}>
               <path d="M3 6.5h7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
