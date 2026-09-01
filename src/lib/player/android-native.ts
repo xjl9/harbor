@@ -31,7 +31,15 @@ export { setOrientation, type OrientationLock } from "./native-orientation";
 export { nativeEngine, showNativeRoutePicker } from "./native-host";
 
 type Tick = { positionSec: number; durationSec: number; bufferedSec: number; playing: boolean; rate?: number };
-type State = { status: "loading" | "ready" | "ended" | "error"; errorCode?: string; engine?: NativeEngine };
+type State = {
+  status: "loading" | "ready" | "ended" | "error";
+  errorCode?: string;
+  engine?: NativeEngine;
+  // Optional: iOS reports the decoded picture size once it knows, Android does not
+  // send these at all.
+  videoWidth?: number;
+  videoHeight?: number;
+};
 type Closed = { positionSec: number; durationSec: number };
 type NativeTrack = {
   id: string;
@@ -97,6 +105,14 @@ export function createNativeBridge(): PlayerBridge {
       }),
       await addPluginListener("harbor-player", "state", (st: State) => {
         if (st.engine === "mpv" || st.engine === "av") setNativeEngine(st.engine);
+        // Only once the engine reports a real decoded size. Absent on Android and
+        // before the first frame, and the shell shows no quality badge until then
+        // rather than guessing one from the stream title.
+        if (typeof st.videoWidth === "number" && typeof st.videoHeight === "number") {
+          if (st.videoWidth > 0 && st.videoHeight > 0) {
+            patch({ videoWidth: st.videoWidth, videoHeight: st.videoHeight });
+          }
+        }
         if (st.status === "error") {
           patch({ status: "error", errorCode: mapError(st.errorCode), errorMessage: st.errorCode ?? "Playback error" });
         } else if (st.status === "ready") {

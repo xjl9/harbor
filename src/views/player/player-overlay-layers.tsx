@@ -402,8 +402,10 @@ export const PlayerOverlayLayers = memo(function PlayerOverlayLayers(p: PlayerOv
           metaReleaseDate={p.src.meta.releaseDate ?? null}
           meta={p.src.meta}
           tmdbKey={p.tmdbKey}
-          season={p.src.episode?.season ?? null}
-          episode={p.src.episode?.episode ?? null}
+          // imdb numbering first, matching hoverSub above: a season an addon numbered
+          // differently from IMDb is the one a viewer will argue with.
+          season={p.src.episode?.imdbSeason ?? p.src.episode?.season ?? null}
+          episode={p.src.episode?.imdbEpisode ?? p.src.episode?.episode ?? null}
           download={p.download}
           onOpenDvr={p.openDvr}
           sleep={p.sleep}

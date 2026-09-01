@@ -1190,6 +1190,20 @@ final class HarborMpvViewController: UIViewController, HarborPlayerEngine {
     return String(cString: cString)
   }
 
+  // dwidth/dheight rather than width/height: those are the dimensions AFTER decode
+  // and any filters, which is what the viewer is actually being shown, and a quality
+  // badge that reports anything else is repeating the release name back at them.
+  // Zero before the first frame, which the shell reads as "do not claim a quality".
+  //
+  // Lives here rather than in the +Commands extension because getInt64 is private to
+  // this file.
+  var decodedSize: CGSize {
+    guard let w = getInt64("dwidth"), let h = getInt64("dheight"), w > 0, h > 0 else {
+      return .zero
+    }
+    return CGSize(width: Int(w), height: Int(h))
+  }
+
   private func getInt64(_ name: String) -> Int64? {
     guard let handle = mpv, !shuttingDown else { return nil }
     var value = Int64(0)

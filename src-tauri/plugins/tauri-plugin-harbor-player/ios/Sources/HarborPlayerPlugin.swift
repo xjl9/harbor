@@ -97,6 +97,9 @@ protocol HarborPlayerEngine: AnyObject {
   var onTracks: (([NativeTrackEntry], [NativeTrackEntry]) -> Void)? { get set }
   /// "mpv" or "av"; the JS shell gates engine-specific controls on it.
   var engineName: String { get }
+  /// The DECODED picture size, which is the only honest source for a quality badge:
+  /// a release named 2160p can decode at 1080p. Zero until the engine knows.
+  var decodedSize: CGSize { get }
   /// Must be set before the first configure: viewDidLoad reads it to decide
   /// whether any native chrome is built at all.
   var webChrome: Bool { get set }
@@ -446,6 +449,12 @@ class HarborPlayerPlugin: Plugin {
   private func sendState(_ status: String, _ errorCode: String?, engine: String) {
     var payload: JSObject = ["status": status, "engine": engine]
     if let code = errorCode { payload["errorCode"] = code }
+    // Additive, and only once the engine actually knows: Android sends neither key
+    // and the shell treats both as absent, so nothing downstream changes shape.
+    if let size = controller?.decodedSize, size.width > 0, size.height > 0 {
+      payload["videoWidth"] = Int(size.width)
+      payload["videoHeight"] = Int(size.height)
+    }
     trigger("state", data: payload)
   }
 
