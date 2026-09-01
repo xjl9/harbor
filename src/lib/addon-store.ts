@@ -83,6 +83,27 @@ export async function seedDefaultAddonsIfFirstRun(): Promise<void> {
         return;
       }
     }
+
+    // Every retry lost. Record the sources anyway, without manifests: the entry
+    // is what makes the addon exist, and fetchInstalledAddons already hydrates a
+    // manifest-less entry the first time anything asks for it - by which point
+    // the app is long past startup and the fetch works. Betting the whole feature
+    // on a fetch succeeding during mount is what left the app sourceless; this
+    // does not care why that fetch failed.
+    const have = new Set(loadInstalled().map((a) => normalizeTransportUrl(a.transportUrl)));
+    const pending = DEFAULT_ADDONS.filter(
+      (d) => !have.has(normalizeTransportUrl(d.transportUrl)),
+    );
+    if (pending.length > 0) {
+      const next = loadInstalled();
+      for (const def of pending) {
+        next.push({ id: def.id, transportUrl: def.transportUrl, installedAt: Date.now() });
+      }
+      saveInstalled(next);
+      window.dispatchEvent(new Event("harbor:addons-changed"));
+    }
+    // Deliberately NOT marked seeded: the manifests are still owed, so a later
+    // launch should try to fetch them properly rather than assume this is done.
   } catch (e) {
     console.warn("[addons] seed default failed", e);
   }
