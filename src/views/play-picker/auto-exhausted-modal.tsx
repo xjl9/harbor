@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import type { Meta } from "@/lib/cinemeta";
 import { useView, type PlayEpisode } from "@/lib/view";
 import { requestMobileIntent } from "@/views/mobile/mobile-intent";
@@ -46,6 +47,15 @@ export function AutoExhaustedModal({
     `Streams tried: ${triedCount}\n` +
     `\nWhat happened: Harbor could not find a working stream automatically.\n` +
     `\n(Add any extra detail here)`;
+  // The most common failure a viewer can hit, and it left no trace anywhere: the
+  // Diagnostics screen read "nothing logged yet" immediately after Harbor had
+  // tried two thousand sources for a title. Warning here puts it in the same
+  // buffer every other failure reports through, so a tester who taps Copy report
+  // hands over the one fact that explains their evening.
+  useEffect(() => {
+    console.warn(`[play] no working stream for ${title}${epSuffix} after ${triedCount} sources`);
+  }, [title, epSuffix, triedCount]);
+
   const mailto = `mailto:bugs@harbor.site?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
   return (
     <main
