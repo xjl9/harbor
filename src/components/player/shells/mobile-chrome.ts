@@ -15,6 +15,13 @@ export const TIME_BEZEL = `${CHROME_SURFACE} rounded-[10px] px-2.5 py-1 font-jak
 export const SAFE_X = "max(env(safe-area-inset-left, 0px), env(safe-area-inset-right, 0px))";
 export const SAFE_INLINE_20 = `calc(${SAFE_X} + 20px)`;
 
+// Bottom inset with a floor. A phone without a home indicator reports
+// safe-area-inset-bottom as 0, so "inset + 12px" left the action row sitting 12px
+// off the glass on an SE while a notched phone got 46px. The floor gives the
+// short devices a real margin and changes nothing on the tall ones, whose own
+// inset already clears it.
+export const SAFE_BOTTOM = "max(env(safe-area-inset-bottom, 0px), 14px)";
+
 export const SHOW_MS = 180;
 export const HIDE_MS = 240;
 export const SHOW_EASE = "var(--ease-out)";

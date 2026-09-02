@@ -3,6 +3,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useT } from "@/lib/i18n";
 import { projectEndpoint, rubberBand, springBack } from "@/lib/player/gesture-physics";
 import { haptics } from "@/lib/player/haptics";
+import { SAFE_BOTTOM } from "./mobile-chrome";
 
 // Shared bottom-sheet chrome for the mobile player: dimmed scrim, rounded top,
 // grabber handle, and a direct-manipulation drag-to-dismiss. The WHOLE sheet body
@@ -267,7 +268,7 @@ export function MobileSheet({
           opacity: panelOpacity,
           transition: panelTransition,
           maxHeight: SHEET_MAX_H,
-          paddingBottom: "env(safe-area-inset-bottom, 0px)",
+          paddingBottom: SAFE_BOTTOM,
           paddingLeft: SAFE_X,
           paddingRight: SAFE_X,
         }}

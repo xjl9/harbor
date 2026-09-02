@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { fmtTime, CHROME_SURFACE, SAFE_INLINE_20 } from "./mobile-chrome";
+import { CHROME_SURFACE, SAFE_BOTTOM, SAFE_INLINE_20, fmtTime } from "./mobile-chrome";
 
 // Taking back a scrub.
 //
@@ -47,7 +47,7 @@ export function MobileSeekUndo({
       style={{
         // Above the folio, not over it: this appears while the chrome is up, and
         // covering the scrubber with the way back to where you were is perverse.
-        bottom: "calc(env(safe-area-inset-bottom, 0px) + 168px)",
+        bottom: `calc(${SAFE_BOTTOM} + 168px)`,
         paddingInline: SAFE_INLINE_20,
         opacity: shown ? 1 : 0,
         transform: shown ? "translateY(0)" : "translateY(6px)",

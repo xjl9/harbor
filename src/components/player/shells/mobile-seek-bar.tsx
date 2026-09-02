@@ -9,7 +9,7 @@ import {
 import { useT } from "@/lib/i18n";
 import { useTrickplayState } from "@/lib/trickplay";
 import type { SkipSegment } from "@/lib/skip-intro";
-import { fmtTime, SAFE_INLINE_20, TIME_BEZEL } from "./mobile-chrome";
+import { SAFE_BOTTOM, SAFE_INLINE_20, TIME_BEZEL, fmtTime } from "./mobile-chrome";
 
 const BUFFER_PAD_SEC = 4;
 const PREVIEW_HALF_WIDTH_PX = 96;
@@ -238,7 +238,7 @@ export function MobilePeekBar({ durationSec, active }: { durationSec: number; ac
       aria-hidden
       className="absolute bottom-0 h-[2px] overflow-hidden rounded-full bg-white/10"
       style={{
-        marginBottom: "calc(env(safe-area-inset-bottom, 0px) + 6px)",
+        marginBottom: `calc(${SAFE_BOTTOM} + 6px)`,
         insetInline: SAFE_INLINE_20,
         opacity: lingering ? 1 : 0,
         // Slow on the way out so it reads as settling rather than blinking off.

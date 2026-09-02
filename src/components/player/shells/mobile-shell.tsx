@@ -17,6 +17,7 @@ import { MOBILE_GLYPH, seekGlyph } from "./mobile-icons";
 import {
   HIDE_EASE,
   HIDE_MS,
+  SAFE_BOTTOM,
   SAFE_INLINE_20,
   SHOW_EASE,
   SHOW_MS,
@@ -274,7 +275,7 @@ export function MobileShell(props: PlayerShellProps) {
           className={`relative flex flex-col gap-1 ${hit}`}
           style={{
             ...zoneStyle("translateY(12px)"),
-            paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 12px)",
+            paddingBottom: `calc(${SAFE_BOTTOM} + 12px)`,
             paddingInline: SAFE_INLINE_20,
           }}
         >
