@@ -1,3 +1,5 @@
+import { isDesktopTauri } from "@/lib/platform";
+
 export function DragClickStage(props: {
   drawMode: boolean;
   pipMode: boolean;
@@ -31,9 +33,16 @@ export function DragClickStage(props: {
             dragStarted = true;
             window.removeEventListener("mousemove", onMove);
             window.removeEventListener("mouseup", onUp);
-            import("@tauri-apps/api/window")
-              .then(({ getCurrentWindow }) => getCurrentWindow().startDragging())
-              .catch(() => {});
+            // Desktop only. iOS has no draggable window and the command is not in
+            // the mobile ACL, so calling it there raised "plugin:window|start_dragging
+            // not allowed by ACL" - which the global unhandledrejection handler turns
+            // into the full-screen Oops view, killing playback. WKWebView synthesises
+            // mouse events from touches, so a drag on the stage reached this.
+            if (isDesktopTauri()) {
+              import("@tauri-apps/api/window")
+                .then(({ getCurrentWindow }) => getCurrentWindow().startDragging())
+                .catch(() => {});
+            }
           }
         };
         const onUp = () => {

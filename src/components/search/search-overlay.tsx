@@ -1,4 +1,5 @@
 import { Search, X, Loader2, CornerDownLeft, CalendarRange, Tag } from "lucide-react";
+import { isDesktopTauri } from "@/lib/platform";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useT } from "@/lib/i18n";
@@ -106,9 +107,13 @@ export function SearchOverlay() {
         dragStarted = true;
         window.removeEventListener("mousemove", onMove);
         window.removeEventListener("mouseup", onUp);
-        import("@tauri-apps/api/window")
-          .then(({ getCurrentWindow }) => getCurrentWindow().startDragging())
-          .catch(() => {});
+        // Desktop only; see drag-click-stage.tsx. The command is absent from the
+        // mobile ACL and the rejection reaches the global handler as a crash.
+        if (isDesktopTauri()) {
+          import("@tauri-apps/api/window")
+            .then(({ getCurrentWindow }) => getCurrentWindow().startDragging())
+            .catch(() => {});
+        }
       }
     };
     const onUp = () => {
