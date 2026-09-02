@@ -149,6 +149,47 @@ body {
   pointer-events: none;
   mix-blend-mode: screen;
 }
+/* Touch player control motion.
+   The character lives in the keyframe stops, not the timing function, so the
+   easing stays ease-in-out throughout and every stop is authored by hand: pass
+   the target, come back a fraction past centre, settle. Nothing scales
+   uniformly - a control that is struck squashes wide and short, then rebounds
+   tall and narrow, the way a physical button would. */
+@keyframes harbor-ctl-pop {
+  from { transform: scale(0.5, 0.6); }
+  50%  { transform: scale(1.2, 1.25); }
+  75%  { transform: scale(0.9, 0.95); }
+  to   { transform: scale(1, 1); }
+}
+@keyframes harbor-ctl-press {
+  from, to { transform: scale(1, 1); }
+  50% { transform: scale(1.16, 0.84); }
+  75% { transform: scale(0.94, 1.06); }
+}
+/* The skip glyphs lean the way they travel before settling back. */
+@keyframes harbor-seek-back {
+  from, to { transform: translateX(0) scale(1, 1); }
+  50% { transform: translateX(-24%) scale(1.18, 0.86); }
+  75% { transform: translateX(7%) scale(0.94, 1.06); }
+}
+@keyframes harbor-seek-fwd {
+  from, to { transform: translateX(0) scale(1, 1); }
+  50% { transform: translateX(24%) scale(1.18, 0.86); }
+  75% { transform: translateX(-7%) scale(0.94, 1.06); }
+}
+.harbor-ctl-pop { animation: harbor-ctl-pop 340ms ease-in-out both; }
+.harbor-ctl-press { animation: harbor-ctl-press 260ms ease-in-out both; }
+.harbor-seek-back { animation: harbor-seek-back 420ms ease-in-out both; }
+.harbor-seek-fwd { animation: harbor-seek-fwd 420ms ease-in-out both; }
+@media (prefers-reduced-motion: reduce) {
+  .harbor-ctl-pop,
+  .harbor-ctl-press,
+  .harbor-seek-back,
+  .harbor-seek-fwd {
+    animation: none;
+  }
+}
+
 @keyframes hero-reveal {
   from { opacity: 0; transform: translateY(16px); }
   to { opacity: 1; transform: none; }

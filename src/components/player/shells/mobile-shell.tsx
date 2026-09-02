@@ -93,6 +93,10 @@ export function MobileShell(props: PlayerShellProps) {
   // Local, not persisted: filling is a per-title decision and carrying it into the
   // next thing you watch would crop a 16:9 show for no reason.
   const [fillMode, setFillMode] = useState(false);
+  // Bumped on each press so the glyph remounts and its animation runs again;
+  // a CSS animation will not restart on an element that never changed.
+  const [backTick, setBackTick] = useState(0);
+  const [fwdTick, setFwdTick] = useState(0);
 
   const chromeShown = visible && sheet.kind === "none" && !subStyleOpen;
   const interactive = useLingeringInteractive(chromeShown);
@@ -153,7 +157,11 @@ export function MobileShell(props: PlayerShellProps) {
           transitionDelay: controlsDelay,
         };
   const hit = interactive ? "pointer-events-auto" : "pointer-events-none";
-  const press = "active:scale-[0.94] transition-transform duration-100";
+  // No uniform active:scale here any more. A single scale driven by a transition
+  // reads as the timing function rather than as the control reacting, so the
+  // transport glyphs carry hand-authored squash instead and the button itself
+  // only dims while held.
+  const press = "active:opacity-70 transition-opacity duration-100";
 
   return (
     <>
@@ -196,11 +204,17 @@ export function MobileShell(props: PlayerShellProps) {
           aria-label={t("Rewind")}
           onClick={() => {
             haptics.light();
+            setBackTick((t) => t + 1);
             onSeekStep(-settings.seekBackStepSec);
           }}
           className={`flex h-14 w-14 items-center justify-center rounded-full text-ink ${press} ${hit}`}
         >
-          <MobileGlyph url={seekGlyph("back", settings.seekBackStepSec)} size={34} />
+          <MobileGlyph
+            key={backTick}
+            className={backTick > 0 ? "harbor-seek-back" : ""}
+            url={seekGlyph("back", settings.seekBackStepSec)}
+            size={34}
+          />
         </button>
         <button
           type="button"
@@ -218,7 +232,12 @@ export function MobileShell(props: PlayerShellProps) {
               className="h-9 w-9 animate-spin rounded-full border-2 border-ink-muted border-t-transparent"
             />
           ) : (
-            <MobileGlyph url={playing ? MOBILE_GLYPH.playing : MOBILE_GLYPH.paused} size={42} />
+            <MobileGlyph
+              key={playing ? "playing" : "paused"}
+              className="harbor-ctl-pop"
+              url={playing ? MOBILE_GLYPH.playing : MOBILE_GLYPH.paused}
+              size={42}
+            />
           )}
         </button>
         <button
@@ -226,11 +245,17 @@ export function MobileShell(props: PlayerShellProps) {
           aria-label={t("Fast forward")}
           onClick={() => {
             haptics.light();
+            setFwdTick((t) => t + 1);
             onSeekStep(settings.seekForwardStepSec);
           }}
           className={`flex h-14 w-14 items-center justify-center rounded-full text-ink ${press} ${hit}`}
         >
-          <MobileGlyph url={seekGlyph("forward", settings.seekForwardStepSec)} size={34} />
+          <MobileGlyph
+            key={fwdTick}
+            className={fwdTick > 0 ? "harbor-seek-fwd" : ""}
+            url={seekGlyph("forward", settings.seekForwardStepSec)}
+            size={34}
+          />
         </button>
       </div>
 
