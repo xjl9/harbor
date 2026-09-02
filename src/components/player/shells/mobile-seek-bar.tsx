@@ -205,8 +205,13 @@ export function MobileTimeLabel({ durationSec, active }: { durationSec: number; 
       {/* The duration is the first thing to go when the row runs out of width.
           On a 375pt phone in portrait a series episode puts time, quality, speed
           and three transport buttons on one line, and " / 2:16:23" is about 60pt
-          of that. Elapsed is what a viewer is reading; total is on the scrubber. */}
-      <span className="text-ink-muted [@media(max-width:420px)]:hidden">
+          of that. Elapsed is what a viewer is reading; total is on the scrubber.
+
+          400px, not 420: the iPhone Air measures exactly 420pt across, so a 420
+          breakpoint matched a phone with room to spare. Below 400 covers the two
+          narrow widths that are actually tight, 375 and 393, and leaves 420 and
+          440 showing the full label. */}
+      <span className="text-ink-muted [@media(max-width:400px)]:hidden">
         {" / "}
         {fmtTime(durationSec)}
       </span>
