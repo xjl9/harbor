@@ -58,7 +58,7 @@ export function MobileActionRow({
   const rightGroup = hasPrevEp || hasNextEp || showPiP;
   return (
     <div className="flex h-11 items-center justify-between">
-      <div className="flex items-center gap-2.5">
+      <div className="flex min-w-0 items-center gap-2.5 overflow-hidden">
         <MobileTimeLabel durationSec={durationSec} active={active} />
         <MobileQualityBadges videoWidth={videoWidth} videoHeight={videoHeight} hdrGamma={hdrGamma} />
         {showRate && (
@@ -67,7 +67,7 @@ export function MobileActionRow({
           </MobileButton>
         )}
       </div>
-      <div className="flex items-center gap-1">
+      <div className="flex shrink-0 items-center gap-1">
         {canPickAnother && (
           <MobileButton label={t("Switch source")} onClick={onPickAnother}>
             <MobileGlyph url={MOBILE_GLYPH.pickAnother} size={MOBILE_GLYPH_SIZE} />
