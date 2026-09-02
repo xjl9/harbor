@@ -1,9 +1,7 @@
-// Lock has no artwork in public/player-icons, so it keeps its lucide glyph rather
-// than being handed a lookalike from a different family. Subtitles does have one.
-import { Lock } from "lucide-react";
 import type { CSSProperties } from "react";
 import { useT } from "@/lib/i18n";
 import { SAFE_INLINE_20 } from "./mobile-chrome";
+import { MobileButton, MOBILE_GLYPH_SIZE } from "./mobile-button";
 import { MobileGlyph } from "./mobile-glyph";
 import { MOBILE_GLYPH } from "./mobile-icons";
 
@@ -74,9 +72,9 @@ export function MobileTopBar({
           paddingInline: SAFE_INLINE_20,
         }}
       >
-        <TopButton label={t("Close")} onClick={onBack}>
-          <MobileGlyph url={MOBILE_GLYPH.close} size={26} />
-        </TopButton>
+        <MobileButton label={t("Close")} onClick={onBack}>
+          <MobileGlyph url={MOBILE_GLYPH.close} size={MOBILE_GLYPH_SIZE} />
+        </MobileButton>
         <div className="pointer-events-none mx-2 flex min-w-0 flex-1 flex-col justify-center">
           <span className="truncate font-display text-[17px] font-medium leading-tight tracking-tight text-ink">
             {title}
@@ -87,35 +85,23 @@ export function MobileTopBar({
             </span>
           )}
         </div>
-        <TopButton label={t("Lock screen")} onClick={onLock}>
-          <Lock size={22} strokeWidth={2} />
-        </TopButton>
+        <MobileButton label={t("Lock screen")} onClick={onLock}>
+          <MobileGlyph url={MOBILE_GLYPH.lock} size={MOBILE_GLYPH_SIZE} />
+        </MobileButton>
         {showAirplay ? (
-          <TopButton label={t("AirPlay")} onClick={onCast}>
-            <MobileGlyph url={MOBILE_GLYPH.castIdle} size={22} />
-          </TopButton>
+          <MobileButton label={t("AirPlay")} onClick={onCast}>
+            <MobileGlyph url={MOBILE_GLYPH.castIdle} size={MOBILE_GLYPH_SIZE} />
+          </MobileButton>
         ) : showCast ? (
-          <TopButton label={t("Cast")} onClick={onCast}>
-            <MobileGlyph url={MOBILE_GLYPH.castIdle} size={22} />
-          </TopButton>
+          <MobileButton label={t("Cast")} onClick={onCast}>
+            <MobileGlyph url={MOBILE_GLYPH.castIdle} size={MOBILE_GLYPH_SIZE} />
+          </MobileButton>
         ) : null}
-        <TopButton label={t("Audio & Subtitles")} onClick={onTracks}>
-          <MobileGlyph url={MOBILE_GLYPH.subtitles} size={22} />
-        </TopButton>
+        <MobileButton label={t("Audio & Subtitles")} onClick={onTracks}>
+          <MobileGlyph url={MOBILE_GLYPH.subtitles} size={MOBILE_GLYPH_SIZE} />
+        </MobileButton>
       </div>
     </div>
   );
 }
 
-function TopButton({ label, onClick, children }: { label: string; onClick: () => void; children: React.ReactNode }) {
-  return (
-    <button
-      type="button"
-      aria-label={label}
-      onClick={onClick}
-      className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-ink active:bg-white/10"
-    >
-      {children}
-    </button>
-  );
-}

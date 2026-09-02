@@ -1,9 +1,11 @@
-import { Lock } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useT } from "@/lib/i18n";
 import { MOBILE_LOCK_PEEK_EVENT, setMobileLocked } from "@/lib/player/mobile-lock";
 import { haptics } from "@/lib/player/haptics";
 import { CHROME_SURFACE } from "./mobile-chrome";
+import { MOBILE_GLYPH_SIZE } from "./mobile-button";
+import { MobileGlyph } from "./mobile-glyph";
+import { MOBILE_GLYPH } from "./mobile-icons";
 
 const LABEL_MS = 1200;
 const PEEK_MS = 3000;
@@ -51,7 +53,7 @@ export function MobileLockPill() {
           opacity: peek ? 1 : 0,
         }}
       >
-        <Lock size={20} strokeWidth={2} />
+        <MobileGlyph url={MOBILE_GLYPH.lock} size={MOBILE_GLYPH_SIZE} />
         {label && <span className="text-[13px] font-medium">{t("Locked")}</span>}
       </button>
     </div>

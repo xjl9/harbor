@@ -6,8 +6,11 @@
 // into surfaces that do not render them. Mobile is a different control surface,
 // so it names its own.
 //
-// Lock has no artwork in the set and deliberately keeps its lucide glyph rather
-// than getting a lookalike drawn for it. Everything else here is John's.
+// Every glyph here is John's set. lock.svg is the one drawn for this player: the
+// set shipped without a lock and the chrome was falling back to a lucide one, which
+// measured a 6px stroke in a 56px box against John's 5px in 66px - a fifth heavier
+// in a smaller box, sitting 44px away from his artwork. It is built to the set's
+// own geometry: 512 box, 38.4 stroke, 19.2 round caps.
 
 const B = "/player-icons/";
 
@@ -24,6 +27,7 @@ export const MOBILE_GLYPH = {
   castConnected: `${B}cast--connected.svg`,
   audio: `${B}audio.svg`,
   subtitles: `${B}subtitle.svg`,
+  lock: `${B}lock.svg`,
   upNext: `${B}up-next.png`,
 } as const;
 

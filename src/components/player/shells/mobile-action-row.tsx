@@ -1,5 +1,6 @@
 import { useT } from "@/lib/i18n";
 import { fmtRate } from "./mobile-chrome";
+import { MobileButton, MOBILE_GLYPH_SIZE } from "./mobile-button";
 import { MobileGlyph } from "./mobile-glyph";
 import { MOBILE_GLYPH } from "./mobile-icons";
 import { MobileQualityBadges } from "./mobile-quality-badges";
@@ -7,9 +8,12 @@ import { MobileTimeLabel } from "./mobile-seek-bar";
 
 // Row under the scrubber. Left: where we are and how fast. Right: two groups
 // split by a hairline, "this stream" (source) and "move on" (prev, next, PiP).
-// Nothing here is a primary action, so it all stays quiet: no rest background,
-// 22px icons. The boxes are 44pt because that is the platform's touch floor, not
-// because the controls want the weight.
+// Everything goes through MobileButton, so the whole row is one height, one
+// radius and one glyph weight.
+//
+// The speed control is a button like the rest of them now rather than a pill with
+// a permanent grey background. At 1x it is the plain text on the picture; changing
+// the speed lights it, which is the one state worth painting.
 //
 // No Episodes button: the UP NEXT tab on the screen edge opens the same panel and
 // is visible whether the chrome is up or not, so a second way in only made the row
@@ -54,56 +58,38 @@ export function MobileActionRow({
   const rightGroup = hasPrevEp || hasNextEp || showPiP;
   return (
     <div className="flex h-11 items-center justify-between">
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2.5">
         <MobileTimeLabel durationSec={durationSec} active={active} />
         <MobileQualityBadges videoWidth={videoWidth} videoHeight={videoHeight} hdrGamma={hdrGamma} />
         {showRate && (
-          <button
-            type="button"
-            aria-label={t("Playback speed")}
-            onClick={onSpeed}
-            className="relative flex h-8 items-center rounded-full bg-white/10 px-2.5 font-mono text-[13px] font-semibold tabular-nums text-ink active:bg-white/20 before:absolute before:-inset-y-2 before:-inset-x-1 before:content-['']"
-          >
-            {fmtRate(rate)}
-          </button>
+          <MobileButton label={t("Playback speed")} onClick={onSpeed} active={rate !== 1} wide>
+            <span className="font-mono text-[13px] font-semibold tabular-nums">{fmtRate(rate)}</span>
+          </MobileButton>
         )}
       </div>
       <div className="flex items-center gap-1">
         {canPickAnother && (
-          <ActionButton label={t("Switch source")} onClick={onPickAnother}>
-            <MobileGlyph url={MOBILE_GLYPH.pickAnother} size={22} />
-          </ActionButton>
+          <MobileButton label={t("Switch source")} onClick={onPickAnother}>
+            <MobileGlyph url={MOBILE_GLYPH.pickAnother} size={MOBILE_GLYPH_SIZE} />
+          </MobileButton>
         )}
         {leftGroup && rightGroup && <span aria-hidden className="mx-1 h-5 w-px bg-white/10" />}
         {hasPrevEp && (
-          <ActionButton label={t("Previous episode")} onClick={onPrevEp}>
-            <MobileGlyph url={MOBILE_GLYPH.prevEpisode} size={22} />
-          </ActionButton>
+          <MobileButton label={t("Previous episode")} onClick={onPrevEp}>
+            <MobileGlyph url={MOBILE_GLYPH.prevEpisode} size={MOBILE_GLYPH_SIZE} />
+          </MobileButton>
         )}
         {hasNextEp && (
-          <ActionButton label={t("Next episode")} onClick={onNextEp}>
-            <MobileGlyph url={MOBILE_GLYPH.nextEpisode} size={22} />
-          </ActionButton>
+          <MobileButton label={t("Next episode")} onClick={onNextEp}>
+            <MobileGlyph url={MOBILE_GLYPH.nextEpisode} size={MOBILE_GLYPH_SIZE} />
+          </MobileButton>
         )}
         {showPiP && (
-          <ActionButton label={t("Picture in picture")} onClick={onPiP}>
-            <MobileGlyph url={MOBILE_GLYPH.pipInactive} size={22} />
-          </ActionButton>
+          <MobileButton label={t("Picture in picture")} onClick={onPiP}>
+            <MobileGlyph url={MOBILE_GLYPH.pipInactive} size={MOBILE_GLYPH_SIZE} />
+          </MobileButton>
         )}
       </div>
     </div>
-  );
-}
-
-function ActionButton({ label, onClick, children }: { label: string; onClick: () => void; children: React.ReactNode }) {
-  return (
-    <button
-      type="button"
-      aria-label={label}
-      onClick={onClick}
-      className="flex h-11 w-11 items-center justify-center rounded-full text-ink active:bg-white/10"
-    >
-      {children}
-    </button>
   );
 }
