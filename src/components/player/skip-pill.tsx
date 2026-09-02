@@ -7,6 +7,9 @@ import type { PlayEpisode } from "@/lib/view";
 import { useT } from "@/lib/i18n";
 import { ThreeLiquidGlassSurface } from "@/components/ThreeLiquidGlassSurface";
 
+// Lifts the pill above the portrait transport row; see the note at its first use.
+const PORTRAIT_LIFT = "[@media(orientation:portrait)_and_(max-width:600px)]:bottom-[252px]";
+
 export function SkipPill({
   engine,
   segment,
@@ -86,7 +89,11 @@ export function SkipPill({
 
   return (
     <div
-      className={`pointer-events-none absolute end-7 z-30 flex items-center gap-2 transition-all duration-200 ease-out ${
+      // bottom-44 clears the transport in landscape, where the controls are
+      // centred and the pill sits out on the end. In portrait on a phone the
+      // transport is anchored near the bottom instead and 176px lands the pill
+      // straight on the play button, so a narrow portrait screen lifts it clear.
+      className={`pointer-events-none absolute end-7 z-30 flex items-center gap-2 transition-all duration-200 ease-out ${PORTRAIT_LIFT} ${
         visible && show
           ? "bottom-44 opacity-100 translate-y-0"
           : "bottom-40 opacity-0 translate-y-2"
@@ -170,7 +177,7 @@ function UpNextCard({
 
   return (
     <div
-      className={`pointer-events-none absolute end-7 z-30 transition-all duration-200 ease-out ${
+      className={`pointer-events-none absolute end-7 z-30 transition-all duration-200 ease-out ${PORTRAIT_LIFT} ${
         visible
           ? "bottom-44 opacity-100 translate-y-0"
           : "bottom-40 opacity-0 translate-y-2"
