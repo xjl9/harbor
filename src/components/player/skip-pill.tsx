@@ -8,7 +8,7 @@ import { useT } from "@/lib/i18n";
 import { ThreeLiquidGlassSurface } from "@/components/ThreeLiquidGlassSurface";
 
 // Lifts the pill above the portrait transport row; see the note at its first use.
-const PORTRAIT_LIFT = "[@media(orientation:portrait)_and_(max-width:600px)]:bottom-[252px]";
+const PORTRAIT_LIFT = "max-[600px]:[@media(orientation:portrait)]:bottom-[252px]";
 
 export function SkipPill({
   engine,
