@@ -24,10 +24,15 @@ const SAFE_X = "max(env(safe-area-inset-left, 0px), env(safe-area-inset-right, 0
 // Sheet height cap lives on the panel as an inline max-height (through a var
 // that flips by orientation) so no caller's heightClass can override it.
 const SHEET_MAX_H = "var(--mobile-sheet-max)";
+// Landscape gets MORE of the screen, not less. The cap used to be
+// min(60vh, 320px) there, and a landscape phone is only ~390pt tall, so a source
+// picker resolved to about one visible row - the list was unusable in the exact
+// orientation the player spends its life in. Portrait keeps a smaller share
+// because 72vh of a tall screen is already a long list.
 const SHEET_MAX_CSS = `
-.harbor-mobile-sheet { --mobile-sheet-max: 60vh; }
+.harbor-mobile-sheet { --mobile-sheet-max: 72vh; }
 @media (orientation: landscape) {
-  .harbor-mobile-sheet { --mobile-sheet-max: min(60vh, 320px); }
+  .harbor-mobile-sheet { --mobile-sheet-max: 92vh; }
 }
 `;
 

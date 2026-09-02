@@ -15,6 +15,11 @@ import type { ReactNode } from "react";
 // prominence it has not earned, and once two of them do it the row stops reading
 // as a set.
 //
+// Active INVERTS rather than tinting. A white wash at 18% is the desktop's answer
+// and it disappears over a bright frame - measured on a lit wall, the on state was
+// indistinguishable from the off state - so a control that is on takes a solid
+// fill and a dark glyph, which reads at any brightness.
+//
 // 44px because that is the platform's touch floor. The glyph inside stays 22 so
 // every icon in the chrome carries the same optical weight.
 export const MOBILE_GLYPH_SIZE = 22;
@@ -48,7 +53,7 @@ export function MobileButton({
         disabled
           ? "cursor-not-allowed text-ink/30"
           : active
-            ? "bg-white/[0.18] text-ink active:bg-white/25"
+            ? "bg-ink text-canvas active:bg-ink/85"
             : "text-ink/90 active:bg-white/10"
       }`}
     >
