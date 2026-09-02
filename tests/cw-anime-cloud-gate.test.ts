@@ -7,6 +7,11 @@ import test from "node:test";
 
 const read = (p: string) => readFileSync(new URL(`../${p}`, import.meta.url), "utf8");
 
+// Collapses whitespace so a source assertion matches the token sequence rather
+// than the formatting. Two of these guards broke when prettier reflowed one
+// boolean chain across lines, which says nothing about the behaviour they name.
+const flat = (src: string) => src.replace(/\s+/g, " ");
+
 const stremio = read("src/lib/stremio.ts");
 const sync = read("src/views/player/hooks/use-stremio-sync.ts");
 const autosave = read("src/views/player/hooks/use-resume-autosave.ts");
@@ -66,7 +71,7 @@ test("tt-detected anime without imdb mapping never stamps kitsu numbering on tt 
   assert.ok(imdbBranch >= 0 && imdbBranch < animeRefusal, "imdb-numbered branch must win when mapping exists");
   assert.match(sync, /if \(isSeries && src\.episode && !derivedVid\) return null;/);
   assert.match(autosave, /const ttAnimeUnmapped =/);
-  assert.match(autosave, /\|\| animeLocal \|\| ttAnimeUnmapped/);
+  assert.match(flat(autosave), /\|\| animeLocal \|\| ttAnimeUnmapped/);
 });
 
 test("terminal flush still races a strict GET before merging the bitfield", () => {
@@ -75,14 +80,17 @@ test("terminal flush still races a strict GET before merging the bitfield", () =
 
 test("anime playback lands in local CW", () => {
   assert.match(autosave, /const animeLocal = ANIME_CLOUD_ID\.test\(id\);/);
-  assert.match(autosave, /\|\| isLocalUrl\(s\.url\) \|\| animeLocal/);
+  assert.match(flat(autosave), /\|\| isLocalUrl\(s\.url\) \|\| animeLocal/);
   assert.match(autosave, /type: s\.meta\.type === "movie" \? "movie" : "series"/);
 });
 
 test("every CW rail excludes cloud anime items", () => {
-  assert.match(home, /items\.filter\(\(i\) => !ANIME_CLOUD_ID\.test\(i\._id\)\)/);
-  assert.match(cwHook, /items\.filter\(\(i\) => !ANIME_CLOUD_ID\.test\(i\._id\)\)/);
-  assert.match(mobileRow, /items\.filter\(\(i\) => !ANIME_CLOUD_ID\.test\(i\._id\)\)/);
+  // The view no longer filters: it consumes the shared merge, which does. Asserting
+  // that home still calls mergeContinueWatching keeps the guarantee that it cannot
+  // reach around the gate, without pinning the filter to a file it has left.
+  assert.match(home, /mergeContinueWatching\(/);
+  assert.match(cwHook, /\.filter\(\(i\) => !ANIME_CLOUD_ID\.test\(i\._id\)\)/);
+  assert.match(mobileRow, /mergeContinueWatching\(/);
   assert.match(shows, /!ANIME_CLOUD_ID\.test\(i\._id\) && isCwMember/);
   assert.match(anime, /libItems\.filter\(\(i\) => !ANIME_CLOUD_ID\.test\(i\._id\)\)/);
 });
@@ -108,9 +116,14 @@ test("absorb cannot resurrect dismissed or ancient entries", () => {
 });
 
 test("dismissing a local anime entry persists past re-absorb", () => {
+  // home now delegates to dismissCwItem, so the local-entry branch is asserted
+  // where it lives rather than in the callback that forwards to it.
   const homeDismiss = home.match(/const onDismissCw = useCallback\([\s\S]*?\[authKey\],\s*\);/)?.[0];
   assert.ok(homeDismiss, "home onDismissCw must exist");
-  assert.match(homeDismiss, /clearLocalCw\(item\._id\);\s*dismissCw\(item, authKey\);/);
+  assert.match(homeDismiss, /dismissCwItem\(item, authKey\)/);
+  const libDismiss = cwHook.match(/export function dismissCwItem\([\s\S]*?\n\}/)?.[0];
+  assert.ok(libDismiss, "dismissCwItem must exist");
+  assert.match(libDismiss, /clearLocalCw\(item\._id\);\s*dismissCw\(item, authKey\);/);
   const animeDismiss = anime.match(/onDismiss=\{\(it\) => \{[\s\S]*?\}\}/)?.[0];
   assert.ok(animeDismiss, "anime room onDismiss must exist");
   assert.match(animeDismiss, /if \(it\.local\) clearLocalCw\(it\._id\);\s*dismissCw\(it, authKey\);/);
@@ -145,9 +158,10 @@ test("tracker sync cannot corrupt the wrong cour", () => {
 });
 
 test("home dedup prefers the twin that actually played most recently", () => {
-  assert.match(home, /lastWatchedOf\(i\) > lastWatchedOf\(held\)/);
-  assert.match(home, /byId\.delete\(held\._id\);/);
-  const fn = home.match(/const lastWatchedOf = \(i: LibraryItem\) => \{[\s\S]*?\};/)?.[0];
+  // Moved out of the view into the shared merge; the guarantee is unchanged.
+  assert.match(cwHook, /lastWatchedOf\(i\) > lastWatchedOf\(held\)/);
+  assert.match(cwHook, /byId\.delete\(held\._id\);/);
+  const fn = cwHook.match(/const lastWatchedOf = \(i: LibraryItem\) => \{[\s\S]*?\};/)?.[0];
   assert.ok(fn, "lastWatchedOf must exist");
   assert.match(fn, /i\._mtime/);
 });

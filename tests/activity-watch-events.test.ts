@@ -43,7 +43,9 @@ test("mark as watched records an event for both movies and shows", () => {
 
 test("the sync hook re-pushes when a watch event lands", () => {
   assert.match(sync, /subscribeWatchEvents\(\(\) => setWatchEvents\(listWatchEvents\(\)\)\)/);
-  assert.match(sync, /watchEvents,\n\s*\}\),/, "events must be passed into the feed");
+  // \s* rather than a literal newline: core.autocrlf rewrites the LF blob to
+  // CRLF on a Windows checkout, and the escape then matches nothing.
+  assert.match(sync, /watchEvents,\s*\}\),/, "events must be passed into the feed");
   assert.match(sync, /\[cw, ratings, favMap, mangaMap, imports, watchEvents\]/);
 });
 

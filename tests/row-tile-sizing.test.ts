@@ -21,7 +21,14 @@ test("poster sizing accounts for the height it has to cover, not just width", ()
 
 test("poster sizing sees css transforms so scaled art is not blurry", () => {
   assert.match(poster, /el\.getBoundingClientRect\(\)/, "clientWidth ignores transforms like scale()");
-  assert.match(poster, /\}, \[inView, qMult, ratio\]\);/, "ratio must be a dependency");
+  // That ratio is IN the dependency list, not that the list reads exactly
+  // [inView, qMult, ratio]. Pinning the whole array broke the moment an unrelated
+  // dependency joined it, which says nothing about the guarantee named here.
+  const deps = poster.match(/\}, \[[^\]]*\]\);/g) ?? [];
+  assert.ok(
+    deps.some((d: string) => /inView/.test(d) && /qMult/.test(d) && /ratio/.test(d)),
+    "ratio must be a dependency",
+  );
 });
 
 test("the declared aspect ratios match the aspect padding", () => {
