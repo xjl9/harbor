@@ -40,20 +40,20 @@ export function P2pConfirmModal({
       <div
         className={
           phone
-            ? "relative flex min-h-full flex-col items-center justify-center gap-6 px-5 py-12 text-center"
+            ? "relative flex min-h-full flex-col items-center justify-center gap-6 px-5 py-12 text-center [@media(max-height:560px)]:gap-3 [@media(max-height:560px)]:py-5"
             : "relative flex h-full flex-col items-center justify-center gap-6 px-8 text-center"
         }
       >
         <h1
           className={
             phone
-              ? "max-w-2xl font-display text-[30px] font-medium leading-[1.1] text-white"
+              ? "max-w-2xl font-display text-[30px] font-medium leading-[1.1] text-white [@media(max-height:560px)]:text-[21px]"
               : "max-w-2xl font-display text-[40px] font-medium leading-[1.06] text-white"
           }
         >
           Stream this via peer-to-peer?
         </h1>
-        <p className="max-w-xl text-[14.5px] leading-relaxed text-white/75">
+        <p className="max-w-xl text-[14.5px] leading-relaxed text-white/75 [@media(max-height:560px)]:text-[13px]">
           This source isn&apos;t cached on your debrid, so Harbor would pull it directly from peers.
           It can take a moment to start and may buffer on low-seed torrents.
         </p>
