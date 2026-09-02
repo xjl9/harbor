@@ -27,7 +27,7 @@ export const MOBILE_GLYPH = {
   castConnected: `${B}cast--connected.svg`,
   audio: `${B}audio.svg`,
   subtitles: `${B}subtitle.svg`,
-  lock: `${B}lock.svg`,
+  fill: `${B}aspect.svg`,
   upNext: `${B}up-next.png`,
 } as const;
 

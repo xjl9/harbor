@@ -105,7 +105,7 @@ function DelayStepper({ delaySec, onDelay }: { delaySec: number; onDelay: (sec: 
       <span className="text-[13px] font-semibold text-ink">{t("Sync Offset")}</span>
       <div className="flex items-center gap-2">
         <span
-          className={`font-mono text-[13px] font-bold tabular-nums ${delaySec !== 0 ? "text-accent" : "text-ink-muted"}`}
+          className={`font-jakarta text-[13px] font-bold tabular-nums ${delaySec !== 0 ? "text-accent" : "text-ink-muted"}`}
         >
           {delaySec > 0 ? "+" : ""}
           {delaySec.toFixed(2)}s

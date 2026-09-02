@@ -186,7 +186,7 @@ function Slider({
     <div className="flex flex-col gap-2.5">
       <div className="flex items-center justify-between">
         <Label>{label}</Label>
-        <span className="font-mono text-[12px] tabular-nums text-ink-muted">{value}</span>
+        <span className="font-jakarta text-[12px] tabular-nums text-ink-muted">{value}</span>
       </div>
       <input
         type="range"

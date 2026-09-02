@@ -8,6 +8,10 @@ import { MOBILE_GLYPH } from "./mobile-icons";
 // Top zone of the mobile shell: vignette scrim plus a single 44px row. Landscape
 // is the steady state, so the title never wraps; it truncates between the close
 // button and the right cluster.
+//
+// Fill rather than lock in the second slot. A lock only protects against a
+// problem the gesture layer should not be creating; filling the screen is a
+// choice a viewer makes on almost every scope film watched on a phone.
 export function MobileTopBar({
   title,
   subtitle,
@@ -15,11 +19,12 @@ export function MobileTopBar({
   episode,
   showAirplay,
   showCast,
+  fillMode,
   scrimStyle,
   zoneStyle,
   interactive,
   onBack,
-  onLock,
+  onToggleFill,
   onCast,
   onTracks,
 }: {
@@ -29,11 +34,12 @@ export function MobileTopBar({
   episode?: number | null;
   showAirplay: boolean;
   showCast: boolean;
+  fillMode: boolean;
   scrimStyle: CSSProperties;
   zoneStyle: CSSProperties;
   interactive: boolean;
   onBack: () => void;
-  onLock: () => void;
+  onToggleFill: () => void;
   onCast: () => void;
   onTracks: () => void;
 }) {
@@ -76,17 +82,17 @@ export function MobileTopBar({
           <MobileGlyph url={MOBILE_GLYPH.close} size={MOBILE_GLYPH_SIZE} />
         </MobileButton>
         <div className="pointer-events-none mx-2 flex min-w-0 flex-1 flex-col justify-center">
-          <span className="truncate font-display text-[17px] font-medium leading-tight tracking-tight text-ink">
+          <span className="truncate font-jakarta text-[17px] font-medium leading-tight tracking-tight text-ink">
             {title}
           </span>
           {deck && (
-            <span className="truncate font-mono text-[11px] uppercase tracking-[0.14em] leading-tight text-ink-muted">
+            <span className="truncate font-jakarta text-[11px] uppercase tracking-[0.14em] leading-tight text-ink-muted">
               {deck}
             </span>
           )}
         </div>
-        <MobileButton label={t("Lock screen")} onClick={onLock}>
-          <MobileGlyph url={MOBILE_GLYPH.lock} size={MOBILE_GLYPH_SIZE} />
+        <MobileButton label={t("Fill screen")} onClick={onToggleFill} active={fillMode}>
+          <MobileGlyph url={MOBILE_GLYPH.fill} size={MOBILE_GLYPH_SIZE} />
         </MobileButton>
         {showAirplay ? (
           <MobileButton label={t("AirPlay")} onClick={onCast}>

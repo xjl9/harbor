@@ -50,6 +50,8 @@ final class HarborMpvViewController: UIViewController, HarborPlayerEngine {
   private let metalLayer = HarborMetalLayer()
   /// Side of the square render surface in points, fixed for the session.
   private var surfaceSidePt: CGFloat = 0
+  /// Crop-to-fill rather than fit; see doSetZoom.
+  var zoomFill = false
   private let closeButton = UIButton(type: .system)
   private let titleLabel = UILabel()
   // Native transport overlay (mpv engine only; the AVPlayer engine uses AVKit's
@@ -113,6 +115,9 @@ final class HarborMpvViewController: UIViewController, HarborPlayerEngine {
   override func viewDidLoad() {
     super.viewDidLoad()
     view.backgroundColor = .black
+    // Filling scales the surface past the view bounds; without this the overflow
+    // would draw over the rest of the screen instead of being cropped.
+    view.clipsToBounds = true
     metalLayer.framebufferOnly = true
     metalLayer.backgroundColor = UIColor.black.cgColor
     // The render surface is created ONCE, square, and its bounds are never touched
@@ -181,7 +186,10 @@ final class HarborMpvViewController: UIViewController, HarborPlayerEngine {
     // this again once it does.
     let aspect =
       decoded.width > 0 && decoded.height > 0 ? decoded.width / decoded.height : 16.0 / 9.0
-    let side = min(w, aspect * h) / min(1.0, aspect)
+    // Fit takes the smaller solution, fill the larger; the overflow is clipped by
+    // the view, which is why it must clip.
+    let bound = zoomFill ? max(w, aspect * h) : min(w, aspect * h)
+    let side = bound / min(1.0, aspect)
     let k = side / surfaceSidePt
     CATransaction.begin()
     CATransaction.setDisableActions(true)

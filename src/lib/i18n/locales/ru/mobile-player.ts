@@ -45,6 +45,7 @@ const mobilePlayer: Record<string, string> = {
   "The touchpad controls Harbor running on a computer. Pick one on your Wi-Fi to start.":
     "Тачпад управляет Harbor на компьютере. Выберите один в вашей сети Wi-Fi, чтобы начать.",
   "No subtitles are built into this file.": "В этом файле нет встроенных субтитров.",
+  "Fill screen": "Заполнить экран",
   "Loading settings": "Загрузка настроек",
 };
 

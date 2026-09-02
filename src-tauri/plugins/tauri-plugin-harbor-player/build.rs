@@ -8,6 +8,7 @@ const COMMANDS: &[&str] = &[
     "set_subtitle_track",
     "enter_pip",
     "set_orientation",
+    "set_zoom",
     "set_rate",
     "set_volume",
     "set_sub_delay",

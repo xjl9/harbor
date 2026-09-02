@@ -64,6 +64,14 @@ pub(crate) async fn set_orientation<R: Runtime>(
 }
 
 #[tauri::command]
+pub(crate) async fn set_zoom<R: Runtime>(
+    app: AppHandle<R>,
+    payload: ZoomRequest,
+) -> crate::Result<EmptyResponse> {
+    app.harbor_player().set_zoom(payload)
+}
+
+#[tauri::command]
 pub(crate) async fn set_rate<R: Runtime>(
     app: AppHandle<R>,
     payload: RateRequest,

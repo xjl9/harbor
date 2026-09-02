@@ -200,7 +200,7 @@ export function MobileTimeLabel({ durationSec, active }: { durationSec: number; 
   const positionSec = usePlaybackPositionGated(active);
   const dragSec = useSeekDragSec();
   return (
-    <span className="font-mono text-[12px] tabular-nums">
+    <span className="font-jakarta text-[12px] tabular-nums">
       <span className="text-ink">{fmtTime(dragSec ?? positionSec)}</span>
       <span className="text-ink-muted"> / {fmtTime(durationSec)}</span>
     </span>

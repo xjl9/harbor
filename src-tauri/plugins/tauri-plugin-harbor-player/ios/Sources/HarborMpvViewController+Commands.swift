@@ -6,6 +6,14 @@ import Foundation
 extension HarborMpvViewController {
   var engineName: String { "mpv" }
 
+  /// Crop to fill. layoutSurface already solves for the square's on-screen size;
+  /// fitting takes the smaller solution and filling takes the larger, so this is
+  /// the same geometry with the bound flipped and needs nothing from mpv itself.
+  func doSetZoom(_ fill: Bool) {
+    zoomFill = fill
+    view.setNeedsLayout()
+  }
+
   func doSetRate(_ rate: Double) {
     // mpv rejects speed below 0.01 (options.rst), so the floor is enforced here
     // rather than surfacing as a logged property failure.

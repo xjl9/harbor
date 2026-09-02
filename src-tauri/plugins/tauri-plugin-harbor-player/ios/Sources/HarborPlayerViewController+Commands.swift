@@ -11,6 +11,10 @@ extension HarborPlayerViewController {
   // the item is ready, and the shell shows nothing until it is non-zero.
   var decodedSize: CGSize { player?.currentItem?.presentationSize ?? .zero }
 
+  func doSetZoom(_ fill: Bool) {
+    videoGravity = fill ? .resizeAspectFill : .resizeAspect
+  }
+
   func doSetRate(_ rate: Double) {
     desiredRate = Float(max(0, rate))
     // Applied live only while playback is under way (playing or waiting to);

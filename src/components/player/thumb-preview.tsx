@@ -75,7 +75,7 @@ export function ThumbPreview({
   if (!src) {
     return (
       <div
-        className="pointer-events-none absolute -top-9 flex -translate-x-1/2 items-center gap-1 rounded-[10px] border border-white/[0.08] bg-[color-mix(in_srgb,var(--color-canvas)_72%,transparent)] px-2.5 py-1 font-mono text-[13px] font-semibold tabular-nums text-ink backdrop-blur-xl"
+        className="pointer-events-none absolute -top-9 flex -translate-x-1/2 items-center gap-1 rounded-[10px] border border-white/[0.08] bg-[color-mix(in_srgb,var(--color-canvas)_72%,transparent)] px-2.5 py-1 font-jakarta text-[13px] font-semibold tabular-nums text-ink backdrop-blur-xl"
         style={{ left: `${pct}%` }}
       >
         {segLabel && (
@@ -112,7 +112,7 @@ export function ThumbPreview({
             {segLabel}
           </span>
         )}
-        <span className="inline-block rounded-[10px] border border-white/[0.08] bg-[color-mix(in_srgb,var(--color-canvas)_72%,transparent)] px-2.5 py-1 font-mono text-[13px] font-semibold tabular-nums text-ink backdrop-blur-xl">
+        <span className="inline-block rounded-[10px] border border-white/[0.08] bg-[color-mix(in_srgb,var(--color-canvas)_72%,transparent)] px-2.5 py-1 font-jakarta text-[13px] font-semibold tabular-nums text-ink backdrop-blur-xl">
           {label}
         </span>
       </div>

@@ -45,7 +45,7 @@ export function RotatingSeekIcon({
         <path d="M 18.5 3.47 A 11 11 0 1 1 7.5 3.47" />
         <path d="M 5.96 7.7 L 7.5 3.47 L 3.07 2.69" />
       </svg>
-      <span className="absolute font-mono text-[10px] font-semibold leading-none tabular-nums">{seconds}</span>
+      <span className="absolute font-jakarta text-[10px] font-semibold leading-none tabular-nums">{seconds}</span>
     </span>
   );
 }

@@ -74,6 +74,11 @@ impl<R: Runtime> HarborPlayer<R> {
             .run_mobile_plugin("setOrientation", payload)
             .map_err(Into::into)
     }
+    pub fn set_zoom(&self, payload: ZoomRequest) -> crate::Result<EmptyResponse> {
+        self.0
+            .run_mobile_plugin("setZoom", payload)
+            .map_err(Into::into)
+    }
     pub fn set_rate(&self, payload: RateRequest) -> crate::Result<EmptyResponse> {
         self.0
             .run_mobile_plugin("setRate", payload)

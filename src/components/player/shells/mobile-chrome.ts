@@ -8,7 +8,7 @@ export const CHROME_SURFACE =
   "bg-[color-mix(in_srgb,var(--color-canvas)_72%,transparent)] backdrop-blur-xl border border-white/[0.08]";
 
 // Time bezel used by the plain scrubber, the trickplay card and the scrub HUD.
-export const TIME_BEZEL = `${CHROME_SURFACE} rounded-[10px] px-2.5 py-1 font-mono text-[13px] font-semibold tabular-nums text-ink`;
+export const TIME_BEZEL = `${CHROME_SURFACE} rounded-[10px] px-2.5 py-1 font-jakarta text-[13px] font-semibold tabular-nums text-ink`;
 
 // Playback is landscape, so the notch sits on one side and the corner on the
 // other. Chrome pads BOTH edges by the larger inset so it stays symmetric.

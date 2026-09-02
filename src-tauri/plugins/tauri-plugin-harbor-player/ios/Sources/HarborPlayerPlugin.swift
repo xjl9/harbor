@@ -68,6 +68,10 @@ struct RateArgs: Decodable {
   let rate: Double
 }
 
+struct ZoomArgs: Decodable {
+  let fill: Bool
+}
+
 struct VolumeArgs: Decodable {
   let volume: Double
 }
@@ -111,6 +115,7 @@ protocol HarborPlayerEngine: AnyObject {
   func doSetAudioTrack(_ id: String?)
   func doSetSubtitleTrack(_ id: String?)
   func doSetRate(_ rate: Double)
+  func doSetZoom(_ fill: Bool)
   func doSetVolume(_ volume: Double)
   func doSetSubDelay(_ seconds: Double)
   func doSetAudioDelay(_ seconds: Double)
@@ -299,6 +304,14 @@ class HarborPlayerPlugin: Plugin {
     let args = try invoke.parseArgs(TrackArgs.self)
     DispatchQueue.main.async {
       self.controller?.doSetSubtitleTrack(args.trackId)
+      invoke.resolve(JsonObject())
+    }
+  }
+
+  @objc public func setZoom(_ invoke: Invoke) throws {
+    let args = try invoke.parseArgs(ZoomArgs.self)
+    DispatchQueue.main.async {
+      self.controller?.doSetZoom(args.fill)
       invoke.resolve(JsonObject())
     }
   }

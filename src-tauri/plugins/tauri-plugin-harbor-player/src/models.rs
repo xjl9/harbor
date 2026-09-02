@@ -58,6 +58,14 @@ pub struct RateRequest {
     pub rate: f64,
 }
 
+/// Crop-to-fill instead of fit. A scope film on a phone letterboxes to a thin
+/// band; this trades the edges of the frame for the height of the screen.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ZoomRequest {
+    pub fill: bool,
+}
+
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct VolumeRequest {

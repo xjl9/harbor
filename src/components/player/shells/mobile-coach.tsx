@@ -71,7 +71,7 @@ export function MobileCoach({ visible }: { visible: boolean }) {
       }}
     >
       <span
-        className={`${CHROME_SURFACE} rounded-full px-3.5 py-2 font-mono text-[11px] uppercase tracking-[0.14em] text-ink`}
+        className={`${CHROME_SURFACE} rounded-full px-3.5 py-2 font-jakarta text-[11px] uppercase tracking-[0.14em] text-ink`}
       >
         {lines[index]}
       </span>

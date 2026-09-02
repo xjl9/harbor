@@ -5,8 +5,8 @@ import {
   MOBILE_SEEK_COMMITTED_EVENT,
   type MobileSeekCommittedDetail,
 } from "@/lib/player/mobile-events";
-import { setMobileLocked, useMobileLocked } from "@/lib/player/mobile-lock";
 import { haptics } from "@/lib/player/haptics";
+import { setNativeZoom } from "@/lib/player/android-native";
 import { useSettings } from "@/lib/settings";
 import { useT } from "@/lib/i18n";
 import { MobileActionRow } from "./mobile-action-row";
@@ -15,14 +15,12 @@ import { MobileSeekUndo, SEEK_UNDO_MIN_JUMP_SEC, type SeekUndo } from "./mobile-
 import { MobileGlyph } from "./mobile-glyph";
 import { MOBILE_GLYPH, seekGlyph } from "./mobile-icons";
 import {
-  CHROME_SURFACE,
   HIDE_EASE,
   HIDE_MS,
   SAFE_INLINE_20,
   SHOW_EASE,
   SHOW_MS,
 } from "./mobile-chrome";
-import { MobileLockPill } from "./mobile-lock-pill";
 import { MobilePeekBar, MobileSeekBar } from "./mobile-seek-bar";
 import { MobileSpeedSheet } from "./mobile-speed-sheet";
 import { MobileSubStyleSheet } from "./mobile-sub-style-sheet";
@@ -78,7 +76,6 @@ export function MobileShell(props: PlayerShellProps) {
   // shared subtitle menu-header fires onOpenStyleBar() then onClose() back to
   // back, so routing both through setSheet would let the close clobber the open.
   const [subStyleOpen, setSubStyleOpen] = useState(false);
-  const locked = useMobileLocked();
   const reduce = usePrefersReducedMotion();
 
   const enginePlaying = snap.status === "playing";
@@ -93,6 +90,9 @@ export function MobileShell(props: PlayerShellProps) {
   }, [pendingPlaying, enginePlaying]);
   const playing = pendingPlaying ?? enginePlaying;
   const rate = snap.rate;
+  // Local, not persisted: filling is a per-title decision and carrying it into the
+  // next thing you watch would crop a 16:9 show for no reason.
+  const [fillMode, setFillMode] = useState(false);
 
   const chromeShown = visible && sheet.kind === "none" && !subStyleOpen;
   const interactive = useLingeringInteractive(chromeShown);
@@ -115,8 +115,6 @@ export function MobileShell(props: PlayerShellProps) {
     return () => window.removeEventListener(MOBILE_SEEK_COMMITTED_EVENT, onCommitted);
   }, []);
 
-  // Clear lock on unmount so a new playback never starts locked.
-  useEffect(() => () => setMobileLocked(false), []);
 
   // Publish how much room the bottom chrome is taking so the subtitle overlay can
   // sit above it instead of underneath the scrubber and the clock. Cleared when the
@@ -134,7 +132,6 @@ export function MobileShell(props: PlayerShellProps) {
   }, [chromeShown]);
 
   if (pipMode) return null;
-  if (locked) return <MobileLockPill />;
 
   // Chrome does not just cross-fade: each zone translates/scales into place on a
   // fast ease-out and leaves on a slower ease-in, with the scrim leading the
@@ -171,9 +168,13 @@ export function MobileShell(props: PlayerShellProps) {
         zoneStyle={zoneStyle("translateY(-8px)")}
         interactive={interactive}
         onBack={onBack}
-        onLock={() => {
+        fillMode={fillMode}
+        onToggleFill={() => {
           haptics.medium();
-          setMobileLocked(true);
+          setFillMode((v) => {
+            setNativeZoom(!v);
+            return !v;
+          });
         }}
         onCast={onCast}
         onTracks={() => setSheet({ kind: "tracks", tab: "subtitles" })}
@@ -209,18 +210,16 @@ export function MobileShell(props: PlayerShellProps) {
             setPendingPlaying(!playing);
             onPlayPause();
           }}
-          className={`flex h-20 w-20 items-center justify-center rounded-full ${press} ${hit}`}
+          className={`flex h-20 w-20 items-center justify-center rounded-full text-ink ${press} ${hit}`}
         >
-          <span className={`${CHROME_SURFACE} flex h-14 w-14 items-center justify-center rounded-full text-ink`}>
-            {buffering ? (
-              <span
-                aria-hidden
-                className="h-7 w-7 animate-spin rounded-full border-2 border-ink-muted border-t-transparent"
-              />
-            ) : (
-              <MobileGlyph url={playing ? MOBILE_GLYPH.playing : MOBILE_GLYPH.paused} size={26} />
-            )}
-          </span>
+          {buffering ? (
+            <span
+              aria-hidden
+              className="h-9 w-9 animate-spin rounded-full border-2 border-ink-muted border-t-transparent"
+            />
+          ) : (
+            <MobileGlyph url={playing ? MOBILE_GLYPH.playing : MOBILE_GLYPH.paused} size={42} />
+          )}
         </button>
         <button
           type="button"

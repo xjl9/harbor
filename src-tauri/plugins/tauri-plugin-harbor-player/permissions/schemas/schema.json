@@ -487,6 +487,18 @@
           "markdownDescription": "Denies the set_volume command without any pre-configured scope."
         },
         {
+          "description": "Enables the set_zoom command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-set-zoom",
+          "markdownDescription": "Enables the set_zoom command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the set_zoom command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-set-zoom",
+          "markdownDescription": "Denies the set_zoom command without any pre-configured scope."
+        },
+        {
           "description": "Enables the show_route_picker command without any pre-configured scope.",
           "type": "string",
           "const": "allow-show-route-picker",
@@ -511,10 +523,10 @@
           "markdownDescription": "Denies the stop command without any pre-configured scope."
         },
         {
-          "description": "Allows the Harbor native player commands.\n#### This default permission set includes:\n\n- `allow-load`\n- `allow-play`\n- `allow-pause`\n- `allow-seek`\n- `allow-stop`\n- `allow-set-audio-track`\n- `allow-set-subtitle-track`\n- `allow-enter-pip`\n- `allow-set-orientation`\n- `allow-set-rate`\n- `allow-set-volume`\n- `allow-set-sub-delay`\n- `allow-set-audio-delay`\n- `allow-show-route-picker`\n- `allow-haptic`\n- `allow-registerListener`\n- `allow-removeListener`\n- `allow-remove-listener`",
+          "description": "Allows the Harbor native player commands.\n#### This default permission set includes:\n\n- `allow-load`\n- `allow-play`\n- `allow-pause`\n- `allow-seek`\n- `allow-stop`\n- `allow-set-audio-track`\n- `allow-set-subtitle-track`\n- `allow-enter-pip`\n- `allow-set-orientation`\n- `allow-set-zoom`\n- `allow-set-rate`\n- `allow-set-volume`\n- `allow-set-sub-delay`\n- `allow-set-audio-delay`\n- `allow-show-route-picker`\n- `allow-haptic`\n- `allow-registerListener`\n- `allow-removeListener`\n- `allow-remove-listener`",
           "type": "string",
           "const": "default",
-          "markdownDescription": "Allows the Harbor native player commands.\n#### This default permission set includes:\n\n- `allow-load`\n- `allow-play`\n- `allow-pause`\n- `allow-seek`\n- `allow-stop`\n- `allow-set-audio-track`\n- `allow-set-subtitle-track`\n- `allow-enter-pip`\n- `allow-set-orientation`\n- `allow-set-rate`\n- `allow-set-volume`\n- `allow-set-sub-delay`\n- `allow-set-audio-delay`\n- `allow-show-route-picker`\n- `allow-haptic`\n- `allow-registerListener`\n- `allow-removeListener`\n- `allow-remove-listener`"
+          "markdownDescription": "Allows the Harbor native player commands.\n#### This default permission set includes:\n\n- `allow-load`\n- `allow-play`\n- `allow-pause`\n- `allow-seek`\n- `allow-stop`\n- `allow-set-audio-track`\n- `allow-set-subtitle-track`\n- `allow-enter-pip`\n- `allow-set-orientation`\n- `allow-set-zoom`\n- `allow-set-rate`\n- `allow-set-volume`\n- `allow-set-sub-delay`\n- `allow-set-audio-delay`\n- `allow-show-route-picker`\n- `allow-haptic`\n- `allow-registerListener`\n- `allow-removeListener`\n- `allow-remove-listener`"
         }
       ]
     }

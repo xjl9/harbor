@@ -28,6 +28,14 @@ import {
 } from "./bridge";
 
 export { setOrientation, type OrientationLock } from "./native-orientation";
+
+/// Crop the picture to fill the screen instead of fitting it. A scope film on a
+/// phone letterboxes to a thin band, and the trade - losing the sides of the frame
+/// to gain its height - is the viewer's to make, so it is a control rather than a
+/// setting. No-ops on any surface without the native plugin.
+export function setNativeZoom(fill: boolean): void {
+  nativeInvoke("set_zoom", { fill });
+}
 export { nativeEngine, showNativeRoutePicker } from "./native-host";
 
 type Tick = { positionSec: number; durationSec: number; bufferedSec: number; playing: boolean; rate?: number   // Optional: iOS reports the decoded picture size, Android does not send these.

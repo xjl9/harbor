@@ -63,10 +63,10 @@ export function MobileSeekUndo({
         }}
         className={`pointer-events-auto flex h-11 items-center gap-2 rounded-full px-4 ${CHROME_SURFACE} active:scale-[0.97]`}
       >
-        <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-muted">
+        <span className="font-jakarta text-[11px] uppercase tracking-[0.14em] text-ink-muted">
           Back to
         </span>
-        <span className="font-mono text-[13px] font-semibold tabular-nums text-ink">
+        <span className="font-jakarta text-[13px] font-semibold tabular-nums text-ink">
           {fmtTime(undo.from)}
         </span>
       </button>

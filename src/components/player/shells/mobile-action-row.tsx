@@ -63,7 +63,7 @@ export function MobileActionRow({
         <MobileQualityBadges videoWidth={videoWidth} videoHeight={videoHeight} hdrGamma={hdrGamma} />
         {showRate && (
           <MobileButton label={t("Playback speed")} onClick={onSpeed} active={rate !== 1} wide>
-            <span className="font-mono text-[13px] font-semibold tabular-nums">{fmtRate(rate)}</span>
+            <span className="font-jakarta text-[13px] font-semibold tabular-nums">{fmtRate(rate)}</span>
           </MobileButton>
         )}
       </div>

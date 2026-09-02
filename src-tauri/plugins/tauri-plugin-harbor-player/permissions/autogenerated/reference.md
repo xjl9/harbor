@@ -13,6 +13,7 @@ Allows the Harbor native player commands.
 - `allow-set-subtitle-track`
 - `allow-enter-pip`
 - `allow-set-orientation`
+- `allow-set-zoom`
 - `allow-set-rate`
 - `allow-set-volume`
 - `allow-set-sub-delay`
@@ -444,6 +445,32 @@ Enables the set_volume command without any pre-configured scope.
 <td>
 
 Denies the set_volume command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`harbor-player:allow-set-zoom`
+
+</td>
+<td>
+
+Enables the set_zoom command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`harbor-player:deny-set-zoom`
+
+</td>
+<td>
+
+Denies the set_zoom command without any pre-configured scope.
 
 </td>
 </tr>

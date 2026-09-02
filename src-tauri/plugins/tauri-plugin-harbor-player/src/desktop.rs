@@ -41,6 +41,9 @@ impl<R: Runtime> HarborPlayer<R> {
     pub fn set_orientation(&self, _payload: OrientationRequest) -> crate::Result<EmptyResponse> {
         Ok(EmptyResponse {})
     }
+    pub fn set_zoom(&self, _payload: ZoomRequest) -> crate::Result<EmptyResponse> {
+        Ok(EmptyResponse {})
+    }
     pub fn set_rate(&self, _payload: RateRequest) -> crate::Result<EmptyResponse> {
         Ok(EmptyResponse {})
     }
