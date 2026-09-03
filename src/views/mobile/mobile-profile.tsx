@@ -27,6 +27,7 @@ import { useProfiles } from "@/lib/profiles";
 import { useSettings } from "@/lib/settings";
 import { loadInstalled } from "@/lib/addon-store";
 import { useActiveDownloadCount } from "@/lib/download/downloads-store";
+import { useT } from "@/lib/i18n";
 import { MobileAddons } from "./mobile-addons";
 import { consumeMobileIntent, MOBILE_INTENT_EVENT } from "./mobile-intent";
 import { MobileDownloads } from "./mobile-downloads";
@@ -43,6 +44,7 @@ import { useRegisterSheet } from "./mobile-sheet-lock";
 import { useKeyboardInset } from "./use-keyboard-inset";
 import { setMobileRemoteStyle, useMobileRemoteStyle, type MobileRemoteStyle } from "./remote-style";
 import { HARBOR_BUGS_BASE } from "@/lib/config/endpoints";
+import { openUrl } from "@/lib/window";
 
 type EditField = {
   key: "remoteHostAddress" | "tmdbKey" | "tvdbKey" | "rpdbKey";
@@ -53,12 +55,13 @@ type EditField = {
 };
 
 export function MobileProfile({ onOpenRemote }: { onOpenRemote: () => void }) {
+  const t = useT();
   const { user, signOut } = useAuth();
   const { activeProfile } = useProfiles();
   const { snapshot, connected } = useMobileRemote();
   const { settings, update } = useSettings();
   const remote = snapshot.profile;
-  const name = remote?.name || activeProfile?.name || user?.email?.split("@")[0] || "Guest";
+  const name = remote?.name || activeProfile?.name || user?.email?.split("@")[0] || t("Guest");
   const avatar = remote?.avatar ?? activeProfile?.avatar ?? null;
   const color = remote?.color ?? activeProfile?.color ?? "oklch(0.78 0.13 60)";
   const [switching, setSwitching] = useState(false);
@@ -148,17 +151,17 @@ export function MobileProfile({ onOpenRemote }: { onOpenRemote: () => void }) {
           className="flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.05] px-4 py-2 text-[12.5px] font-semibold text-ink-muted backdrop-blur-sm transition-colors active:bg-white/[0.1]"
         >
           <Users size={13} strokeWidth={2.4} />
-          Switch profile
+          {t("Switch profile")}
         </button>
       </header>
 
       <section className="flex flex-col gap-4">
         <h2 className="px-1 text-[12px] font-bold uppercase tracking-[0.16em] text-ink-subtle">
-          Remote style
+          {t("Remote style")}
         </h2>
         <div className="grid grid-cols-2 gap-3">
-          <StylePreview kind="dpad" label="D-pad" />
-          <StylePreview kind="minimal" label="Touchpad" />
+          <StylePreview kind="dpad" label={t("D-pad")} />
+          <StylePreview kind="minimal" label={t("Touchpad")} />
         </div>
       </section>
 
@@ -302,7 +305,7 @@ export function MobileProfile({ onOpenRemote }: { onOpenRemote: () => void }) {
         <Divider />
         <Row
           icon={<MonitorSmartphone size={20} strokeWidth={2} />}
-          label="Remote"
+          label={t("Remote")}
           onClick={onOpenRemote}
         />
         <Divider />
@@ -332,17 +335,17 @@ export function MobileProfile({ onOpenRemote }: { onOpenRemote: () => void }) {
         <Divider />
         <Row
           icon={<HelpCircle size={20} strokeWidth={2} />}
-          label="Help & feedback"
-          onClick={() => window.open(HARBOR_BUGS_BASE, "_blank")}
+          label={t("Help & feedback")}
+          href={HARBOR_BUGS_BASE}
         />
         <Divider />
-        <Row icon={<FileText size={20} strokeWidth={2} />} label="Legal" onClick={() => {}} />
+        <Row icon={<FileText size={20} strokeWidth={2} />} label={t("Legal")} onClick={() => {}} />
         {user && (
           <>
             <Divider />
             <Row
               icon={<LogOut size={20} strokeWidth={2} />}
-              label="Sign out"
+              label={t("Sign out")}
               danger
               onClick={signOut}
             />
@@ -550,6 +553,10 @@ function TouchpadGlyph() {
   );
 }
 
+/* `href` renders a real anchor rather than a button calling window.open. This
+   screen is where the setup flow lands people, and a programmatic open that a
+   mobile browser does not credit as a user gesture can navigate the current
+   tab instead, which is how a viewer ends up outside Harbor with no way back. */
 function Row({
   icon,
   label,
@@ -559,6 +566,7 @@ function Row({
   pendingLabel = "Set up",
   badge,
   onClick,
+  href,
   danger,
 }: {
   icon: ReactNode;
@@ -568,15 +576,14 @@ function Row({
   pending?: boolean;
   pendingLabel?: string;
   badge?: string;
-  onClick: () => void;
+  onClick?: () => void;
+  href?: string;
   danger?: boolean;
 }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="flex w-full items-center gap-4 px-4 py-4 text-start transition-colors active:bg-raised/60"
-    >
+  const skin =
+    "flex w-full items-center gap-4 px-4 py-4 text-start transition-colors active:bg-raised/60";
+  const inner = (
+    <>
       <span className={`shrink-0 ${danger ? "text-danger" : "text-ink-muted"}`}>{icon}</span>
       {/* The label holds its width and the value absorbs the squeeze, matching
           the settings rows. A truncated label reads as broken; a truncated
@@ -608,6 +615,28 @@ function Row({
       {!danger && (
         <ChevronRight size={18} strokeWidth={2.2} className="shrink-0 text-ink-subtle" />
       )}
+    </>
+  );
+  if (href) {
+    return (
+      <a
+        href={href}
+        target="_blank"
+        rel="noopener noreferrer"
+        onClick={(e) => {
+          if (!("__TAURI_INTERNALS__" in window)) return;
+          e.preventDefault();
+          openUrl(href);
+        }}
+        className={skin}
+      >
+        {inner}
+      </a>
+    );
+  }
+  return (
+    <button type="button" onClick={onClick} className={skin}>
+      {inner}
     </button>
   );
 }

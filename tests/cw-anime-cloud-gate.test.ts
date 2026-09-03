@@ -29,7 +29,9 @@ test("cloudWriteId never yields a cloud id for anime-scheme metas", () => {
   const fn = stremio.match(/export function cloudWriteId\([\s\S]*?\n\}/)?.[0];
   assert.ok(fn, "cloudWriteId must exist in stremio.ts");
   const animeReturn = fn.indexOf("if (ANIME_CLOUD_ID.test(metaId)) return null;");
-  const resolvedReturn = fn.indexOf("if (verified && resolved && resolved.startsWith(\"tt\")) return resolved;");
+  const resolvedReturn = fn.indexOf(
+    'if (verified && resolved && resolved.startsWith("tt")) return resolved;',
+  );
   assert.ok(animeReturn >= 0, "anime-scheme ids must return null");
   assert.ok(resolvedReturn > animeReturn, "anime null must win over resolved-tt fallback");
   assert.match(stremio, /export const ANIME_CLOUD_ID = \/\^\(kitsu\|mal\|anilist\|anidb\):\//);
@@ -38,7 +40,7 @@ test("cloudWriteId never yields a cloud id for anime-scheme metas", () => {
 test("cloudWriteId keeps non-anime behavior intact", () => {
   const fn = stremio.match(/export function cloudWriteId\([\s\S]*?\n\}/)?.[0];
   assert.ok(fn, "cloudWriteId must exist in stremio.ts");
-  const ttReturn = fn.indexOf("if (metaId.startsWith(\"tt\")) return metaId;");
+  const ttReturn = fn.indexOf('if (metaId.startsWith("tt")) return metaId;');
   const animeReturn = fn.indexOf("if (ANIME_CLOUD_ID.test(metaId)) return null;");
   assert.ok(ttReturn >= 0 && ttReturn < animeReturn, "tt passthrough stays first");
   assert.match(fn, /return CLOUD_OK\.test\(metaId\) \? metaId : null;/);
@@ -65,17 +67,25 @@ test("videoIdFor still refuses cross-scheme threaded video ids", () => {
 });
 
 test("tt-detected anime without imdb mapping never stamps kitsu numbering on tt items", () => {
-  assert.match(sync, /cid\.startsWith\("tt"\) && threaded && ANIME_SCHEME\.test\(threaded\)\) return null;/);
+  assert.match(
+    sync,
+    /cid\.startsWith\("tt"\) && threaded && ANIME_SCHEME\.test\(threaded\)\) return null;/,
+  );
   const imdbBranch = sync.indexOf("s.episode.imdbSeason != null && s.episode.imdbEpisode != null");
-  const animeRefusal = sync.indexOf('cid.startsWith("tt") && threaded && ANIME_SCHEME.test(threaded)) return null;');
-  assert.ok(imdbBranch >= 0 && imdbBranch < animeRefusal, "imdb-numbered branch must win when mapping exists");
+  const animeRefusal = sync.indexOf(
+    'cid.startsWith("tt") && threaded && ANIME_SCHEME.test(threaded)) return null;',
+  );
+  assert.ok(
+    imdbBranch >= 0 && imdbBranch < animeRefusal,
+    "imdb-numbered branch must win when mapping exists",
+  );
   assert.match(sync, /if \(isSeries && src\.episode && !derivedVid\) return null;/);
   assert.match(autosave, /const ttAnimeUnmapped =/);
   assert.match(flat(autosave), /\|\| animeLocal \|\| ttAnimeUnmapped/);
 });
 
 test("terminal flush still races a strict GET before merging the bitfield", () => {
-  assert.match(sync, /isTerminal\s*\? await Promise\.race\(\[strictGet,/);
+  assert.match(sync, /isTerminal\s*\? await Promise\.race\(\[\s*strictGet,/);
 });
 
 test("anime playback lands in local CW", () => {
@@ -118,7 +128,9 @@ test("absorb cannot resurrect dismissed or ancient entries", () => {
 test("dismissing a local anime entry persists past re-absorb", () => {
   // home now delegates to dismissCwItem, so the local-entry branch is asserted
   // where it lives rather than in the callback that forwards to it.
-  const homeDismiss = home.match(/const onDismissCw = useCallback\([\s\S]*?\[authKey\],\s*\);/)?.[0];
+  const homeDismiss = home.match(
+    /const onDismissCw = useCallback\([\s\S]*?\[authKey\],\s*\);/,
+  )?.[0];
   assert.ok(homeDismiss, "home onDismissCw must exist");
   assert.match(homeDismiss, /dismissCwItem\(item, authKey\)/);
   const libDismiss = cwHook.match(/export function dismissCwItem\([\s\S]*?\n\}/)?.[0];
@@ -126,17 +138,26 @@ test("dismissing a local anime entry persists past re-absorb", () => {
   assert.match(libDismiss, /clearLocalCw\(item\._id\);\s*dismissCw\(item, authKey\);/);
   const animeDismiss = anime.match(/onDismiss=\{\(it\) => \{[\s\S]*?\}\}/)?.[0];
   assert.ok(animeDismiss, "anime room onDismiss must exist");
-  assert.match(animeDismiss, /if \(it\.local\) clearLocalCw\(it\._id\);\s*dismissCw\(it, authKey\);/);
+  assert.match(
+    animeDismiss,
+    /if \(it\.local\) clearLocalCw\(it\._id\);\s*dismissCw\(it, authKey\);/,
+  );
 });
 
 test("library repair cannot rewrite live anime-scheme items", () => {
   const repair = read("src/lib/stremio-library-repair.ts");
-  assert.match(repair, /ANIME_CLOUD_ID\.test\(nid\) && \(normalized as \{ removed\?: unknown \}\)\.removed !== true\) continue;/);
+  assert.match(
+    repair,
+    /ANIME_CLOUD_ID\.test\(nid\) && \(normalized as \{ removed\?: unknown \}\)\.removed !== true\) continue;/,
+  );
 });
 
 test("anime episode lists carry absolute numbering for the phantom remap", () => {
   const se = read("src/lib/series-episodes.ts");
-  assert.match(se, /ep\.absoluteNumber == null && m\.absoluteEpisodeNumber\) ep\.absoluteNumber = m\.absoluteEpisodeNumber;/);
+  assert.match(
+    se,
+    /ep\.absoluteNumber == null && m\.absoluteEpisodeNumber\)\s*ep\.absoluteNumber = m\.absoluteEpisodeNumber;/,
+  );
 });
 
 test("phantom guard remaps absolute numbering instead of removing", () => {
@@ -153,8 +174,11 @@ test("tracker sync cannot corrupt the wrong cour", () => {
   for (const src of [anilistSync, malSync]) {
     assert.match(src, /if \(target > total \+ 1\) return;/);
   }
-  assert.match(anilistSync, /entry\.progress >= total\) return;/);
-  assert.match(malSync, /num_episodes_watched >= total\) return;/);
+  assert.match(anilistSync, /entry && total > 0 && entry\.progress >= total\) return;/);
+  assert.match(
+    malSync,
+    /cur\?\.my_list_status && total > 0 && cur\.my_list_status\.num_episodes_watched >= total\)\s*return;/,
+  );
 });
 
 test("home dedup prefers the twin that actually played most recently", () => {

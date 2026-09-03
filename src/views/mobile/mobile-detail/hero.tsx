@@ -5,6 +5,7 @@ import { Poster, usePosterChain } from "@/components/poster";
 import { ImdbIcon } from "@/components/icons/imdb-icon";
 import { HeroAwardsCorner } from "@/views/detail/hero-awards";
 import { useSettings } from "@/lib/settings";
+import { useT } from "@/lib/i18n";
 import {
   EASE_OUT,
   FLIP_TARGET_ATTR,
@@ -13,6 +14,12 @@ import {
   sameArtwork,
 } from "@/lib/motion";
 import type { TmdbDetail } from "@/lib/providers/tmdb";
+import { LocalLibraryBrand } from "@/components/local-library-brand";
+import {
+  MediaServerBrand,
+  mediaServerProviderName,
+} from "@/components/media-server-brand";
+import type { MediaServerProvider } from "@/lib/media-server/types";
 
 type HeroSummary = { type: string; wins: number; nominations: number }[];
 
@@ -28,6 +35,7 @@ export function Hero({
   runtime,
   genres,
   awardSummary,
+  availability,
   onBack,
 }: {
   meta: Meta;
@@ -41,8 +49,10 @@ export function Hero({
   runtime?: string;
   genres: string[];
   awardSummary: HeroSummary;
+  availability: { local: boolean; providers: MediaServerProvider[] };
   onBack: () => void;
 }) {
+  const t = useT();
   return (
     <div className="relative">
       <div className="relative aspect-[3/4] [@media(min-width:700px)_and_(min-height:600px)]:aspect-[16/9] max-h-[62vh] w-full overflow-hidden bg-surface">
@@ -57,7 +67,7 @@ export function Hero({
       <button
         type="button"
         onClick={onBack}
-        aria-label="Back"
+        aria-label={t("Back")}
         className="absolute start-4 grid h-11 w-11 place-items-center rounded-full bg-black/40 text-white backdrop-blur-sm"
         style={{ top: "calc(env(safe-area-inset-top, 0px) + 12px)" }}
       >
@@ -106,6 +116,7 @@ export function Hero({
             isImdb={isImdb}
             runtime={runtime}
             genres={genres}
+            availability={availability}
           />
         </div>
       </div>
@@ -245,12 +256,14 @@ function MetaPills({
   isImdb,
   runtime,
   genres,
+  availability,
 }: {
   year: string;
   rating?: string;
   isImdb: boolean;
   runtime?: string;
   genres: string[];
+  availability: { local: boolean; providers: MediaServerProvider[] };
 }) {
   // Clean inline metadata (matches the home hero) instead of a row of identical gray
   // capsules — year/runtime recede, the rating is emphasized, genres are subtle.
@@ -259,6 +272,30 @@ function MetaPills({
     items.push(
       <span key="y" className="font-medium text-ink">
         {year}
+      </span>,
+    );
+  if (availability.local)
+    items.push(
+      <span
+        key="local"
+        aria-label="In your local library"
+        className="flex items-center"
+      >
+        <LocalLibraryBrand className="h-[18px] w-[18px]" />
+      </span>,
+    );
+  for (const provider of availability.providers)
+    items.push(
+      <span
+        key={`ms-${provider}`}
+        aria-label={`Available in ${mediaServerProviderName(provider)}`}
+        className="flex items-center"
+      >
+        <MediaServerBrand
+          provider={provider}
+          name={mediaServerProviderName(provider)}
+          compact
+        />
       </span>,
     );
   if (rating)

@@ -15,6 +15,7 @@ use tokio::sync::Mutex as AsyncMutex;
 #[cfg(desktop)]
 const SOLVER_LABEL: &str = "harbor-cf-solver";
 const CF_TTL: Duration = Duration::from_secs(20 * 60);
+const CF_RETRY_COOLDOWN: Duration = Duration::from_secs(30 * 60);
 
 #[cfg(desktop)]
 static PENDING: Mutex<Option<oneshot::Sender<String>>> = Mutex::new(None);
@@ -58,26 +59,69 @@ pub fn cf_invalidate(host: &str) {
     cf_cache().lock().unwrap().remove(host);
 }
 
-#[cfg(desktop)]
-fn harvest(app: &AppHandle, url: &str) {
+fn cf_failures() -> &'static Mutex<HashMap<String, Instant>> {
+    static F: OnceLock<Mutex<HashMap<String, Instant>>> = OnceLock::new();
+    F.get_or_init(|| Mutex::new(HashMap::new()))
+}
+
+fn host_of(url: &str) -> Option<String> {
+    Url::parse(url).ok()?.host_str().map(|s| s.to_string())
+}
+
+fn cf_in_cooldown(host: &str) -> bool {
+    let mut map = cf_failures().lock().unwrap();
+    let fresh = map.get(host).map(|at| at.elapsed() < CF_RETRY_COOLDOWN);
+    match fresh {
+        Some(true) => true,
+        Some(false) => {
+            map.remove(host);
+            false
+        }
+        None => false,
+    }
+}
+
+fn cf_note_failure(host: &str) {
+    cf_failures()
+        .lock()
+        .unwrap()
+        .insert(host.to_string(), Instant::now());
+}
+
+fn cf_clear_failure(host: &str) {
+    cf_failures().lock().unwrap().remove(host);
+}
+
+struct SolverDismiss(AppHandle);
+
+impl Drop for SolverDismiss {
+    fn drop(&mut self) {
+        if let Some(w) = self.0.get_webview_window(SOLVER_LABEL) {
+            let _ = w.set_always_on_top(false);
+            let _ = w.hide();
+        }
+    }
+}
+
+fn harvest(app: &AppHandle, url: &str) -> bool {
     let Some(win) = app.get_webview_window(SOLVER_LABEL) else {
-        return;
+        return false;
     };
     let Ok(parsed) = Url::parse(url) else {
-        return;
+        return false;
     };
     let Some(host) = parsed.host_str().map(|s| s.to_string()) else {
-        return;
+        return false;
     };
     let ua = last_ua().lock().unwrap().clone();
     if ua.is_empty() {
-        return;
+        return false;
     }
     let cookies = match win.cookies_for_url(parsed) {
         Ok(c) => c,
         Err(e) => {
             eprintln!("[cf] cookie read failed: {e}");
-            return;
+            return false;
         }
     };
     let mut parts: Vec<String> = Vec::new();
@@ -88,7 +132,7 @@ fn harvest(app: &AppHandle, url: &str) {
         }
     }
     if parts.is_empty() {
-        return;
+        return false;
     }
     let cookie = parts.join("; ");
     cf_cache().lock().unwrap().insert(
@@ -100,6 +144,7 @@ fn harvest(app: &AppHandle, url: &str) {
         },
     );
     eprintln!("[cf] harvested clearance for {}", host);
+    true
 }
 
 #[cfg(desktop)]
@@ -166,16 +211,17 @@ fn open_solver(app: &AppHandle, url: &str) -> Result<(), String> {
     let app_main = app.clone();
     let (tx, rx) = mpsc::channel::<Result<(), String>>();
     app.run_on_main_thread(move || {
-        let built = WebviewWindowBuilder::new(&app_main, SOLVER_LABEL, WebviewUrl::External(parsed))
-            .title("Harbor · checking source")
-            .inner_size(480.0, 640.0)
-            .center()
-            .resizable(true)
-            .decorations(true)
-            .shadow(true)
-            .focused(true)
-            .initialization_script(INIT_SCRIPT)
-            .build();
+        let built =
+            WebviewWindowBuilder::new(&app_main, SOLVER_LABEL, WebviewUrl::External(parsed))
+                .title("Harbor · checking source")
+                .inner_size(480.0, 640.0)
+                .center()
+                .resizable(true)
+                .decorations(true)
+                .shadow(true)
+                .focused(true)
+                .initialization_script(INIT_SCRIPT)
+                .build();
         match built {
             Ok(window) => {
                 let _ = window.show();
@@ -204,11 +250,20 @@ pub async fn cf_fetch(_app: AppHandle, _url: String) -> Result<String, String> {
 #[cfg(desktop)]
 pub async fn cf_fetch(app: AppHandle, url: String) -> Result<String, String> {
     let _guard = request_lock().lock().await;
+    let host = host_of(&url);
+    if let Some(h) = host.as_deref() {
+        if cf_in_cooldown(h) {
+            eprintln!("[cf] skipping {}, a recent solve failed", h);
+            return Err(format!("cloudflare challenge for {} recently failed", h));
+        }
+        cf_note_failure(h);
+    }
     let (tx, rx) = oneshot::channel::<String>();
     *PENDING.lock().unwrap() = Some(tx);
 
     eprintln!("[cf] solving {}", url);
     open_solver(&app, &url)?;
+    let _dismiss = SolverDismiss(app.clone());
     if let Some(w) = app.get_webview_window(SOLVER_LABEL) {
         let _ = w.unminimize();
         let _ = w.set_always_on_top(true);
@@ -219,7 +274,12 @@ pub async fn cf_fetch(app: AppHandle, url: String) -> Result<String, String> {
     match tokio::time::timeout(Duration::from_secs(90), rx).await {
         Ok(Ok(body)) => {
             eprintln!("[cf] got {} bytes", body.len());
-            harvest(&app, &url);
+            let cleared = harvest(&app, &url);
+            if cleared {
+                if let Some(h) = host.as_deref() {
+                    cf_clear_failure(h);
+                }
+            }
             Ok(body)
         }
         _ => {

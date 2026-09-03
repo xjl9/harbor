@@ -1,15 +1,26 @@
 import { Subtitles as SubsIcon } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
-import { modalOverlayClose, modalOverlayEmitState, modalOverlayOpen } from "@/lib/modal-overlay";
+import {
+  modalOverlayClose,
+  modalOverlayEmitResult,
+  modalOverlayEmitState,
+  modalOverlayOpen,
+} from "@/lib/modal-overlay";
 import { openStyleBar } from "@/lib/player/sub-presets";
 import { setSecondarySub } from "@/lib/player/secondary-sub";
 import { useT } from "@/lib/i18n";
 import { useSettings } from "@/lib/settings";
+import { wasLimitReached } from "@/lib/subtitles/limit-signal";
+import { bindSubtitleDownloadAuth } from "@/lib/subtitles/provider-auth";
+import type { SubtitleLoadMetadata } from "@/lib/subtitles/types";
 import { MenuBody } from "./subtitle-menu/menu-body";
+import { ResizableSubtitlePanel } from "./subtitle-menu/resizable-panel";
+import { useSubtitleContext } from "./subtitle-menu/subtitle-context-store";
 import type { SubtitleMenuProps } from "./subtitle-menu/types";
 import { buildOverlayState } from "./subtitle-menu/utils";
 import { Tooltip } from "./transport/tooltip";
+import { watchOutsideMouseDown } from "@/lib/player/overlay-dismiss";
 
 export type { SubtitleMenuProps } from "./subtitle-menu/types";
 
@@ -24,6 +35,7 @@ export function SubtitleMenu(props: Props) {
   const useOverlay = props.useOverlayPopup === true;
   const propsRef = useRef(props);
   propsRef.current = props;
+  const subtitleContext = useSubtitleContext();
   const preferredLanguages =
     settings.preferredSubLangs.length > 0
       ? settings.preferredSubLangs
@@ -40,10 +52,10 @@ export function SubtitleMenu(props: Props) {
       const target = e.target as HTMLElement | null;
       if (wrap.current?.contains(target)) return;
       if (target?.closest("[data-title-suggest-dropdown]")) return;
+      if (target?.closest("[data-dropdown-menu]")) return;
       setOpen(false);
     };
-    window.addEventListener("mousedown", close);
-    return () => window.removeEventListener("mousedown", close);
+    return watchOutsideMouseDown(close);
   }, [open, useOverlay]);
 
   useEffect(() => {
@@ -65,28 +77,58 @@ export function SubtitleMenu(props: Props) {
       }),
     );
     offs.push(
-      listen<{
-        url: string;
-        lang?: string;
-        title?: string;
-        format?: "srt" | "vtt" | "ass" | "ssa" | "sub";
-        encoding?: string;
-      }>("modal://subtitle/add", (e) => {
-        propsRef.current.onAddSubtitle(e.payload.url, e.payload.lang, e.payload.title, {
-          format: e.payload.format,
-          encoding: e.payload.encoding,
-        });
+      listen("modal://subtitle/live-sync", () => {
+        void modalOverlayClose();
+        setOpen(false);
+        setForceInline(false);
+        propsRef.current.onEnterSync?.();
+      }),
+    );
+    offs.push(
+      listen<
+        SubtitleLoadMetadata & {
+          url: string;
+          lang?: string;
+          title?: string;
+          requestId?: string;
+        }
+      >("modal://subtitle/add", (e) => {
+        const { url, lang, title, requestId, ...metadata } = e.payload;
+        void (async () => {
+          const authKind = metadata.downloadAuth?.kind;
+          const apiKey =
+            authKind === "subsource-api-key"
+              ? settings.subsourceApiKey
+              : authKind === "subdl-api-key"
+                ? settings.subdlApiKey
+                : null;
+          const downloadAuth = await bindSubtitleDownloadAuth(authKind, apiKey);
+          const mainWindowMetadata: SubtitleLoadMetadata = { ...metadata, downloadAuth };
+          return propsRef.current.onAddSubtitle(url, lang, title, mainWindowMetadata);
+        })()
+          .then((result) => (result !== false ? "ok" : wasLimitReached(url) ? "limited" : "failed"))
+          .catch(() => "failed" as const)
+          .then((result) => {
+            if (!requestId) return;
+            return modalOverlayEmitResult("modal://subtitle/add-result", {
+              requestId,
+              result,
+            });
+          });
       }),
     );
     offs.push(listen("modal://closed", () => setOpen(false)));
     return () => {
       offs.forEach((p) => p.then((fn) => fn()).catch(() => {}));
     };
-  }, [useOverlay]);
+  }, [useOverlay, settings.subsourceApiKey, settings.subdlApiKey]);
 
   useEffect(() => {
     if (!useOverlay || !open) return;
-    void modalOverlayEmitState("subtitle", buildOverlayState(props, preferredLanguages));
+    void modalOverlayEmitState(
+      "subtitle",
+      buildOverlayState(props, preferredLanguages, subtitleContext),
+    );
   }, [
     useOverlay,
     open,
@@ -99,6 +141,7 @@ export function SubtitleMenu(props: Props) {
     props.season,
     props.episode,
     preferredLanguages,
+    subtitleContext,
   ]);
 
   useEffect(() => {
@@ -119,7 +162,10 @@ export function SubtitleMenu(props: Props) {
       setOpen(false);
       setForceInline(false);
     } else {
-      void modalOverlayOpen("subtitle", buildOverlayState(propsRef.current, preferredLanguages))
+      void modalOverlayOpen(
+        "subtitle",
+        buildOverlayState(propsRef.current, preferredLanguages, subtitleContext),
+      )
         .then(() => {
           setOpen(true);
           setForceInline(false);
@@ -137,6 +183,7 @@ export function SubtitleMenu(props: Props) {
     <div ref={wrap} className="relative">
       <Tooltip label={t("Subtitles")}>
         <button
+          data-player-subtitles
           type="button"
           onClick={handleClick}
           aria-label={t("Subtitles")}
@@ -144,21 +191,30 @@ export function SubtitleMenu(props: Props) {
             open ? "bg-white/22 text-white" : "text-white/85 hover:bg-white/10 hover:text-white"
           }`}
         >
-          <SubsIcon size={19} strokeWidth={2} />
+          {props.iconUrl ? (
+            <img
+              src={props.iconUrl}
+              alt=""
+              className="h-[22px] w-[22px] shrink-0 select-none object-contain"
+              draggable={false}
+            />
+          ) : (
+            <SubsIcon size={19} strokeWidth={2} />
+          )}
           {subSelected && (
             <span className="absolute end-2.5 top-2.5 h-1.5 w-1.5 rounded-full bg-emerald-400" />
           )}
         </button>
       </Tooltip>
       {open && (forceInline || !useOverlay) && (
-        <div className="fixed end-2 bottom-[84px] flex h-[460px] max-h-[calc(100vh-108px)] w-[560px] max-w-[calc(100vw-16px)] flex-col overflow-hidden rounded-2xl border border-edge bg-elevated shadow-[0_24px_60px_-18px_rgba(0,0,0,0.8)] backdrop-blur-xl">
+        <ResizableSubtitlePanel className="fixed end-14 bottom-[150px] animate-menu-pop">
           <MenuBody
             {...props}
             preferredLanguages={preferredLanguages}
             onClose={() => setOpen(false)}
             onOpenStyleBar={openStyleBar}
           />
-        </div>
+        </ResizableSubtitlePanel>
       )}
     </div>
   );

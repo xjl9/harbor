@@ -45,6 +45,7 @@ const PRUNABLE_EXACT = new Set<string>([
   "harbor.playback-history.v1",
   "harbor.streamBadges.v1",
   "harbor.manga.popular.v1",
+  "harbor.ebook.metadata.v1",
   "harbor.heroPool.v1",
 ]);
 
@@ -54,7 +55,9 @@ const PRUNABLE_PREFIXES = [
   "harbor.manga.cache.v1.",
   "harbor.manga.cache.v2.",
   "harbor.manga.art.",
+  "harbor.ebook.openlibrary.v1.",
   "harbor.tvdbo.",
+  "harbor.playback-history.v1.",
 ];
 
 function isPrunable(key: string): boolean {
@@ -132,6 +135,29 @@ export function setItemWithRecovery(key: string, value: string): boolean {
       if (!isQuotaError(e)) throw e;
     }
   }
+  // Replacing a value can still fail at the quota boundary because WebView storage
+  // reserves the new value before releasing the old one. Retry non-destructively by
+  // temporarily removing the previous value, and restore it if the replacement fails.
+  let previous: string | null = null;
+  try {
+    previous = localStorage.getItem(key);
+    if (previous != null) {
+      localStorage.removeItem(key);
+      try {
+        localStorage.setItem(key, value);
+        return true;
+      } catch (e) {
+        try {
+          localStorage.setItem(key, previous);
+        } catch {
+          console.error(`[storage] could not restore "${key}" after replacement failed`);
+        }
+        if (!isQuotaError(e)) throw e;
+      }
+    }
+  } catch (e) {
+    if (!isQuotaError(e)) throw e;
+  }
   console.warn(`[storage] giving up on "${key}" after pruning every cache`);
   return false;
 }
@@ -157,7 +183,7 @@ function bindCriticalFlush(): void {
   flushBound = true;
   const flush = () => {
     if (pendingCritical.size === 0) return;
-    for (const [k, v] of [...pendingCritical]) {
+    for (const [k, v] of pendingCritical) {
       if (setItemWithRecovery(k, v)) pendingCritical.delete(k);
     }
   };
@@ -183,12 +209,11 @@ const PROACTIVE_PER_KEY_THRESHOLD = 256 * 1024;
 const PROACTIVE_TOTAL_THRESHOLD = 3.5 * 1024 * 1024;
 
 const DEAD_CACHE_PREFIXES = ["harbor.picker-cache."];
-const VERSIONED_CACHE_PREFIXES = [
-  "harbor.awards.wikidata",
-  "harbor.anime_awards.metas",
-];
+const VERSIONED_CACHE_PREFIXES = ["harbor.awards.wikidata", "harbor.anime_awards.metas"];
 
-const LRU_PREFIX_CAPS: Array<{ prefix: string; keep: number }> = [{ prefix: "harbor.tvdbo.", keep: 24 }];
+const LRU_PREFIX_CAPS: Array<{ prefix: string; keep: number }> = [
+  { prefix: "harbor.tvdbo.", keep: 24 },
+];
 
 function capLruPrefixes(): void {
   for (const { prefix, keep } of LRU_PREFIX_CAPS) {
@@ -244,6 +269,8 @@ export function proactiveStorageCleanup(): void {
   }
   if (total > PROACTIVE_TOTAL_THRESHOLD) {
     const r = freeStorageSpace();
-    console.info(`[storage] proactive total cleanup: ${r.pruned.length} caches, ${r.freedBytes} bytes`);
+    console.info(
+      `[storage] proactive total cleanup: ${r.pruned.length} caches, ${r.freedBytes} bytes`,
+    );
   }
 }

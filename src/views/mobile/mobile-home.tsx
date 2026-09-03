@@ -8,10 +8,12 @@ import {
   isStreamingServiceRow,
   mergeRows,
 } from "@/views/home/home-rows";
+import { displayRowTitle } from "@/views/home/customizable-rows";
 import { loadAddonRows, type AddonRow } from "@/lib/addons";
 import { isAnimeRow } from "@/views/anime/anime-rows";
 import { useAuth } from "@/lib/auth";
 import { useSettings, type StreamingService } from "@/lib/settings";
+import { useT } from "@/lib/i18n";
 import { useHideAnimeMetas, useHideAnimeRows } from "@/lib/anime-hide";
 import { usePinnedRows } from "@/views/home/hooks/use-pinned-rows";
 import { useMediaFavorites, type MediaEntry } from "@/lib/media-favorites";
@@ -48,6 +50,7 @@ function dedupeMetas(metas: Meta[]): Meta[] {
 }
 
 export function MobileHome() {
+  const t = useT();
   const { settings } = useSettings();
   const { authKey } = useAuth();
   const [hero, setHero] = useState<Meta[]>([]);
@@ -122,6 +125,9 @@ export function MobileHome() {
     authKey,
     settings.tmdbKey,
     settings.tmdbLanguage,
+    settings.tmdbImageLangs,
+    settings.translateTitles,
+    settings.translateDescriptions,
     settings.region,
     settings.homeMode,
     settings.homeShowAllAddonRows,
@@ -300,18 +306,19 @@ export function MobileHome() {
     return (
       <div className="flex h-[70vh] flex-col items-center justify-center gap-4 px-8 text-center">
         <h2 className="font-display text-[20px] font-medium text-ink">
-          Couldn't load your home
+          {t("Couldn't load your home")}
         </h2>
         <p className="max-w-xs text-[13.5px] leading-relaxed text-ink-muted">
-          Harbor couldn't reach the catalog servers. Check your connection and
-          try again.
+          {t(
+            "Harbor couldn't reach the catalog servers. Check your connection and try again.",
+          )}
         </p>
         <button
           type="button"
           onClick={() => setReloadKey((k) => k + 1)}
           className="no-press flex h-11 items-center rounded-full bg-ink px-6 text-[14px] font-semibold text-canvas transition-transform active:scale-95"
         >
-          Try again
+          {t("Try again")}
         </button>
       </div>
     );
@@ -411,7 +418,7 @@ export function MobileHome() {
       {!isClassic && shownRows[0] && shownRows[0].metas.length >= 6 ? (
         <>
           <MobileRankRail
-            title="Top 10 Today"
+            title={t("Top 10 Today")}
             metas={dedupeMetas(shownRows[0].metas)}
             onOpenDetail={setDetailMeta}
           />
@@ -421,7 +428,7 @@ export function MobileHome() {
           {shownRows.slice(1).map((r) => (
             <MobileRail
               key={r.key}
-              title={r.name}
+              title={displayRowTitle(r, false, t)}
               metas={dedupeMetas(r.metas).slice(0, 18)}
               onOpenDetail={setDetailMeta}
             />
@@ -437,7 +444,7 @@ export function MobileHome() {
           {shownRows.map((r) => (
             <MobileRail
               key={r.key}
-              title={r.name}
+              title={displayRowTitle(r, false, t)}
               metas={dedupeMetas(r.metas).slice(0, 18)}
               onOpenDetail={setDetailMeta}
             />
@@ -515,7 +522,7 @@ function RailSkeleton({ titleW }: { titleW: string }) {
       <div className="flex gap-3 overflow-hidden px-4 pb-1">
         {Array.from({ length: 5 }).map((_, i) => (
           <div key={i} className="w-[124px] shrink-0">
-            <div className="aspect-[2/3] rounded-[14px] bg-elevated/40" />
+            <div className="aspect-[2/3] rounded-lg bg-elevated/40" />
             <div className="mt-1.5 h-2.5 w-4/5 rounded bg-elevated/35" />
             <div className="mt-1.5 h-2.5 w-3/5 rounded bg-elevated/30" />
           </div>

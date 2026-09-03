@@ -6,8 +6,6 @@ import { useSettings } from "@/lib/settings";
 import type { PlayEpisode } from "@/lib/view";
 import { isPhoneShell, PHONE_FOCUS, PHONE_KICKER } from "./picker-utils";
 
-const IS_TAURI = typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
-
 export function PickerNav({
   onBack,
   onRefresh,
@@ -20,8 +18,7 @@ export function PickerNav({
   const t = useT();
   const { settings } = useSettings();
   const phone = isPhoneShell();
-  const controlsInBar = IS_TAURI && !settings.useNativeTitleBar && !settings.hybridTitleBar;
-  const groupLeft = controlsInBar || settings.pickerRefreshNextToBack;
+  const groupLeft = settings.pickerRefreshNextToBack;
   if (phone) {
     return (
       <div className="flex items-center justify-between gap-3">
@@ -49,11 +46,7 @@ export function PickerNav({
   }
   return (
     <div className="-mb-9">
-      <div
-        className={`flex items-center gap-3 ${
-          groupLeft ? "justify-start" : "justify-between"
-        }`}
-      >
+      <div className={`flex items-center gap-3 ${groupLeft ? "justify-start" : "justify-between"}`}>
         <button
           type="button"
           onClick={onBack}
@@ -86,9 +79,11 @@ export function PickerNav({
 export function PickerHeader({
   meta,
   episode,
+  absoluteEpisode,
 }: {
   meta: Meta;
   episode?: PlayEpisode;
+  absoluteEpisode?: number | null;
 }) {
   const phone = isPhoneShell();
   const phoneH1 =
@@ -104,14 +99,18 @@ export function PickerHeader({
                 : "text-[11px] font-semibold uppercase tracking-[0.32em] text-ink-subtle"
             }
           >
-            {meta.name} · Season {episode.imdbSeason ?? episode.season} · Episode {String(episode.imdbEpisode ?? episode.episode).padStart(2, "0")}
+            {absoluteEpisode != null
+              ? `${meta.name} · Episode ${absoluteEpisode}`
+              : `${meta.name} · Season ${episode.imdbSeason ?? episode.season} · Episode ${String(episode.imdbEpisode ?? episode.episode).padStart(2, "0")}`}
           </p>
           <h1
             className={
               phone ? phoneH1 : "font-display text-[64px] font-medium leading-[0.96] tracking-tight text-ink"
             }
           >
-            {episode.name || `Episode ${episode.episode}`}
+            {episode.name ||
+              metaEpisodeName(meta, episode) ||
+              `Episode ${absoluteEpisode ?? episode.episode}`}
           </h1>
           {episode.overview && <CollapsibleOverview text={episode.overview} />}
         </>
@@ -180,4 +179,11 @@ function CollapsibleOverview({ text }: { text: string }) {
       )}
     </div>
   );
+}
+
+function metaEpisodeName(meta: Meta, episode: PlayEpisode): string | undefined {
+  const match = meta.videos?.find(
+    (v) => (v.season ?? 1) === episode.season && (v.episode ?? v.number) === episode.episode,
+  );
+  return match?.name || match?.title || undefined;
 }

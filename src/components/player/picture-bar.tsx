@@ -79,7 +79,7 @@ export function PictureBar() {
       <div
         role="toolbar"
         aria-label={t("Picture adjustments")}
-        className="pointer-events-auto flex flex-wrap items-center justify-center gap-4 rounded-[16px] border border-edge bg-elevated px-4 py-3 shadow-[0_18px_44px_-22px_rgba(0,0,0,0.85)]"
+        className="pointer-events-auto flex flex-wrap items-center justify-center gap-4 rounded-md bg-elevated px-4 py-3 shadow-[0_10px_30px_-12px_rgba(0,0,0,0.6)]"
         style={{ maxWidth: SAFE_MAX_W }}
       >
         {PICTURE_DIALS.map((dial) => {

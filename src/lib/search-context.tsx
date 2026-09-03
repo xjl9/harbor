@@ -3,7 +3,7 @@ import { MOVIE_GENRES } from "@/lib/feed/tags";
 import { metaLooksAnime } from "@/lib/anime-detect";
 import { useParental } from "@/lib/parental";
 import { searchAll, searchAnime, searchCinemeta, searchLiveTvChannels, type SearchResults } from "@/lib/search";
-import { searchAddonCatalogs, searchAddonGroups, mergeMetas } from "@/lib/search-addons";
+import { searchAddonCatalogs, searchAddonGroups, mergeMetas, type AddonQuery } from "@/lib/search-addons";
 import { searchAddonIndex } from "@/lib/search-addon-index";
 import { createSearchRequestGuard } from "@/lib/search-request-guard";
 import { normalizeSearchQuery } from "@/lib/search-query";
@@ -13,6 +13,7 @@ import { anilistCharacterSearch, type CharacterHit } from "@/lib/anilist/charact
 import { gatherCatalogAddons, type Addon } from "@/lib/addons";
 import { useAuth } from "@/lib/auth";
 import { useSettings } from "@/lib/settings";
+import { usePlaylists } from "@/lib/iptv/playlists-store";
 import { isMagnetInput, isDirectVideoUrl } from "@/lib/torrent/magnet";
 import { useView, type Frame } from "@/lib/view";
 
@@ -20,6 +21,12 @@ type SearchState = {
   open: boolean;
   query: string;
   results: SearchResults | null;
+  // Deliberately not a field on SearchResults. Every addon is announced as
+  // "pending" before the first fetch leaves the box, and folding that into
+  // `results` flipped it non-null with every list still empty, which unmounted
+  // the desktop overlay's loading skeleton before a single source had answered.
+  // The desktop gate is `!results`, so the slot stream has to live beside it.
+  addonQueries: AddonQuery[];
   status: "idle" | "typing" | "loading" | "done";
   recent: string[];
 };
@@ -33,6 +40,7 @@ type SearchValue = SearchState & {
   removeRecent: (q: string) => void;
   clearRecent: () => void;
   setAiHold: (hold: boolean) => void;
+  retry: () => void;
 };
 
 const Ctx = createContext<SearchValue | null>(null);
@@ -97,22 +105,24 @@ function dedupeByTitle<T extends TitledMeta>(list: T[]): T[] {
   return out;
 }
 
+// An addon slot holds its installed-order position for the whole query. Appending on
+// settle the way the addonGroups accumulator does would reorder the list every time a
+// slow addon answered, and Big Picture indexes its rail rows by array position.
+//
+// These metas are never stripped against the fused rows the way addonGroups is. An
+// addon whose every hit was promoted into Movies or Series still has to be able to
+// say so under its own name, and stripping it is what made a well-matching addon
+// look like it had answered with nothing.
+function upsertAddonQuery(list: AddonQuery[], q: AddonQuery): AddonQuery[] {
+  const at = list.findIndex((x) => x.id === q.id);
+  if (at < 0) return [...list, q];
+  const next = list.slice();
+  next[at] = q;
+  return next;
+}
+
 function normShow(s: string): string {
   return s.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
-}
-
-function sameShow(a: string, b: string): boolean {
-  const x = normShow(a);
-  return x.length > 0 && x === normShow(b);
-}
-
-function animeKindFromFormat(
-  format: string | null,
-  fallback: "movie" | "series",
-): "movie" | "series" {
-  const fmt = (format ?? "").toUpperCase();
-  if (!fmt) return fallback;
-  return fmt === "MOVIE" ? "movie" : "series";
 }
 
 function loadRecent(): string[] {
@@ -148,13 +158,16 @@ function saveRecent(items: string[]): void {
 
 export function SearchProvider({ children }: { children: ReactNode }) {
   const { settings } = useSettings();
+  const playlists = usePlaylists();
   const { authKey } = useAuth();
   const { hiddenTabs } = useParental();
   const [open, setOpen] = useState(false);
   const [query, setQueryState] = useState("");
   const [results, setResults] = useState<SearchResults | null>(null);
+  const [addonQueries, setAddonQueries] = useState<AddonQuery[]>([]);
   const [status, setStatus] = useState<SearchState["status"]>("idle");
   const [aiHold, setAiHold] = useState(false);
+  const [retryNonce, setRetryNonce] = useState(0);
   const [recent, setRecent] = useState<string[]>(() => loadRecent());
   const debounceRef = useRef<number | null>(null);
   const requestGuardRef = useRef(createSearchRequestGuard());
@@ -189,24 +202,27 @@ export function SearchProvider({ children }: { children: ReactNode }) {
     if (debounceRef.current) window.clearTimeout(debounceRef.current);
     if (!trimmed) {
       setResults(null);
+      setAddonQueries([]);
       setStatus("idle");
       return;
     }
     if (aiHold) {
       setResults(null);
+      setAddonQueries([]);
       setStatus("idle");
       return;
     }
     setResults(null);
+    setAddonQueries([]);
     setStatus("typing");
     const animeAllowed = !hiddenTabs.anime && !settings.hideContent.anime;
     const mangaAllowed = settings.mangaEnabled && !settings.hideContent.manga;
     const franchiseAllowed = animeAllowed || mangaAllowed;
-    const liveTvAllowed = !hiddenTabs.liveTv && settings.iptvPlaylists.length > 0;
+    const liveTvAllowed = !hiddenTabs.liveTv && playlists.length > 0;
     debounceRef.current = window.setTimeout(() => {
       if (!requestGuardRef.current.isCurrent(id)) return;
       setStatus("loading");
-      const liveTv = liveTvAllowed ? searchLiveTvChannels(trimmed, settings.iptvPlaylists) : [];
+      const liveTv = liveTvAllowed ? searchLiveTvChannels(trimmed, playlists) : [];
       const guard = <T,>(p: Promise<T>, fallback: T): Promise<T> =>
         Promise.race([
           p.catch(() => fallback),
@@ -218,6 +234,7 @@ export function SearchProvider({ children }: { children: ReactNode }) {
       const tmdbCacheKey = [
         settings.tmdbKey,
         settings.tmdbLanguage,
+        settings.translateTitles,
         excludeGenres.join(","),
         normalizedQuery,
       ].join("\0");
@@ -248,10 +265,29 @@ export function SearchProvider({ children }: { children: ReactNode }) {
       );
       const addonGroupsPromise = guard(
         addonsP.then((a) =>
-          searchAddonGroups(a, trimmed, (g) => {
-            acc.groups = [...acc.groups.filter((x) => x.id !== g.id), g];
-            publish();
-          }),
+          searchAddonGroups(
+            a,
+            trimmed,
+            (g) => {
+              acc.groups = [...acc.groups.filter((x) => x.id !== g.id), g];
+              publish();
+            },
+            // Deliberately no settle path. The empty-settle guard below exists because
+            // the 8s outer guard resolves [] and would wipe visible groups; addon slots
+            // arrive only through this stream, so there is nothing for it to wipe.
+            //
+            // Its own setState, never publish(). publish() writes `results`, and the
+            // pending burst fires before any source has answered, so routing this
+            // through it turned `results` non-null with nothing in it and killed the
+            // desktop overlay's loading skeleton.
+            (q) => {
+              if (!requestGuardRef.current.isCurrent(id)) return;
+              const metas = settings.hideContent.anime
+                ? q.metas.filter((m) => !metaLooksAnime(m))
+                : q.metas;
+              setAddonQueries((prev) => upsertAddonQuery(prev, { ...q, metas }));
+            },
+          ),
         ),
         [],
       );
@@ -301,33 +337,7 @@ export function SearchProvider({ children }: { children: ReactNode }) {
         const dedupedGroups = acc.groups
           .map((g) => ({ ...g, metas: dropAnime(g.metas.filter((m) => !shown.has(m.id))) }))
           .filter((g) => g.metas.length > 0);
-        const animeTop = acc.anime[0];
-        const animeTopKind: "movie" | "series" = animeTop
-          ? animeKindFromFormat(animeTop.format, base.topMatch?.kind ?? "series")
-          : "series";
-        const topMatch =
-          animeTop && base.topMatch && sameShow(base.topMatch.meta.name, animeTop.name)
-            ? {
-                kind: animeTopKind,
-                meta: {
-                  id: animeTop.kitsuId
-                    ? `kitsu:${animeTop.kitsuId}`
-                    : animeTop.malId
-                      ? `mal:${animeTop.malId}`
-                      : `anilist:${animeTop.anilistId}`,
-                  type: animeTopKind,
-                  name: animeTop.name,
-                  poster: animeTop.poster ?? base.topMatch.meta.poster,
-                  background: animeTop.background ?? undefined,
-                  description: animeTop.overview || undefined,
-                  releaseInfo: animeTop.year ?? undefined,
-                },
-                popularity: base.topMatch.popularity,
-                backdrop: animeTop.background ?? base.topMatch.backdrop,
-                overview: animeTop.overview || base.topMatch.overview,
-                voteAverage: base.topMatch.voteAverage,
-              }
-            : base.topMatch;
+        const topMatch = base.topMatch;
         setResults({
           ...base,
           topMatch: settings.hideContent.anime && topMatch && metaLooksAnime(topMatch.meta) ? null : topMatch,
@@ -399,7 +409,7 @@ export function SearchProvider({ children }: { children: ReactNode }) {
         debounceRef.current = null;
       }
     };
-  }, [query, aiHold, settings.tmdbKey, settings.tmdbLanguage, settings.iptvPlaylists, excludeGenres, hiddenTabs.anime, settings.hideContent.anime, hiddenTabs.liveTv, settings.mangaEnabled, settings.hideContent.manga, authKey]);
+  }, [query, aiHold, retryNonce, settings.tmdbKey, settings.tmdbLanguage, settings.translateTitles, playlists, excludeGenres, hiddenTabs.anime, settings.hideContent.anime, hiddenTabs.liveTv, settings.mangaEnabled, settings.hideContent.manga, authKey]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -423,8 +433,15 @@ export function SearchProvider({ children }: { children: ReactNode }) {
   const clear = useCallback(() => {
     setQueryState("");
     setResults(null);
+    setAddonQueries([]);
     setStatus("idle");
   }, []);
+
+  // Re-runs the whole query. There is no per-addon re-entry point into
+  // searchAddonGroups, and an addon row that says "Didn't answer" with nothing
+  // to press is a dead band on a D-pad. TMDB comes back off its cache, so what
+  // this actually costs is one more addon fan-out.
+  const retry = useCallback(() => setRetryNonce((n) => n + 1), []);
 
   const recordRecent = useCallback((q: string) => {
     const trimmed = q.trim();
@@ -485,8 +502,8 @@ export function SearchProvider({ children }: { children: ReactNode }) {
   }, [open]);
 
   const value = useMemo(
-    () => ({ open, setOpen, query, setQuery, results, status, recent, clear, closeForNavigation, recordRecent, removeRecent, clearRecent, setAiHold }),
-    [open, query, results, status, recent, setQuery, clear, closeForNavigation, recordRecent, removeRecent, clearRecent],
+    () => ({ open, setOpen, query, setQuery, results, addonQueries, status, recent, clear, closeForNavigation, recordRecent, removeRecent, clearRecent, setAiHold, retry }),
+    [open, query, results, addonQueries, status, recent, setQuery, clear, closeForNavigation, recordRecent, removeRecent, clearRecent, retry],
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

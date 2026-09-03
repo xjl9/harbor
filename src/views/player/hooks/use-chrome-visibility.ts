@@ -26,6 +26,12 @@ export function useChromeVisibility(params: {
   const chromeVisibleRef = useRef(false);
   useEffect(() => {
     chromeVisibleRef.current = chromeVisible;
+    document.documentElement.toggleAttribute("data-player-chrome-visible", chromeVisible);
+    document.documentElement.setAttribute("data-player-chrome-mounted", "");
+    return () => {
+      document.documentElement.removeAttribute("data-player-chrome-visible");
+      document.documentElement.removeAttribute("data-player-chrome-mounted");
+    };
   }, [chromeVisible]);
 
   const hideTimer = useRef<number | null>(null);
@@ -91,11 +97,13 @@ export function useChromeVisibility(params: {
     // On touch, a bare touchstart must NOT force controls up: the mobile gesture
     // stage owns the tap-to-toggle model and drives visibility through its own event.
     if (!mobile) window.addEventListener("touchstart", onMove);
+    window.addEventListener("harbor:controller-activity", onMove);
     window.addEventListener("pointerdown", onPointerDown);
     window.addEventListener("keydown", onKeyDown);
     return () => {
       window.removeEventListener("mousemove", onMove);
       if (!mobile) window.removeEventListener("touchstart", onMove);
+      window.removeEventListener("harbor:controller-activity", onMove);
       window.removeEventListener("pointerdown", onPointerDown);
       window.removeEventListener("keydown", onKeyDown);
       if (hideTimer.current) window.clearTimeout(hideTimer.current);

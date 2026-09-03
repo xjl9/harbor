@@ -2,6 +2,8 @@ import { Suspense, lazy, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Pause, Play } from "lucide-react";
 import { isMangaReaderRoute } from "@/lib/platform";
+import { isSetupRoute } from "@/lib/platform";
+import { hasSetupToken } from "./onboard/setup-wire";
 import { useView } from "@/lib/view";
 import { HarborLoader } from "@/components/harbor-loader";
 import { ScrollRootContext } from "@/components/row";
@@ -25,14 +27,30 @@ import { MOBILE_CHROME_CLEARANCE } from "./chrome-metrics";
 const RemoteApp = lazy(() => import("@/views/remote-app").then((m) => ({ default: m.RemoteApp })));
 const MangaRemote = lazy(() => import("./manga-remote/manga-remote").then((m) => ({ default: m.MangaRemote })));
 const MangaLocalReader = lazy(() => import("./manga-read/manga-local-reader").then((m) => ({ default: m.MangaLocalReader })));
+const MobileOnboard = lazy(() => import("./onboard").then((m) => ({ default: m.MobileOnboard })));
 const PlayPicker = lazy(() => import("@/views/play-picker").then((m) => ({ default: m.PlayPicker })));
 const PlayerView = lazy(() => import("@/views/player").then((m) => ({ default: m.PlayerView })));
 
 export function MobileShell() {
+  // Held in state rather than re-read per render. Leaving setup strips the
+  // query parameter, and a page that decided what to render straight from the
+  // URL would have no way to tell "user finished" from "URL still says setup".
+  // /setup is the onboarding surface and /remote is the bridge. The token is
+  // still honoured so an already-issued QR keeps working, but the path is what
+  // decides, so onboarding can never take over the remote again.
+  const [setup, setSetup] = useState(() => isSetupRoute() || hasSetupToken());
   return (
     <MobileRemoteProvider>
       <SheetLockProvider>
-        {isMangaReaderRoute() ? <MangaReaderShell /> : <ShellBody />}
+        {setup ? (
+          <Suspense fallback={<HarborLoader />}>
+            <MobileOnboard onExit={() => setSetup(false)} />
+          </Suspense>
+        ) : isMangaReaderRoute() ? (
+          <MangaReaderShell />
+        ) : (
+          <ShellBody />
+        )}
       </SheetLockProvider>
     </MobileRemoteProvider>
   );

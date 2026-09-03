@@ -40,6 +40,7 @@ import { WatchNowCard } from "./watch-now-card";
 import { ProfileAudioCard } from "./profile-audio-card";
 import { MinecraftCard } from "./minecraft-card";
 import { SimklCard } from "./simkl-card";
+import { LetterboxdCard } from "./letterboxd-card";
 import { ProfileHero } from "./profile-hero";
 import { ProfileSettings } from "./profile-settings";
 import { ScrollToTop } from "./scroll-to-top";
@@ -47,7 +48,6 @@ import { ProfileSkeleton } from "./profile-skeleton";
 import { ProfileEmpty, ProfileError, ProfilePrivate } from "./profile-states";
 import { MyListsShowcase } from "./my-lists-showcase";
 import { MyListsPicker } from "./my-lists-picker";
-import { LinkOutInterstitial } from "@/components/link-out-interstitial";
 import { ProfileViewAll } from "./profile-view-all";
 import { RecentActivity } from "./recent-activity";
 import { Showcase } from "./showcase";
@@ -96,28 +96,22 @@ export function ProfileView({
   const cloudMinutes = summary?.counts.minutesWatched ?? 0;
 
   useEffect(() => {
-    if (!isOwner) return;
-    const w = Math.max(watchedCount, libWatched, cloudWatched);
-    const m = Math.max(mangaProgress.length, cloudManga);
-    const movies = Math.max(watchedBreakdown.moviesWatched, cloudMovies);
-    const episodes = Math.max(watchedBreakdown.episodesWatched, cloudEpisodes);
-    const minutes = Math.max(watchedBreakdown.minutesWatched, cloudMinutes);
+    if (!isOwner || !watchedBreakdown.ready) return;
+    const w = Math.max(watchedCount, libWatched);
+    const m = mangaProgress.length;
+    const movies = watchedBreakdown.moviesWatched;
+    const episodes = watchedBreakdown.episodesWatched;
+    const minutes = watchedBreakdown.minutesWatched;
 
     if (
-      w <= cloudWatched &&
-      m <= cloudManga &&
-      movies <= cloudMovies &&
-      episodes <= cloudEpisodes &&
-      minutes <= cloudMinutes
+      w === cloudWatched &&
+      m === cloudManga &&
+      movies === cloudMovies &&
+      episodes === cloudEpisodes &&
+      minutes === cloudMinutes
     )
       return;
-    pushStats(
-      w > 0 ? w : null,
-      m > 0 ? m : null,
-      movies > 0 ? movies : null,
-      episodes > 0 ? episodes : null,
-      minutes > 0 ? minutes : null,
-    );
+    pushStats(w, m, movies, episodes, minutes);
   }, [
     isOwner,
     libWatched,
@@ -289,28 +283,20 @@ export function ProfileView({
   const presentCards = CARD_ORDER_DEFAULT.filter((k) => cardNodes[k] != null);
   const orderedCards = effectiveOrder(layout, presentCards);
 
-  const heroSummary = summary.isOwner
-    ? {
-        ...summary,
-        counts: {
-          ...summary.counts,
-          watched: Math.max(summary.counts.watched ?? 0, watchedBreakdown.watched),
-          moviesWatched: Math.max(
-            summary.counts.moviesWatched ?? 0,
-            watchedBreakdown.moviesWatched,
-          ),
-          episodesWatched: Math.max(
-            summary.counts.episodesWatched ?? 0,
-            watchedBreakdown.episodesWatched,
-          ),
-          minutesWatched: Math.max(
-            summary.counts.minutesWatched ?? 0,
-            watchedBreakdown.minutesWatched,
-            (summary.counts.hoursWatched ?? 0) * 60,
-          ),
-        },
-      }
-    : summary;
+  const heroSummary =
+    summary.isOwner && watchedBreakdown.ready
+      ? {
+          ...summary,
+          counts: {
+            ...summary.counts,
+            watched: Math.max(summary.counts.watched ?? 0, watchedBreakdown.watched),
+            moviesWatched: watchedBreakdown.moviesWatched,
+            episodesWatched: watchedBreakdown.episodesWatched,
+            minutesWatched: watchedBreakdown.minutesWatched,
+            hoursWatched: Math.floor(watchedBreakdown.minutesWatched / 60),
+          },
+        }
+      : summary;
 
   return (
     <div
@@ -330,7 +316,6 @@ export function ProfileView({
         onEdit={() => setEditing(true)}
         onPatch={patchSummary}
       />
-      <LinkOutInterstitial />
       <ScrollToTop targetRef={scrollRef} />
 
       <div className="mx-auto w-full max-w-6xl px-6 pb-16 lg:px-10">
@@ -386,6 +371,19 @@ export function ProfileView({
                 <SimklCard isOwner hideTitle={c.hideCardTitles} published={summary.simkl} />
               ) : !summary.isOwner && summary.simkl ? (
                 <SimklCard isOwner={false} hideTitle={c.hideCardTitles} published={summary.simkl} />
+              ) : null}
+              {summary.isOwner && settings.showLetterboxdCard ? (
+                <LetterboxdCard
+                  isOwner
+                  hideTitle={c.hideCardTitles}
+                  published={summary.letterboxd}
+                />
+              ) : !summary.isOwner && summary.letterboxd ? (
+                <LetterboxdCard
+                  isOwner={false}
+                  hideTitle={c.hideCardTitles}
+                  published={summary.letterboxd}
+                />
               ) : null}
               <FriendsPanel
                 friends={summary.isOwner || summary.friendsPublic ? friends : []}

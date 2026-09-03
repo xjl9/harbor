@@ -1,10 +1,11 @@
 // @ts-expect-error Node test types are intentionally outside the browser-only tsconfig.
 import assert from "node:assert/strict";
 // @ts-expect-error Node test types are intentionally outside the browser-only tsconfig.
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 // @ts-expect-error Node test types are intentionally outside the browser-only tsconfig.
 import test from "node:test";
-import { filterTracksByPreferredLanguage } from "../src/lib/subtitles/language.ts";
+import { filterTracksByPreferredLanguage, isKnownLanguage } from "../src/lib/subtitles/language.ts";
+import { subtitleLanguage } from "../src/lib/local-library/player-src.ts";
 
 const src = readFileSync(
   new URL("../src/lib/subtitles/providers/addons.ts", import.meta.url),
@@ -89,6 +90,10 @@ const subtitleModal = readFileSync(
   new URL("../src/components/popups/subtitle-modal.tsx", import.meta.url),
   "utf8",
 );
+const subtitlePanelSize = readFileSync(
+  new URL("../src/components/player/subtitle-menu/panel-size.ts", import.meta.url),
+  "utf8",
+);
 
 test("one slow subtitle addon cannot discard faster addon results", () => {
   assert.match(
@@ -101,7 +106,12 @@ test("one slow subtitle addon cannot discard faster addon results", () => {
     /withSubtitleTimeout\(searchAddons\(/,
     "the combined addon result must not be discarded by one shared timeout",
   );
-  assert.match(search, /searchAddons\(opts\.addons, q, tmo\)/);
+  assert.match(
+    search,
+    /for \(const addon of opts\.addons\)/,
+    "one search task per addon so a slow addon cannot hold back the rest",
+  );
+  assert.match(search, /searchAddons\(\[addon\], q, tmo\)/);
 });
 
 test("an enriched addon timeout still falls back to the standard subtitle endpoint", () => {
@@ -119,11 +129,11 @@ test("an enriched addon timeout still falls back to the standard subtitle endpoi
 });
 
 test("automatic subtitle loading limits each preferred language independently", () => {
-  assert.match(fetchIntoPlayer, /const EXTRA_TRACKS_PER_LANGUAGE = 40/);
+  assert.match(fetchIntoPlayer, /const EXTRA_TRACKS_PER_LANGUAGE = 15/);
   assert.match(fetchIntoPlayer, /spreadBySourcePerLanguage\(/);
   assert.match(
     fetchIntoPlayer,
-    /spreadBySourcePerLanguage\(byPreferredLang, consumed, EXTRA_TRACKS_PER_LANGUAGE\)/,
+    /spreadBySourcePerLanguage\(eagerPool, consumed, EXTRA_TRACKS_PER_LANGUAGE\)/,
   );
 });
 
@@ -133,22 +143,59 @@ test("the subtitle menu only keeps configured languages", () => {
     { id: "ar", lang: "Arabic" },
     { id: "es", lang: "spa" },
     { id: "fr", lang: "French" },
+    { id: "untagged" },
   ];
   assert.deepEqual(
     filterTracksByPreferredLanguage(tracks, ["English", "Arabic"]).map((track) => track.id),
-    ["en", "ar"],
+    ["en", "ar", "untagged"],
   );
 });
 
+test("release suffixes are not mistaken for subtitle language tags", () => {
+  assert.equal(isKnownLanguage("eng"), true);
+  assert.equal(isKnownLanguage("en"), true);
+  assert.equal(isKnownLanguage("in"), true);
+  const video = "/movies/The.Imitation.Game.2014-Pahe.in.mkv";
+  assert.equal(subtitleLanguage(video, "/movies/The.Imitation.Game.2014-Pahe.in.srt"), undefined);
+  assert.equal(subtitleLanguage(video, "/movies/The.Imitation.Game.2014-Pahe.in.en.srt"), "en");
+  assert.equal(subtitleLanguage(video, "/movies/The.Imitation.Game.2014-Pahe.in.in.srt"), "id");
+});
+
 test("the configured languages reach the separate subtitle popup", () => {
-  assert.match(subtitleMenu, /buildOverlayState\(propsRef\.current, preferredLanguages\)/);
+  assert.match(
+    subtitleMenu,
+    /buildOverlayState\(propsRef\.current, preferredLanguages, subtitleContext\)/,
+  );
   assert.match(subtitleModal, /preferredLanguages=\{state\.preferredLanguages\}/);
 });
 
 test("subtitle popup fills compact players while staying above the controls", () => {
-  assert.match(subtitleMenu, /fixed end-2 bottom-\[84px\]/);
-  assert.match(subtitleModal, /m-2 mb-\[84px\]/);
-  assert.match(subtitleMenu, /w-\[560px\] max-w-\[calc\(100vw-16px\)\]/);
-  assert.match(subtitleModal, /w-\[560px\] max-w-\[calc\(100vw-16px\)\]/);
+  assert.match(subtitleMenu, /fixed end-14 bottom-\[150px\]/);
+  assert.match(subtitleModal, /mb-\[84px\] me-\[56px\]/);
+  assert.match(subtitleMenu, /<ResizableSubtitlePanel className="fixed end-14/);
+  assert.match(
+    subtitlePanelSize,
+    /DEFAULT_SUBTITLE_PANEL_SIZE[^=]*= \{ width: 560, height: 460 \}/,
+  );
+  assert.doesNotMatch(subtitleMenu, /flex h-\[460px\].*w-\[560px\]/);
   assert.doesNotMatch(subtitleModal, /me-\[120px\]/);
+});
+
+test("every anchored player popup shares one anchor", () => {
+  const root = new URL("../src/components/player/", import.meta.url);
+  const drifted: string[] = [];
+  const walk = (dir: URL) => {
+    for (const e of readdirSync(dir, { withFileTypes: true })) {
+      if (e.isDirectory()) {
+        walk(new URL(`${e.name}/`, dir));
+      } else if (e.name.endsWith(".tsx")) {
+        const at = new URL(e.name, dir);
+        const src = readFileSync(at, "utf8");
+        const hit = src.match(/fixed end-\S+ bottom-\[\d+px\]/);
+        if (hit && hit[0] !== "fixed end-14 bottom-[150px]") drifted.push(`${e.name} ${hit[0]}`);
+      }
+    }
+  };
+  walk(root);
+  assert.deepEqual(drifted, []);
 });

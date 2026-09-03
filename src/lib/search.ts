@@ -1,12 +1,13 @@
-import { get } from "@/lib/providers/tmdb/tmdb-client";
+import { effectiveTmdbLanguage, get } from "@/lib/providers/tmdb/tmdb-client";
 import { movieMeta, seriesMeta, type Page, type RawMovie, type RawSeries } from "@/lib/providers/tmdb/tmdb-meta-mappers";
 import { MOVIE_GENRES, TV_GENRES } from "@/lib/feed/tags";
 import type { Meta } from "@/lib/cinemeta";
 import type { AddonResultGroup } from "@/lib/search-addons";
 import type { AddonHit } from "@/lib/search-addon-index";
 import { getCachedPlaylist } from "@/lib/iptv/store";
+import type { StoredPlaylist } from "@/lib/iptv/playlists-store";
 import { arabicAwareMatch } from "@/lib/iptv/rtl";
-import type { Settings } from "@/lib/settings";
+import { loadStoredSettings } from "@/lib/settings/load";
 import { safeFetch } from "@/lib/safe-fetch";
 import { anilistAnimeSearch } from "@/lib/anilist/browse";
 import type { MangaSummary } from "@/lib/manga/model";
@@ -80,7 +81,7 @@ export type SearchIntent =
 
 export function searchLiveTvChannels(
   query: string,
-  iptvPlaylists: Settings["iptvPlaylists"],
+  iptvPlaylists: StoredPlaylist[],
   limit = 8,
 ): LiveTvHit[] {
   const q = query.trim().toLowerCase();
@@ -139,7 +140,7 @@ async function jikanAnimeSearch(query: string, limit: number): Promise<AnimeHit[
         format: a.type ?? null,
         name,
         year: year ? String(year) : null,
-        poster: a.images?.jpg?.large_image_url ?? a.images?.jpg?.image_url ?? null,
+        poster: a.images?.jpg?.image_url ?? a.images?.jpg?.large_image_url ?? null,
         background: a.trailer?.images?.maximum_image_url ?? null,
         overview: a.synopsis ?? "",
         score: a.score ?? 0,
@@ -180,7 +181,7 @@ async function kitsuAnimeSearch(query: string, limit: number): Promise<AnimeHit[
         format: at.subtype ?? null,
         name: at.titles?.en?.trim() || at.canonicalTitle || "Untitled",
         year: at.startDate ? at.startDate.slice(0, 4) : null,
-        poster: at.posterImage?.large ?? at.posterImage?.medium ?? null,
+        poster: at.posterImage?.medium ?? at.posterImage?.large ?? null,
         background: at.coverImage?.large ?? null,
         overview: at.synopsis ?? "",
         score: at.averageRating ? Number(at.averageRating) / 10 : 0,
@@ -263,6 +264,7 @@ export async function searchAll(
   const data = await get<Page<MultiItem>>(key, "search/multi", {
     query: trimmed,
     include_adult: "false",
+    ...(loadStoredSettings().translateTitles ? {} : { language: "en-US" }),
   });
   if (!data) {
     return {
@@ -280,6 +282,27 @@ export async function searchAll(
       intent: detectIntent(trimmed),
       tmdbUnavailable: true,
     };
+  }
+  const metaBase = effectiveTmdbLanguage().split("-")[0]?.toLowerCase() ?? "";
+  let enNameById: Map<number, string> | null = null;
+  if (
+    loadStoredSettings().translateTitles &&
+    metaBase !== "" &&
+    metaBase !== "en" &&
+    metaBase !== "ja"
+  ) {
+    const en = await get<Page<MultiItem>>(key, "search/multi", {
+      query: trimmed,
+      include_adult: "false",
+      language: "en-US",
+    });
+    if (en?.results) {
+      enNameById = new Map();
+      for (const r of en.results) {
+        const n = (r as { title?: string; name?: string }).title ?? (r as { name?: string }).name;
+        if (typeof r.id === "number" && n) enNameById.set(r.id, n);
+      }
+    }
   }
   const exclude = new Set(opts.excludeGenres ?? []);
   const hasExcludedGenre = (gs?: number[]) => (gs ?? []).some((id) => exclude.has(id));
@@ -300,14 +323,14 @@ export async function searchAll(
 
   for (const r of results) {
     if (r.media_type === "movie" && r.poster_path) {
-      movies.push(movieMeta(r));
+      movies.push(movieMeta(r, enNameById?.get(r.id)));
       const pop = r.popularity ?? 0;
       if (pop > topPop) {
         topRaw = r;
         topPop = pop;
       }
     } else if (r.media_type === "tv" && r.poster_path) {
-      series.push(seriesMeta(r));
+      series.push(seriesMeta(r, enNameById?.get(r.id)));
       const pop = r.popularity ?? 0;
       if (pop > topPop) {
         topRaw = r;
@@ -344,7 +367,9 @@ export async function searchAll(
     const isMovie = winner.media_type === "movie";
     topMatch = {
       kind: isMovie ? "movie" : "series",
-      meta: isMovie ? movieMeta(winner as RawMovie) : seriesMeta(winner as RawSeries),
+      meta: isMovie
+        ? movieMeta(winner as RawMovie, enNameById?.get(winner.id))
+        : seriesMeta(winner as RawSeries, enNameById?.get(winner.id)),
       popularity: winner.popularity ?? 0,
       backdrop: winner.backdrop_path ? `https://image.tmdb.org/t/p/w1280${winner.backdrop_path}` : undefined,
       overview: winner.overview,
@@ -374,7 +399,7 @@ function levenshtein(a: string, b: string): number {
   if (m === 0) return n;
   if (n === 0) return m;
   let prev = Array.from({ length: n + 1 }, (_, i) => i);
-  let cur = new Array<number>(n + 1);
+  let cur = Array.from({ length: n + 1 }, () => 0);
   for (let i = 1; i <= m; i++) {
     cur[0] = i;
     for (let j = 1; j <= n; j++) {

@@ -1,16 +1,9 @@
+import { NavGlyph } from "@/components/icons/nav-glyph";
+import { UiIcon } from "@/components/ui-icon";
+import { PopIcon } from "@/components/pop-icon";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { CoverImg } from "@/components/cover-img";
-import {
-  ArrowDownToLine,
-  Award,
-  BookOpen,
-  ChevronLeft,
-  Flame,
-  Heart,
-  RotateCcw,
-  Sparkles,
-  Star,
-} from "lucide-react";
+import { Award, BookOpen, ChevronLeft, Flame, RotateCcw, Sparkles, Star } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 const COLLECTION_ICON: Record<string, LucideIcon> = {
@@ -39,8 +32,18 @@ import { ratingTarget } from "@/lib/ratings/types";
 import { coverageOf } from "./anime-coverage";
 import { badgeArtFor, CollectionBadges } from "./collection-badge";
 import { MangaAdaptationCard, MangaRecommendedRail } from "./manga-extras";
-import { enrichManga, MangaUpdatesRank, MangaUpdatesSection, useMangaUpdates } from "./mangaupdates-info";
+import {
+  enrichManga,
+  MangaUpdatesRank,
+  MangaUpdatesSection,
+  useMangaUpdates,
+} from "./mangaupdates-info";
 import { TopMangaModal } from "./top-manga-modal";
+import { decodeMangaId } from "@/lib/manga/sources/suwayomi/model";
+import { suwayomiBaseForSource } from "@/lib/manga/sources/suwayomi/auth-registry";
+import { cachedSuwayomiSources } from "./manga-browse/langs";
+import { sourceDisplayName } from "./manga-browse/all-extensions";
+import { pushActivityHint } from "@/lib/discord/activity-hint";
 
 const GRADIENT_SIDE =
   "bg-gradient-to-r from-[var(--color-canvas)] from-0% via-[color-mix(in_oklch,var(--color-canvas),transparent_45%)] via-55% to-[color-mix(in_oklch,var(--color-canvas),transparent_88%)] to-100%";
@@ -87,8 +90,8 @@ function MangaDetailSkeleton({ onBack }: { onBack: () => void }) {
                 ))}
               </div>
               <div className="flex gap-3">
-                <div className="h-12 w-40 animate-pulse rounded-xl bg-raised" />
-                <div className="h-12 w-48 animate-pulse rounded-xl bg-raised" />
+                <div className="h-12 w-40 animate-pulse rounded-full bg-raised" />
+                <div className="h-12 w-48 animate-pulse rounded-full bg-raised" />
               </div>
             </div>
           </div>
@@ -186,10 +189,30 @@ export function MangaDetail({
   const [backdrop, setBackdrop] = useState<string | null>(null);
   const [expanded, setExpanded] = useState(false);
   const [topMangaOpen, setTopMangaOpen] = useState(false);
+  const [extInfo, setExtInfo] = useState<{ name: string; icon?: string } | null>(null);
 
   const favorites = useMangaFavorites();
   const isFavorite = useIsMangaFavorite(mangaId);
   const progress = useMangaProgressEntry(mangaId, detail?.title);
+
+  useEffect(() => {
+    let alive = true;
+    setExtInfo(null);
+    const parsed = decodeMangaId(mangaId);
+    if (!parsed) return;
+    const base = suwayomiBaseForSource(parsed.sourceId);
+    if (!base) return;
+    cachedSuwayomiSources({ baseUrl: base })
+      .then((list) => {
+        if (!alive) return;
+        const source = list.find((s) => s.id === parsed.sourceId);
+        if (source) setExtInfo({ name: sourceDisplayName(source), icon: source.iconUrl });
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [mangaId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -240,6 +263,16 @@ export function MangaDetail({
     };
   }, [detail?.title]);
 
+  useEffect(() => {
+    if (!detail?.title) return;
+    return pushActivityHint({
+      details: `Browsing ${detail.title}`,
+      state: "Manga",
+      largeImage: detail.cover,
+      largeText: detail.title,
+    });
+  }, [detail?.title, detail?.cover]);
+
   const langs = useMemo(() => chapterLanguages(chapters), [chapters]);
   const langFiltered = useMemo(
     () => chapters.filter((c) => c.language === selectedLang),
@@ -253,7 +286,8 @@ export function MangaDetail({
 
   const retry = () => setRetryTick((n) => n + 1);
   const noContent = !detail && chapters.length === 0;
-  if (noContent && (detailPending || chaptersPending)) return <MangaDetailSkeleton onBack={onBack} />;
+  if (noContent && (detailPending || chaptersPending))
+    return <MangaDetailSkeleton onBack={onBack} />;
   if (noContent) return <MangaDetailError onBack={onBack} onRetry={retry} />;
 
   const enriched = enrichManga(detail, muInfo);
@@ -329,13 +363,35 @@ export function MangaDetail({
                 >
                   {detail?.title ?? t("Untitled")}
                 </h1>
-                {detail?.altTitle && <p className="text-[16px] text-ink-muted">{detail.altTitle}</p>}
+                {detail?.altTitle && (
+                  <p className="text-[16px] text-ink-muted">{detail.altTitle}</p>
+                )}
                 {muInfo && enriched.author && (
-                  <p className="text-[14px] text-ink-muted">{t("by {author}", { author: enriched.author })}</p>
+                  <p className="text-[14px] text-ink-muted">
+                    {t("by {author}", { author: enriched.author })}
+                  </p>
                 )}
               </div>
 
               <div className="flex flex-wrap items-center gap-2">
+                {extInfo && (
+                  <span
+                    title={t("Source extension")}
+                    className="inline-flex items-center gap-1.5 rounded-full bg-elevated/60 px-3 py-1 text-[13px] font-medium text-ink ring-1 ring-edge-soft backdrop-blur-sm"
+                  >
+                    {extInfo.icon && (
+                      <img
+                        src={extInfo.icon}
+                        alt=""
+                        className="h-3.5 w-3.5 rounded-[3px] object-contain"
+                        onError={(e) => {
+                          e.currentTarget.style.display = "none";
+                        }}
+                      />
+                    )}
+                    {extInfo.name}
+                  </span>
+                )}
                 {pills.map((p) => (
                   <span
                     key={p}
@@ -359,7 +415,7 @@ export function MangaDetail({
                         className="inline-flex items-center gap-1.5 rounded-full bg-elevated/60 py-1 pl-2 pr-2.5 text-[12px] font-medium text-accent ring-1 ring-edge-soft backdrop-blur-sm"
                       >
                         <Icon size={12.5} strokeWidth={2.4} />
-                        {c.badge}
+                        {t(c.badge)}
                       </span>
                     );
                   })}
@@ -370,8 +426,10 @@ export function MangaDetail({
                 <button
                   type="button"
                   disabled={!canRead}
-                  onClick={() => canRead && onRead(langFiltered, langFiltered.length - 1, mangaMeta)}
-                  className="inline-flex h-12 items-center gap-2 rounded-xl bg-accent px-6 text-[15px] font-bold text-canvas transition-transform hover:scale-[1.02] active:scale-[0.97] disabled:pointer-events-none disabled:opacity-50"
+                  onClick={() =>
+                    canRead && onRead(langFiltered, langFiltered.length - 1, mangaMeta)
+                  }
+                  className="inline-flex h-12 items-center gap-2.5 rounded-full bg-ink px-7 text-[15px] font-semibold text-canvas transition-transform duration-200 hover:scale-[1.03] active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50"
                 >
                   <BookOpen size={19} />
                   {t("Read latest")}
@@ -380,7 +438,7 @@ export function MangaDetail({
                   <button
                     type="button"
                     onClick={() => onResume(progress)}
-                    className="inline-flex h-12 items-center gap-2 rounded-xl border border-edge bg-elevated/40 px-5 text-[15px] font-semibold text-ink backdrop-blur-sm transition-colors hover:bg-elevated"
+                    className="inline-flex h-12 items-center gap-2 rounded-full bg-white/[0.06] px-6 text-[15px] font-semibold text-ink ring-1 ring-inset ring-edge-soft transition-colors duration-150 hover:bg-white/[0.10] active:scale-[0.98]"
                   >
                     <RotateCcw size={17} strokeWidth={2.2} />
                     {resumeLabel}
@@ -390,7 +448,7 @@ export function MangaDetail({
                     type="button"
                     disabled={!canRead}
                     onClick={() => canRead && onRead(langFiltered, 0, mangaMeta)}
-                    className="inline-flex h-12 items-center rounded-xl border border-edge bg-elevated/40 px-5 text-[15px] font-semibold text-ink backdrop-blur-sm transition-colors hover:bg-elevated disabled:pointer-events-none disabled:opacity-50"
+                    className="inline-flex h-12 items-center rounded-full bg-white/[0.06] px-6 text-[15px] font-semibold text-ink ring-1 ring-inset ring-edge-soft transition-colors duration-150 hover:bg-white/[0.10] active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50"
                   >
                     {t("Start from beginning")}
                   </button>
@@ -403,17 +461,25 @@ export function MangaDetail({
                     detail &&
                     favorites.toggle({ id: mangaId, title: detail.title, cover: detail.cover })
                   }
-                  className={`flex h-12 w-12 items-center justify-center rounded-xl border backdrop-blur-sm transition-colors ${
+                  className={`group flex h-12 w-12 shrink-0 items-center justify-center rounded-full transition-[transform,background-color] duration-200 active:scale-[0.94] ${
                     isFavorite
-                      ? "border-rose-400/40 bg-rose-500/15 text-rose-300"
-                      : "border-edge bg-elevated/40 text-ink-muted hover:bg-elevated hover:text-ink"
+                      ? "bg-accent/20 text-accent hover:bg-accent/22"
+                      : "bg-white/[0.06] text-ink hover:bg-white/[0.10]"
                   }`}
                 >
-                  <Heart size={22} fill={isFavorite ? "currentColor" : "none"} />
+                  <PopIcon
+                    active={isFavorite}
+                    activeIcon={<UiIcon name="unfavorite" className="h-5 w-5" />}
+                    inactiveIcon={<UiIcon name="favorite" className="h-5 w-5" />}
+                  />
                 </button>
                 {detail && (
                   <RateButton
-                    target={ratingTarget({ id: mangaId, name: detail.title, poster: detail.cover }, "manga")}
+                    tone="lift"
+                    target={ratingTarget(
+                      { id: mangaId, name: detail.title, poster: detail.cover },
+                      "manga",
+                    )}
                   />
                 )}
                 <MangaAddToListButton
@@ -427,9 +493,9 @@ export function MangaDetail({
                     aria-label={t("Downloads")}
                     title={t("Downloads")}
                     onClick={onOpenDownloads}
-                    className="flex h-12 w-12 items-center justify-center rounded-xl border border-edge bg-elevated/40 text-ink-muted backdrop-blur-sm transition-colors hover:bg-elevated hover:text-ink"
+                    className="group flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-white/[0.06] text-ink transition-[transform,background-color] duration-200 hover:bg-white/[0.10] active:scale-[0.94]"
                   >
-                    <ArrowDownToLine size={21} strokeWidth={2} />
+                    <NavGlyph name="download" className="h-5 w-5" />
                   </button>
                 )}
               </div>

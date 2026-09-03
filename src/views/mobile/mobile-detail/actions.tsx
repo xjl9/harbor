@@ -1,13 +1,15 @@
 import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
-import { Bookmark, Check, Download, Eye, Film, Monitor, MonitorPlay, MoreHorizontal, Play } from "lucide-react";
+import { Bookmark, Check, Download, Eye, Film, Monitor, MonitorPlay, MoreHorizontal } from "lucide-react";
+import { Play } from "@/components/icons/play-filled";
 import type { Meta } from "@/lib/cinemeta";
 import { readResumeMs } from "@/lib/resume";
 import type { TmdbDetail } from "@/lib/providers/tmdb";
-import type { RemoteLibraryAction, RemoteTrackers } from "@/lib/remote/protocol";
+import type { RemoteLibraryAction } from "@/lib/remote/protocol";
 import { resolveTrailerId } from "@/lib/trailer";
 import { isMobileNative, isRemoteRoute } from "@/lib/platform";
 import { useSettings } from "@/lib/settings";
+import { useT } from "@/lib/i18n";
 import { useView } from "@/lib/view";
 import { useDownloads } from "@/lib/download/downloads-store";
 import { useMobileRemote } from "../mobile-remote";
@@ -30,6 +32,7 @@ export function DetailActions({
   trailerId: string | null;
   onPlay: () => void;
 }) {
+  const t = useT();
   const { settings } = useSettings();
   const [sheetOpen, setSheetOpen] = useState(false);
   const [trailerOpen, setTrailerOpen] = useState(false);
@@ -66,12 +69,12 @@ export function DetailActions({
           className="flex h-12 flex-1 items-center justify-center gap-2 rounded-full bg-ink text-[15.5px] font-semibold text-canvas shadow-[0_10px_30px_-12px_rgba(0,0,0,0.5)]"
         >
           <Play size={18} strokeWidth={0} fill="currentColor" />
-          {resuming ? "Resume" : "Play"}
+          {resuming ? t("Resume") : t("Play")}
         </button>
         <button
           type="button"
           onClick={() => setSheetOpen(true)}
-          aria-label="More actions"
+          aria-label={t("More actions")}
           className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-edge-soft bg-surface text-ink"
         >
           <MoreHorizontal size={20} strokeWidth={2} />
@@ -97,20 +100,6 @@ export function DetailActions({
   );
 }
 
-function joinAnd(items: string[]): string {
-  if (items.length <= 1) return items[0] ?? "";
-  if (items.length === 2) return `${items[0]} and ${items[1]}`;
-  return `${items.slice(0, -1).join(", ")}, and ${items[items.length - 1]}`;
-}
-
-function syncHint(trackers: RemoteTrackers | undefined): string | undefined {
-  if (!trackers) return undefined;
-  const names: string[] = [];
-  if (trackers.trakt) names.push("Trakt");
-  if (trackers.simkl) names.push("Simkl");
-  return names.length ? `Syncs to your ${joinAnd(names)}` : undefined;
-}
-
 function ActionsSheet({
   meta,
   detail,
@@ -126,6 +115,7 @@ function ActionsSheet({
   onPlayTrailer: () => void;
   onClose: () => void;
 }) {
+  const t = useT();
   const reduced = useReducedMotion();
   const { leaving, close } = useSheetExit(onClose);
   const { sendToHost, castPlay, sendCommand, connected, snapshot } = useMobileRemote();
@@ -173,7 +163,15 @@ function ActionsSheet({
     send,
   });
 
-  const sync = online ? syncHint(trackers) : undefined;
+  const syncServices = [trackers?.trakt ? "Trakt" : null, trackers?.simkl ? "Simkl" : null].filter(
+    (name): name is string => name !== null,
+  );
+  const syncList =
+    syncServices.length === 2
+      ? t("{first} and {second}", { first: syncServices[0], second: syncServices[1] })
+      : syncServices[0];
+  const sync =
+    online && syncList ? t("Syncs to your {services}", { services: syncList }) : undefined;
 
   const dlStatus = movieDownload?.status;
   const dlActive = dlStatus === "downloading" || dlStatus === "paused";
@@ -208,7 +206,7 @@ function ActionsSheet({
     <div className="fixed inset-0 z-[70] flex flex-col justify-end" role="dialog" aria-modal="true">
       <button
         type="button"
-        aria-label="Close"
+        aria-label={t("Close")}
         onClick={close}
         className={`absolute inset-0 bg-black/50 ${
           reduced ? "" : leaving ? "md-sheet-fade-out" : "md-sheet-fade"
@@ -235,7 +233,7 @@ function ActionsSheet({
           {trailerId && (
             <SheetRow
               icon={<Film size={20} strokeWidth={2} />}
-              label="Play trailer"
+              label={t("Play trailer")}
               onClick={() => {
                 onPlayTrailer();
                 close();
@@ -269,8 +267,8 @@ function ActionsSheet({
               />
               <SheetRow
                 icon={<Monitor size={20} strokeWidth={2} />}
-                label="Open on computer"
-                sublabel="Send this title to your Harbor app"
+                label={t("Open on computer")}
+                sublabel={t("Send this title to your Harbor app")}
                 onClick={() => {
                   sendToHost(meta);
                   close();
@@ -280,46 +278,54 @@ function ActionsSheet({
           )}
         </div>
 
-        <Group label="Your library">
+        <Group label={t("Your library")}>
           <SheetRow
             icon={<HeartIcon filled={rows.favorite.on} />}
-            label="Favorites"
-            sublabel={rows.favorite.on ? "Saved to your favorites" : "Save to your favorites"}
+            label={t("Favorites")}
+            sublabel={rows.favorite.on ? t("Saved to your favorites") : t("Save to your favorites")}
             active={rows.favorite.on}
             disabled={rows.favorite.disabled}
             trailing={
-              rows.favorite.on ? <Check size={18} strokeWidth={2.6} className="text-accent" /> : undefined
+              rows.favorite.on ? (
+                <Check size={18} strokeWidth={2.6} className="text-accent" />
+              ) : undefined
             }
             onClick={rows.favorite.toggle}
           />
           <SheetRow
-            icon={<Bookmark size={20} strokeWidth={2} fill={rows.watchlist.on ? "currentColor" : "none"} />}
-            label="Watchlist"
-            sublabel={rows.watchlist.on ? "In your watchlist" : "Add to your watchlist"}
+            icon={
+              <Bookmark size={20} strokeWidth={2} fill={rows.watchlist.on ? "currentColor" : "none"} />
+            }
+            label={t("Watchlist")}
+            sublabel={rows.watchlist.on ? t("In your watchlist") : t("Add to your watchlist")}
             hint={sync}
             active={rows.watchlist.on}
             disabled={rows.watchlist.disabled}
             trailing={
-              rows.watchlist.on ? <Check size={18} strokeWidth={2.6} className="text-accent" /> : undefined
+              rows.watchlist.on ? (
+                <Check size={18} strokeWidth={2.6} className="text-accent" />
+              ) : undefined
             }
             onClick={rows.watchlist.toggle}
           />
           <SheetRow
             icon={<Eye size={20} strokeWidth={2} />}
-            label="Watched"
-            sublabel={rows.watched.on ? "Marked as watched" : "Mark as watched"}
+            label={t("Watched")}
+            sublabel={rows.watched.on ? t("Marked as watched") : t("Mark as watched")}
             hint={sync}
             active={rows.watched.on}
             disabled={rows.watched.disabled}
             trailing={
-              rows.watched.on ? <Check size={18} strokeWidth={2.6} className="text-accent" /> : undefined
+              rows.watched.on ? (
+                <Check size={18} strokeWidth={2.6} className="text-accent" />
+              ) : undefined
             }
             onClick={rows.watched.toggle}
           />
           {rows.needsComputer && (
             <div className="flex items-center justify-center gap-2 px-6 pb-1 pt-1.5 text-center text-[12px] leading-relaxed text-ink-subtle">
               <Monitor size={14} strokeWidth={2} className="shrink-0" />
-              <span>Connect to your computer to manage your library.</span>
+              <span>{t("Connect to your computer to manage your library.")}</span>
             </div>
           )}
         </Group>

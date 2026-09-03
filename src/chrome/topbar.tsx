@@ -1,4 +1,6 @@
-import { ArrowLeft, Search, Users } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
+import { Search } from "@/components/icons/search-icon";
+import { UiIcon } from "@/components/ui-icon";
 import { isDesktopTauri } from "@/lib/platform";
 import { useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
@@ -9,6 +11,7 @@ import { DownloadsButton } from "@/components/downloads-popover";
 import { BookmarksButton } from "@/components/bookmarks-popover";
 import { NotificationCenter } from "@/components/notification-center/notification-center";
 import { ThreeLiquidGlassSurface } from "@/components/ThreeLiquidGlassSurface";
+import { ProfileButton } from "@/chrome/profile-button";
 import { RecordingPill } from "@/chrome/recording-pill";
 import { SleepTimerButton } from "@/chrome/sleep-timer-button";
 import {
@@ -150,6 +153,7 @@ export function Topbar({ connecting = false }: { connecting?: boolean } = {}) {
           {!kid && <NotificationCenter />}
           {!kid && <BookmarksButton />}
           {!onLiveRoot && !kid && <TogetherButton />}
+          {!kid && <ProfileButton />}
           </div>
             {isDesktopChrome() && !settings.useNativeTitleBar && !settings.hybridTitleBar && (
             <div className="ms-1 flex shrink-0 items-center gap-2">
@@ -195,7 +199,7 @@ function CloseConfirmKids({ onConfirm, onCancel }: { onConfirm: () => void; onCa
         if (e.target === e.currentTarget) onCancel();
       }}
     >
-      <div className="relative w-full max-w-md overflow-hidden rounded-[28px] bg-gradient-to-b from-[#3aa6c4] via-[#1c789f] to-[#0c4a6e] p-8 text-center text-white shadow-[0_30px_80px_-20px_rgba(0,0,0,0.7)]">
+      <div className="relative w-full max-w-md overflow-hidden rounded-2xl bg-gradient-to-b from-[#3aa6c4] via-[#1c789f] to-[#0c4a6e] p-8 text-center text-white shadow-[0_30px_80px_-20px_rgba(0,0,0,0.7)]">
         <img
           src="/kids/doodles/lilbluewhale.png"
           alt=""
@@ -350,7 +354,7 @@ export function TogetherButton({
           </div>
         </>
       ) : (
-        <Users size={17} strokeWidth={1.9} />
+        <UiIcon name="watch-together" className="h-[17px] w-[17px]" />
       )}
     </button>
   );
@@ -420,7 +424,10 @@ function SearchPill() {
     >
       <Search size={16} strokeWidth={1.75} className="shrink-0 text-ink-subtle" />
       <span className="flex-1 truncate text-[14px] text-ink-subtle">{t("search.placeholder")}</span>
-      <kbd className="hidden shrink-0 rounded-md border border-white/[0.10] bg-transparent px-1.5 py-0.5 font-mono text-[10.5px] font-medium text-ink-subtle sm:inline">
+      <kbd
+        aria-hidden
+        className="hidden h-[22px] min-w-[22px] shrink-0 items-center justify-center rounded-md border border-edge-soft/70 bg-canvas/60 px-1.5 font-mono text-[11px] font-medium leading-none text-ink-subtle sm:inline-flex"
+      >
         {formatBindingForDisplay(binding)}
       </kbd>
     </button>

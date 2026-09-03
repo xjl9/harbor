@@ -45,8 +45,7 @@ const PROVIDER_KEYS: StreamingService[] = [
 type Dir = "up" | "right" | "down" | "left";
 
 const prefersReducedMotion = () =>
-  typeof window !== "undefined" &&
-  window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+  typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
 
 const SEGMENTS: Array<{ dir: Dir; clip: string; fill: string }> = [
   { dir: "up", clip: "polygon(50% 47%, -17% -20%, 117% -20%)", fill: "to top" },
@@ -109,9 +108,9 @@ const CHEVRONS: Array<{
 ];
 
 export function DpadRemote() {
+  const t = useT();
   const { sendCommand, snapshot, connected } = useMobileRemote();
   const { settings, update } = useSettings();
-  const t = useT();
   // Native standalone builds connect to a chosen Harbor host; the web remote is
   // served by the desktop, so its host is implied and it skips the connect flow.
   const native = isMobileNative();
@@ -165,6 +164,7 @@ export function DpadRemote() {
   useRegisterSheet(confirm !== null && !confirmLeaving);
 
   const holdDir = useRef<Dir | null>(null);
+  const didHold = useRef(false);
   const holdTimer = useRef<number | undefined>(undefined);
   const holdDelay = useRef(340);
   const releaseTimer = useRef<number | undefined>(undefined);
@@ -172,6 +172,7 @@ export function DpadRemote() {
   const tick = () => {
     const dir = holdDir.current;
     if (!dir) return;
+    didHold.current = true;
     nav(dir);
     setHolding(true);
     holdDelay.current = Math.max(85, holdDelay.current - 42);
@@ -180,7 +181,7 @@ export function DpadRemote() {
 
   const startPress = (dir: Dir) => {
     window.clearTimeout(releaseTimer.current);
-    nav(dir);
+    didHold.current = false;
     setPressed(dir);
     holdDir.current = dir;
     holdDelay.current = 340;
@@ -269,10 +270,21 @@ export function DpadRemote() {
               <button
                 key={dir}
                 type="button"
-                aria-label={dir}
-                onPointerDown={(e) => {
-                  e.preventDefault();
+                aria-label={t(
+                  dir === "up"
+                    ? "Up"
+                    : dir === "right"
+                      ? "Right"
+                      : dir === "down"
+                        ? "Down"
+                        : "Left",
+                )}
+                onPointerDown={() => {
                   startPress(dir);
+                }}
+                onClick={() => {
+                  if (!didHold.current) nav(dir);
+                  didHold.current = false;
                 }}
                 onPointerUp={endPress}
                 onPointerLeave={endPress}
@@ -338,12 +350,9 @@ export function DpadRemote() {
 
           <button
             type="button"
-            aria-label="Select"
-            onPointerDown={(e) => {
-              e.preventDefault();
-              setOkDown(true);
-              nav("select");
-            }}
+            aria-label={t("Select")}
+            onPointerDown={() => setOkDown(true)}
+            onClick={() => nav("select")}
             onPointerUp={() => setOkDown(false)}
             onPointerLeave={() => setOkDown(false)}
             onPointerCancel={() => setOkDown(false)}
@@ -355,21 +364,21 @@ export function DpadRemote() {
                 "0 -1px 1px rgba(0,0,0,0.5), 0 1px 0 rgba(255,255,255,0.07)",
             }}
           >
-            OK
+            {t("OK")}
           </button>
         </div>
       </div>
 
       <div className="flex w-full flex-col items-center gap-3 [@media(max-height:500px)]:w-auto [@media(max-height:500px)]:max-w-[360px]">
         <div className="flex w-full max-w-[352px] shrink-0 items-center justify-between px-2">
-          <Util label="Speed & sleep" onPress={() => setSpeedOpen(true)}>
+          <Util label={t("Speed & sleep")} onPress={() => setSpeedOpen(true)}>
             <RemoteIcon name="sleep_timer" size={24} />
           </Util>
-          <Util label="Keyboard" onPress={() => setKbOpen(true)}>
+          <Util label={t("Keyboard")} onPress={() => setKbOpen(true)}>
             <RemoteIcon name="keyboard" size={24} />
           </Util>
           <Util
-            label="Voice"
+            label={t("Voice")}
             accent
             onPress={() => {
               if (getSpeechRecognition()) setVoiceOpen(true);
@@ -378,10 +387,10 @@ export function DpadRemote() {
           >
             <RemoteIcon name="microphone" size={26} />
           </Util>
-          <Util label="Apps" onPress={() => setServices({ open: true })}>
+          <Util label={t("Apps")} onPress={() => setServices({ open: true })}>
             <RemoteIcon name="apps_grid" size={24} />
           </Util>
-          <Util label="More" onPress={() => {}}>
+          <Util label={t("More")} onPress={() => {}}>
             <RemoteIcon name="more" size={24} />
           </Util>
         </div>
@@ -395,13 +404,13 @@ export function DpadRemote() {
           <Pane>
             <div className="flex w-full justify-around">
               <Circle
-                label="Back"
+                label={t("Back")}
                 onPress={() => (watching ? setConfirm("back") : nav("back"))}
               >
                 <RemoteIcon name="back" size={26} />
               </Circle>
               <Circle
-                label="Home"
+                label={t("Home")}
                 onPress={() =>
                   watching
                     ? setConfirm("home")
@@ -411,7 +420,7 @@ export function DpadRemote() {
                 <RemoteIcon name="home" size={26} />
               </Circle>
               <Circle
-                label="Menu"
+                label={t("Menu")}
                 onPress={() => sendCommand({ action: "openSearch" })}
               >
                 <RemoteIcon name="menu" size={26} />
@@ -419,7 +428,7 @@ export function DpadRemote() {
             </div>
             <div className="flex w-full items-center justify-around">
               <Circle
-                label="Rewind"
+                label={t("Rewind")}
                 onPress={() =>
                   sendCommand({
                     action: "seek",
@@ -430,11 +439,9 @@ export function DpadRemote() {
                 <RemoteIcon name="previous" size={26} />
               </Circle>
               <Circle
-                label={playing ? "Pause" : "Play"}
+                label={playing ? t("Pause") : t("Play")}
                 big
-                onPress={() =>
-                  sendCommand({ action: playing ? "pause" : "play" })
-                }
+                onPress={() => sendCommand({ action: "togglePlayback" })}
               >
                 {playing ? (
                   <RemoteIcon name="pause" size={32} />
@@ -443,7 +450,7 @@ export function DpadRemote() {
                 )}
               </Circle>
               <Circle
-                label="Forward"
+                label={t("Forward")}
                 onPress={() =>
                   sendCommand({
                     action: "seek",
@@ -459,7 +466,7 @@ export function DpadRemote() {
           <Pane>
             <div className="flex w-full justify-around">
               <Circle
-                label="Volume down"
+                label={t("Volume down")}
                 onPress={() =>
                   sendCommand({
                     action: "setVolume",
@@ -470,7 +477,7 @@ export function DpadRemote() {
                 <VolumeX size={26} strokeWidth={2.2} />
               </Circle>
               <Circle
-                label="Mute"
+                label={t("Mute")}
                 onPress={() =>
                   sendCommand({ action: "setMuted", muted: !snapshot.muted })
                 }
@@ -482,7 +489,7 @@ export function DpadRemote() {
                 )}
               </Circle>
               <Circle
-                label="Volume up"
+                label={t("Volume up")}
                 onPress={() =>
                   sendCommand({
                     action: "setVolume",
@@ -495,7 +502,7 @@ export function DpadRemote() {
             </div>
             <div className="flex w-full justify-around">
               <Circle
-                label="Subtitles"
+                label={t("Subtitles")}
                 onPress={() => sendCommand({ action: "toggleSubtitles" })}
               >
                 <RemoteIcon name="captions" size={26} />
@@ -914,7 +921,7 @@ function HostRow({
   );
 }
 
-function ConfirmLeave({
+export function ConfirmLeave({
   snapshot,
   reduced,
   leaving,
@@ -927,6 +934,7 @@ function ConfirmLeave({
   onCancel: () => void;
   onConfirm: () => void;
 }) {
+  const t = useT();
   const remainingMin =
     snapshot.durationSec > 0
       ? Math.max(
@@ -936,8 +944,8 @@ function ConfirmLeave({
       : null;
   const ep = snapshot.episode;
   const meta = [
-    ep ? `S${ep.season} E${ep.episode}` : null,
-    remainingMin && remainingMin > 0 ? `${remainingMin} min left` : null,
+    ep ? t("S{season} E{episode}", { season: ep.season, episode: ep.episode }) : null,
+    remainingMin && remainingMin > 0 ? t("{count} min left", { count: remainingMin }) : null,
   ]
     .filter(Boolean)
     .join(" · ");
@@ -952,7 +960,7 @@ function ConfirmLeave({
     >
       <style>{SHEET_EXIT_CSS}</style>
       <div
-        className={`flex flex-col gap-5 rounded-t-[28px] border-t border-edge-soft/60 bg-elevated px-5 pt-4 ${
+        className={`flex flex-col gap-5 rounded-t-2xl border-t border-edge-soft/60 bg-elevated px-5 pt-4 ${
           reduced
             ? ""
             : leaving
@@ -971,7 +979,7 @@ function ConfirmLeave({
       >
         <div className="mx-auto h-1 w-10 shrink-0 rounded-full bg-ink/20" />
         <h3 className="shrink-0 text-center text-[18px] font-semibold tracking-tight text-ink">
-          {"Leave what you're watching?"}
+          {t("Leave what you're watching?")}
         </h3>
         {hasCard && (
           <div className="flex items-center gap-3 rounded-2xl bg-raised/40 p-2.5">
@@ -1004,7 +1012,7 @@ function ConfirmLeave({
               reduced ? "" : ""
             }`}
           >
-            Keep watching
+            {t("Keep watching")}
           </button>
           <button
             type="button"
@@ -1013,7 +1021,7 @@ function ConfirmLeave({
               reduced ? "" : ""
             }`}
           >
-            Leave
+            {t("Leave")}
           </button>
         </div>
       </div>

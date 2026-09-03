@@ -4,13 +4,30 @@ import { dlog } from "@/lib/debug";
 import type { SubResult, SubSearchQuery } from "../types";
 import { isPlausibleLang, normalizeLang } from "../language";
 import { withSubtitleTimeout } from "../autoload";
+import {
+  classifyProviderSubtitleMetadata,
+  type ProviderSubtitleFlags,
+} from "../provider-classification";
+import { isSafeProviderSubtitleUrl } from "../provider-url";
+import {
+  inferSubtitleUpstreamProvider,
+  subtitleContextTitle,
+  subtitleFpsFromMetadata,
+} from "../provider-label";
 
-type RawAddonSub = {
+type RawAddonSub = ProviderSubtitleFlags & {
   id?: string;
   url: string;
   lang: string;
   m?: string;
   SubFormat?: string;
+  fps?: number | string;
+  author?: string;
+  uploader?: string;
+  provider?: string;
+  source?: string;
+  name?: string;
+  addon?: string;
 };
 
 function transportBase(transportUrl: string): string {
@@ -75,7 +92,7 @@ function extraSegment(q: SubSearchQuery): string {
 }
 
 async function fetchAddonSubtitles(url: string, addonName: string): Promise<RawAddonSub[]> {
-  dlog(`[addons] Fetching from ${addonName}: ${url}`);
+  dlog(`[addons] Fetching subtitles from ${addonName}`);
   const res = await safeFetch(url, { headers: { Accept: "application/json" } });
   if (!res.ok) {
     dlog(`[addons] ${addonName} returned ${res.status}`);
@@ -119,8 +136,8 @@ async function callOne(
       remaining,
       [],
     );
-  } catch (e) {
-    dlog(`[addons] ${addon.manifest.name} error: ${e}`);
+  } catch {
+    dlog(`[addons] ${addon.manifest.name} request failed`);
     return [];
   }
 }
@@ -171,29 +188,42 @@ export async function searchAddons(
         [],
       );
       dlog(`[addons] ${addon.manifest.name}: ${result.length} subtitles`);
-      if (result.length > 0) dlog(`[addons] ${addon.manifest.name} raw sample`, result[0]);
       return result;
     }),
   );
 
   const out: SubResult[] = [];
+  const displayTitle = subtitleContextTitle(q);
   settled.forEach((subs, i) => {
     const addonName = targets[i].addon.manifest.name;
     for (let idx = 0; idx < subs.length; idx++) {
       const s = subs[idx];
-      if (!s.url || s.url === "about:blank" || !isPlausibleLang(s.lang)) continue;
+      if (!s.url || !isSafeProviderSubtitleUrl(s.url) || !isPlausibleLang(s.lang)) continue;
       // Include addon name and index to ensure unique IDs across different addons
       const uniqueId = s.id
         ? `${addonName.toLowerCase().replace(/[^a-z0-9]/g, "-")}-${s.id}`
         : `${addonName.toLowerCase().replace(/[^a-z0-9]/g, "-")}-${idx}`;
+      const classification = classifyProviderSubtitleMetadata(s, [s.m, s.name, s.id, s.url]);
       out.push({
         id: uniqueId,
         url: s.url,
         lang: normalizeLang(s.lang),
         title: addonName,
+        displayTitle,
         source: "addon",
         format: (s.SubFormat?.toLowerCase() as SubResult["format"]) || undefined,
         release: s.m || undefined,
+        fps: subtitleFpsFromMetadata(s.fps, s.m),
+        author: s.author?.trim() || s.uploader?.trim() || undefined,
+        ...classification,
+        upstreamProvider: inferSubtitleUpstreamProvider(
+          s.provider,
+          s.source,
+          s.name,
+          s.addon,
+          s.id,
+          s.url,
+        ),
       });
     }
   });

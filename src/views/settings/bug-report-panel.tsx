@@ -12,8 +12,9 @@ import {
 } from "@/lib/bug-report";
 import { useSettings } from "@/lib/settings";
 import { useT } from "@/lib/i18n";
-import { Section } from "./shared";
+import { Section, ToggleRow } from "./shared";
 import { ContributorCard } from "./bug-report/contributor-card";
+import { Field } from "./bug-report/field";
 import { DiagnosticsCard } from "./bug-report/diagnostics-card";
 import { FileDrop } from "./bug-report/file-drop";
 import { SeverityPicker } from "./bug-report/severity-picker";
@@ -129,7 +130,7 @@ export function BugReportPanel() {
             onChange={(e) => setSummary(e.target.value)}
             maxLength={240}
             placeholder={t("Player freezes after the second episode autoplays")}
-            className="h-12 rounded-xl border border-edge bg-canvas px-4 text-[14px] text-ink placeholder:text-ink-subtle outline-none focus:border-ink"
+            className="h-11 w-full min-w-0 rounded-md bg-canvas px-3.5 text-[13.5px] text-ink placeholder:text-ink-subtle outline-none"
           />
         </Field>
 
@@ -146,7 +147,7 @@ export function BugReportPanel() {
           />
         </Field>
 
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
           <Field label={t("What you expected")}>
             <TextArea
               value={expected}
@@ -184,7 +185,7 @@ export function BugReportPanel() {
         title={t("Credit (optional)")}
         subtitle={t("Bug reporters get listed in the release notes when their report leads to a shipped fix. Leave blank to stay anonymous.")}
       >
-        <div className="flex flex-col divide-y divide-edge overflow-hidden rounded-xl border border-edge bg-canvas focus-within:border-ink-subtle sm:flex-row sm:divide-y-0 sm:divide-x">
+        <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-3">
           <CreditField
             icon={<User size={14} strokeWidth={1.9} />}
             value={reporterName}
@@ -207,17 +208,11 @@ export function BugReportPanel() {
             maxLength={200}
           />
         </div>
-        <label className="mt-3 flex items-center gap-2.5 rounded-xl border border-edge-soft/60 bg-canvas/30 px-4 py-3">
-          <input
-            type="checkbox"
-            checked={consentCredit}
-            onChange={(e) => setConsentCredit(e.target.checked)}
-            className="h-4 w-4 accent-ink"
-          />
-          <span className="text-[12.5px] text-ink-muted">
-            {t("Credit me in the release notes if this report leads to a fix.")}
-          </span>
-        </label>
+        <ToggleRow
+          label={t("Credit me in the release notes if this report leads to a fix.")}
+          value={consentCredit}
+          onChange={setConsentCredit}
+        />
       </Section>
 
       <ContributorCard />
@@ -225,12 +220,12 @@ export function BugReportPanel() {
       <DiagnosticsCard diag={diag} />
 
       {error && (
-        <div className="rounded-xl border border-danger/30 bg-danger/10 px-4 py-3 text-[12.5px] text-danger">
+        <div className="rounded-md bg-danger/15 px-4 py-3 text-[12.5px] text-danger">
           {t("Could not send: {error}", { error })}
         </div>
       )}
 
-      <div className="sticky bottom-3 z-10 flex items-center justify-end gap-3 rounded-2xl border border-edge-soft bg-elevated/85 px-5 py-3 backdrop-blur">
+      <div className="sticky bottom-3 z-10 flex items-center justify-end gap-3 rounded-md bg-elevated px-5 py-3">
         <span className="me-auto text-[11.5px] text-ink-subtle">
           {canSubmit ? t("Ready to send") : summary.trim().length < 6 ? t("Summary needs at least 6 characters") : t("Preparing…")}
         </span>
@@ -238,7 +233,7 @@ export function BugReportPanel() {
           type="button"
           onClick={submit}
           disabled={!canSubmit}
-          className="h-11 rounded-xl bg-ink px-5 text-[13.5px] font-semibold text-canvas transition-opacity hover:opacity-90 disabled:opacity-40"
+          className="h-11 rounded-md bg-ink px-5 text-[13.5px] font-semibold text-canvas transition-opacity hover:opacity-90 disabled:opacity-40"
         >
           {submitting ? t("Sending…") : t("Submit bug report")}
         </button>
@@ -267,55 +262,35 @@ function ExportLogButton() {
 
   const pill =
     state === "exporting"
-      ? { dot: "bg-amber-400 animate-pulse", text: t("Exporting"), chip: "bg-amber-500/15 text-amber-300" }
+      ? { dot: "bg-accent animate-pulse", text: t("Exporting"), chip: "bg-accent-soft text-accent" }
       : state === "done"
-        ? { dot: "bg-emerald-400", text: t("Exported"), chip: "bg-emerald-500/15 text-emerald-400" }
+        ? { dot: "bg-success", text: t("Exported"), chip: "bg-success/15 text-success" }
         : state === "error"
           ? { dot: "bg-danger", text: t("Failed"), chip: "bg-danger/15 text-danger" }
           : null;
 
   return (
-    <div className="flex flex-col gap-2.5">
+    <div className="flex flex-col gap-2.5 rounded-md bg-elevated px-4 py-3.5">
       <div className="flex items-center gap-3">
         <button
           type="button"
           onClick={() => void run()}
           disabled={state === "exporting"}
-          className="h-11 w-fit rounded-xl border border-edge bg-canvas px-5 text-[13.5px] font-semibold text-ink transition-colors hover:border-ink-subtle disabled:opacity-50"
+          className="h-11 w-fit rounded-md bg-raised px-5 text-[13.5px] font-semibold text-ink transition-opacity hover:opacity-90 disabled:opacity-50"
         >
           {t("Export player log")}
         </button>
         {pill && (
           <span
-            className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider ${pill.chip}`}
+            className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11.5px] font-semibold uppercase tracking-wider ${pill.chip}`}
           >
             <span className={`h-1.5 w-1.5 rounded-full ${pill.dot}`} />
             {pill.text}
           </span>
         )}
       </div>
-      {detail && <p className="text-[12px] leading-relaxed text-ink-muted">{detail}</p>}
+      {detail && <p className="text-[12.5px] leading-relaxed text-ink-muted">{detail}</p>}
     </div>
-  );
-}
-
-function Field({
-  label,
-  required,
-  children,
-}: {
-  label: string;
-  required?: boolean;
-  children: React.ReactNode;
-}) {
-  return (
-    <label className="flex flex-col gap-1.5">
-      <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-subtle">
-        {label}
-        {required && <span className="ms-1 text-accent">*</span>}
-      </span>
-      {children}
-    </label>
   );
 }
 
@@ -333,7 +308,7 @@ function CreditField({
   maxLength?: number;
 }) {
   return (
-    <label className="flex h-11 flex-1 items-center gap-2 px-3.5 transition-colors hover:bg-elevated/40">
+    <label className="flex h-12 items-center gap-2 rounded-md bg-elevated px-4">
       <span className="flex h-5 w-5 shrink-0 items-center justify-center text-ink-subtle">
         {icon}
       </span>
@@ -368,7 +343,7 @@ function TextArea({
       onChange={(e) => onChange(e.target.value)}
       rows={rows}
       placeholder={placeholder}
-      className="resize-y rounded-xl border border-edge bg-canvas px-3.5 py-2.5 text-[13px] leading-relaxed text-ink placeholder:text-ink-subtle outline-none focus:border-ink"
+      className="w-full min-w-0 resize-y rounded-md bg-canvas px-3.5 py-2.5 text-[13px] leading-relaxed text-ink placeholder:text-ink-subtle outline-none"
     />
   );
 }

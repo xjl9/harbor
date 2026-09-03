@@ -2,6 +2,7 @@ import {
   Camera,
   ChevronLeft,
   Info,
+  Gauge,
   Maximize,
   Minimize,
   Pause,
@@ -10,13 +11,20 @@ import {
   Replace,
   SkipBack,
   SkipForward,
-  Tv,
 } from "lucide-react";
+import { NavGlyph } from "@/components/icons/nav-glyph";
 import { hdrFormatLabel, realQualityLabel } from "@/lib/player/resolution-label";
 import type { PlayerCapabilities, PlayerSnapshot } from "@/lib/player/bridge";
+import type { ReactNode } from "react";
 import type { SubtitleAddHandler } from "@/lib/player/subtitle-load";
 import type { Meta } from "@/lib/cinemeta";
-import { getCustomIcon, type CustomIconMap, type PlayerControlId, type TimeFormat, type VolumeStyle } from "@/lib/player-chrome";
+import {
+  getCustomIcon,
+  type CustomIconMap,
+  type PlayerControlId,
+  type TimeFormat,
+  type VolumeStyle,
+} from "@/lib/player-chrome";
 import type { DownloadStatus } from "@/views/player/hooks/use-video-download";
 import { useT } from "@/lib/i18n";
 import { SubtitleMenu } from "../subtitle-menu";
@@ -29,6 +37,7 @@ import { AspectMenu } from "./aspect-menu";
 import { Anime4kMenu } from "./anime4k-menu";
 import { ShaderMenu } from "./shader-menu";
 import { HdrToggleStremioBtn } from "./hdr-toggle-btn";
+import { QualityInfo } from "./quality-badge";
 import { RtxHdrToggleStremioBtn } from "./rtx-hdr-toggle-btn";
 import { RtxVsrToggleStremioBtn } from "./rtx-vsr-toggle-btn";
 import type { Anime4kChoice } from "@/views/player/hooks/use-anime4k";
@@ -44,8 +53,10 @@ import { FullscreenClock } from "@/components/player/fullscreen-clock";
 
 function qualityInfoOn(): boolean {
   try {
-    return (JSON.parse(localStorage.getItem("harbor.settings") ?? "{}") as { showQualityInfo?: boolean })
-      .showQualityInfo === true;
+    return (
+      (JSON.parse(localStorage.getItem("harbor.settings") ?? "{}") as { showQualityInfo?: boolean })
+        .showQualityInfo === true
+    );
   } catch {
     return false;
   }
@@ -127,6 +138,7 @@ export type StremioRenderCtx = {
   onDownloadReveal?: () => void;
   onDownloadReset?: () => void;
   onOpenDvr?: () => void;
+  homeServerQualityControl?: ReactNode;
 };
 
 function getStremioState(id: PlayerControlId, ctx: StremioRenderCtx): string | undefined {
@@ -142,7 +154,7 @@ function getStremioState(id: PlayerControlId, ctx: StremioRenderCtx): string | u
     case "dvr":
       return ctx.isLiveChannel ? "recording" : "idle";
     case "cast":
-      return ctx.capabilities.chromecast ? "connected" : "idle";
+      return "idle";
     case "pip":
       return "inactive";
     case "download":
@@ -191,24 +203,23 @@ export function RenderedStremioControl({
               <span className="flex min-w-0 items-center gap-2 truncate">
                 <h1 className="truncate text-[19px] font-medium leading-tight">{ctx.title}</h1>
                 {ctx.subtitle && (
-                  <span className="shrink-0 text-[13px] font-normal text-white/55">{ctx.subtitle}</span>
-                )}
-                {!showQuality && res && (
-                  <span className="shrink-0 rounded-md bg-white/15 px-1.5 py-0.5 text-[10.5px] font-bold uppercase tracking-wide text-white/80">
-                    {res}
+                  <span className="shrink-0 text-[13px] font-normal text-white/55">
+                    {ctx.subtitle}
                   </span>
                 )}
-                {!showQuality && hdr && (
-                  <span className="shrink-0 rounded-md bg-amber-400/20 px-1.5 py-0.5 text-[10.5px] font-bold uppercase tracking-wide text-amber-200">
-                    {hdr}
-                  </span>
-                )}
+                {!showQuality && <QualityInfo labels={[res, hdr]} show={ctx.active} />}
               </span>
               {showQuality && (
-                <span className="truncate text-[12px] font-normal tabular-nums text-white/55">{ctx.quality}</span>
+                <span className="truncate text-[12px] font-normal tabular-nums text-white/55">
+                  {ctx.quality}
+                </span>
               )}
             </span>
-            <Info size={13} strokeWidth={2.1} className="shrink-0 opacity-40 transition-opacity group-hover:opacity-90" />
+            <Info
+              size={13}
+              strokeWidth={2.1}
+              className="shrink-0 opacity-40 transition-opacity group-hover:opacity-90"
+            />
           </button>
         );
       }
@@ -241,13 +252,14 @@ export function RenderedStremioControl({
       );
     }
     case "local-time":
-      return ctx.fullscreen ? (
+      return (
         <FullscreenClock
           durationSec={ctx.snap.durationSec}
           playbackRate={ctx.snap.rate}
           active={ctx.active}
+          fullscreen={ctx.fullscreen}
         />
-      ) : null;
+      );
     case "play-pause":
       return (
         <Tooltip label={ctx.playing ? tr("Pause") : tr("Play")}>
@@ -264,7 +276,11 @@ export function RenderedStremioControl({
       if (!ctx.showEpisodeNav) return null;
       return (
         <Tooltip label={tr("Previous episode")}>
-          <StremioBtn onClick={ctx.onPrevEp} ariaLabel={tr("Previous episode")} disabled={!ctx.hasPrevEp}>
+          <StremioBtn
+            onClick={ctx.onPrevEp}
+            ariaLabel={tr("Previous episode")}
+            disabled={!ctx.hasPrevEp}
+          >
             <SkipBack size={26} strokeWidth={2} fill="currentColor" />
           </StremioBtn>
         </Tooltip>
@@ -273,7 +289,11 @@ export function RenderedStremioControl({
       if (!ctx.showEpisodeNav) return null;
       return (
         <Tooltip label={tr("Next episode")}>
-          <StremioBtn onClick={ctx.onNextEp} ariaLabel={tr("Next episode")} disabled={!ctx.hasNextEp}>
+          <StremioBtn
+            onClick={ctx.onNextEp}
+            ariaLabel={tr("Next episode")}
+            disabled={!ctx.hasNextEp}
+          >
             <SkipForward size={26} strokeWidth={2} fill="currentColor" />
           </StremioBtn>
         </Tooltip>
@@ -313,7 +333,11 @@ export function RenderedStremioControl({
             onClick={ctx.onPickAnother}
             ariaLabel={ctx.isLiveChannel ? tr("TV Guide") : tr("Switch stream")}
           >
-            {ctx.isLiveChannel ? <Tv size={26} strokeWidth={1.9} /> : <Replace size={26} strokeWidth={1.9} />}
+            {ctx.isLiveChannel ? (
+              <NavGlyph name="guide" className="h-[26px] w-[26px]" />
+            ) : (
+              <Replace size={26} strokeWidth={1.9} />
+            )}
           </StremioBtn>
         </Tooltip>
       );
@@ -322,7 +346,14 @@ export function RenderedStremioControl({
       return <DvrButton channelName={ctx.meta?.name ?? tr("Live")} onClick={ctx.onOpenDvr} />;
     case "download":
       if (ctx.isLiveChannel) return null;
-      if (!ctx.download || !ctx.onDownloadStart || !ctx.onDownloadCancel || !ctx.onDownloadReveal || !ctx.onDownloadReset) return null;
+      if (
+        !ctx.download ||
+        !ctx.onDownloadStart ||
+        !ctx.onDownloadCancel ||
+        !ctx.onDownloadReveal ||
+        !ctx.onDownloadReset
+      )
+        return null;
       return (
         <DownloadButton
           status={ctx.download}
@@ -385,6 +416,7 @@ export function RenderedStremioControl({
       if (ctx.isLiveChannel && ctx.snap.subtitleTracks.length === 0) return null;
       return (
         <SubtitleMenu
+          engine={ctx.engine}
           tracks={ctx.snap.subtitleTracks}
           selectedId={ctx.snap.subtitleTracks.find((t) => t.selected)?.id ?? null}
           delaySec={ctx.snap.subDelaySec}
@@ -414,6 +446,15 @@ export function RenderedStremioControl({
           onOpenChange={ctx.setAudioMenuOpen}
           useOverlayPopup={ctx.useOverlayPopups}
         />
+      );
+    case "home-server-quality":
+      return (
+        ctx.homeServerQualityControl ??
+        (ctx.editing ? (
+          <StremioBtn ariaLabel={tr("Home server quality")}>
+            <Gauge size={22} strokeWidth={1.9} />
+          </StremioBtn>
+        ) : null)
       );
     case "draw-toggle":
       if (!ctx.showDraw) return null;
@@ -450,7 +491,11 @@ export function RenderedStremioControl({
       return (
         <Tooltip label={ctx.fullscreen ? tr("Exit fullscreen") : tr("Fullscreen")} side="bottom">
           <StremioBtn onClick={ctx.onFullscreen} ariaLabel={tr("Fullscreen")}>
-            {ctx.fullscreen ? <Minimize size={28} strokeWidth={2} /> : <Maximize size={28} strokeWidth={2} />}
+            {ctx.fullscreen ? (
+              <Minimize size={28} strokeWidth={2} />
+            ) : (
+              <Maximize size={28} strokeWidth={2} />
+            )}
           </StremioBtn>
         </Tooltip>
       );

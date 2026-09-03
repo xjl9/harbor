@@ -17,20 +17,12 @@ let version = 0;
     const prev = dismissed.get(k);
     if (prev == null || ms > prev) dismissed.set(k, ms);
   };
-  try {
-    const raw = JSON.parse(localStorage.getItem(SIMKL_KEY) ?? "[]");
-    const arr = Array.isArray(raw) ? (raw as string[]) : [];
-    const migrated = arr.map((v) => (v.startsWith("simkl|") ? v : `simkl|${v}`));
-    if (migrated.some((v, i) => v !== arr[i])) {
-      localStorage.setItem(SIMKL_KEY, JSON.stringify(migrated));
-    }
-    for (const v of migrated) add(v, loadNow);
-  } catch {}
+  let legacy = false;
   try {
     const raw = JSON.parse(localStorage.getItem(DISMISS_KEY) ?? "null");
     if (Array.isArray(raw)) {
       for (const v of raw) if (typeof v === "string") add(v, loadNow);
-      persistDismissed();
+      legacy = true;
     } else if (raw && typeof raw === "object") {
       for (const [k, v] of Object.entries(raw)) {
         if (typeof v === "number") {
@@ -46,6 +38,20 @@ let version = 0;
       }
     }
   } catch {}
+  try {
+    const raw = JSON.parse(localStorage.getItem(SIMKL_KEY) ?? "[]");
+    const arr = Array.isArray(raw) ? (raw as string[]) : [];
+    for (const v of arr) {
+      if (typeof v !== "string" || !v) continue;
+      const key = v.startsWith("simkl|") ? v : `simkl|${v}`;
+      if (!dismissed.has(key)) add(key, loadNow);
+    }
+    if (arr.length > 0) {
+      localStorage.removeItem(SIMKL_KEY);
+      legacy = true;
+    }
+  } catch {}
+  if (legacy) persistDismissed();
 })();
 
 function persistDismissed(): void {
@@ -86,12 +92,15 @@ function itemActivity(item: LibraryItem): number {
 
 export function isCwDismissed(item: LibraryItem): boolean {
   const plain = dismissed.get(item._id);
-  const simkl = item.external === "simkl" ? dismissed.get(`simkl|${item._id}`) : undefined;
-  const dismissedAt = Math.max(plain ?? -1, simkl ?? -1);
+  const ext = item.external ? dismissed.get(`${item.external}|${item._id}`) : undefined;
+  const dismissedAt = Math.max(plain ?? -1, ext ?? -1);
   if (dismissedAt < 0) return false;
   const vid = dismissedVid.get(item._id);
-  if (vid && item.state?.video_id === vid) return true;
-  return itemActivity(item) <= dismissedAt;
+  const curVid = item.state?.video_id;
+  if (vid && typeof curVid === "string" && curVid) return vid === curVid;
+  const activity = itemActivity(item);
+  if (activity > 0) return activity <= dismissedAt;
+  return true;
 }
 
 export function dismissCw(item: LibraryItem, authKey: string | null): void {
@@ -102,14 +111,8 @@ export function dismissCw(item: LibraryItem, authKey: string | null): void {
   const dismissVid = item.state?.video_id;
   if (typeof dismissVid === "string" && dismissVid) dismissedVid.set(id, dismissVid);
   else dismissedVid.delete(id);
-  if (item.external === "simkl") {
-    dismissed.set(`simkl|${id}`, nowMs);
-    try {
-      const raw = JSON.parse(localStorage.getItem(SIMKL_KEY) ?? "[]");
-      const set = new Set(Array.isArray(raw) ? (raw as string[]) : []);
-      set.add(`simkl|${id}`);
-      localStorage.setItem(SIMKL_KEY, JSON.stringify([...set]));
-    } catch {}
+  if (item.external) {
+    dismissed.set(`${item.external}|${id}`, nowMs);
     persistDismissed();
     emit();
     return;

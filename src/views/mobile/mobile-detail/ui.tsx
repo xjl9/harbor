@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Star } from "lucide-react";
 import { ImdbIcon } from "@/components/icons/imdb-icon";
+import { useT } from "@/lib/i18n";
 
 export function SectionTitle({ children }: { children: React.ReactNode }) {
   return (
@@ -36,6 +37,7 @@ export function Line({ className = "" }: { className?: string }) {
 }
 
 export function Overview({ text }: { text: string }) {
+  const t = useT();
   const [open, setOpen] = useState(false);
   return (
     <div className="flex flex-col items-start gap-1.5">
@@ -48,7 +50,7 @@ export function Overview({ text }: { text: string }) {
           onClick={() => setOpen((v) => !v)}
           className="text-[13px] font-semibold text-accent transition-opacity active:opacity-70 motion-reduce:transition-none"
         >
-          {open ? "Less" : "More"}
+          {open ? t("Less") : t("More")}
         </button>
       )}
     </div>

@@ -1,5 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
-import { ArrowDown, ArrowUp, Bookmark, Clock, Link2, Star } from "lucide-react";
+import {
+  ArrowDown,
+  ArrowUp,
+  Bookmark,
+  Clock,
+  FolderOpen,
+  Link2,
+  Server,
+  Star,
+} from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { Meta } from "@/lib/cinemeta";
 import {
@@ -32,7 +41,7 @@ import { useMobileRemote } from "./mobile-remote";
 import { MobileDetail } from "./mobile-detail";
 import { TILE_CULL } from "./tile-cull";
 
-type SectionId = "watchlist" | "history" | "favorites";
+type SectionId = "watchlist" | "history" | "favorites" | "local" | "mediaServers";
 type Entry = { meta: Meta; date: number };
 type SectionState = { entries: Entry[]; loading: boolean };
 
@@ -40,6 +49,8 @@ const SECTIONS: Array<{ id: SectionId; label: string; icon: LucideIcon }> = [
   { id: "watchlist", label: "Watchlist", icon: Bookmark },
   { id: "history", label: "History", icon: Clock },
   { id: "favorites", label: "Favorites", icon: Star },
+  { id: "local", label: "Local Library", icon: FolderOpen },
+  { id: "mediaServers", label: "Media Servers", icon: Server },
 ];
 
 const EMPTY: Record<SectionId, { icon: LucideIcon; title: string; body: string }> = {
@@ -57,6 +68,16 @@ const EMPTY: Record<SectionId, { icon: LucideIcon; title: string; body: string }
     icon: Star,
     title: "No favorites yet",
     body: "Tap the star on any movie or show to keep it close.",
+  },
+  local: {
+    icon: FolderOpen,
+    title: "Your local library is empty",
+    body: "Scan local folders in Harbor and your movies and shows will appear here.",
+  },
+  mediaServers: {
+    icon: Server,
+    title: "No media-server titles",
+    body: "Enable and sync Plex, Jellyfin, or Emby in Harbor to browse them here.",
   },
 };
 
@@ -82,7 +103,14 @@ const VIEW_SWAP_CSS = `
 function readSavedTab(): SectionId {
   try {
     const v = localStorage.getItem(TAB_KEY);
-    if (v === "watchlist" || v === "history" || v === "favorites") return v;
+    if (
+      v === "watchlist" ||
+      v === "history" ||
+      v === "favorites" ||
+      v === "local" ||
+      v === "mediaServers"
+    )
+      return v;
   } catch {}
   return "watchlist";
 }
@@ -153,7 +181,7 @@ function Header() {
 function TabStrip({ tab, onTab }: { tab: SectionId; onTab: (t: SectionId) => void }) {
   const t = useT();
   return (
-    <div className="flex items-center gap-1.5">
+    <div className="flex items-center gap-1.5 overflow-x-auto pb-1 [scrollbar-width:none]">
       {SECTIONS.map((s) => {
         const on = s.id === tab;
         const Icon = s.icon;
@@ -163,7 +191,7 @@ function TabStrip({ tab, onTab }: { tab: SectionId; onTab: (t: SectionId) => voi
             type="button"
             onClick={() => onTab(s.id)}
             aria-current={on ? "page" : undefined}
-            className={`flex flex-1 items-center justify-center gap-1.5 rounded-full py-2.5 text-[13.5px] font-semibold transition-colors duration-200 active:scale-[0.97] motion-reduce:transition-none ${
+            className={`flex shrink-0 items-center justify-center gap-1.5 rounded-full px-4 py-2.5 text-[13.5px] font-semibold transition-colors duration-200 active:scale-[0.97] motion-reduce:transition-none ${
               on ? "bg-ink text-canvas" : "bg-surface text-ink-muted ring-1 ring-edge-soft"
             }`}
           >
@@ -247,6 +275,7 @@ function Section({
 }
 
 function GridTile({ meta, onOpenDetail }: { meta: Meta; onOpenDetail: (m: Meta) => void }) {
+  const t = useT();
   const { settings } = useSettings();
   const { src, onError } = usePosterChain(
     settings.rpdbKey,
@@ -258,9 +287,17 @@ function GridTile({ meta, onOpenDetail }: { meta: Meta; onOpenDetail: (m: Meta) 
     <button
       type="button"
       onClick={() => onOpenDetail(meta)}
+      aria-label={t("View {title}", { title: meta.name })}
       className={`text-start ${TILE_CULL}`}
     >
-      <Poster src={src} onError={onError} seed={meta.id} ratio="portrait" lazy className="rounded-[12px]" />
+      <Poster
+        src={src}
+        onError={onError}
+        seed={meta.id}
+        ratio="portrait"
+        lazy
+        className="rounded-[12px]"
+      />
       {meta.name && (
         <p className="mt-1.5 line-clamp-2 text-[12px] font-medium leading-snug text-ink-muted">
           {meta.name}
@@ -549,6 +586,13 @@ function useLibraryData(): { data: Record<SectionId, SectionState>; connected: b
         watchlist: { entries: watchlist, loading: baseLoading },
         history: { entries: history, loading: baseLoading },
         favorites: { entries: favorites, loading: remotePending },
+        // Both only exist on the connected desktop, so they track the remote
+        // payload rather than the merged local/cloud sources above.
+        local: { entries: remoteToEntries(remoteLib?.local), loading: remotePending },
+        mediaServers: {
+          entries: remoteToEntries(remoteLib?.mediaServers),
+          loading: remotePending,
+        },
       },
     };
   }, [

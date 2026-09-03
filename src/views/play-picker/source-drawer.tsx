@@ -1,12 +1,13 @@
-import { ChevronDown, Download, ExternalLink, Loader2, Play, Zap } from "lucide-react";
+import { ChevronDown, Download, ExternalLink, Loader2, Zap } from "lucide-react";
+import { Play } from "@/components/icons/play-filled";
 import { useEffect, useMemo, useState } from "react";
 import { AddonLogo, AddonLogoStack } from "@/components/addon-logo";
 import { CopyLinkButton, resolveStreamLink } from "@/components/player/copy-link-button";
 import { FlagStack } from "@/components/flag";
 import { FormatBadge, RuleBadges } from "@/components/format-badge";
 import { HostMatchChip } from "@/components/host-match-chip";
-import { useDebridClients } from "@/lib/debrid/registry";
 import { useT } from "@/lib/i18n";
+import { useDebridClients } from "@/lib/debrid/registry";
 import { useSettings } from "@/lib/settings";
 import type { ScoredStream } from "@/lib/streams/types";
 import type { PlayEpisode } from "@/lib/view";
@@ -15,7 +16,6 @@ import {
   addonInstanceKey,
   anyStreamCached,
   buildAddonOptions,
-  contributorLabel,
   displayTitle,
   isPhoneShell,
   PHONE_FOCUS,
@@ -40,6 +40,7 @@ export function SourceDrawer({
   showName,
   episode,
   failedStreams,
+  absoluteEpisode,
 }: {
   open: boolean;
   onToggle: () => void;
@@ -55,22 +56,26 @@ export function SourceDrawer({
   showName: string;
   episode?: PlayEpisode;
   failedStreams?: Set<ScoredStream>;
+  absoluteEpisode?: number | null;
 }) {
   const t = useT();
   const phone = isPhoneShell();
   const [addonFilter, setAddonFilter] = useState("all");
   const addonOptions = useMemo(() => buildAddonOptions(streams), [streams]);
   const shown = useMemo(
-    () => (addonFilter === "all" ? streams : streams.filter((s) => addonInstanceKey(s) === addonFilter)),
+    () =>
+      addonFilter === "all" ? streams : streams.filter((s) => addonInstanceKey(s) === addonFilter),
     [streams, addonFilter],
   );
   useEffect(() => {
-    if (addonFilter !== "all" && !addonOptions.some((o) => o.id === addonFilter)) setAddonFilter("all");
+    if (addonFilter !== "all" && !addonOptions.some((o) => o.id === addonFilter))
+      setAddonFilter("all");
   }, [addonOptions, addonFilter]);
   return (
     <div className="flex flex-col gap-4">
       <button
         onClick={onToggle}
+        aria-expanded={open}
         className={
           phone
             ? `group flex min-h-12 w-full items-center gap-3 rounded-2xl border border-edge-soft bg-elevated/40 px-5 text-[11px] font-semibold uppercase tracking-[0.22em] text-ink-muted transition-all hover:border-edge hover:text-ink ${PHONE_FOCUS}`
@@ -82,21 +87,26 @@ export function SourceDrawer({
           className={`transition-transform duration-300 ${open ? "rotate-180" : ""}${phone ? " order-last shrink-0" : ""}`}
         />
         <span className={phone ? "me-auto text-start" : undefined}>
-          {open ? "Hide all sources" : "All sources"}
+          {open ? t("Hide all sources") : t("All sources")}
         </span>
         <span className="text-ink-subtle/80">{count}</span>
         {usedAddons.length > 0 && (
           <span className="flex items-center gap-2">
             <AddonLogoStack addons={usedAddons} size="sm" max={5} />
             <span className="text-ink-subtle/80">
-              {addonCount} addon{addonCount === 1 ? "" : "s"}
+              {addonCount === 1 ? t("1 addon") : t("{n} addons", { n: addonCount })}
             </span>
           </span>
         )}
       </button>
       {open && addonOptions.length > 1 && (
         <div className="flex flex-wrap items-center gap-1.5">
-          <AddonPill active={addonFilter === "all"} onClick={() => setAddonFilter("all")} label="All" count={streams.length} />
+          <AddonPill
+            active={addonFilter === "all"}
+            onClick={() => setAddonFilter("all")}
+            label={t("All")}
+            count={streams.length}
+          />
           {addonOptions.map((o) => (
             <AddonPill
               key={o.id}
@@ -123,6 +133,7 @@ export function SourceDrawer({
               showName={showName}
               episode={episode}
               failed={failedStreams?.has(s) ?? false}
+              absoluteEpisode={absoluteEpisode}
             />
           ))}
           {phone && shown.length > 80 && (
@@ -174,6 +185,7 @@ function SourceRow({
   showName,
   episode,
   failed = false,
+  absoluteEpisode,
 }: {
   stream: ScoredStream;
   debrids: ReturnType<typeof useDebridClients>;
@@ -185,17 +197,31 @@ function SourceRow({
   showName: string;
   episode?: PlayEpisode;
   failed?: boolean;
+  absoluteEpisode?: number | null;
 }) {
-  const { settings } = useSettings();
   const t = useT();
+  const { settings } = useSettings();
   const phone = isPhoneShell();
   const cachedDebrids = debrids.filter((d) => stream.cached[d.slug]);
   const libraryDebrids = debrids.filter((d) => stream.inLibrary[d.slug]);
   const addonCached = anyStreamCached(stream);
-  const summary = streamSummaryParts(stream);
+  const summary = streamSummaryParts(stream).map((part) =>
+    stream.seeders != null && part === `${stream.seeders} seeds`
+      ? t("{n} seeds", { n: stream.seeders })
+      : part,
+  );
   const link = resolveStreamLink(stream);
-  const title = displayTitle(stream, showName, episode);
+  const title = displayTitle(stream, showName, episode, absoluteEpisode);
   const fname = settings.pickerShowFilename ? torrentFilename(stream) : "";
+  const contributor =
+    !stream.contributors || stream.contributors.length <= 1
+      ? stream.addonName
+      : stream.contributors.length === 2
+        ? `${stream.contributors[0].name} + ${stream.contributors[1].name}`
+        : t("{name} + {n} more", {
+            name: stream.contributors[0].name,
+            n: stream.contributors.length - 1,
+          });
 
   return (
     <li className={divider ? "border-t border-edge-soft/30" : ""}>
@@ -241,8 +267,10 @@ function SourceRow({
               size="sm"
             />
             <span className="truncate">
-              {contributorLabel(stream)}
-              {summary.length > 0 && <span className="text-ink-subtle/60"> · {summary.join(" · ")}</span>}
+              {contributor}
+              {summary.length > 0 && (
+                <span className="text-ink-subtle/60"> · {summary.join(" · ")}</span>
+              )}
             </span>
           </p>
         </div>
@@ -254,79 +282,87 @@ function SourceRow({
           }
         >
           <div className="flex items-center gap-3">
-          {link && <CopyLinkButton url={link} />}
-          <HostMatchChip match={match} />
-          {stream.audioLanguages.filter((l) => l.toLowerCase() !== "unknown").length > 0 && (
-            <FlagStack
-              languages={stream.audioLanguages.filter((l) => l.toLowerCase() !== "unknown")}
-              size="md"
-              max={4}
-            />
-          )}
-          {libraryDebrids.length > 0 ? (
-            <span
-              className={
-                phone
-                  ? "inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.08em] text-accent"
-                  : "inline-flex items-center gap-1.5 text-[12px] font-bold uppercase tracking-[0.14em] text-accent"
-              }
-            >
-              <Zap size={12} fill="currentColor" strokeWidth={0} />
-              {phone
-                ? `In · ${libraryDebrids.map((d) => d.slug.toUpperCase()).join("+")}`
-                : `In ${libraryDebrids.map((d) => d.name).join(" + ")}`}
-            </span>
-          ) : cachedDebrids.length > 0 ? (
-            <span
-              className={
-                phone
-                  ? "inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-muted"
-                  : "inline-flex items-center gap-1.5 text-[12px] font-semibold uppercase tracking-[0.14em] text-ink-muted"
-              }
-            >
-              <Zap size={11} strokeWidth={2} />
-              {phone
-                ? `Cached · ${cachedDebrids.map((d) => d.slug.toUpperCase()).join("+")}`
-                : `Cached on ${cachedDebrids.map((d) => d.name).join(" + ")}`}
-            </span>
-          ) : addonCached ? (
-            <span className="inline-flex items-center gap-1.5 text-[12px] font-semibold uppercase tracking-[0.14em] text-ink-muted">
-              <Zap size={11} strokeWidth={2} />
-              Cached
-            </span>
-          ) : !stream.url && !stream.infoHash && (stream.externalUrl || stream.ytId) ? (
-            <span className="inline-flex items-center gap-1.5 text-[12px] font-semibold uppercase tracking-[0.14em] text-ink-subtle">
-              <ExternalLink size={11} strokeWidth={2.2} />
-              External
-            </span>
-          ) : !stream.url ? (
-            <span className="inline-flex items-center gap-1.5 text-[12px] font-semibold uppercase tracking-[0.14em] text-ink-subtle">
-              <Download size={11} strokeWidth={2.2} />
-              {debrids.length === 0 && stream.infoHash ? "Stream" : "Cache"}
-            </span>
-          ) : null}
-          {resolving ? (
-            <Loader2 size={16} className="animate-spin text-ink-muted" />
-          ) : !stream.url && !stream.infoHash && (stream.externalUrl || stream.ytId) ? (
-            <ExternalLink
-              size={14}
-              strokeWidth={2.2}
-              className={
-                phone ? "text-ink-muted" : "text-ink-muted/50 transition-all group-hover:text-ink"
-              }
-            />
-          ) : (
-            <Play
-              size={15}
-              fill="currentColor"
-              strokeWidth={0}
-              className={
-                phone
-                  ? "text-ink-muted"
-                  : "text-ink-muted/50 transition-all group-hover:translate-x-0.5 group-hover:text-ink"
-              }
-            />
-          )}
+            {link && <CopyLinkButton url={link} />}
+            <HostMatchChip match={match} />
+            {stream.audioLanguages.filter((l) => l.toLowerCase() !== "unknown").length > 0 && (
+              <FlagStack
+                languages={stream.audioLanguages.filter((l) => l.toLowerCase() !== "unknown")}
+                size="md"
+                max={4}
+              />
+            )}
+            {libraryDebrids.length > 0 ? (
+              <span
+                className={
+                  phone
+                    ? "inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.08em] text-accent"
+                    : "inline-flex items-center gap-1.5 text-[12px] font-bold uppercase tracking-[0.14em] text-accent"
+                }
+              >
+                <Zap size={12} fill="currentColor" strokeWidth={0} />
+                {phone
+                  ? t("In {providers}", {
+                      providers: `· ${libraryDebrids.map((d) => d.slug.toUpperCase()).join("+")}`,
+                    })
+                  : t("In {providers}", {
+                      providers: libraryDebrids.map((d) => d.name).join(" + "),
+                    })}
+              </span>
+            ) : cachedDebrids.length > 0 ? (
+              <span
+                className={
+                  phone
+                    ? "inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-muted"
+                    : "inline-flex items-center gap-1.5 text-[12px] font-semibold uppercase tracking-[0.14em] text-ink-muted"
+                }
+              >
+                <Zap size={11} strokeWidth={2} />
+                {phone
+                  ? t("Cached on {providers}", {
+                      providers: `· ${cachedDebrids.map((d) => d.slug.toUpperCase()).join("+")}`,
+                    })
+                  : t("Cached on {providers}", {
+                      providers: cachedDebrids.map((d) => d.name).join(" + "),
+                    })}
+              </span>
+            ) : addonCached ? (
+              <span className="inline-flex items-center gap-1.5 text-[12px] font-semibold uppercase tracking-[0.14em] text-ink-muted">
+                <Zap size={11} strokeWidth={2} />
+                {t("Cached")}
+              </span>
+            ) : !stream.url && !stream.infoHash && (stream.externalUrl || stream.ytId) ? (
+              <span className="inline-flex items-center gap-1.5 text-[12px] font-semibold uppercase tracking-[0.14em] text-ink-subtle">
+                <ExternalLink size={11} strokeWidth={2.2} />
+                {t("External")}
+              </span>
+            ) : !stream.url ? (
+              <span className="inline-flex items-center gap-1.5 text-[12px] font-semibold uppercase tracking-[0.14em] text-ink-subtle">
+                <Download size={11} strokeWidth={2.2} />
+                {debrids.length === 0 && stream.infoHash ? t("Stream") : t("Cache")}
+              </span>
+            ) : null}
+            {resolving ? (
+              <Loader2 size={16} className="animate-spin text-ink-muted" />
+            ) : !stream.url && !stream.infoHash && (stream.externalUrl || stream.ytId) ? (
+              <ExternalLink
+                size={14}
+                strokeWidth={2.2}
+                className={
+                  phone ? "text-ink-muted" : "text-ink-muted/50 transition-all group-hover:text-ink"
+                }
+              />
+            ) : (
+              <Play
+                size={15}
+                fill="currentColor"
+                strokeWidth={0}
+                className={
+                  phone
+                    ? "text-ink-muted"
+                    : "text-ink-muted/50 transition-all group-hover:translate-x-0.5 group-hover:text-ink"
+                }
+              />
+            )}
           </div>
           {tierChipBadges(stream).length > 0 && (
             <div

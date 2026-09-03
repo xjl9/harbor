@@ -13,6 +13,14 @@ import type { Meta } from "@/lib/cinemeta";
 import { getEpisodeProgress, resumeDefaultSeason } from "@/lib/episode-progress";
 import { scrollToDataEp } from "@/lib/episode-scroll";
 import { tmdbSeasonEpisodes, type Episode, type Season } from "@/lib/providers/tmdb";
+import { tmdbLanguageIso } from "@/lib/providers/tmdb/tmdb-client";
+import type { OrderedEpisode } from "@/lib/providers/tvdb-order";
+import { pickLocalizedText } from "@/lib/localized-text";
+import {
+  PREFERRED_TEXT_SCORE,
+  preferredVideoName,
+  preferredVideoOverview,
+} from "@/lib/meta-resource";
 import { useSettings } from "@/lib/settings";
 import { effectiveOrderProvider, tvdbPanelEnabled } from "@/lib/settings/episode-order";
 import { useTrakt } from "@/lib/trakt/provider";
@@ -133,41 +141,14 @@ export function SeriesEpisodes({
     setActive(def);
   }, [meta.id, seasons, combinedWatched, resumeSeason]);
 
-  useEffect(() => {
-    let cancelled = false;
-    const cached = cache.current.get(active);
-    if (cached) {
-      setEpisodes(cached);
-      setLoading(false);
-      return;
-    }
-    setLoading(true);
-    tmdbSeasonEpisodes(settings.tmdbKey, tvId, active).then((eps) => {
-      if (cancelled) return;
-      if (eps.length > 0) {
-        const m = cache.current;
-        m.delete(active);
-        m.set(active, eps);
-        while (m.size > 2) {
-          const oldest = m.keys().next().value;
-          if (oldest === undefined) break;
-          m.delete(oldest);
-        }
-      }
-      setEpisodes(eps);
-      setLoading(false);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [tvId, active, settings.tmdbKey]);
-
-  const { episodes: enrichedBase, imdbRatings } = useEpisodeEnrich({
+  const { episodes: enrichedBase, imdbRatings, preferredVideos } = useEpisodeEnrich({
     episodes,
     active,
     imdbId,
     tvdbKey: settings.tvdbKey,
     omdbKey: settings.omdbKey,
+    metaId: meta.id,
+    preferCustomMeta: settings.preferCustomMetaAddon,
   });
   const tvdbStills = useSeriesTvdbStills(imdbId, enrichedBase.length, settings.tvdbSeasonType);
   const enrichedEpisodes = useMemo(() => {
@@ -231,19 +212,94 @@ export function SeriesEpisodes({
     setOrderSeason,
     userPickedRef,
   });
-  const orderedEpsRaw = arcActive
+  useEffect(() => {
+    let cancelled = false;
+    const load = (season: number): Promise<Episode[]> =>
+      tmdbSeasonEpisodes(settings.tmdbKey, tvId, season).then((eps) => {
+        if (cancelled || eps.length === 0) return [];
+        const m = cache.current;
+        m.delete(season);
+        m.set(season, eps);
+        while (m.size > 2) {
+          const oldest = m.keys().next().value;
+          if (oldest === undefined) break;
+          m.delete(oldest);
+        }
+        return eps;
+      });
+    const cached = cache.current.get(active);
+    if (cached) {
+      setEpisodes(cached);
+      setLoading(false);
+    } else {
+      setLoading(true);
+      void load(active).then((eps) => {
+        if (cancelled) return;
+        setEpisodes(eps);
+        setLoading(false);
+      });
+    }
+    if (orderActive && orderSeasonEff !== active && !cache.current.has(orderSeasonEff)) {
+      void load(orderSeasonEff);
+    }
+    return () => {
+      cancelled = true;
+    };
+  }, [tvId, active, settings.tmdbKey, orderActive, orderSeasonEff]);
+  const orderedEpsRaw: OrderedEpisode[] = arcActive
     ? arc.episodes
     : ordering
       ? ordering.bySeason.get(orderSeasonEff) ?? []
       : [];
   const orderedEps = useMemo(() => {
-    if (imdbRatings.size === 0) return orderedEpsRaw;
+    // pickLocalizedText keys script tests by ISO-1 ("ko"), not TVDB codes ("kor").
+    const lang = tmdbLanguageIso();
+    const airedLike =
+      orderActive && (settings.tvdbSeasonType === "aired" || settings.tvdbSeasonType === "official");
+    const tmdbByKey = new Map<string, Episode>();
+    if (airedLike) {
+      for (const e of cache.current.get(orderSeasonEff) ?? []) {
+        tmdbByKey.set(`${e.seasonNumber}:${e.episodeNumber}`, e);
+      }
+    }
     return orderedEpsRaw.map((ep) => {
-      if (ep.imdbRating != null) return ep;
-      const r = imdbRatings.get(`${ep.seasonNumber}:${ep.episodeNumber}`);
-      return r != null && r > 0 ? { ...ep, imdbRating: r } : ep;
+      const tmdbEp = airedLike ? tmdbByKey.get(`${ep.seasonNumber}:${ep.episodeNumber}`) : undefined;
+      const pref = preferredVideos.get(`${ep.seasonNumber}:${ep.episodeNumber}`);
+      const name =
+        pickLocalizedText(
+          [
+            { text: preferredVideoName(pref), score: PREFERRED_TEXT_SCORE },
+            { text: ep.name },
+            { text: ep.nameEn ?? "" },
+            { text: tmdbEp?.name ?? "" },
+          ],
+          { forName: true, lang },
+        ) ?? ep.name;
+      const overview =
+        pickLocalizedText(
+          [
+            { text: preferredVideoOverview(pref), score: PREFERRED_TEXT_SCORE },
+            { text: ep.overview },
+            { text: ep.overviewEn ?? "" },
+            { text: tmdbEp?.overview ?? "" },
+          ],
+          { lang },
+        ) ?? ep.overview;
+      let next = { ...ep, name, overview };
+      if (ep.imdbRating == null) {
+        const r = imdbRatings.get(`${ep.seasonNumber}:${ep.episodeNumber}`);
+        if (r != null && r > 0) next = { ...next, imdbRating: r };
+      }
+      return next;
     });
-  }, [orderedEpsRaw, imdbRatings]);
+  }, [
+    orderedEpsRaw,
+    imdbRatings,
+    orderActive,
+    orderSeasonEff,
+    settings.tvdbSeasonType,
+    preferredVideos,
+  ]);
   const visibleOrderedEps = useMemo(
     () =>
       hideActive && hiddenSet.size > 0
@@ -305,7 +361,7 @@ export function SeriesEpisodes({
               className={`flex h-9 items-center gap-1.5 rounded-full px-3 text-[12.5px] font-semibold tabular-nums transition-colors ${
                 showHidden
                   ? "bg-ink text-canvas"
-                  : "border border-edge-soft text-ink-muted hover:border-edge hover:text-ink"
+                  : "bg-white/[0.06] text-ink-muted hover:bg-white/[0.10] hover:text-ink"
               }`}
             >
               {showHidden ? <Eye size={14} strokeWidth={2.2} /> : <EyeOff size={14} strokeWidth={2.2} />}

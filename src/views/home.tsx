@@ -51,7 +51,7 @@ import { repairLibraryNames } from "@/lib/stremio-repair";
 import { reconcileRemoteWatched } from "@/lib/stremio-watched-pull";
 import { isCorruptAnimeEntry } from "@/lib/anime-cw-repair";
 import { absorbCloudAnimeCw } from "@/lib/anime-cw-absorb";
-import { episodeFromVideoId, library, type LibraryItem } from "@/lib/stremio";
+import { episodeFromVideoId, libraryIfChanged, type LibraryItem } from "@/lib/stremio";
 import { useTrakt } from "@/lib/trakt/provider";
 import { buildTraktHomeRows } from "@/lib/trakt/home-rails";
 import { fetchWatchedKeySet } from "@/lib/trakt/history";
@@ -59,7 +59,7 @@ import { recentlyPlayed, subscribePlayback, type WatchedSet } from "@/lib/playba
 import { detectAnimeForCw, useDetectedAnimeVersion } from "@/lib/anime-detect";
 import { buildSimklHomeRows } from "@/lib/simkl/home-rails";
 import { loadSimklWatchedMap, loadSimklStatusMap, type WatchlistStatus } from "@/lib/simkl/list-status";
-import { fetchSimklPlaybackItems } from "@/lib/simkl/playback";
+import { useExternalCw } from "@/lib/feed/external-cw";
 import { useSimkl } from "@/lib/simkl/provider";
 import { useAnilist } from "@/lib/anilist/provider";
 import { loadAnilistWatchedMap } from "@/lib/anilist/watched-map";
@@ -71,6 +71,8 @@ import { useScrollMemory, useView } from "@/lib/view";
 import { CustomizableRows } from "./home/customizable-rows";
 import { CustomizeBar } from "./home/customize-bar";
 import { CWSection } from "./home/cw-section";
+import { NewEpisodesSection } from "./home/new-episodes-section";
+import { useNewEpisodes } from "./home/hooks/use-new-episodes";
 import { useCwAdvance } from "./home/hooks/use-cw-advance";
 import { usePinnedRows } from "./home/hooks/use-pinned-rows";
 import {
@@ -102,7 +104,7 @@ export function Home({ active = true, onReady }: { active?: boolean; onReady?: (
   const [traktRows, setTraktRows] = useState<HomeRow[]>([]);
   const [simklRows, setSimklRows] = useState<HomeRow[]>([]);
   const [letterboxdRows, setLetterboxdRows] = useState<HomeRow[]>([]);
-  const [simklCw, setSimklCw] = useState<LibraryItem[]>([]);
+  const externalCw = useExternalCw(!settings.cwPerProfile && settings.externalContinueWatching);
   const [traktWatched, setTraktWatched] = useState<Set<string>>(() => new Set());
   const [simklWatchedMap, setSimklWatchedMap] = useState<Map<string, Set<string>>>(() => new Map());
   const [simklStatusMap, setSimklStatusMap] = useState<Map<string, WatchlistStatus>>(() => new Map());
@@ -165,26 +167,35 @@ export function Home({ active = true, onReady }: { active?: boolean; onReady?: (
   useEffect(() => {
     const onAddonsChanged = () => setAddonsTick((t) => t + 1);
     window.addEventListener("harbor:addons-changed", onAddonsChanged);
-    return () => window.removeEventListener("harbor:addons-changed", onAddonsChanged);
+    window.addEventListener("harbor:active-profile-changed", onAddonsChanged);
+    return () => {
+      window.removeEventListener("harbor:addons-changed", onAddonsChanged);
+      window.removeEventListener("harbor:active-profile-changed", onAddonsChanged);
+    };
   }, []);
 
+  const buildRetryRef = useRef(0);
   useEffect(() => {
     let cancelled = false;
+    let retryTimer: number | null = null;
     (async () => {
       const isClassic = settings.homeMode === "classic";
 
-      let built: { rows: HomeRow[]; hero: Meta[] } = { rows: [], hero: [] };
+      let built: { rows: HomeRow[]; hero: Meta[]; failed?: number } = { rows: [], hero: [] };
       if (!isClassic) {
         built = settings.tmdbKey
-          ? await buildTmdbRows(settings).catch(() => ({ rows: [] as HomeRow[], hero: [] as Meta[] }))
-          : await buildCinemetaRows().catch(() => ({ rows: [] as HomeRow[], hero: [] as Meta[] }));
+          ? await buildTmdbRows(settings).catch(() => ({ rows: [] as HomeRow[], hero: [] as Meta[], failed: 1 }))
+          : await buildCinemetaRows().catch(() => ({ rows: [] as HomeRow[], hero: [] as Meta[], failed: 1 }));
         if (built.rows.length === 0) {
-          built = await buildCinemetaRows().catch(() => ({ rows: [] as HomeRow[], hero: [] as Meta[] }));
+          built = await buildCinemetaRows().catch(() => ({ rows: [] as HomeRow[], hero: [] as Meta[], failed: 1 }));
         }
       }
       if (cancelled) return;
-      setRows(mergeRows(built.rows, []));
-      setHeroPool(built.hero);
+      let degraded = (built.failed ?? 0) > 0;
+      const commitRows = (next: HomeRow[]) =>
+        setRows((prev) => (degraded && next.length === 0 && prev.length > 0 ? prev : next));
+      commitRows(mergeRows(built.rows, []));
+      if (!degraded || built.hero.length > 0) setHeroPool(built.hero);
       setHeroReady(true);
       if (settings.heroFeed && settings.heroFeed !== "classic") {
         const feed = await fetchHeroFeed(settings.heroFeed).catch(() => [] as Meta[]);
@@ -192,16 +203,26 @@ export function Home({ active = true, onReady }: { active?: boolean; onReady?: (
       }
 
       const dedupRows = isClassic ? false : !settings.homeShowAllAddonRows;
-      const addons = await loadAddonRows(authKey, { dedup: dedupRows }).catch(
-        () => [] as AddonRow[],
-      );
+      const addons = await loadAddonRows(authKey, { dedup: dedupRows }).catch(() => {
+        degraded = true;
+        return [] as AddonRow[];
+      });
       if (cancelled) return;
       const filtered = isClassic
         ? addons
         : addons.filter((a) => !isAnimeRow(a) && !isStreamingServiceRow(a.name));
+      const nextRows = mergeRows(built.rows, filtered, { dedup: dedupRows });
       startTransition(() => {
-        setRows(mergeRows(built.rows, filtered, { dedup: dedupRows }));
+        commitRows(nextRows);
       });
+      const halfMissing = nextRows.length === 0 || (!isClassic && built.rows.length === 0);
+      if (!degraded) {
+        buildRetryRef.current = 0;
+      } else if (halfMissing && buildRetryRef.current < 3) {
+        const attempt = buildRetryRef.current;
+        buildRetryRef.current = attempt + 1;
+        retryTimer = window.setTimeout(() => setBuildTick((n) => n + 1), 1500 * 2 ** attempt);
+      }
 
       if (authKey) {
         const installed = await userAddons(authKey).catch(() => []);
@@ -211,18 +232,26 @@ export function Home({ active = true, onReady }: { active?: boolean; onReady?: (
     })().catch(console.error);
     return () => {
       cancelled = true;
+      if (retryTimer != null) window.clearTimeout(retryTimer);
     };
   }, [authKey, settings.tmdbKey, settings.tmdbLanguage, settings.region, settings.homeMode, settings.homeShowAllAddonRows, settings.heroFeed, addonsTick, buildTick]);
 
   useEffect(() => {
     if (!active) return;
+    const rebuildIfEmpty = () => {
+      if (rowsRef.current.length > 0) return;
+      buildRetryRef.current = 0;
+      setBuildTick((n) => n + 1);
+    };
     const onVisible = () => {
-      if (document.visibilityState === "visible" && rowsRef.current.length === 0) {
-        setBuildTick((n) => n + 1);
-      }
+      if (document.visibilityState === "visible") rebuildIfEmpty();
     };
     document.addEventListener("visibilitychange", onVisible);
-    return () => document.removeEventListener("visibilitychange", onVisible);
+    window.addEventListener("online", rebuildIfEmpty);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("online", rebuildIfEmpty);
+    };
   }, [active]);
 
   useEffect(() => {
@@ -341,22 +370,6 @@ export function Home({ active = true, onReady }: { active?: boolean; onReady?: (
   }, [simklConnected]);
 
   useEffect(() => {
-    if (!simklConnected) {
-      setSimklCw([]);
-      return;
-    }
-    let cancelled = false;
-    fetchSimklPlaybackItems()
-      .then((cw) => {
-        if (!cancelled) setSimklCw(cw);
-      })
-      .catch(() => {});
-    return () => {
-      cancelled = true;
-    };
-  }, [simklConnected]);
-
-  useEffect(() => {
     if (!letterboxd.isActive) {
       setLetterboxdRows([]);
       return;
@@ -404,7 +417,7 @@ export function Home({ active = true, onReady }: { active?: boolean; onReady?: (
     }
     let cancelled = false;
     const load = () => {
-      library(authKey)
+      libraryIfChanged(authKey)
         .then((libItems) => {
           if (cancelled) return;
           const view = libItems.some(isCorruptAnimeEntry)
@@ -494,15 +507,15 @@ export function Home({ active = true, onReady }: { active?: boolean; onReady?: (
     return s;
   }, [items]);
   const localCwItems = useLocalCwLibraryItems();
-  const cwRootSources = useMemo(() => [...localCwItems, ...simklCw], [localCwItems, simklCw]);
+  const cwRootSources = useMemo(() => [...localCwItems, ...externalCw], [localCwItems, externalCw]);
   const cwRootVersion = useCwFranchiseRootsVersion(cwRootSources);
   const continueWatching = useMemo(
     () =>
-      mergeContinueWatching(items, simklCw, localCwItems, {
+      mergeContinueWatching(items, externalCw, localCwItems, {
         cwPerProfile: settings.cwPerProfile,
         hideAnime: settings.animeOnlyInAnimeRoom || settings.hideContent.anime,
       }),
-    [items, simklCw, localCwItems, cwVersion, cwRootVersion, settings.animeOnlyInAnimeRoom, settings.hideContent.anime, settings.cwPerProfile, animeDetectVer],
+    [items, externalCw, localCwItems, cwVersion, cwRootVersion, settings.animeOnlyInAnimeRoom, settings.hideContent.anime, settings.cwPerProfile, animeDetectVer],
   );
   const resurfaceLibrary = useMemo(
     () => buildCwResurfaceLibrary(items, localCwItems),
@@ -549,6 +562,7 @@ export function Home({ active = true, onReady }: { active?: boolean; onReady?: (
     publishResumeStates(cwItems);
   }, [cwItems]);
 
+
   const onDismissCw = useCallback(
     (item: LibraryItem) => dismissCwItem(item, authKey),
     [authKey],
@@ -560,7 +574,14 @@ export function Home({ active = true, onReady }: { active?: boolean; onReady?: (
     const toMetas = (m: Map<string, MediaEntry>): Meta[] =>
       [...m.values()]
         .sort((a, b) => b.addedAt - a.addedAt)
-        .map((e) => ({ id: e.id, type: e.type, name: e.name, poster: e.poster }));
+        .map((e) => ({
+          id: e.id,
+          type: e.type,
+          name: e.name,
+          poster: e.poster,
+          addonOrigin: e.addonOrigin,
+          videos: e.videos,
+        }));
     const out: HomeRow[] = [];
     if (favItems.size > 0) {
       out.push({ key: "harbor-favorites", type: "movie", name: "Favorites", metas: toMetas(favItems), page: 1, hasMore: false, noDedup: true });
@@ -662,6 +683,12 @@ export function Home({ active = true, onReady }: { active?: boolean; onReady?: (
   const restRows = displayed.rest;
 
   const homeRowsCustom = settings.homeRows;
+  const newEpisodesHidden = homeRowsCustom.hidden.includes("new-episodes");
+  const {
+    episodes: newEpisodes,
+    dismissOne: dismissNewEpisode,
+    dismissAll: dismissAllNewEpisodes,
+  } = useNewEpisodes(cwItems, settings.homeNewEpisodes && !newEpisodesHidden);
 
   const sourceRows = useMemo<HomeRow[]>(() => {
     const uniqueSources = new Map<string, SourceRow>();
@@ -862,6 +889,13 @@ export function Home({ active = true, onReady }: { active?: boolean; onReady?: (
             items={cwItems}
             watchedSet={traktWatched}
             onDismiss={onDismissCw}
+          />
+        )}
+        {settings.homeNewEpisodes && !newEpisodesHidden && (
+          <NewEpisodesSection
+            episodes={newEpisodes}
+            onDismissOne={dismissNewEpisode}
+            onDismissAll={dismissAllNewEpisodes}
           />
         )}
       </div>

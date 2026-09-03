@@ -7,6 +7,8 @@ const appFill: Record<string, string> = {
   "Downloading speech model {pct}%": "Baixando modelo de voz {pct}%",
   "Downloading speech model": "Baixando modelo de voz",
   "Subtitles synced": "Legendas sincronizadas",
+  "Subtitles already aligned": "As legendas já estão alinhadas",
+  "Not enough dialogue to sync": "Diálogo insuficiente para sincronizar",
   "Subtitles may be off": "As legendas podem estar dessincronizadas",
   "Different subtitle version": "Versão de legenda diferente",
   "Couldn't auto-sync": "Não foi possível sincronizar automaticamente",
@@ -15,6 +17,25 @@ const appFill: Record<string, string> = {
   "Sync manually": "Sincronizar manualmente",
   "Adjusted timing by": "Tempo ajustado em",
   "Timing looks aligned": "O tempo parece alinhado",
+  "Variable timing corrected": "Tempo variável corrigido",
+  Delay: "Atraso",
+  "Timing rate": "Ritmo do tempo",
+  "No timing change was needed. This subtitle already matches the audio.":
+    "Não foi necessário alterar o tempo. Esta legenda já corresponde ao áudio.",
+  "Harbor couldn't analyze the audio for this source. Try again or adjust it manually.":
+    "O Harbor não conseguiu analisar o áudio desta fonte. Tente novamente ou ajuste manualmente.",
+  "There isn't enough readable dialogue in this subtitle to measure its timing.":
+    "Não há diálogo legível suficiente nesta legenda para medir o tempo.",
+  "This subtitle appears to be for a different cut. Try another match.":
+    "Esta legenda parece ser de uma versão diferente. Tente outra correspondência.",
+  "The timing checks disagreed, so Harbor left the subtitle unchanged.":
+    "As verificações de tempo discordaram, por isso o Harbor não alterou a legenda.",
+  "The timing difference was too large to correct safely. Try another subtitle.":
+    "A diferença de tempo era demasiado grande para corrigir com segurança. Tente outra legenda.",
+  "There wasn't enough matching dialogue to make a safe correction.":
+    "Não houve diálogo correspondente suficiente para fazer uma correção segura.",
+  "Harbor couldn't find a reliable timing correction for this subtitle.":
+    "O Harbor não encontrou uma correção de tempo fiável para esta legenda.",
   "Looks right": "Parece certo",
   "Still off": "Ainda fora de sincronia",
   "This subtitle looks like a different version of the video.":
@@ -422,6 +443,7 @@ const appFill: Record<string, string> = {
   Characters: "Personagens",
   "Characters · {n}": "Personagens · {n}",
   "Related Anime": "Animes relacionados",
+  "Sequels & Prequels": "Sequências e prequelas",
   Adaptations: "Adaptações",
   Statistics: "Estatísticas",
   "Deletes every episode cached for this source": "Exclui todos os episódios em cache desta fonte",
@@ -775,6 +797,18 @@ const appFill: Record<string, string> = {
   "Use Cinemeta for title metadata": "Usar o Cinemeta para metadados de títulos",
   "Turn this off to take Cinemeta out entirely and use only your own metadata addons, such as AIOMetadata or AIOStreams. Cinemeta can go stale and show already released episodes as TBA. Leave it on unless you have a metadata addon installed, or titles will have no details.":
     "Desative para remover o Cinemeta por completo e usar apenas seus próprios addons de metadados, como AIOMetadata ou AIOStreams. O Cinemeta pode ficar desatualizado e mostrar episódios já lançados como TBA. Deixe ativado a menos que você tenha um addon de metadados instalado, ou os títulos ficarão sem detalhes.",
+  "This one also replaces Harbor's bundled players and tools, so it installs through Harbor Setup. Harbor closes, the installer finishes, then Harbor reopens.":
+    "Esta atualização também substitui os reprodutores e as ferramentas que vêm com o Harbor, por isso ela é instalada pelo Harbor Setup. O Harbor fecha, o instalador termina e o Harbor abre novamente.",
+  "This one installs through Harbor Setup, but the update manifest carries no signature for it. Harbor will not run an installer it cannot verify. Download it and run it yourself.":
+    "Esta atualização é instalada pelo Harbor Setup, mas o manifesto de atualização não traz assinatura para ele. O Harbor não executa um instalador que não consegue verificar. Baixe o instalador e execute você mesmo.",
+  "Download installer":
+    "Baixar o instalador",
+  "Install and reopen":
+    "Instalar e reabrir",
+  "Harbor is closing. Harbor Setup will finish and reopen it.":
+    "O Harbor está fechando. O Harbor Setup vai terminar e abri-lo novamente.",
+  "Harbor Setup did not finish updating Harbor. Nothing was changed.":
+    "O Harbor Setup não terminou de atualizar o Harbor. Nada foi alterado.",
 };
 
 export default appFill;

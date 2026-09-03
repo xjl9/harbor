@@ -2,6 +2,7 @@ import type { TrackInfo } from "@/lib/player/bridge";
 import type { SubtitleAddHandler } from "@/lib/player/subtitle-load";
 
 export type SubtitleMenuProps = {
+  engine?: "html5" | "mpv" | "native";
   tracks: TrackInfo[];
   selectedId: string | null;
   delaySec: number;
@@ -19,6 +20,7 @@ export type SubtitleMenuProps = {
   useOverlayPopup?: boolean;
   onOpenChange?: (open: boolean) => void;
   onOpenStyleBar?: () => void;
+  iconUrl?: string;
 };
 
 export type Group = { langKey: string; langDisplay: string; variants: TrackInfo[] };

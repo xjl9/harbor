@@ -36,7 +36,7 @@ export function EpisodeItem({
   const upcoming = isUpcoming(ep.airDate);
   const watchedAgo = progress.startedAt > 0 ? formatRelativeWatched(progress.startedAt) : "";
   const sub = [
-    `S${ep.season} E${ep.episode}`,
+    t("S{season} E{episode}", { season: ep.season, episode: ep.episode }),
     ep.runtime ? `${ep.runtime} min` : null,
     formatAirDate(ep.airDate) || null,
   ]
@@ -84,7 +84,7 @@ export function EpisodeItem({
               upcoming ? "text-ink-muted" : "text-ink"
             } ${spoiler.title ? SPOILER_TEXT_CLASS : ""}`}
           >
-            {ep.name || `Episode ${ep.episode}`}
+            {ep.name || t("Episode {number}", { number: ep.episode })}
           </p>
           {upcoming && (
             <span className="inline-flex shrink-0 items-center rounded-[5px] border border-edge-soft bg-elevated/40 px-1.5 py-[1px] text-[9px] font-medium uppercase tracking-[0.14em] text-ink-subtle">

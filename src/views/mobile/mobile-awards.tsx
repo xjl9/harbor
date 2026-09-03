@@ -11,6 +11,7 @@ import type { AwardType } from "@/lib/providers/wikidata";
 import { useSettings } from "@/lib/settings";
 import { MOBILE_SAFE_X } from "./chrome-metrics";
 import { requestMobileIntent } from "./mobile-intent";
+import { useT } from "@/lib/i18n";
 
 const MOBILE_AWARDS: AwardType[] = [
   "oscar",
@@ -55,6 +56,7 @@ export function MobileAwards({
   onClose: () => void;
   onOpenDetail: (m: Meta) => void;
 }) {
+  const t = useT();
   const { settings } = useSettings();
   const key = settings.tmdbKey;
   const hasKey = !!key;
@@ -133,7 +135,7 @@ export function MobileAwards({
       ref={scrollRef}
       role="dialog"
       aria-modal="true"
-      aria-label="Awards"
+      aria-label={t("Awards")}
       onAnimationEnd={(e) => {
         if (closing && e.target === e.currentTarget) onClose();
       }}
@@ -152,13 +154,13 @@ export function MobileAwards({
           <button
             type="button"
             onClick={close}
-            aria-label="Back"
+            aria-label={t("Back")}
             className="no-press grid h-10 w-10 shrink-0 place-items-center rounded-full bg-surface text-ink ring-1 ring-edge-soft transition-transform active:scale-95 motion-reduce:transition-none"
           >
             <ChevronLeft size={22} strokeWidth={2.4} className="dir-icon" />
           </button>
           <span className="font-display text-[17px] font-medium tracking-tight text-ink">
-            Awards
+            {t("Awards")}
           </span>
         </div>
 
@@ -174,7 +176,7 @@ export function MobileAwards({
             </h1>
             <p className="line-clamp-1 text-[11.5px] font-semibold uppercase tracking-[0.16em] text-ink-subtle">
               {meta.founded > 0
-                ? `${meta.shorthand} · since ${meta.founded}`
+                ? t("{name} · since {year}", { name: meta.shorthand, year: meta.founded })
                 : meta.shorthand}
             </p>
           </div>
@@ -193,7 +195,7 @@ export function MobileAwards({
 
         <div className="flex items-center justify-between px-5">
           <span className="text-[13px] font-semibold uppercase tracking-[0.16em] text-ink-subtle">
-            Winners
+            {t("Winners")}
           </span>
           <ModeToggle mode={mode} onSelect={selectMode} tint={tint} />
         </div>
@@ -207,13 +209,13 @@ export function MobileAwards({
           {!hasKey ? (
             <Empty
               Icon={KeyRound}
-              text="Add a TMDB key in Settings to unlock award winners."
+              text={t("Add a TMDB key in Settings to unlock award winners.")}
               // Dismiss on the way out. This dialog is portaled to document.body,
               // so it sits in its own stacking context and stays in front of the
               // settings screen the intent opens no matter what z-index that
               // screen carries: the button looked dead until this closed too.
               action={{
-                label: "Open Settings",
+                label: t("Open Settings"),
                 onClick: () => {
                   close();
                   requestMobileIntent("settings");
@@ -227,10 +229,7 @@ export function MobileAwards({
               <ListSkeleton />
             )
           ) : films.length === 0 ? (
-            <Empty
-              Icon={Trophy}
-              text="No winners are catalogued for this award yet."
-            />
+            <Empty Icon={Trophy} text={t("No winners are catalogued for this award yet.")} />
           ) : mode === "grid" ? (
             <>
               <WinnerGrid films={films} onOpen={onOpenDetail} />
@@ -305,12 +304,13 @@ function ModeToggle({
   onSelect: (m: Mode) => void;
   tint: string;
 }) {
+  const t = useT();
   return (
     <div className="flex items-center gap-1 rounded-full border border-edge-soft bg-surface p-1">
       <ModeButton
         active={mode === "grid"}
         onClick={() => onSelect("grid")}
-        label="Grid view"
+        label={t("Grid view")}
         tint={tint}
       >
         <LayoutGrid size={16} strokeWidth={2.2} />
@@ -318,7 +318,7 @@ function ModeToggle({
       <ModeButton
         active={mode === "list"}
         onClick={() => onSelect("list")}
-        label="List view"
+        label={t("List view")}
         tint={tint}
       >
         <List size={16} strokeWidth={2.2} />
@@ -373,6 +373,7 @@ function WinnerGrid({
 }
 
 function GridTile({ meta, onOpen }: { meta: Meta; onOpen: (m: Meta) => void }) {
+  const t = useT();
   const { settings } = useSettings();
   const { src, onError } = usePosterChain(
     settings.rpdbKey,
@@ -384,6 +385,7 @@ function GridTile({ meta, onOpen }: { meta: Meta; onOpen: (m: Meta) => void }) {
     <button
       type="button"
       onClick={() => onOpen(meta)}
+      aria-label={t("View {title}", { title: meta.name })}
       className="text-start"
     >
       <Poster
@@ -438,6 +440,7 @@ function ListRow({
   tint: string;
   onOpen: (m: Meta) => void;
 }) {
+  const t = useT();
   const { settings } = useSettings();
   const { src, onError } = usePosterChain(
     settings.rpdbKey,
@@ -450,6 +453,7 @@ function ListRow({
     <button
       type="button"
       onClick={() => onOpen(meta)}
+      aria-label={t("View {title}", { title: meta.name })}
       className="flex items-center gap-3.5 rounded-2xl p-2 text-start transition-colors active:bg-elevated/50 motion-reduce:transition-none"
     >
       <div className="w-[46px] shrink-0">
@@ -468,7 +472,7 @@ function ListRow({
         </span>
         <span className="text-[12.5px] tabular-nums text-ink-subtle">
           {year ? `${year} · ` : ""}
-          {meta.type === "series" ? "Series" : "Film"}
+          {meta.type === "series" ? t("Series") : t("Film")}
         </span>
       </div>
       <span

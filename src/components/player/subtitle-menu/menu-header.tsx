@@ -1,15 +1,20 @@
-import { SlidersHorizontal, X } from "lucide-react";
+import { X } from "lucide-react";
+import { UiIcon } from "@/components/ui-icon";
 import type { TrackInfo } from "@/lib/player/bridge";
 import { useT } from "@/lib/i18n";
 import { useAutoSyncHandle } from "@/components/player/autosync/autosync-store";
 import { HoverTooltip } from "@/components/hover-tooltip";
+import { SubtitleFpsControl } from "./subtitle-fps-control";
 import { SyncControl } from "./sync-control";
 
 type Props = {
+  engine: "html5" | "mpv" | "native";
   count: number;
   selectedTrack: TrackInfo | null;
+  hasSecondary: boolean;
   delaySec: number;
   delayNonZero: boolean;
+  onEnterSync?: () => void;
   onOpenStyleBar?: () => void;
   onClose: () => void;
 };
@@ -25,7 +30,7 @@ export function MenuHeader(p: Props) {
   const canAutoSync = p.selectedTrack?.external === true || autoSyncOn;
 
   return (
-    <header className="flex items-center justify-between border-b border-edge-soft px-4 py-2.5">
+    <header className="flex items-center justify-between border-b border-edge-soft pe-4 ps-10 py-2.5">
       <div className="flex items-baseline gap-2.5">
         <span className="text-[13.5px] font-semibold text-ink">{tr("Subtitles")}</span>
         {p.count > 0 && (
@@ -36,9 +41,16 @@ export function MenuHeader(p: Props) {
       <div className="flex items-center gap-1">
         <SyncControl
           canAutoSync={canAutoSync}
+          canLiveSync={p.selectedTrack != null}
           delaySec={p.delaySec}
           delayNonZero={p.delayNonZero}
+          onLiveSync={p.onEnterSync}
           onClose={p.onClose}
+        />
+        <SubtitleFpsControl
+          engine={p.engine}
+          track={p.selectedTrack}
+          hasSecondary={p.hasSecondary}
         />
 
         {p.onOpenStyleBar && (
@@ -52,7 +64,7 @@ export function MenuHeader(p: Props) {
               aria-label={tr("Subtitle appearance")}
               className="flex h-9 w-9 items-center justify-center rounded-full text-ink-muted transition-colors hover:bg-raised hover:text-ink"
             >
-              <SlidersHorizontal size={18} strokeWidth={2} />
+              <UiIcon name="customize-subtitles" className="h-[18px] w-[18px]" />
             </button>
           </HoverTooltip>
         )}

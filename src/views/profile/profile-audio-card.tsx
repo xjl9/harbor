@@ -11,6 +11,25 @@ import {
   type AudioMeta,
 } from "@/lib/social/profile-audio";
 
+const VOLUME_KEY = "harbor.profileAudioVolume.v1";
+
+function readSavedVolume(): number {
+  try {
+    const raw = localStorage.getItem(VOLUME_KEY);
+    if (raw != null) {
+      const v = Number(raw);
+      if (Number.isFinite(v) && v >= 0 && v <= 100) return v;
+    }
+  } catch {}
+  return 70;
+}
+
+function saveVolume(v: number): void {
+  try {
+    localStorage.setItem(VOLUME_KEY, String(v));
+  } catch {}
+}
+
 export function ProfileAudioCard({ audioUrl }: { audioUrl?: string }) {
   const t = useT();
   const { settings, update } = useSettings();
@@ -19,7 +38,7 @@ export function ProfileAudioCard({ audioUrl }: { audioUrl?: string }) {
   const [playing, setPlaying] = useState(false);
   const [started, setStarted] = useState(false);
   const [muted, setMuted] = useState(false);
-  const [volume, setVolume] = useState(70);
+  const [volume, setVolume] = useState(readSavedVolume);
   const [barOpen, setBarOpen] = useState(false);
   const [mountMuted, setMountMuted] = useState(false);
   const frameRef = useRef<HTMLIFrameElement>(null);
@@ -72,6 +91,7 @@ export function ProfileAudioCard({ audioUrl }: { audioUrl?: string }) {
 
   const onVolumeDrag = (next: number) => {
     setVolume(next);
+    saveVolume(next);
     if (next > 0 && muted) setMuted(false);
   };
 
@@ -83,7 +103,7 @@ export function ProfileAudioCard({ audioUrl }: { audioUrl?: string }) {
   return (
     <section
       aria-label={t("Profile song")}
-      className="relative rounded-[14px] bg-surface ring-1 ring-edge-soft"
+      className="relative rounded-lg bg-surface ring-1 ring-edge-soft"
     >
       {isSpotify ? (
         <iframe
@@ -92,7 +112,7 @@ export function ProfileAudioCard({ audioUrl }: { audioUrl?: string }) {
           loading="lazy"
           allow="encrypted-media; clipboard-write"
           referrerPolicy="strict-origin-when-cross-origin"
-          className="block h-[152px] w-full rounded-[14px] border-0"
+          className="block h-[152px] w-full rounded-lg border-0"
         />
       ) : (
         <>
@@ -101,7 +121,7 @@ export function ProfileAudioCard({ audioUrl }: { audioUrl?: string }) {
               type="button"
               onClick={() => (started ? setPlaying((p) => !p) : startPlay())}
               aria-label={playing ? t("Pause") : t("Play")}
-              className="relative grid h-12 w-12 shrink-0 place-items-center overflow-hidden rounded-[10px] bg-elevated ring-1 ring-edge-soft"
+              className="relative grid h-12 w-12 shrink-0 place-items-center overflow-hidden rounded-md bg-elevated ring-1 ring-edge-soft"
             >
               {meta?.thumbnail ? (
                 <img src={meta.thumbnail} alt="" draggable={false} className="h-full w-full object-cover" />
@@ -138,7 +158,7 @@ export function ProfileAudioCard({ audioUrl }: { audioUrl?: string }) {
                 {muted ? <VolumeX size={16} /> : <Volume2 size={16} />}
               </button>
               <div
-                className={`absolute bottom-full left-1/2 z-20 flex -translate-x-1/2 flex-col items-center rounded-[14px] border border-edge-soft bg-canvas/95 px-2.5 py-3 shadow-[0_18px_40px_-12px_rgba(0,0,0,0.75)] backdrop-blur-md transition-[opacity,transform] duration-150 ${
+                className={`absolute bottom-full left-1/2 z-20 flex -translate-x-1/2 flex-col items-center rounded-lg border border-edge-soft bg-canvas/95 px-2.5 py-3 shadow-[0_18px_40px_-12px_rgba(0,0,0,0.75)] backdrop-blur-md transition-[opacity,transform] duration-150 ${
                   barOpen ? "scale-100 opacity-100" : "pointer-events-none scale-90 opacity-0"
                 }`}
               >

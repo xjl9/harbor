@@ -12,6 +12,7 @@ import {
   removeLocalEntry,
   updateLocalEntries,
   useLocalLibrary,
+  useLocalLibraryReady,
   type LocalEntry,
 } from "@/lib/local-library";
 import { confirmDialog } from "@/lib/dialog";
@@ -39,6 +40,7 @@ import { useLocalExport } from "./local-tab/use-local-export";
 import { useLocalScan } from "./local-tab/use-local-scan";
 import { LocalCwRow } from "./local-tab/cw-row";
 import { useReportFeatured } from "./featured-context";
+import { readLibraryFilterPreferences, writeLibraryFilterPreferences } from "./filter-preferences";
 
 type Tr = (key: string, vars?: Record<string, string | number>) => string;
 
@@ -48,6 +50,7 @@ export function LocalTab({ scrollRef }: { scrollRef?: RefObject<HTMLElement | nu
   const t = useT();
   const { openMeta } = useView();
   const items = useLocalLibrary();
+  const libraryReady = useLocalLibraryReady();
   const [toast, setToast] = useState<string | null>(null);
   const [identify, setIdentify] = useState<LocalEntry[] | null>(null);
   const [selectMode, setSelectMode] = useState(false);
@@ -125,11 +128,20 @@ export function LocalTab({ scrollRef }: { scrollRef?: RefObject<HTMLElement | nu
   // Matches the column width Grid derives in ./shared, so the virtualized rows
   // keep the same density as the rest of the library tabs.
   const posterWidth = Math.round(150 * settings.posterScale);
-  const [type, setType] = useState<TypeKey>("all");
+  const savedFilters = useMemo(() => readLibraryFilterPreferences("local"), []);
+  const [type, setType] = useState<TypeKey>(savedFilters.type ?? "all");
   const [query, setQuery] = useState("");
-  const [sortKey, setSortKey] = useState<LocalSortKey>("added");
-  const [sortDir, setSortDir] = useState<SortDir>("desc");
-  const [genres, setGenres] = useState<Set<string>>(() => new Set());
+  const [sortKey, setSortKey] = useState<LocalSortKey>(savedFilters.sort ?? "added");
+  const [sortDir, setSortDir] = useState<SortDir>(savedFilters.sortDir ?? "desc");
+  const [genres, setGenres] = useState<Set<string>>(() => new Set(savedFilters.genres ?? []));
+  useEffect(() => {
+    writeLibraryFilterPreferences("local", {
+      type,
+      genres: [...genres],
+      sort: sortKey,
+      sortDir,
+    });
+  }, [type, genres, sortKey, sortDir]);
   const genreOptions = useMemo<GenreOption[]>(() => {
     const counts = new Map<string, number>();
     for (const it of items) {
@@ -160,13 +172,16 @@ export function LocalTab({ scrollRef }: { scrollRef?: RefObject<HTMLElement | nu
     [items],
   );
   const reviewCount = reviewGroups.length;
+  // Local files are one row per episode; count distinct shows/movies (as
+  // grouped for the grid) rather than the underlying file count.
+  const allGroups = useMemo(() => groupLocal(items), [items]);
   const counts = useMemo(
     () => ({
-      all: items.length,
-      movie: items.filter((i) => i.type === "movie").length,
-      series: items.filter((i) => i.type === "show").length,
+      all: allGroups.length,
+      movie: allGroups.filter((g) => g.kind === "movie").length,
+      series: allGroups.filter((g) => g.kind === "show").length,
     }),
-    [items],
+    [allGroups],
   );
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -308,6 +323,14 @@ export function LocalTab({ scrollRef }: { scrollRef?: RefObject<HTMLElement | nu
       )}
     </>
   );
+
+  if (!libraryReady) {
+    return (
+      <div className="grid min-h-48 place-items-center">
+        <Loader2 size={22} className="animate-spin text-ink-muted" />
+      </div>
+    );
+  }
 
   if (items.length === 0) {
     return (

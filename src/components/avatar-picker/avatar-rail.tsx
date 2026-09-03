@@ -1,7 +1,13 @@
-import { FolderInput, FolderPlus, HelpCircle, Trash2 } from "lucide-react";
+import { Download, FileJson, FolderInput, FolderPlus, HelpCircle, Trash2 } from "lucide-react";
 import { useT } from "@/lib/i18n";
 
-export type RailGroup = { id: string; label: string; count: number; packId?: string; badge?: number };
+export type RailGroup = {
+  id: string;
+  label: string;
+  count: number;
+  packId?: string;
+  badge?: number;
+};
 
 export function AvatarRail({
   groups,
@@ -11,6 +17,8 @@ export function AvatarRail({
   onSelect,
   onImport,
   onImportFolder,
+  onImportPack,
+  onExportPack,
   onHelp,
   onDeletePack,
 }: {
@@ -21,13 +29,20 @@ export function AvatarRail({
   onSelect: (id: string) => void;
   onImport: () => void;
   onImportFolder: () => void;
+  onImportPack: () => void;
+  onExportPack?: (packId: string) => void;
   onHelp: () => void;
   onDeletePack: (packId: string) => void;
 }) {
   const t = useT();
   return (
     <div className="flex w-[184px] shrink-0 flex-col border-e border-edge-soft p-2.5">
-      <RailItem label={t("All")} count={total} active={section === "all"} onClick={() => onSelect("all")} />
+      <RailItem
+        label={t("All")}
+        count={total}
+        active={section === "all"}
+        onClick={() => onSelect("all")}
+      />
       <div className="mx-2 my-1.5 h-px bg-edge-soft/70" />
       <div className="flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto [scrollbar-width:thin]">
         {groups.map((g) => (
@@ -40,6 +55,7 @@ export function AvatarRail({
             flash={flashIds?.includes(g.id)}
             onClick={() => onSelect(g.id)}
             onDelete={g.packId ? () => onDeletePack(g.packId as string) : undefined}
+            onExport={g.packId && onExportPack ? () => onExportPack(g.packId as string) : undefined}
           />
         ))}
       </div>
@@ -63,6 +79,14 @@ export function AvatarRail({
         </button>
         <button
           type="button"
+          onClick={onImportPack}
+          className="flex items-center gap-2 whitespace-nowrap rounded-[9px] px-3 py-2 text-[13px] font-medium text-ink-muted transition-colors hover:bg-elevated hover:text-ink active:scale-[0.98] motion-reduce:active:scale-100"
+        >
+          <FileJson size={15} strokeWidth={2.2} />
+          {t("Import pack (.json)")}
+        </button>
+        <button
+          type="button"
           onClick={onHelp}
           className="flex items-center gap-2 whitespace-nowrap rounded-[9px] px-3 py-1.5 text-[11.5px] font-medium text-ink-subtle transition-colors hover:bg-elevated hover:text-ink-muted"
         >
@@ -82,6 +106,7 @@ function RailItem({
   flash,
   onClick,
   onDelete,
+  onExport,
 }: {
   label: string;
   count: number;
@@ -90,7 +115,9 @@ function RailItem({
   flash?: boolean;
   onClick: () => void;
   onDelete?: () => void;
+  onExport?: () => void;
 }) {
+  const t = useT();
   return (
     <div
       className={`group/row relative flex items-center rounded-[9px] transition-colors ${
@@ -103,7 +130,9 @@ function RailItem({
         onClick={onClick}
         className="flex min-w-0 flex-1 items-center gap-2 px-3 py-2 text-start outline-none"
       >
-        <span className={`truncate text-[13px] ${active ? "font-semibold text-ink" : "text-ink-muted"}`}>
+        <span
+          className={`truncate text-[13px] ${active ? "font-semibold text-ink" : "text-ink-muted"}`}
+        >
           {label}
         </span>
         {badge ? (
@@ -120,11 +149,21 @@ function RailItem({
           </span>
         )}
       </button>
+      {onExport && (
+        <button
+          type="button"
+          onClick={onExport}
+          aria-label={t("Export pack")}
+          className="absolute end-8 flex h-6 w-6 items-center justify-center rounded-md text-ink-subtle opacity-0 transition-all hover:bg-elevated hover:text-ink group-hover/row:opacity-100"
+        >
+          <Download size={13} strokeWidth={2.2} />
+        </button>
+      )}
       {onDelete && (
         <button
           type="button"
           onClick={onDelete}
-          aria-label="Remove pack"
+          aria-label={t("Remove pack")}
           className="absolute end-1.5 flex h-6 w-6 items-center justify-center rounded-md text-ink-subtle opacity-0 transition-all hover:bg-danger/15 hover:text-danger group-hover/row:opacity-100"
         >
           <Trash2 size={13} strokeWidth={2.2} />

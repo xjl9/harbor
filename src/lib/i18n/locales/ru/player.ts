@@ -33,6 +33,15 @@ const player: Record<string, string> = {
   "Try a different source.": "Попробуйте другой источник.",
   "Try another source.": "Выберите другой источник.",
   "Switch stream": "Сменить поток",
+  "Reloading the stream…": "Перезагрузка потока…",
+  "Couldn't reload the stream. Try picking another source.":
+    "Не удалось перезагрузить поток. Попробуйте выбрать другой источник.",
+  "Harbor's streaming server only runs in the desktop app.":
+    "Стриминг-сервер Harbor работает только в десктопном приложении.",
+  "Restarting the streaming server…": "Перезапуск стриминг-сервера…",
+  "Couldn't restart the streaming server.": "Не удалось перезапустить стриминг-сервер.",
+  "The streaming server didn't come back up.": "Стриминг-сервер так и не заработал.",
+  "Streaming server restarted.": "Стриминг-сервер перезапущен.",
   "Switch to channel list (hide program guide)": "Перейти к списку каналов (скрыть телепрограмму)",
   "Switch to program guide": "Перейти к телепрограмме",
   "Audio tracks": "Аудиодорожки",
@@ -61,6 +70,11 @@ const player: Record<string, string> = {
   "Forced only": "Только форсированные",
   "Forced subs with native audio": "Форсированные субтитры с родным аудио",
   "HI/SDH": "HI/SDH",
+  "Hearing impaired": "Для слабослышащих",
+  "Foreign-only": "Только иностранные фрагменты",
+  "Machine-translated": "Машинный перевод",
+  MT: "MT",
+  "Audio verified": "Проверено по аудио",
   "No styling": "Без оформления",
   "Position and size only": "Только положение и размер",
   "Show HI/SDH": "Показывать HI/SDH",
@@ -149,7 +163,7 @@ const player: Record<string, string> = {
   "Choose a folder...": "Выбрать папку...",
   Clear: "Очистить",
   "Click any source to swap in place": "Нажмите источник, чтобы заменить на лету",
-  "Click to apply · Right-click to delete": "Нажмите, чтобы применить · правый клик — удалить",
+  "Click to apply · Right-click to delete": "Нажмите, чтобы применить · правый клик – удалить",
   Close: "Закрыть",
   "Close guide": "Закрыть телепрограмму",
   "Close match": "Близкое совпадение",
@@ -331,8 +345,6 @@ const player: Record<string, string> = {
     "Ведущий запускает воспроизведение для всей комнаты.",
   "This and next: + {title}": "Эта и следующая: + {title}",
   "This file has one audio track.": "В этом файле одна аудиодорожка.",
-  'This file is in OneDrive. If "Files On-Demand" is on, the file is a cloud placeholder until it\'s downloaded. Right-click it in Explorer and pick':
-    "Этот файл находится в OneDrive. Если включены «Файлы по запросу», файл остаётся облачным заполнителем, пока не будет скачан. Нажмите на него правой кнопкой в проводнике и выберите",
   "This show: {title}": "Эта передача: {title}",
   "Tighter spacing": "Плотный интервал",
   Title: "Название",
@@ -360,7 +372,7 @@ const player: Record<string, string> = {
   "Wrong channel or source?": "Не тот канал или источник?",
   "Wrong episode or quality?": "Не та серия или качество?",
   "Your copy runs {guest}, host's runs {host}. Sync may drift.":
-    "Ваша копия — {guest}, у хоста — {host}. Возможен рассинхрон.",
+    "Ваша копия – {guest}, у хоста – {host}. Возможен рассинхрон.",
   "Your style is overriding the embedded subtitle's own styling":
     "Ваш стиль переопределяет собственное оформление встроенных субтитров",
   Yours: "У вас",
@@ -402,6 +414,61 @@ const player: Record<string, string> = {
   "Next and Previous behavior": "Поведение кнопок «Следующее» и «Предыдущее»",
   "Next and Previous follow your queue": "«Следующее» и «Предыдущее» следуют вашей очереди",
   "Next and Previous follow this show": "«Следующее» и «Предыдущее» следуют этому шоу",
+  "Subtitle FPS": "Частота кадров субтитров",
+  "Automatic correction": "Автоматическая коррекция",
+  "Measure this subtitle against speech and correct delay and gradual drift together.":
+    "Сопоставьте субтитры с речью и исправьте задержку и постепенный дрейф вместе.",
+  "Detect timing drift": "Определить дрейф тайминга",
+  "Timing analysis active": "Анализ тайминга выполняется",
+  "Automatic timing correction requires an external text subtitle.":
+    "Для автоматической коррекции тайминга нужны внешние текстовые субтитры.",
+  "Manual source FPS": "Исходная частота кадров вручную",
+  "Subtitle source FPS": "Исходная частота кадров субтитров",
+  "Choose the frame rate the subtitle was authored for.":
+    "Выберите частоту кадров, для которой были созданы субтитры.",
+  "No correction (default)": "Без коррекции (по умолчанию)",
+  "Auto (match video)": "Авто (как у видео)",
+  "Custom...": "Другая...",
+  "Custom subtitle FPS": "Другая частота кадров субтитров",
+  "Apply custom subtitle FPS": "Применить другую частоту кадров субтитров",
+  "Video FPS": "Частота кадров видео",
+  "No correction": "Без коррекции",
+  "Couldn't apply subtitle FPS. Try again.":
+    "Не удалось применить частоту кадров субтитров. Повторите попытку.",
+  "Enter an FPS from 1 to 240.": "Введите частоту кадров от 1 до 240.",
+  "Select a subtitle track first.": "Сначала выберите дорожку субтитров.",
+  "Subtitle FPS is only available with the libmpv player.":
+    "Настройка частоты кадров субтитров доступна только в проигрывателе libmpv.",
+  "Subtitle FPS conversion is only available for text-based subtitles.":
+    "Преобразование частоты кадров доступно только для текстовых субтитров.",
+  "Subtitle FPS is unavailable while a secondary subtitle is active.":
+    "Настройка частоты кадров недоступна, пока включены вторые субтитры.",
+  "Video FPS is unavailable.": "Частота кадров видео недоступна.",
+  "Subtitle FPS is unavailable in this libmpv runtime.":
+    "Настройка частоты кадров субтитров недоступна в этой версии libmpv.",
+  "Turn off Auto Sync before changing subtitle FPS.":
+    "Отключите автосинхронизацию перед изменением частоты кадров субтитров.",
+  "Resize subtitle menu": "Изменить размер меню субтитров",
+  "Drag to resize. Use arrow keys to adjust, or Home to reset.":
+    "Перетащите для изменения размера. Используйте клавиши со стрелками для настройки, а Home – для сброса.",
+  "Drag the corner to resize. Left and right change width; up and down change height; Home resets the size.":
+    "Перетащите угол для изменения размера. Стрелки влево и вправо меняют ширину, вверх и вниз – высоту, а Home сбрасывает размер.",
+  "Couldn't switch subtitles. Try again.": "Не удалось переключить субтитры. Повторите попытку.",
+  "Subtitle details": "Сведения о субтитрах",
+  "Open subtitle details": "Открыть сведения о субтитрах",
+  Provider: "Провайдер",
+  Format: "Формат",
+  Quality: "Качество",
+  Author: "Автор",
+  Release: "Релиз",
+  "Not provided": "Не указано",
+  "Match estimate": "Оценка соответствия",
+  "Match evidence": "Данные о соответствии",
+  "This is a metadata-based release estimate, not a measured timing score.":
+    "Это оценка по метаданным релиза, а не измерение синхронизации.",
+  "Couldn't save the synced subtitle. Try again.":
+    "Не удалось сохранить синхронизированные субтитры. Повторите попытку.",
+  "Saving...": "Сохранение...",
 };
 
 export default player;

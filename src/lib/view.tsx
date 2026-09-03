@@ -22,6 +22,7 @@ import { useTogether } from "./together/provider";
 import type { SportsGame } from "./sports/espn";
 import { beginMarathonAdvance } from "./fullscreen-state";
 import { consumeBack } from "./back-intercept";
+import type { SubtitleLoadMetadata } from "./subtitles/types";
 
 export type View =
   | "home"
@@ -38,9 +39,11 @@ export type View =
   | "collections-hub"
   | "live"
   | "vod"
+  | "sports"
   | "downloads"
   | "wrapped"
   | "manga"
+  | "ebook"
   | "people";
 
 export type PlayEpisode = {
@@ -64,16 +67,34 @@ export type PlayEpisode = {
 
 export type PlayerSrc = {
   meta: Meta;
+  playbackTraceId?: string;
+  proxySessionId?: string;
+  historyUrl?: string;
   imdbId?: string;
   imdbIdVerified?: boolean;
   episode?: PlayEpisode;
+  /** Last logical episode covered by the physical source. */
+  episodeEnd?: number;
+  episodeSpan?: import("./episode-span").EpisodeSpan;
   url: string;
   title: string;
   subtitle?: string;
   notWebReady?: boolean;
   isAnime?: boolean;
-  subtitles?: Array<{ url: string; lang?: string; id?: string }>;
-  subtitlePreselect?: { off: boolean; url?: string; lang?: string; title?: string };
+  subtitles?: Array<{
+    url: string;
+    lang?: string;
+    id?: string;
+    /** The path came from the user's local library or a configured home server, not an addon. */
+    trustedSource?: boolean;
+  }>;
+  subtitlePreselect?: {
+    off: boolean;
+    url?: string;
+    lang?: string;
+    title?: string;
+    metadata?: SubtitleLoadMetadata;
+  };
   attempt?: number;
   autoFired?: boolean;
   resume?: boolean;
@@ -82,9 +103,20 @@ export type PlayerSrc = {
   liveProgram?: string;
   isLive?: boolean;
   headers?: Record<string, string>;
+  homeServer?: {
+    connectionId: string;
+    itemId: string;
+    versionId: string;
+    quality: import("./media-server/types").MediaServerQuality;
+    playbackSessionId?: string;
+  };
+  startPositionMs?: number;
+  startPaused?: boolean;
 };
 
 export type PlayerStreamRef = {
+  /** Exact media filename selected after local/torrent/debrid resolution. */
+  resolvedFilename?: string | null;
   infoHash?: string | null;
   fileIdx?: number | null;
   addonId?: string | null;
@@ -132,8 +164,10 @@ export type Frame =
   | { kind: "library" }
   | { kind: "live" }
   | { kind: "vod" }
+  | { kind: "sports" }
   | { kind: "downloads" }
   | { kind: "manga"; mangaId?: string }
+  | { kind: "ebook"; ebookId?: string }
   | { kind: "people"; source?: RankSource; dept?: PeopleDept; focusSource?: boolean; nonce: number }
   | { kind: "service"; service: StreamingService }
   | {
@@ -183,6 +217,7 @@ export type SettingsSection =
   | "trakt"
   | "anilist"
   | "simkl"
+  | "letterboxd"
   | "parental"
   | "relay"
   | "streaming"
@@ -236,6 +271,8 @@ type ViewValue = {
   openCollection: (id: number) => void;
   mangaId: string | null;
   openManga: (mangaId?: string) => void;
+  ebookId: string | null;
+  openEBook: (ebookId?: string) => void;
   peopleInit: {
     source?: RankSource;
     dept?: PeopleDept;
@@ -346,10 +383,14 @@ function frameKey(f: Frame): string {
       return "live";
     case "vod":
       return "vod";
+    case "sports":
+      return "sports";
     case "downloads":
       return "downloads";
     case "manga":
       return f.mangaId ? `manga:${f.mangaId}` : "manga";
+    case "ebook":
+      return f.ebookId ? `ebook:${f.ebookId}` : "ebook";
     case "people":
       return "people";
     case "service":
@@ -481,8 +522,10 @@ export function ViewProvider({ children }: { children: ReactNode }) {
       if (f.kind === "collections-hub") return "collections-hub";
       if (f.kind === "live") return "live";
       if (f.kind === "vod") return "vod";
+      if (f.kind === "sports") return "sports";
       if (f.kind === "downloads") return "downloads";
       if (f.kind === "manga") return "manga";
+      if (f.kind === "ebook") return "ebook";
       if (f.kind === "people") return "people";
       if (f.kind === "home") return "home";
     }
@@ -515,6 +558,8 @@ export function ViewProvider({ children }: { children: ReactNode }) {
   const collectionId = collectionFrame ? collectionFrame.id : null;
   const mangaFrame = lastOfKind(stack, "manga");
   const mangaId = mangaFrame ? (mangaFrame.mangaId ?? null) : null;
+  const ebookFrame = lastOfKind(stack, "ebook");
+  const ebookId = ebookFrame ? (ebookFrame.ebookId ?? null) : null;
   const peopleFrame = lastOfKind(stack, "people");
   const peopleInit = useMemo(
     () =>
@@ -741,10 +786,20 @@ export function ViewProvider({ children }: { children: ReactNode }) {
           rowScrollMem.current.clear();
           return [{ kind: "vod" }];
         }
+        if (v === "sports") {
+          scrollMem.current.clear();
+          rowScrollMem.current.clear();
+          return [{ kind: "sports" }];
+        }
         if (v === "manga") {
           scrollMem.current.clear();
           rowScrollMem.current.clear();
           return [{ kind: "manga" }];
+        }
+        if (v === "ebook") {
+          scrollMem.current.clear();
+          rowScrollMem.current.clear();
+          return [{ kind: "ebook" }];
         }
         if (v === "people") {
           scrollMem.current.clear();
@@ -941,6 +996,20 @@ export function ViewProvider({ children }: { children: ReactNode }) {
         const t = cur[cur.length - 1];
         if (t.kind === "manga" && t.mangaId === mangaId) return cur;
         return pushFrame(cur, { kind: "manga", mangaId });
+      });
+    },
+    [setNavStack],
+  );
+
+  const openEBook = useCallback(
+    (ebookId?: string) => {
+      setNavStack((cur) => {
+        const top = cur[cur.length - 1];
+        if (top.kind === "ebook") {
+          if (top.ebookId === ebookId) return cur;
+          return [...cur.slice(0, -1), { kind: "ebook", ebookId }];
+        }
+        return pushFrame(cur, { kind: "ebook", ebookId });
       });
     },
     [setNavStack],
@@ -1192,6 +1261,8 @@ export function ViewProvider({ children }: { children: ReactNode }) {
       openCollection,
       mangaId,
       openManga,
+      ebookId,
+      openEBook,
       peopleInit,
       openPeople,
       addonCollectionMeta,
@@ -1263,6 +1334,8 @@ export function ViewProvider({ children }: { children: ReactNode }) {
       openCollection,
       mangaId,
       openManga,
+      ebookId,
+      openEBook,
       peopleInit,
       openPeople,
       addonCollectionMeta,

@@ -253,7 +253,7 @@ function linkifyEscaped(s: string, mentions?: ReadonlySet<string>): string {
     }
     const href = linkUrl(raw);
     out += href
-      ? `<a href="${esc(href)}" target="_blank" rel="noopener noreferrer nofollow" style="${LINK_STYLE}">${esc(raw)}</a>${esc(trail)}`
+      ? `<a href="${esc(href)}" rel="noopener noreferrer nofollow" style="${LINK_STYLE}">${esc(raw)}</a>${esc(trail)}`
       : esc(m[0]);
     last = m.index + m[0].length;
   }
@@ -304,7 +304,7 @@ function finalize(f: Frame, addEmbed: () => boolean): { html: string; raw: strin
       if (!href) return wrap(inner);
       const label = f.arg != null ? inner || esc(href) : esc(href);
       return wrap(
-        `<a href="${esc(href)}" target="_blank" rel="noopener noreferrer nofollow" style="${LINK_STYLE}">${label}</a>`,
+        `<a href="${esc(href)}" rel="noopener noreferrer nofollow" style="${LINK_STYLE}">${label}</a>`,
       );
     }
     case "img":

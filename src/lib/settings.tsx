@@ -21,6 +21,9 @@ import {
   sourceKeyFor,
 } from "./settings/profile-store";
 import type { Settings, StreamingService } from "./settings/types";
+import { markSectionDirty } from "./profile-sync/scheduler";
+import { configureLayoutStore } from "./layout-sync/store";
+import { SYNCED_SETTINGS_FIELDS } from "./layout-sync/sections";
 
 export type {
   ContentCategory,
@@ -76,10 +79,17 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
 
   setTmdbLanguage(settings.tmdbLanguage);
 
+  const lastSavedImageRef = useRef<{ profileId: string; image: string | null }>({
+    profileId: sourceRef.current.profileId,
+    image: null,
+  });
+
   useEffect(() => {
     let cancelled = false;
-    void loadBgImage().then((img) => {
+    const activeId = sourceRef.current.profileId;
+    void loadBgImage(activeId).then((img) => {
       if (cancelled || !img) return;
+      lastSavedImageRef.current = { profileId: activeId, image: img };
       setSettings((s) => (s.theme.backgroundImage ? s : { ...s, theme: { ...s.theme, backgroundImage: img } }));
     });
     return () => {
@@ -107,12 +117,17 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     setSettings((s) => (isRemovedBuiltinAvatar(s.harborAvatar) ? { ...s, harborAvatar: null } : s));
   }, []);
 
-  const lastSavedImageRef = useRef<string | null>(null);
   useEffect(() => {
+    const activeId = sourceRef.current.profileId;
     const img = settings.theme.backgroundImage;
-    if (img === lastSavedImageRef.current) return;
-    lastSavedImageRef.current = img;
-    void saveBgImage(img);
+    if (
+      lastSavedImageRef.current.profileId === activeId &&
+      lastSavedImageRef.current.image === img
+    ) {
+      return;
+    }
+    lastSavedImageRef.current = { profileId: activeId, image: img };
+    void saveBgImage(img, activeId);
   }, [settings.theme.backgroundImage]);
 
   const fileTimerRef = useRef(0);
@@ -380,6 +395,27 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
 
   const update = useCallback((patch: Partial<Settings>) => {
     setSettings((s) => ({ ...s, ...patch }));
+    // The write-side trigger for account sync. Without it a layout change is persisted
+    // locally and never queued, so the section only ever travels device-to-server by
+    // accident. Marking on the patch rather than diffing the whole blob keeps this off
+    // the hot path: update is called for every settings toggle in the app.
+    for (const [section, field] of SYNCED_SETTINGS_FIELDS) {
+      if (field in patch) markSectionDirty(section);
+    }
+  }, []);
+
+  // Same contract as the roster store: sync reads and writes through the provider for
+  // the ACTIVE profile, and straight to disk for any other, because only the active
+  // profile has live React state that a direct write would lose.
+  useEffect(() => {
+    configureLayoutStore({
+      activeProfileId: () => sourceRef.current.profileId,
+      isLinked: (profileId) =>
+        profileId === sourceRef.current.profileId ? sourceRef.current.linked : true,
+      readActive: () => settingsRef.current,
+      writeActive: (patch) => setSettings((s) => ({ ...s, ...patch })),
+    });
+    return () => configureLayoutStore(null);
   }, []);
 
   useEffect(() => {
@@ -403,20 +439,41 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
 
   const switchProfile = useCallback((profileId: string, linked: boolean) => {
     const cur = sourceRef.current;
-    if (sourceKeyFor(cur.profileId, cur.linked) === sourceKeyFor(profileId, linked)) {
-      sourceRef.current = { profileId, linked };
+    if (cur.profileId === profileId && cur.linked === linked) {
       return;
     }
-    persistEffective(settingsRef.current, cur.profileId, cur.linked);
-    const next = loadEffective(profileId, linked);
-    setUiLanguage(next.uiLanguage);
-    setTmdbLanguage(next.tmdbLanguage);
-    tmdbLangRef.current = effectiveTmdbLanguage();
-    imgLangRef.current = next.tmdbImageLangs.join(",");
-    sourceRef.current = { profileId, linked };
-    persistEffective(next, profileId, linked);
-    settingsRef.current = next;
-    setSettings(next);
+
+    if (sourceKeyFor(cur.profileId, cur.linked) === sourceKeyFor(profileId, linked)) {
+      sourceRef.current = { profileId, linked };
+    } else {
+      persistEffective(settingsRef.current, cur.profileId, cur.linked);
+      const next = loadEffective(profileId, linked);
+      setUiLanguage(next.uiLanguage);
+      setTmdbLanguage(next.tmdbLanguage);
+      tmdbLangRef.current = effectiveTmdbLanguage();
+      imgLangRef.current = next.tmdbImageLangs.join(",");
+      sourceRef.current = { profileId, linked };
+      persistEffective(next, profileId, linked);
+      settingsRef.current = next;
+      setSettings(next);
+    }
+
+    lastSavedImageRef.current = { profileId, image: null };
+    settingsRef.current = {
+      ...settingsRef.current,
+      theme: { ...settingsRef.current.theme, backgroundImage: null },
+    };
+    setSettings((s) => ({ ...s, theme: { ...s.theme, backgroundImage: null } }));
+
+    void loadBgImage(profileId).then((img) => {
+      if (sourceRef.current.profileId !== profileId) return;
+      lastSavedImageRef.current = { profileId, image: img };
+      settingsRef.current = {
+        ...settingsRef.current,
+        theme: { ...settingsRef.current.theme, backgroundImage: img },
+      };
+      setSettings((s) => ({ ...s, theme: { ...s.theme, backgroundImage: img } }));
+    });
   }, []);
 
   const setSettingsLinked = useCallback(

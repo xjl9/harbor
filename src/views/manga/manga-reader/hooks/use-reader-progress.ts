@@ -19,13 +19,56 @@ type Args = {
   book: boolean;
   settled: RefObject<boolean>;
   scrollRef: RefObject<HTMLDivElement | null>;
+  disabled?: boolean;
 };
 
 export function useReaderProgress(a: Args): (page: number) => void {
-  const { pid, manga, chapter, label, total, currentPage, index, loading, failed, paged, book, settled, scrollRef } = a;
+  const {
+    pid,
+    manga,
+    chapter,
+    label,
+    total,
+    currentPage,
+    index,
+    loading,
+    failed,
+    paged,
+    book,
+    settled,
+    scrollRef,
+    disabled,
+  } = a;
 
   useEffect(() => {
-    if (book || !settled.current || loading || failed || total === 0 || !manga.title) return;
+    if (disabled || loading || failed || total === 0 || !manga.title) return;
+    setMangaReading({
+      mangaId: manga.id,
+      title: manga.title,
+      cover: manga.cover,
+      chapter: chapter.chapter,
+      chapterLabel: label,
+      page: Math.min(currentPage + 1, total),
+      totalPages: total,
+    });
+  }, [
+    loading,
+    failed,
+    total,
+    currentPage,
+    index,
+    manga.id,
+    manga.title,
+    manga.cover,
+    chapter.id,
+    chapter.chapter,
+    label,
+    disabled,
+  ]);
+
+  useEffect(() => {
+    if (disabled || book || !settled.current || loading || failed || total === 0 || !manga.title)
+      return;
     setMangaReading({
       mangaId: manga.id,
       title: manga.title,
@@ -54,10 +97,28 @@ export function useReaderProgress(a: Args): (page: number) => void {
       });
     }, 700);
     return () => window.clearTimeout(t);
-  }, [currentPage, total, index, loading, failed, paged, book, pid, manga.id, manga.title, manga.cover, chapter.id, chapter.chapter, label, settled, scrollRef]);
+  }, [
+    currentPage,
+    total,
+    index,
+    loading,
+    failed,
+    paged,
+    book,
+    pid,
+    manga.id,
+    manga.title,
+    manga.cover,
+    chapter.id,
+    chapter.chapter,
+    label,
+    settled,
+    scrollRef,
+    disabled,
+  ]);
 
   return (p: number) => {
-    if (!manga.title || total === 0) return;
+    if (disabled || !manga.title || total === 0) return;
     const page = Math.min(p + 1, total);
     setMangaReading({
       mangaId: manga.id,

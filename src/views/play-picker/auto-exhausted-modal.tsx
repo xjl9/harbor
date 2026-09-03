@@ -8,11 +8,13 @@ import { isPhoneShell } from "./picker-utils";
 export function AutoExhaustedModal({
   meta,
   episode,
+  absoluteEpisode,
   triedCount,
   onBrowseManually,
 }: {
   meta: Meta;
   episode?: PlayEpisode;
+  absoluteEpisode?: number | null;
   triedCount: number;
   onBrowseManually: () => void;
 }) {
@@ -38,7 +40,9 @@ export function AutoExhaustedModal({
   };
   const title = meta.name ?? "this title";
   const epSuffix = episode
-    ? ` S${episode.imdbSeason ?? episode.season}E${String(episode.imdbEpisode ?? episode.episode).padStart(2, "0")}`
+    ? absoluteEpisode != null
+      ? ` E${absoluteEpisode}`
+      : ` S${episode.imdbSeason ?? episode.season}E${String(episode.imdbEpisode ?? episode.episode).padStart(2, "0")}`
     : "";
   const subject = `Harbor: no working stream for ${title}${epSuffix}`;
   const body =
@@ -81,7 +85,10 @@ export function AutoExhaustedModal({
         {/* The count is the whole diagnosis. Saying "no addon is installed" when an
             addon just returned dozens of sources sends people to fix the one thing
             that is provably working, so that line only shows when nothing came back. */}
-        <ul className="mt-3 space-y-1.5 text-start text-[13.5px] leading-relaxed text-ink-muted" dir="auto">
+        <ul
+          className="mt-3 space-y-1.5 text-start text-[13.5px] leading-relaxed text-ink-muted"
+          dir="auto"
+        >
           {triedCount > 0 ? (
             <>
               <li dir="auto">· None of them are cached on your debrid yet.</li>

@@ -2,12 +2,23 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import type { Addon } from "@/lib/addons";
 import type { Meta } from "@/lib/cinemeta";
 import { useDebridClients } from "@/lib/debrid/registry";
-import { buildPickerConfigHash, clearOnePickerCache, getPickerCache, setPickerCache } from "@/lib/picker-cache";
+import {
+  buildPickerConfigHash,
+  clearOnePickerCache,
+  getPickerCache,
+  setPickerCache,
+} from "@/lib/picker-cache";
 import { useSettings } from "@/lib/settings";
+import type { AddonProgress } from "@/lib/streams/addons";
 import { runPipeline, type PipelineResult } from "@/lib/streams/pipeline";
 import { buildEpisodePipelineInput } from "@/lib/streams/episode-pipeline-input";
 import type { PlayEpisode } from "@/lib/view";
-import { stampAddonOrder } from "./picker-utils";
+import {
+  pickerErrorTransport,
+  pipelineError,
+  stampAddonOrder,
+  type PickerError,
+} from "./picker-utils";
 
 type Settings = ReturnType<typeof useSettings>["settings"];
 
@@ -39,9 +50,14 @@ export function usePipelineResult({
   const [pipelineDone, setPipelineDone] = useState(false);
   const [firstResultAt, setFirstResultAt] = useState<number | null>(null);
   const [autoSettleReady, setAutoSettleReady] = useState(false);
-  const [resolveError, setResolveError] = useState<string | null>(null);
+  const [pickerError, setResolveError] = useState<PickerError | null>(null);
   const [refreshNonce, setRefreshNonce] = useState(0);
-  const [addonQuorum, setAddonQuorum] = useState<{ settled: number; total: number }>({ settled: 0, total: 0 });
+  const [addonQuorum, setAddonQuorum] = useState<AddonProgress>({
+    settled: 0,
+    total: 0,
+    queriedAddonIds: [],
+    settledAddonIds: [],
+  });
   const [pipelineStartedAt, setPipelineStartedAt] = useState<number | null>(null);
 
   const configHash = useMemo(
@@ -66,7 +82,12 @@ export function usePipelineResult({
       setFirstResultAt(performance.now());
       setAutoSettleReady(true);
       setResolveError(null);
-      setAddonQuorum({ settled: 1, total: 1 });
+      setAddonQuorum({
+        settled: 1,
+        total: 1,
+        queriedAddonIds: [],
+        settledAddonIds: [],
+      });
       setPipelineStartedAt(performance.now());
       return () => ac.abort();
     }
@@ -76,7 +97,12 @@ export function usePipelineResult({
     setPipelineDone(false);
     setFirstResultAt(null);
     setAutoSettleReady(false);
-    setAddonQuorum({ settled: 0, total: 0 });
+    setAddonQuorum({
+      settled: 0,
+      total: 0,
+      queriedAddonIds: [],
+      settledAddonIds: [],
+    });
     setPipelineStartedAt(performance.now());
     runPipeline(
       buildEpisodePipelineInput({
@@ -101,9 +127,9 @@ export function usePipelineResult({
         setFirstResultAt((prev) => prev ?? performance.now());
         setPickerCache(meta, episode, partial, configHash, false);
       },
-      (settled, total) => {
+      (progress) => {
         if (ac.signal.aborted) return;
-        setAddonQuorum({ settled, total });
+        setAddonQuorum(progress);
       },
     )
       .then((r) => {
@@ -117,7 +143,7 @@ export function usePipelineResult({
       })
       .catch((e) => {
         if (ac.signal.aborted) return;
-        setResolveError(e instanceof Error ? e.message : "Couldn't load streams. Check your addons and connection.");
+        setResolveError(pipelineError(e instanceof Error ? e.message : undefined));
         setLoading(false);
         setPipelineDone(true);
         setAutoSettleReady(true);
@@ -147,6 +173,7 @@ export function usePipelineResult({
     clearOnePickerCache(meta, episode);
     setRefreshNonce((n) => n + 1);
   }, [meta, episode]);
+  const resolveError = pickerErrorTransport(pickerError);
 
   return {
     result,
@@ -157,6 +184,7 @@ export function usePipelineResult({
     addonQuorum,
     pipelineStartedAt,
     resolveError,
+    pickerError,
     refresh,
     setResult,
     setLoading,

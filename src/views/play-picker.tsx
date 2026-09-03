@@ -1,25 +1,42 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowUp, ChevronLeft, Download, Filter, Loader2, PackageX, Play, RefreshCw, X, Zap } from "lucide-react";
+import {
+  ArrowDownToLine,
+  ArrowUp,
+  ChevronLeft,
+  Download,
+  Filter,
+  Loader2,
+  PackageX,
+  Play,
+  RefreshCw,
+  X,
+  Zap,
+} from "lucide-react";
 import { useT } from "@/lib/i18n";
 import { resolveAddonLogo } from "@/components/addon-logo";
 import { FormatBadge } from "@/components/format-badge";
 import { torrentEngineStatus } from "@/lib/torrent/local-engine";
-import { torrentsDisabled } from "@/lib/torrent/stremio-stream";
+import { directTorrentEnabled, torrentsDisabled } from "@/lib/torrent/stremio-stream";
 import { useAuth } from "@/lib/auth";
 import type { Meta } from "@/lib/cinemeta";
 import { useDebridClients } from "@/lib/debrid/registry";
+import {
+  cachedDebridPreparationSignature,
+  prepareCachedDebridStreams,
+} from "@/lib/debrid/playback-preparation";
 import { useTogether } from "@/lib/together/provider";
 import { buildMatchScores, matchBadge, MATCH_CLOSE } from "@/lib/together/source-match";
 import { HostSourceBanner } from "@/components/host-source-banner";
 import { HoverTooltip } from "@/components/hover-tooltip";
 import { StreamModeToggle } from "@/components/stream-mode-toggle";
-import { isP2pStream } from "@/lib/streams/cached";
+import { filterStreamsByMode } from "@/lib/streams/mode";
 import { consumeRecentStubEvent } from "@/lib/dead-streams";
 import { peekCachedLogo, resolveLogo } from "@/lib/logo";
 import {
   readPlayback,
   readLastSeriesPlayback,
   streamMatchesEntry,
+  streamMatchesReleaseLineage,
   streamMatchesSource,
 } from "@/lib/playback-history";
 import { readSeasonLock } from "@/lib/season-lock";
@@ -41,19 +58,21 @@ import { CachedFilterPill, LanguageFilterPill } from "./play-picker/filter-pills
 import { PickerEmptyLadder } from "./play-picker/picker-empty-ladder";
 import { NoSourcesConfiguredModal } from "./play-picker/no-sources-modal";
 import {
-  debridBannerTitle,
+  debridBanner,
   hasCachedMarker,
   hasUncachedMarker,
-  humanError,
   isEngineWarmingError,
   isPhoneShell,
   normalizeLangCode,
   orderByAddonNative,
   PHONE_FOCUS,
+  playError,
   primaryLadder,
   streamIdentity,
   streamLeadBadge,
   streamMatchesLangs,
+  translateDebridBannerTitle,
+  translatePickerError,
 } from "./play-picker/picker-utils";
 import { PickerHeader, PickerNav } from "./play-picker/picker-header";
 import { PrimaryCard } from "./play-picker/primary-card";
@@ -62,7 +81,7 @@ import { CachedTip } from "./play-picker/cached-tip";
 import { StremioLayout } from "./play-picker/stremio-layout";
 import { SourceDrawer } from "./play-picker/source-drawer";
 import { TierStrip } from "./play-picker/tier-strip";
-import { usePickHandler } from "./play-picker/use-pick-handler";
+import { usePickHandler, type ResolvingSelection } from "./play-picker/use-pick-handler";
 import { useActiveKid } from "@/lib/profiles";
 import { useAutoCandidates } from "./play-picker/use-auto-candidates";
 import { useAutoFire } from "./play-picker/use-auto-fire";
@@ -71,16 +90,30 @@ import { useAddons } from "./play-picker/use-addons";
 import { useAnimeAltTitles } from "./play-picker/use-anime-alt-titles";
 import { useImdbId } from "./play-picker/use-imdb-id";
 import { usePipelineResult } from "./play-picker/use-pipeline-result";
+import { animeAbsoluteFromStreamIds } from "@/lib/streams/anime-identity";
 import { useStreamIds } from "./play-picker/use-stream-ids";
 import { findLocalEpisodeVersions, findLocalMovieVersions } from "@/lib/local-library/versions";
 import { localPlayerSrc } from "@/lib/local-library/player-src";
 import { downloadableSeasonPacks } from "@/lib/download/season-pack";
+import { downloadSeasonPerEpisode } from "@/lib/download/season-download";
+import { completedDownloadFor, type DownloadItem } from "@/lib/download/downloads-store";
+import { downloadLocalEntry, downloadPlayerSrc } from "@/lib/download/player-src";
 import { LocalStreamList } from "./play-picker/local-stream-card";
 import { SubtitleSelectStep } from "./play-picker/subtitle-select-step";
+import { prefetchResumeStart } from "@/lib/player/resume-start";
+import { isLivePlaybackSrc } from "@/lib/player/live-src";
 
 const TIER_ORDER: Tier[] = ["4K_DV", "4K_HDR", "4K", "1080p_HDR", "1080p", "720p", "SD", "ROUGH"];
 
 const RESOLVE_TIMEOUT_MS = 150_000;
+
+type PerEpisodeStatus =
+  | { code: "checking"; total: number }
+  | { code: "checked"; done: number; total: number }
+  | { code: "already-downloading" }
+  | { code: "no-source" }
+  | { code: "queued"; queued: number; total: number }
+  | { code: "failed" };
 
 export function PlayPicker({
   meta,
@@ -130,7 +163,24 @@ export function PlayPicker({
     prefetchSegments(meta, episode);
   }, [meta, episode]);
   const imdbId = resolvedImdb.id;
+  useEffect(() => {
+    if (!authKey || (!settings.resumePlayback && !settings.resumePrompt)) return;
+    prefetchResumeStart({
+      metaId: meta.id,
+      authKey,
+      imdbId,
+      imdbVerified: resolvedImdb.verified,
+    });
+  }, [
+    authKey,
+    imdbId,
+    meta.id,
+    resolvedImdb.verified,
+    settings.resumePlayback,
+    settings.resumePrompt,
+  ]);
   const streamIds = useStreamIds(meta, episode, imdbId);
+  const animeAbsoluteEpisode = useMemo(() => animeAbsoluteFromStreamIds(streamIds), [streamIds]);
   const localMatches = useMemo(() => {
     const m = meta.id.match(/^tmdb:(?:movie|tv):(\d+)$/);
     const tmdbId = m ? parseInt(m[1], 10) : null;
@@ -139,6 +189,30 @@ export function PlayPicker({
       ? findLocalEpisodeVersions(episode.season, episode.episode, tmdbId, imdbId)
       : findLocalMovieVersions(tmdbId, imdbId);
   }, [meta.id, imdbId, episode]);
+  const [downloadMatch, setDownloadMatch] = useState<DownloadItem | null>(null);
+  useEffect(() => {
+    if (isDownload) {
+      setDownloadMatch(null);
+      return;
+    }
+    let cancelled = false;
+    completedDownloadFor(meta.id, episode?.season ?? null, episode?.episode ?? null)
+      .then((item) => {
+        if (!cancelled) setDownloadMatch(item);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [isDownload, meta.id, episode?.season, episode?.episode]);
+  const downloadEntry = useMemo(
+    () => (downloadMatch ? downloadLocalEntry(downloadMatch) : null),
+    [downloadMatch],
+  );
+  const diskEntries = useMemo(
+    () => (downloadEntry ? [downloadEntry, ...localMatches] : localMatches),
+    [downloadEntry, localMatches],
+  );
   const { addons } = useAddons(authKey, settings);
   const [seasonLogo, setSeasonLogo] = useState<string | undefined>(() =>
     peekCachedLogo(settings.tmdbKey, meta, { preferOwn: true }),
@@ -161,7 +235,7 @@ export function PlayPicker({
     () => (seasonLogo ? { ...meta, logo: seasonLogo } : meta),
     [meta, seasonLogo],
   );
-  const [resolving, setResolving] = useState<{ stream: ScoredStream } | null>(null);
+  const [resolving, setResolving] = useState<ResolvingSelection | null>(null);
   const [failedStreams, setFailedStreams] = useState<Set<ScoredStream>>(new Set());
   const [selectedTier, setSelectedTier] = useState<Tier | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -177,7 +251,7 @@ export function PlayPicker({
     autoSettleReady,
     addonQuorum,
     pipelineStartedAt,
-    resolveError,
+    pickerError,
     refresh,
     setAutoSettleReady,
     setResolveError,
@@ -276,14 +350,7 @@ export function PlayPicker({
           /^(kitsu|mal|anilist|anidb):/.test(meta.id) ? null : (episode?.season ?? null),
         )
       : result.picker.all;
-    let all = candidatePool;
-    if (settings.streamMode === "addons") {
-      const addonsOnly = all.filter((s) => !isP2pStream(s));
-      if (addonsOnly.length > 0) all = addonsOnly;
-    } else if (settings.streamMode === "p2p") {
-      const p2pOnly = all.filter((s) => isP2pStream(s));
-      if (p2pOnly.length > 0) all = p2pOnly;
-    }
+    let all = filterStreamsByMode(candidatePool, settings.streamMode);
     if (langFilter && preferredLangs.length > 0) {
       const langFiltered = all.filter((s) => streamMatchesLangs(s, preferredLangs));
       if (langFiltered.length > 0) all = langFiltered;
@@ -343,6 +410,36 @@ export function PlayPicker({
     return base.slice().sort((a, b) => (hostMatch.get(b) ?? 0) - (hostMatch.get(a) ?? 0));
   }, [filteredPicker, addonOrderMode, result, addons, hostMatch]);
 
+  const playbackPreparationHint = useMemo(
+    () =>
+      episode ? { season: episode.season ?? null, episode: episode.episode ?? null } : undefined,
+    [episode?.season, episode?.episode],
+  );
+  const playbackPreparationSignature = useMemo(
+    () => cachedDebridPreparationSignature(displayStreams, debrids, playbackPreparationHint),
+    [displayStreams, debrids, playbackPreparationHint],
+  );
+  const playbackPreparationInput = useRef({
+    streams: displayStreams,
+    debrids,
+    hint: playbackPreparationHint,
+  });
+  playbackPreparationInput.current = {
+    streams: displayStreams,
+    debrids,
+    hint: playbackPreparationHint,
+  };
+
+  useEffect(() => {
+    if (!settings.instantPlaybackPreparation || isDownload || !playbackPreparationSignature) {
+      return;
+    }
+    const ac = new AbortController();
+    const { streams, debrids: clients, hint } = playbackPreparationInput.current;
+    void prepareCachedDebridStreams(streams, clients, hint, ac.signal);
+    return () => ac.abort();
+  }, [settings.instantPlaybackPreparation, isDownload, playbackPreparationSignature]);
+
   const langHiddenCount = useMemo(() => {
     if (!result || preferredLangs.length === 0) return 0;
     return result.picker.all.filter((s) => !streamMatchesLangs(s, preferredLangs)).length;
@@ -384,6 +481,7 @@ export function PlayPicker({
         : null),
     [seasonLockEntry, meta.id, meta.type, isAnimeMetaId, settings.keepSourceNextEpisode, autoPlay],
   );
+  const lastSeriesSourceIsLineage = seasonLockEntry == null;
 
   const kidProfile = useActiveKid();
   const p2pAutoConsent = settings.p2pAutoConsent || !!kidProfile;
@@ -391,6 +489,7 @@ export function PlayPicker({
     filteredPicker,
     previousPlayback,
     sourceEntry: lastSeriesSource,
+    sourceEntryLineage: lastSeriesSourceIsLineage,
     isCached,
     addons,
     hasStrongAddon,
@@ -413,8 +512,7 @@ export function PlayPicker({
   const [autoAttemptIdx, setAutoAttemptIdx] = useState(0);
   const [autoExhausted, setAutoExhausted] = useState(false);
   const [autoCancelled, setAutoCancelled] = useState(false);
-  const isLiveLikeContent =
-    !!meta.type && !["movie", "series", "anime"].includes(String(meta.type).toLowerCase());
+  const isLiveLikeContent = isLivePlaybackSrc({ meta });
   const autoActive =
     !!((autoPlay && !isLiveLikeContent) || wasInvitedTo(inviteKey)) &&
     !autoCancelled &&
@@ -431,7 +529,11 @@ export function PlayPicker({
     if (!filteredPicker || !previousPlayback) return null;
     const m = filteredPicker.allRaw.find((s) => streamMatchesEntry(s, previousPlayback)) ?? null;
     if (!m || isAnimeMetaId || !episode) return m;
-    if (m.episode != null && m.episode !== episode.episode) return null;
+    if (
+      m.episode != null &&
+      (episode.episode < m.episode || episode.episode > (m.episodeEnd ?? m.episode))
+    )
+      return null;
     if (
       m.episode != null &&
       m.season != null &&
@@ -444,8 +546,9 @@ export function PlayPicker({
 
   const sameSourceMatch: ScoredStream | null = useMemo(() => {
     if (!filteredPicker || !lastSeriesSource || previousMatch) return null;
-    return filteredPicker.allRaw.find((s) => streamMatchesSource(s, lastSeriesSource)) ?? null;
-  }, [filteredPicker, lastSeriesSource, previousMatch]);
+    const matches = lastSeriesSourceIsLineage ? streamMatchesReleaseLineage : streamMatchesSource;
+    return filteredPicker.allRaw.find((s) => matches(s, lastSeriesSource)) ?? null;
+  }, [filteredPicker, lastSeriesSource, lastSeriesSourceIsLineage, previousMatch]);
 
   const currentPick: ScoredStream | null = useMemo(() => {
     if (!filteredPicker) return null;
@@ -494,6 +597,7 @@ export function PlayPicker({
     imdbId,
     imdbIdVerified: resolvedImdb.verified,
     episode,
+    absoluteEpisode: animeAbsoluteEpisode,
     attempt,
     resume,
     debrids,
@@ -534,7 +638,7 @@ export function PlayPicker({
       abortResolve();
       setResolving(null);
       setAutoCancelled(true);
-      setResolveError(humanError("timeout"));
+      setResolveError(playError("timeout"));
     }, RESOLVE_TIMEOUT_MS);
     return () => window.clearTimeout(t);
   }, [resolving, abortResolve, setResolveError]);
@@ -558,6 +662,39 @@ export function PlayPicker({
     onPlay(previousMatch, true, false, true);
   }, [rememberedHandledFirst, previousMatch, onPlay]);
 
+  const downloadFiredRef = useRef(false);
+  useEffect(() => {
+    if (downloadFiredRef.current || !downloadMatch) return;
+    if (!autoActive || !autoPlay || (attempt ?? 0) !== 0) return;
+    if (inSession || hostSourceForMedia) return;
+    if (settings.localPlaybackMode === "stream" || localMatches.length > 0) return;
+    if (autoFiredRef.current || rememberedFiredRef.current) return;
+    downloadFiredRef.current = true;
+    autoFiredRef.current = true;
+    rememberedFiredRef.current = true;
+    openPlayerGated({
+      ...downloadPlayerSrc(metaForDisplay, episode, downloadMatch, {
+        imdbId,
+        isAnime: isAnimeRequest,
+      }),
+      autoFired: true,
+    });
+  }, [
+    downloadMatch,
+    autoActive,
+    autoPlay,
+    attempt,
+    inSession,
+    hostSourceForMedia,
+    settings.localPlaybackMode,
+    localMatches,
+    metaForDisplay,
+    episode,
+    imdbId,
+    isAnimeRequest,
+    openPlayerGated,
+  ]);
+
   useAutoFire({
     autoActive,
     rememberedHandledFirst: rememberedHandledFirst && autoAttemptIdx === 0,
@@ -575,6 +712,8 @@ export function PlayPicker({
     isTorrentioStream,
     expectHostSource,
     hostSource: hostSourceForMedia,
+    preferredSourceEntry: lastSeriesSource,
+    preferredSourceMatched: sameSourceMatch != null || previousMatch != null,
     season: !isAnimeMetaId ? (episode?.season ?? null) : null,
     episode: !isAnimeMetaId ? (episode?.episode ?? null) : null,
     addonQuorum,
@@ -627,14 +766,54 @@ export function PlayPicker({
     addonsSettled && !!streamIds && streamIds.length > 0 && allCount === 0 && debrids.length > 0;
   const terminalEmpty = noStreamIds || noDebrids || noResults;
   const seasonPackEmpty = isSeasonDownload && addonsSettled && allCount === 0;
-  const [stubBanner, setStubBanner] = useState<string | null>(null);
+  const [perEpisodeBusy, setPerEpisodeBusy] = useState(false);
+  const [perEpisodeStatus, setPerEpisodeStatus] = useState<PerEpisodeStatus | null>(null);
+  const perEpisodeAcRef = useRef<AbortController | null>(null);
+  useEffect(() => () => perEpisodeAcRef.current?.abort(), []);
+  const startPerEpisodeSeason = useCallback(async () => {
+    const targets = seasonEpisodes ?? [];
+    if (targets.length === 0 || perEpisodeAcRef.current) return;
+    const ac = new AbortController();
+    perEpisodeAcRef.current = ac;
+    setPerEpisodeBusy(true);
+    setPerEpisodeStatus({ code: "checking", total: targets.length });
+    try {
+      const batch = await downloadSeasonPerEpisode({
+        meta,
+        episodes: targets,
+        addons: addons ?? [],
+        debrids,
+        allowP2p: directTorrentEnabled(),
+        signal: ac.signal,
+        onProgress: (done, total) => {
+          if (!ac.signal.aborted) {
+            setPerEpisodeStatus({ code: "checked", done, total });
+          }
+        },
+      });
+      if (ac.signal.aborted) return;
+      if (batch.total === 0) {
+        setPerEpisodeStatus({ code: "already-downloading" });
+      } else if (batch.queued === 0) {
+        setPerEpisodeStatus({ code: "no-source" });
+      } else {
+        setPerEpisodeStatus({ code: "queued", queued: batch.queued, total: batch.total });
+      }
+    } catch {
+      if (!ac.signal.aborted) setPerEpisodeStatus({ code: "failed" });
+    } finally {
+      if (!ac.signal.aborted) {
+        perEpisodeAcRef.current = null;
+        setPerEpisodeBusy(false);
+      }
+    }
+  }, [addons, debrids, meta, seasonEpisodes]);
+  const [stubBanner, setStubBanner] = useState(false);
   useEffect(() => {
     const ev = consumeRecentStubEvent(8000);
     if (!ev) return;
-    setStubBanner(
-      "Last source wasn't actually cached on your debrid yet. Pick another from the list.",
-    );
-    const t = window.setTimeout(() => setStubBanner(null), 6000);
+    setStubBanner(true);
+    const t = window.setTimeout(() => setStubBanner(false), 6000);
     return () => window.clearTimeout(t);
   }, [streamIds]);
   useEffect(() => {
@@ -649,7 +828,8 @@ export function PlayPicker({
     }
   }, [autoPlay, pipelineDone, autoCandidates.length, autoExhausted, autoCancelled]);
 
-  const engineWarming = isEngineWarmingError(resolveError);
+  const engineWarming = isEngineWarmingError(pickerError);
+  const pickerErrorText = pickerError ? translatePickerError(t, pickerError) : null;
   useEffect(() => {
     if (!engineWarming) return;
     let alive = true;
@@ -671,7 +851,7 @@ export function PlayPicker({
   }, [engineWarming, setResolveError]);
 
   const showAutoTransition =
-    !resolveError &&
+    !pickerErrorText &&
     !isDownload &&
     ((autoActive && (streamIds === null || loading || autoCandidates.length > 0)) ||
       resolving != null);
@@ -695,6 +875,7 @@ export function PlayPicker({
     return (
       <SubtitleSelectStep
         src={pendingPreselect}
+        absoluteEpisode={animeAbsoluteEpisode}
         onStart={(finalSrc) => {
           setPendingPreselect(null);
           openPlayer(finalSrc);
@@ -728,6 +909,7 @@ export function PlayPicker({
         meta={metaForDisplay}
         episode={episode}
         resolving={resolving != null}
+        p2p={resolving?.p2p === true}
         attemptIdx={autoAttemptIdx}
         download={isDownload}
         onCancel={() => {
@@ -750,6 +932,7 @@ export function PlayPicker({
       <AutoExhaustedModal
         meta={meta}
         episode={episode}
+        absoluteEpisode={animeAbsoluteEpisode}
         triedCount={autoCandidates.length}
         onBrowseManually={() => {
           setAutoCancelled(true);
@@ -765,7 +948,7 @@ export function PlayPicker({
     settings.pickerLayout !== "stremio" &&
     !loading &&
     currentPick != null &&
-    !resolveError &&
+    !pickerErrorText &&
     !stubBanner;
 
   return (
@@ -823,12 +1006,25 @@ export function PlayPicker({
         }
       >
         <PickerNav onBack={backToDetail} onRefresh={refresh} refreshing={loading} />
-        <PickerHeader meta={metaForDisplay} episode={episode} />
+        <PickerHeader
+          meta={metaForDisplay}
+          episode={episode}
+          absoluteEpisode={animeAbsoluteEpisode}
+        />
 
         {!isDownload && (
           <LocalStreamList
-            entries={localMatches}
-            onPlay={(entry) => openPlayerGated(localPlayerSrc(entry))}
+            entries={diskEntries}
+            onPlay={(entry) =>
+              openPlayerGated(
+                downloadMatch && entry.id === downloadEntry?.id
+                  ? downloadPlayerSrc(metaForDisplay, episode, downloadMatch, {
+                      imdbId,
+                      isAnime: isAnimeRequest,
+                    })
+                  : localPlayerSrc(entry, undefined, episode),
+              )
+            }
           />
         )}
 
@@ -846,7 +1042,9 @@ export function PlayPicker({
 
         {!phone && stubBanner && (
           <div className="rounded-2xl border border-amber-300/30 bg-amber-400/10 px-5 py-4 text-[13.5px] text-amber-100">
-            {stubBanner}
+            {t(
+              "Last source wasn't actually cached on your debrid yet. Pick another from the list.",
+            )}
           </div>
         )}
 
@@ -887,11 +1085,12 @@ export function PlayPicker({
           <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-accent-soft px-5 py-3.5 text-[13px] ring-1 ring-edge-soft">
             <div className="flex min-w-0 flex-1 flex-col">
               <p className="font-semibold text-accent">
-                {debridBannerTitle(result.debridErrors[0])}
+                {translateDebridBannerTitle(t, debridBanner(result.debridErrors[0]))}
               </p>
               <p className="text-[12.5px] leading-snug text-ink-muted">
-                Some of your cached sources may be missing from this list. This is a debrid-side
-                issue, not a problem with your subscription.
+                {t(
+                  "Some of your cached sources may be missing from this list. This is a debrid-side issue, not a problem with your subscription.",
+                )}
               </p>
             </div>
             <button
@@ -899,7 +1098,7 @@ export function PlayPicker({
               disabled={loading}
               className={`shrink-0 rounded-full bg-elevated px-4 py-2 text-[12.5px] font-semibold text-ink ring-1 ring-edge-soft transition-transform hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 motion-reduce:transition-none motion-reduce:hover:scale-100${phone ? " min-h-11" : ""}`}
             >
-              Recheck
+              {t("Recheck")}
             </button>
           </div>
         )}
@@ -909,6 +1108,10 @@ export function PlayPicker({
             season={episode?.season ?? null}
             rawCount={rawCount}
             refreshing={loading}
+            episodeCount={seasonEpisodes?.length ?? 0}
+            queueing={perEpisodeBusy}
+            queueStatus={perEpisodeStatus}
+            onQueueEpisodes={() => void startPerEpisodeSeason()}
             onRefresh={refresh}
             onOpenSettings={() => openSettings("streaming")}
           />
@@ -948,6 +1151,17 @@ export function PlayPicker({
           />
         )}
 
+        {!isDownload && result && result.picker.all.length > 0 && (
+          <div
+            className={`flex justify-end${phone ? " [&_button]:min-h-11 [&_button]:px-4 [&_button]:text-[13px]" : ""}`}
+          >
+            <StreamModeToggle
+              mode={settings.streamMode}
+              onChange={(mode) => update({ streamMode: mode })}
+            />
+          </div>
+        )}
+
         {(settings.pickerLayout === "stremio" || isDownload) &&
         filteredPicker &&
         filteredPicker.all.length > 0 ? (
@@ -979,6 +1193,7 @@ export function PlayPicker({
               <PrimaryCard
                 meta={metaForDisplay}
                 episode={episode}
+                absoluteEpisode={animeAbsoluteEpisode}
                 stream={currentPick}
                 debrids={debrids}
                 addonLogo={lookupLogo(currentPick.addonId)}
@@ -1007,19 +1222,6 @@ export function PlayPicker({
                         : "ml-auto flex items-center gap-2"
                     }
                   >
-                    {phone ? (
-                      <span className="[&_button]:min-h-11 [&_button]:px-4 [&_button]:text-[13px]">
-                        <StreamModeToggle
-                          mode={settings.streamMode}
-                          onChange={(m) => update({ streamMode: m })}
-                        />
-                      </span>
-                    ) : (
-                      <StreamModeToggle
-                        mode={settings.streamMode}
-                        onChange={(m) => update({ streamMode: m })}
-                      />
-                    )}
                     {uncachedHiddenCount > 0 && (
                       <CachedFilterPill
                         on={cachedOnly}
@@ -1057,6 +1259,7 @@ export function PlayPicker({
                   resolvingId={resolving?.stream.infoHash ?? null}
                   showName={meta.name}
                   episode={episode}
+                  absoluteEpisode={animeAbsoluteEpisode}
                   failedStreams={failedStreams}
                 />
               </div>
@@ -1064,34 +1267,34 @@ export function PlayPicker({
           </>
         )}
 
-        {!phone && resolveError && engineWarming && (
+        {!phone && pickerErrorText && engineWarming && (
           <div className="flex items-center gap-3 rounded-2xl border border-edge-soft/60 bg-elevated/40 px-5 py-4 text-[13.5px] text-ink-muted">
             <Loader2 size={16} className="shrink-0 animate-spin text-ink-subtle" />
-            <span>{resolveError}</span>
+            <span>{pickerErrorText}</span>
           </div>
         )}
-        {!phone && resolveError && !engineWarming && (
+        {!phone && pickerErrorText && !engineWarming && (
           <div className="rounded-2xl border border-danger/30 bg-danger/15 px-5 py-4 text-[13.5px] text-ink">
-            {resolveError}
+            {pickerErrorText}
           </div>
         )}
       </div>
-      {phone && (resolveError || stubBanner) && (
+      {phone && (pickerErrorText || stubBanner) && (
         // Errors surface where the thumb already is: the MarqueeBar slot.
         <div
           role="status"
           aria-live="polite"
           className={`harbor-rise fixed inset-x-5 z-[70] flex items-center gap-3 rounded-2xl border px-5 py-4 text-[13.5px] backdrop-blur ${
-            resolveError && !engineWarming
+            pickerErrorText && !engineWarming
               ? "border-danger/30 bg-canvas/95 text-ink"
               : "border-edge-soft/60 bg-elevated/95 text-ink-muted"
           }`}
           style={{ bottom: "calc(env(safe-area-inset-bottom, 0px) + 16px)" }}
         >
-          {engineWarming && resolveError && (
+          {engineWarming && pickerErrorText && (
             <Loader2 size={16} className="shrink-0 animate-spin text-ink-subtle" />
           )}
-          <span>{resolveError ?? stubBanner}</span>
+          <span>{pickerErrorText ?? stubBanner}</span>
         </div>
       )}
       {marqueeVisible && currentPick && (
@@ -1236,22 +1439,53 @@ function SeasonPackEmptyState({
   season,
   rawCount,
   refreshing,
+  episodeCount,
+  queueing,
+  queueStatus,
+  onQueueEpisodes,
   onRefresh,
   onOpenSettings,
 }: {
   season: number | null;
   rawCount: number;
   refreshing: boolean;
+  episodeCount: number;
+  queueing: boolean;
+  queueStatus: PerEpisodeStatus | null;
+  onQueueEpisodes: () => void;
   onRefresh: () => void;
   onOpenSettings: () => void;
 }) {
   const t = useT();
   const seasonLabel = season == null ? t("this season") : t("Season {n}", { n: season });
+  const queueStatusText = (() => {
+    if (!queueStatus) return null;
+    switch (queueStatus.code) {
+      case "checking":
+        return t("Checking {total} episodes for sources.", { total: queueStatus.total });
+      case "checked":
+        return t("Checked {done} of {total} episodes.", {
+          done: queueStatus.done,
+          total: queueStatus.total,
+        });
+      case "already-downloading":
+        return t("These episodes are already downloading.");
+      case "no-source":
+        return t("No source was found for any of these episodes. Try refreshing or another addon.");
+      case "queued":
+        return t("Queued {queued} of {total} episodes.", {
+          queued: queueStatus.queued,
+          total: queueStatus.total,
+        });
+      case "failed":
+        return t("Could not queue these episodes.");
+    }
+  })();
   return (
     <div
       role="status"
       aria-live="polite"
-      className="rounded-[24px] border border-edge-soft/70 bg-canvas/80 px-9 py-11"
+      className="rounded-3xl border border-edge-soft/70 bg-canvas/80 px-9 py-11"
     >
       <div className="flex flex-col items-center gap-5 text-center">
         <span className="flex h-12 w-12 items-center justify-center rounded-full bg-elevated text-ink-muted ring-1 ring-edge-soft">
@@ -1264,21 +1498,36 @@ function SeasonPackEmptyState({
           <p className="text-[13.5px] leading-relaxed text-ink-muted">
             {rawCount > 0
               ? t(
-                  "Harbor found episode sources, but none was a downloadable package for {season}. Try another addon or refresh the sources.",
+                  "Harbor found episode sources for {season}, but none of them is a single downloadable package. It can still fetch the episodes one at a time.",
                   { season: seasonLabel },
                 )
               : t(
-                  "None of your addons returned a downloadable package for {season}. Refresh the sources or check your source settings.",
+                  "None of your addons returned a downloadable package for {season}. Harbor can still fetch the episodes one at a time, or you can refresh the sources.",
                   { season: seasonLabel },
                 )}
           </p>
         </div>
         <div className="flex flex-wrap justify-center gap-2.5">
+          {episodeCount > 0 && (
+            <button
+              type="button"
+              onClick={onQueueEpisodes}
+              disabled={queueing}
+              className="inline-flex h-10 items-center gap-2 rounded-full bg-ink px-5 text-[13px] font-semibold text-canvas transition-transform hover:scale-[1.02] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-55 motion-reduce:transition-none motion-reduce:hover:scale-100"
+            >
+              {queueing ? (
+                <Loader2 size={14} className="animate-spin" aria-hidden />
+              ) : (
+                <ArrowDownToLine size={14} strokeWidth={2.2} aria-hidden />
+              )}
+              {t("Download episode by episode")}
+            </button>
+          )}
           <button
             type="button"
             onClick={onRefresh}
             disabled={refreshing}
-            className="inline-flex h-10 items-center gap-2 rounded-full bg-ink px-5 text-[13px] font-semibold text-canvas transition-transform hover:scale-[1.02] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-55 motion-reduce:transition-none motion-reduce:hover:scale-100"
+            className="inline-flex h-10 items-center gap-2 rounded-full border border-edge-soft bg-elevated px-5 text-[13px] font-semibold text-ink-muted transition-colors hover:border-edge hover:text-ink disabled:cursor-not-allowed disabled:opacity-55"
           >
             <RefreshCw size={14} className={refreshing ? "animate-spin" : ""} aria-hidden />
             {t("Refresh sources")}
@@ -1291,6 +1540,11 @@ function SeasonPackEmptyState({
             {t("Source settings")}
           </button>
         </div>
+        {queueStatusText && (
+          <p className="animate-lift-in max-w-lg text-[12.5px] leading-relaxed text-ink-subtle">
+            {queueStatusText}
+          </p>
+        )}
       </div>
     </div>
   );

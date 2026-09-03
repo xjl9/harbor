@@ -1,7 +1,7 @@
 const profileFill: Record<string, string> = {
-  "General": "Общие",
-  "Look": "Оформление",
-  "optional": "необязательно",
+  General: "Общие",
+  Look: "Оформление",
+  optional: "необязательно",
   "Your name and the details shown at the top of your profile.":
     "Ваше имя и данные, которые показываются вверху профиля.",
   "Your avatar, banner, and how the whole profile is styled.":
@@ -26,6 +26,15 @@ const profileFill: Record<string, string> = {
   "Link Simkl and everything you watch shows up right here.":
     "Подключите Simkl, и всё, что вы смотрите, появится здесь.",
   "Could not reach Simkl.": "Не удалось связаться с Simkl.",
+  "Show your Letterboxd card": "Показывать карточку Letterboxd",
+  "Off by default. Shows your Letterboxd name, lists and film counts on your profile for anyone who visits. Manage the connection itself in Settings, Letterboxd.":
+    "По умолчанию выключено. Показывает ваше имя, списки и количество фильмов Letterboxd в профиле всем посетителям. Само подключение настраивается в Настройках, раздел Letterboxd.",
+  "On Letterboxd": "В Letterboxd",
+  "Open Letterboxd profile": "Открыть профиль Letterboxd",
+  "No Letterboxd lists shared yet": "В Letterboxd пока нет открытых списков",
+  "Link Letterboxd and the films and lists you keep there show up right here.":
+    "Подключите Letterboxd, и фильмы со списками оттуда появятся здесь.",
+  "Connect Letterboxd": "Подключить Letterboxd",
   "Your rating": "Ваша оценка",
   "Tap the heart on any movie, show, manga, or character to save it here.":
     "Нажмите на сердечко у фильма, сериала, манги или персонажа, чтобы сохранить его здесь.",
@@ -219,8 +228,6 @@ const profileFill: Record<string, string> = {
   "Add background": "Добавить фон",
   "In a watch party": "На совместном просмотре",
   "{count} aboard": "{count} на борту",
-  "Paused on ": "На паузе ",
-  "Watching ": "Смотрит ",
   something: "что-то",
   Share: "Поделиться",
   "Share profile": "Поделиться профилем",

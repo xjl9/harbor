@@ -1,6 +1,7 @@
 import { useState } from "react";
+import { Monitor } from "lucide-react";
+import { Search } from "@/components/icons/search-icon";
 import { isDesktopTauri } from "@/lib/platform";
-import { Search } from "lucide-react";
 import { HarborMark } from "@/components/icons/harbor-mark";
 import { RecordingPill } from "@/chrome/recording-pill";
 import { TogetherButton } from "@/chrome/topbar";
@@ -16,6 +17,7 @@ import { OverflowNav, type NavEntry } from "@/chrome/nav-overflow";
 import { NAV_ITEMS, applyNavCustomization, type NavItem } from "@/chrome/nav-items";
 import { NotificationCenter } from "@/components/notification-center/notification-center";
 import { AccountMenu } from "@/chrome/account-menu/account-menu";
+import { useBigPictureEntry } from "@/chrome/use-big-picture-entry";
 
 // Window buttons are DESKTOP chrome. __TAURI_INTERNALS__ is present on iOS and
 // Android too, so testing for it put minimize/maximize/close on a phone - which
@@ -34,6 +36,7 @@ export function CinematicOverlay() {
   const t = useT();
   const [pinFor, setPinFor] = useState<View | null>(null);
   const maxed = useMaximized();
+  const bigPicture = useBigPictureEntry();
 
   const themePreset =
     settings.theme.preset !== "custom"
@@ -139,6 +142,11 @@ export function CinematicOverlay() {
             <NotificationCenter />
             {view !== "live" && (
               <TogetherButton variant="ghost" connectStyle="tab" />
+            )}
+            {bigPicture.offer && (
+              <IconBtn onClick={bigPicture.open} label={bigPicture.label} active={false}>
+                <Monitor size={15} strokeWidth={2.2} />
+              </IconBtn>
             )}
             <IconBtn
               onClick={() => setSearchOpen(true)}

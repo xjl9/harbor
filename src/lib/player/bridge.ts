@@ -1,5 +1,7 @@
+import { readPlayerVolume } from "@/lib/player-volume";
 import type { SubCue } from "@/lib/subtitles/parser";
 import type { SubtitleLoadMetadata } from "@/lib/subtitles/types";
+import type { SubtitleMatchConfidence } from "@/lib/subtitles/release-match";
 
 export type TrackInfo = {
   id: string;
@@ -12,15 +14,37 @@ export type TrackInfo = {
   channelCount?: number;
   title?: string;
   external?: boolean;
+  prepared?: boolean;
+  autoSelectionEligible?: boolean;
   externalFilename?: string;
   forced?: boolean;
   default?: boolean;
   hearingImpaired?: boolean;
   secondary?: boolean;
   url?: string;
+  originalUrl?: string;
+  downloadAuth?: SubtitleLoadMetadata["downloadAuth"];
+  format?: SubtitleLoadMetadata["format"];
   release?: string;
   provider?: string;
+  providerDerived?: boolean;
+  fps?: number;
+  downloads?: number;
+  author?: string;
+  uploadedAt?: string;
+  rating?: SubtitleLoadMetadata["rating"];
+  productionType?: string;
+  releaseType?: string;
+  foreignOnly?: boolean;
+  machineTranslated?: boolean;
+  fromTrusted?: boolean;
+  providerMatch?: SubtitleLoadMetadata["providerMatch"];
+  timingStatus?: SubtitleLoadMetadata["timingStatus"];
+  timingMeasurementStatus?: SubtitleLoadMetadata["timingMeasurementStatus"];
+  matchExplanation?: SubtitleLoadMetadata["matchExplanation"];
   matchScore?: number;
+  matchConfidence?: SubtitleMatchConfidence;
+  matchReasons?: string[];
   subId?: string;
 };
 
@@ -31,12 +55,15 @@ export type Chapter = {
 
 export type PlayerStatus = "idle" | "loading" | "ready" | "playing" | "paused" | "ended" | "error";
 
+export type PlayerSeekPrecision = "exact" | "keyframes";
+
 export type PlayerSnapshot = {
   status: PlayerStatus;
   positionSec: number;
   durationSec: number;
   bufferedSec: number;
   buffering: boolean;
+  firstFrameReady: boolean;
   volume: number;
   muted: boolean;
   rate: number;
@@ -64,7 +91,16 @@ export type PlayerSnapshot = {
 
 export type PlayerSource = {
   url: string;
-  subtitles?: { id?: string; url: string; lang?: string; m?: string }[];
+  traceId?: string;
+  startupProfile?: "standard" | "high-bitrate";
+  subtitles?: {
+    id?: string;
+    url: string;
+    lang?: string;
+    m?: string;
+    /** The path came from the user's local library or a configured home server, not an addon. */
+    trustedSource?: boolean;
+  }[];
   notWebReady?: boolean;
   startAtSec?: number;
   isLive?: boolean;
@@ -77,7 +113,7 @@ export type PlayerBridge = {
   load: (src: PlayerSource) => Promise<void>;
   play: () => Promise<void>;
   pause: () => void;
-  seek: (sec: number) => void;
+  seek: (sec: number, precision?: PlayerSeekPrecision) => void;
   frameStep?: (dir: 1 | -1) => void;
   setVolume: (v: number) => void;
   setMuted: (m: boolean) => void;
@@ -163,6 +199,7 @@ export const emptySnapshot: PlayerSnapshot = {
   durationSec: 0,
   bufferedSec: 0,
   buffering: false,
+  firstFrameReady: false,
   volume: 1,
   muted: false,
   rate: 1,
@@ -181,3 +218,9 @@ export const emptySnapshot: PlayerSnapshot = {
   errorMessage: null,
   errorCode: null,
 };
+
+/** Snapshot seeded with the persisted volume/mute preference instead of the 1.0/100% default. */
+export function initialPlayerSnapshot(): PlayerSnapshot {
+  const saved = readPlayerVolume();
+  return { ...emptySnapshot, volume: saved.volume, muted: saved.muted };
+}

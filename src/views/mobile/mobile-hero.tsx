@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Check, Info, Play, Plus, TrendingUp } from "lucide-react";
+import { Check, Info, Plus, TrendingUp } from "lucide-react";
+import { Play } from "@/components/icons/play-filled";
 import type { Meta } from "@/lib/cinemeta";
 import { sizeImageUrl } from "@/lib/img-size";
 import { useSettings } from "@/lib/settings";
+import { useT } from "@/lib/i18n";
 import { useHeroLogos } from "@/components/anime-hero/use-hero-logos";
 import { toggleWatchlist, useInWatchlist } from "@/lib/watchlist";
 import { ImdbIcon } from "@/components/icons/imdb-icon";
@@ -21,17 +23,18 @@ function upsize(url?: string): string | undefined {
   return sizeImageUrl(url, window.innerWidth <= PHONE_MAX_CSS_PX ? 780 : 1280);
 }
 
-function kindLabel(t: Meta["type"]): string {
-  if (t === "series") return "Series";
-  if (t === "anime") return "Anime";
-  return "Movies";
-}
-
 function prefersReduced(): boolean {
   return !!window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
 }
 
-export function MobileHero({ slides, onOpenDetail }: { slides: Meta[]; onOpenDetail?: (m: Meta) => void }) {
+export function MobileHero({
+  slides,
+  onOpenDetail,
+}: {
+  slides: Meta[];
+  onOpenDetail?: (m: Meta) => void;
+}) {
+  const t = useT();
   const { settings } = useSettings();
   const { openOnHost, playOnHost } = useMobileRemote();
   const layerActive = useLayerActive();
@@ -129,13 +132,13 @@ export function MobileHero({ slides, onOpenDetail }: { slides: Meta[]; onOpenDet
 
   const bgOf = (i: number): string | undefined => {
     const m = shown[i];
-    return m ? upsize(m.background) ?? m.poster : undefined;
+    return m ? (upsize(m.background) ?? m.poster) : undefined;
   };
 
   const safeActive = active < shown.length ? active : 0;
   const current = shown[safeActive];
   const target = slots[front] < shown.length ? slots[front] : 0;
-  const logo = current ? logos[current.id] ?? current.logo : undefined;
+  const logo = current ? (logos[current.id] ?? current.logo) : undefined;
   const year = (current?.releaseInfo ?? "").slice(0, 4);
   const inWl = useInWatchlist(current?.id);
 
@@ -145,6 +148,12 @@ export function MobileHero({ slides, onOpenDetail }: { slides: Meta[]; onOpenDet
   const src0 = bgOf(slots[0]);
   const src1 = bgOf(slots[1]);
   const layerTransition = reduce ? "none" : `opacity ${DISSOLVE_MS}ms ease-in-out`;
+  const badge =
+    current.type === "series"
+      ? t("#{rank} in Series Today", { rank: safeActive + 1 })
+      : current.type === "anime"
+        ? t("#{rank} in Anime Today", { rank: safeActive + 1 })
+        : t("#{rank} in Movies Today", { rank: safeActive + 1 });
 
   return (
     <section
@@ -180,7 +189,7 @@ export function MobileHero({ slides, onOpenDetail }: { slides: Meta[]; onOpenDet
       <div className="relative h-[62svh] min-h-[min(440px,72svh)] [@media(max-height:500px)]:h-[50svh] [@media(max-height:500px)]:min-h-0 [@media(min-width:700px)_and_(min-height:500px)_and_(max-height:900px)]:h-[48svh] [@media(min-width:700px)_and_(min-height:500px)_and_(max-height:900px)]:min-h-0 w-full overflow-hidden">
         <button
           type="button"
-          aria-label={`Open ${current.name}`}
+          aria-label={t("Open {name}", { name: current.name })}
           onClick={open}
           className="no-press absolute inset-0 z-0 block h-full w-full text-start"
         >
@@ -234,7 +243,7 @@ export function MobileHero({ slides, onOpenDetail }: { slides: Meta[]; onOpenDet
               rows step aside there rather than clipping the title off the top. */}
           <span className="inline-flex items-center gap-1.5 self-start text-[10.5px] font-semibold uppercase tracking-[0.16em] text-white/85 [@media(max-height:500px)]:hidden">
             <TrendingUp size={12} strokeWidth={2.8} className="text-accent" />
-            #{safeActive + 1} in {kindLabel(current.type)} Today
+            {badge}
           </span>
           {logo ? (
             <img
@@ -264,13 +273,20 @@ export function MobileHero({ slides, onOpenDetail }: { slides: Meta[]; onOpenDet
               className="flex h-[54px] flex-1 items-center justify-center gap-2.5 rounded-full bg-white text-[16px] font-semibold text-black shadow-[0_8px_24px_-8px_rgba(0,0,0,0.6)] [@media(max-height:500px)]:h-[46px]"
             >
               <Play size={19} strokeWidth={0} fill="currentColor" />
-              Play
+              {t("Play")}
             </button>
             <button
               type="button"
-              aria-label={inWl ? "In My List" : "Add to My List"}
+              aria-label={inWl ? t("In My List") : t("Add to My List")}
               onClick={() =>
-                toggleWatchlist({ id: current.id, type: current.type, name: current.name, poster: current.poster })
+                toggleWatchlist({
+                  id: current.id,
+                  type: current.type,
+                  name: current.name,
+                  poster: current.poster,
+                  addonOrigin: current.addonOrigin,
+                  videos: current.videos,
+                })
               }
               className="flex h-[54px] w-[54px] shrink-0 items-center justify-center rounded-full border border-white/15 bg-white/10 text-white backdrop-blur-md [@media(max-height:500px)]:h-[46px] [@media(max-height:500px)]:w-[46px]"
             >
@@ -278,7 +294,7 @@ export function MobileHero({ slides, onOpenDetail }: { slides: Meta[]; onOpenDet
             </button>
             <button
               type="button"
-              aria-label="More info"
+              aria-label={t("More info")}
               onClick={open}
               className="flex h-[54px] w-[54px] shrink-0 items-center justify-center rounded-full border border-white/15 bg-white/10 text-white backdrop-blur-md [@media(max-height:500px)]:h-[46px] [@media(max-height:500px)]:w-[46px]"
             >
@@ -291,7 +307,7 @@ export function MobileHero({ slides, onOpenDetail }: { slides: Meta[]; onOpenDet
                 <button
                   key={m.id}
                   type="button"
-                  aria-label={`Show ${m.name}`}
+                  aria-label={t("Show {name}", { name: m.name })}
                   onClick={() => {
                     pausedUntil.current = Date.now() + PILL_PAUSE_MS;
                     goTo(i);

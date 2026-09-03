@@ -6,6 +6,7 @@ import { TvIcon } from "@/components/icons/tv-icon";
 import { AnimeIcon } from "@/components/icons/anime-icon";
 import { DiscoverIcon } from "@/components/icons/discover-icon";
 import { useSettings } from "@/lib/settings";
+import { useT } from "@/lib/i18n";
 import type { View } from "./mobile-browse";
 
 type IconCmp = ComponentType<{ active?: boolean }>;
@@ -42,7 +43,14 @@ const SWITCHER_CSS = `
 }
 `;
 
-export function MobileViewSwitcher({ view, onSelect }: { view: View; onSelect: (v: View) => void }) {
+export function MobileViewSwitcher({
+  view,
+  onSelect,
+}: {
+  view: View;
+  onSelect: (v: View) => void;
+}) {
+  const t = useT();
   const { settings } = useSettings();
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -70,11 +78,11 @@ export function MobileViewSwitcher({ view, onSelect }: { view: View; onSelect: (
         type="button"
         aria-haspopup="menu"
         aria-expanded={open}
-        aria-label={`Browsing ${current.label}. Change section`}
+        aria-label={t("Browsing {section}. Change section", { section: t(current.label) })}
         onClick={() => setOpen((o) => !o)}
         className="flex h-11 items-center gap-1 rounded-full border border-white/10 bg-black/25 pe-2 ps-3.5 text-ink backdrop-blur-md"
       >
-        <span className="text-[13.5px] font-semibold">{current.label}</span>
+        <span className="text-[13.5px] font-semibold">{t(current.label)}</span>
         <ChevronDown
           size={16}
           strokeWidth={2.4}
@@ -86,7 +94,7 @@ export function MobileViewSwitcher({ view, onSelect }: { view: View; onSelect: (
       {open && (
         <div
           role="menu"
-          aria-label="Sections"
+          aria-label={t("Sections")}
           className="harbor-vs-panel absolute right-0 top-[calc(100%+8px)] flex w-[186px] flex-col gap-0.5 rounded-[18px] border border-edge-soft/60 bg-elevated/95 p-1.5 shadow-[0_20px_46px_-16px_rgba(0,0,0,0.62)]"
         >
           {views.map((v, i) => {
@@ -112,7 +120,7 @@ export function MobileViewSwitcher({ view, onSelect }: { view: View; onSelect: (
                   <RowIcon active={on} />
                 </span>
                 <span className={`text-[15px] font-semibold ${on ? "text-ink" : "text-ink-muted"}`}>
-                  {v.label}
+                  {t(v.label)}
                 </span>
               </button>
             );

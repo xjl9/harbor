@@ -7,7 +7,8 @@ import { SHORT_PLAYBACK_SEC } from "@/lib/dead-streams";
 import { savePlayback } from "@/lib/playback-history";
 import { resolveStream } from "@/lib/streams/resolve";
 import type { ScoredStream } from "@/lib/streams/types";
-import { registerStreamProxy } from "@/lib/stream-proxy";
+import { registerStreamProxy, unregisterStreamProxy } from "@/lib/stream-proxy";
+import { playbackStartupProfile } from "@/lib/player/startup-profile";
 import type { PlayerSrc } from "@/lib/view";
 import type { DebridStore } from "@/lib/debrid/types";
 
@@ -49,13 +50,18 @@ export function useStreamSwitcher(params: {
   const [switcherOpen, setSwitcherOpen] = useState(false);
   const [swapResolvingKey, setSwapResolvingKey] = useState<string | null>(null);
   const [liveUrl, setLiveUrl] = useState(src.url);
+  const [liveHistoryUrl, setLiveHistoryUrl] = useState(src.historyUrl ?? src.url);
   const [liveStreamRef, setLiveStreamRef] = useState(src.streamRef);
+  const swapAcRef = useRef<AbortController | null>(null);
   useEffect(() => {
     setLiveUrl(src.url);
+    setLiveHistoryUrl(src.historyUrl ?? src.url);
     setLiveStreamRef(src.streamRef);
-  }, [src.url, src.streamRef]);
+    swapAcRef.current?.abort();
+    setSwapResolvingKey(null);
+  }, [src.url, src.historyUrl, src.streamRef]);
 
-  const swapAcRef = useRef<AbortController | null>(null);
+  const switchProxySessionRef = useRef<string | null>(null);
 
   // Pin this item's streams in the picker cache for the whole playback session
   // so they survive the 30-min stale sweep. Without this, opening the switcher
@@ -84,17 +90,23 @@ export function useStreamSwitcher(params: {
         ? { season: src.episode.season ?? null, episode: src.episode.episode ?? null }
         : undefined;
       const r = await resolveStream(stream, debrids, ac.signal, true, false, hint);
-      if (ac.signal.aborted) return;
+      if (ac.signal.aborted) {
+        if (swapAcRef.current === ac) setSwapResolvingKey(null);
+        return;
+      }
       if (!r.ok) {
         console.warn(`[player] stream swap failed: ${r.code}`);
         setSwapResolvingKey(null);
         return;
       }
       let playUrl = r.data.url;
-      if (r.data.headers && Object.keys(r.data.headers).length > 0) {
+      let nextProxySessionId: string | null = null;
+      const hasProxyHeaders = !!r.data.headers && Object.keys(r.data.headers).length > 0;
+      if (hasProxyHeaders) {
         try {
           const proxied = await registerStreamProxy(r.data.url, r.data.headers);
           playUrl = proxied.url;
+          nextProxySessionId = proxied.sessionId;
         } catch {
           setSwapResolvingKey(null);
           return;
@@ -102,6 +114,7 @@ export function useStreamSwitcher(params: {
       }
       const b = bridgeRef.current;
       if (!b) {
+        if (nextProxySessionId) void unregisterStreamProxy(nextProxySessionId).catch(() => {});
         setSwapResolvingKey(null);
         return;
       }
@@ -117,19 +130,35 @@ export function useStreamSwitcher(params: {
           subtitles: r.data.subtitles,
           notWebReady: r.data.notWebReady,
           startAtSec: resumeAt > 5 ? resumeAt : undefined,
+          startupProfile: playbackStartupProfile(stream),
         });
         await b.play().catch(() => {});
       } catch (e) {
+        if (nextProxySessionId) void unregisterStreamProxy(nextProxySessionId).catch(() => {});
         console.warn("[player] stream swap failed", e);
+        setSwapResolvingKey(null);
+        return;
+      }
+      const previousProxySessionId = switchProxySessionRef.current;
+      switchProxySessionRef.current = nextProxySessionId;
+      if (previousProxySessionId) {
+        void unregisterStreamProxy(previousProxySessionId).catch(() => {});
       }
       setLiveUrl(playUrl);
+      setLiveHistoryUrl(r.data.url);
       setLiveStreamRef({
+        resolvedFilename:
+          r.data.filename ??
+          stream.behaviorHints?.filename ??
+          stream.behaviorHints?.fileName ??
+          null,
         infoHash: stream.infoHash ?? null,
-        fileIdx: stream.fileIdx ?? null,
+        fileIdx: r.data.fileIdx ?? stream.fileIdx ?? null,
         addonId: stream.addonId ?? null,
         title: stream.title ?? null,
         parsedTitle: stream.parsedTitle ?? null,
         resolution: stream.resolution ?? null,
+        releaseGroup: stream.releaseGroupNormalized ?? null,
         source: stream.source ?? null,
         size: stream.size ?? null,
         bingeGroup: stream.behaviorHints?.bingeGroup ?? null,
@@ -142,12 +171,13 @@ export function useStreamSwitcher(params: {
           src.meta.id,
           {
             infoHash: stream.infoHash ?? null,
-            fileIdx: stream.fileIdx ?? null,
+            fileIdx: r.data.fileIdx ?? stream.fileIdx ?? null,
             addonId: stream.addonId ?? null,
-            url: playUrl,
+            url: r.data.url,
             title: src.meta.name,
             parsedTitle: stream.parsedTitle ?? null,
             resolution: stream.resolution ?? null,
+            releaseGroup: stream.releaseGroupNormalized ?? null,
             source: stream.source ?? null,
             size: stream.size ?? null,
             bingeGroup: stream.behaviorHints?.bingeGroup ?? null,
@@ -167,7 +197,15 @@ export function useStreamSwitcher(params: {
     [debrids],
   );
 
-  useEffect(() => () => swapAcRef.current?.abort(), []);
+  useEffect(
+    () => () => {
+      swapAcRef.current?.abort();
+      if (switchProxySessionRef.current) {
+        void unregisterStreamProxy(switchProxySessionRef.current).catch(() => {});
+      }
+    },
+    [],
+  );
 
   return {
     streamCheckOpen,
@@ -176,6 +214,7 @@ export function useStreamSwitcher(params: {
     setSwitcherOpen,
     swapResolvingKey,
     liveUrl,
+    liveHistoryUrl,
     liveStreamRef,
     pickAnother,
     onSwitchStream,

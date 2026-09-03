@@ -9,6 +9,7 @@ import { useTvdbSeasonTypes } from "@/views/detail/series-episodes/use-tvdb-seas
 import { useWatchedSets } from "@/views/detail/series-episodes/use-watched-sets";
 import { useSettings } from "@/lib/settings";
 import { effectiveOrderProvider } from "@/lib/settings/episode-order";
+import { t as translate, useT, useUiLanguage } from "@/lib/i18n";
 import { setViewedSeason } from "@/lib/season-view-pref";
 import {
   getEpisodeProgress,
@@ -54,6 +55,8 @@ export function EpisodeSection({
   seasons: number[];
   onPlay: (ep: Ep) => void;
 }) {
+  const t = useT();
+  const language = useUiLanguage();
   const { settings } = useSettings();
   const { snapshot } = useMobileRemote();
   const { openPicker } = useView();
@@ -63,7 +66,10 @@ export function EpisodeSection({
   const imdbId = detail?.imdbId ?? (meta.id.startsWith("tt") ? meta.id : null);
 
   const settingsProvider = effectiveOrderProvider(settings);
-  const [override, setOverride] = useState<{ provider: "default" | "tvdb"; seasonType: string } | null>(null);
+  const [override, setOverride] = useState<{
+    provider: "default" | "tvdb";
+    seasonType: string;
+  } | null>(null);
   useEffect(() => {
     setOverride(null);
   }, [meta.id]);
@@ -87,7 +93,10 @@ export function EpisodeSection({
   const seasonItems = useMemo<SeasonSheetItem[]>(() => {
     if (ordering) {
       return ordering.seasons.map((s) => {
-        const label = s.name && s.name.trim() ? s.name : `Season ${s.seasonNumber}`;
+        const label =
+          s.name && s.name.trim()
+            ? s.name
+            : translate("Season {number}", { number: s.seasonNumber });
         const { from, to } = seasonDateRange(ordering.bySeason.get(s.seasonNumber) ?? []);
         return {
           key: String(s.seasonNumber),
@@ -103,7 +112,8 @@ export function EpisodeSection({
     }
     return seasons.map((n) => {
       const s = detail?.seasons?.find((x) => x.seasonNumber === n);
-      const label = s?.name && s.name.trim() ? s.name : `Season ${n}`;
+      const label =
+        s?.name && s.name.trim() ? s.name : translate("Season {number}", { number: n });
       return {
         key: String(n),
         name: label,
@@ -112,7 +122,7 @@ export function EpisodeSection({
         badge: seasonTypeBadge(n, label),
       };
     });
-  }, [ordering, seasons, detail?.seasons]);
+  }, [ordering, seasons, detail?.seasons, language]);
 
   const { isConnected: traktConnected } = useTrakt();
   const { isConnected: simklConnected } = useSimkl();
@@ -201,6 +211,8 @@ export function EpisodeSection({
     imdbId,
     tvdbKey,
     omdbKey: "",
+    metaId: meta.id,
+    preferCustomMeta: settings.preferCustomMetaAddon,
   });
 
   const baseEpisodes = useMemo<Ep[]>(() => {
@@ -310,7 +322,7 @@ export function EpisodeSection({
   return (
     <section className="flex flex-col gap-4">
       <div className="flex items-center justify-between gap-3">
-        <SectionTitle>Episodes</SectionTitle>
+        <SectionTitle>{t("Episodes")}</SectionTitle>
         {seasonItems.length > 1 && (
           <SeasonPicker
             items={seasonItems}
@@ -329,7 +341,7 @@ export function EpisodeSection({
           ))}
         </div>
       ) : episodes.length === 0 ? (
-        <p className="text-[13.5px] text-ink-subtle">No episodes to show here yet.</p>
+        <p className="text-[13.5px] text-ink-subtle">{t("No episodes to show here yet.")}</p>
       ) : (
         <>
           <div className="flex flex-col gap-1.5">

@@ -1,5 +1,22 @@
 import type { ReactNode } from "react";
-import { BookOpen, GalleryVerticalEnd, Popcorn } from "lucide-react";
+import { Popcorn } from "lucide-react";
+import { NavGlyph } from "@/components/icons/nav-glyph";
+import { NavLottie } from "@/components/icons/nav-lottie";
+import lotHome from "@/assets/lottie/nav/home.json";
+import lotCatalogs from "@/assets/lottie/nav/catalogs.json";
+import lotMovies from "@/assets/lottie/nav/movies.json";
+import lotShows from "@/assets/lottie/nav/shows.json";
+import lotAnime from "@/assets/lottie/nav/anime.json";
+import lotManga from "@/assets/lottie/nav/manga.json";
+import lotEbook from "@/assets/lottie/nav/ebook.json";
+import lotLiveTv from "@/assets/lottie/nav/live-tv.json";
+import lotPlaylists from "@/assets/lottie/nav/playlists.json";
+import lotCalendar from "@/assets/lottie/nav/calendar.json";
+import lotLibrary from "@/assets/lottie/nav/library.json";
+import lotCollections from "@/assets/lottie/nav/collections.json";
+import lotDownloads from "@/assets/lottie/nav/downloads.json";
+import lotAddons from "@/assets/lottie/nav/addons.json";
+import lotSettings from "@/assets/lottie/nav/settings.json";
 import { useUnseenReminderCount } from "@/lib/reminders";
 import { AddonsIcon } from "@/components/icons/addons-icon";
 import { CatalogsIcon } from "@/components/icons/catalogs-icon";
@@ -12,6 +29,7 @@ import { LiveTvIcon } from "@/components/icons/live-tv-icon";
 import { MoviesIcon } from "@/components/icons/movies-icon";
 import { PlaylistVodIcon } from "@/components/icons/playlist-vod-icon";
 import { SettingsIcon } from "@/components/icons/settings-icon";
+import { SportsIcon } from "@/components/icons/sports-icon";
 import { TvIcon } from "@/components/icons/tv-icon";
 import { DownloadsNavIcon } from "@/chrome/downloads-nav-icon";
 import type { LockableTab } from "@/lib/parental";
@@ -40,7 +58,9 @@ export type NavItemId =
   | "kids"
   | "anime"
   | "manga"
+  | "ebook"
   | "live"
+  | "sports"
   | "vod"
   | "calendar"
   | "library"
@@ -52,7 +72,7 @@ export type NavItemId =
 export type NavItem = {
   id: NavItemId;
   label: string;
-  render: (active: boolean) => ReactNode;
+  render: (active: boolean, hovered?: boolean) => ReactNode;
   view: View;
   hideKey?: "anime" | "liveTv" | "sports" | "manga";
   parentalKey?: LockableTab;
@@ -65,24 +85,132 @@ export type NavCustomization = {
   renamed: Record<string, string>;
 };
 
-export const NAV_ITEMS: NavItem[] = [
-  { id: "home", label: "nav.home", render: (active) => <HomeIcon active={active} />, view: "home" },
-  { id: "discover", label: "nav.discover", render: (active) => <DiscoverIcon active={active} />, view: "discover", parentalKey: "discover" },
-  { id: "catalogs", label: "nav.catalogs", render: (active) => <CatalogsIcon active={active} />, view: "catalogs", parentalKey: "discover" },
-  { id: "movies", label: "nav.movies", render: (active) => <MoviesIcon active={active} />, view: "movies", parentalKey: "movies" },
-  { id: "shows", label: "nav.shows", render: (active) => <TvIcon active={active} />, view: "shows", parentalKey: "shows" },
-  { id: "kids", label: "nav.kids", render: (active) => <Popcorn size={26} strokeWidth={2.2} className={active ? "" : "opacity-70"} />, view: "kids" },
-  { id: "anime", label: "nav.anime", render: (active) => <AnimeIcon active={active} />, view: "anime", hideKey: "anime", parentalKey: "anime" },
-  { id: "manga", label: "nav.manga", render: (active) => <BookOpen size={24} strokeWidth={2.2} className={active ? "" : "opacity-70"} />, view: "manga", hideKey: "manga", parentalKey: "anime" },
-  { id: "live", label: "nav.live", render: (active) => <LiveTvIcon active={active} />, view: "live", hideKey: "liveTv", parentalKey: "liveTv" },
-  { id: "vod", label: "nav.playlists", render: (active) => <PlaylistVodIcon active={active} />, view: "vod" },
-  { id: "calendar", label: "nav.calendar", render: (active) => <CalendarNavIcon active={active} />, view: "calendar", parentalKey: "calendar" },
-  { id: "library", label: "nav.library", render: (active) => <LibraryIcon active={active} />, view: "library", parentalKey: "library" },
-  { id: "collections", label: "Collections", render: (active) => <GalleryVerticalEnd size={24} strokeWidth={2.2} className={active ? "" : "opacity-70"} />, view: "collections-hub" },
-  { id: "downloads", label: "nav.downloads", render: (active) => <DownloadsNavIcon active={active} />, view: "downloads" },
-  { id: "addons", label: "nav.addons", render: (active) => <AddonsIcon active={active} />, view: "addons", parentalKey: "addons" },
-  { id: "settings", label: "nav.settings", render: (active) => <SettingsIcon active={active} />, view: "settings", pinGated: true },
+const NAV_ITEMS_ALL: NavItem[] = [
+  { id: "home", label: "nav.home", render: (active, hovered) => <NavLottie data={lotHome} hovered={hovered} fallback={<HomeIcon active={active} />} />, view: "home" },
+  {
+    id: "discover",
+    label: "nav.discover",
+    render: (active) => <DiscoverIcon active={active} />,
+    view: "discover",
+    parentalKey: "discover",
+  },
+  {
+    id: "catalogs",
+    label: "nav.catalogs",
+    render: (active, hovered) => <NavLottie data={lotCatalogs} hovered={hovered} fallback={<CatalogsIcon active={active} />} />,
+    view: "catalogs",
+    parentalKey: "discover",
+  },
+  {
+    id: "movies",
+    label: "nav.movies",
+    render: (active, hovered) => <NavLottie data={lotMovies} hovered={hovered} fallback={<MoviesIcon active={active} />} />,
+    view: "movies",
+    parentalKey: "movies",
+  },
+  {
+    id: "shows",
+    label: "nav.shows",
+    render: (active, hovered) => <NavLottie data={lotShows} hovered={hovered} fallback={<TvIcon active={active} />} />,
+    view: "shows",
+    parentalKey: "shows",
+  },
+  {
+    id: "kids",
+    label: "nav.kids",
+    render: (active) => (
+      <Popcorn size={26} strokeWidth={2.2} className={active ? "" : "opacity-70"} />
+    ),
+    view: "kids",
+  },
+  {
+    id: "anime",
+    label: "nav.anime",
+    render: (active, hovered) => <NavLottie data={lotAnime} hovered={hovered} fallback={<AnimeIcon active={active} />} />,
+    view: "anime",
+    hideKey: "anime",
+    parentalKey: "anime",
+  },
+  {
+    id: "manga",
+    label: "nav.manga",
+    render: (_active, hovered) => <NavLottie data={lotManga} hovered={hovered} fallback={<NavGlyph name="manga" className="h-[26px] w-[26px] p-[2px]" />} />,
+    view: "manga",
+    hideKey: "manga",
+    parentalKey: "anime",
+  },
+  {
+    id: "ebook",
+    label: "nav.ebook",
+    render: (_active, hovered) => <NavLottie data={lotEbook} hovered={hovered} fallback={<NavGlyph name="ebook" className="h-[26px] w-[26px] p-[2px]" />} />,
+    view: "ebook",
+    parentalKey: "anime",
+  },
+  {
+    id: "live",
+    label: "nav.live",
+    render: (active, hovered) => <NavLottie data={lotLiveTv} hovered={hovered} fallback={<LiveTvIcon active={active} />} />,
+    view: "live",
+    hideKey: "liveTv",
+    parentalKey: "liveTv",
+  },
+  {
+    id: "sports",
+    label: "nav.sports",
+    render: (active) => <SportsIcon active={active} />,
+    view: "sports",
+    hideKey: "sports",
+    parentalKey: "sports",
+  },
+  {
+    id: "vod",
+    label: "nav.playlists",
+    render: (active, hovered) => <NavLottie data={lotPlaylists} hovered={hovered} fallback={<PlaylistVodIcon active={active} />} />,
+    view: "vod",
+  },
+  {
+    id: "calendar",
+    label: "nav.calendar",
+    render: (active, hovered) => <NavLottie data={lotCalendar} hovered={hovered} fallback={<CalendarNavIcon active={active} />} />,
+    view: "calendar",
+    parentalKey: "calendar",
+  },
+  {
+    id: "library",
+    label: "nav.library",
+    render: (active, hovered) => <NavLottie data={lotLibrary} hovered={hovered} fallback={<LibraryIcon active={active} />} />,
+    view: "library",
+    parentalKey: "library",
+  },
+  {
+    id: "collections",
+    label: "Collections",
+    render: (_active, hovered) => <NavLottie data={lotCollections} hovered={hovered} fallback={<NavGlyph name="collections" className="h-[26px] w-[26px] p-[2px]" />} />,
+    view: "collections-hub",
+  },
+  {
+    id: "downloads",
+    label: "nav.downloads",
+    render: (active, hovered) => <NavLottie data={lotDownloads} hovered={hovered} fallback={<DownloadsNavIcon active={active} />} />,
+    view: "downloads",
+  },
+  {
+    id: "addons",
+    label: "nav.addons",
+    render: (active, hovered) => <NavLottie data={lotAddons} hovered={hovered} fallback={<AddonsIcon active={active} />} />,
+    view: "addons",
+    parentalKey: "addons",
+  },
+  {
+    id: "settings",
+    label: "nav.settings",
+    render: (active, hovered) => <NavLottie data={lotSettings} hovered={hovered} fallback={<SettingsIcon active={active} />} />,
+    view: "settings",
+    pinGated: true,
+  },
 ];
+
+export const NAV_ITEMS: NavItem[] = NAV_ITEMS_ALL.filter((i) => i.id !== "sports");
 
 export function applyNavCustomization(items: NavItem[], cfg: NavCustomization): NavItem[] {
   const shown = items
@@ -131,9 +259,7 @@ export function moveNavItem(
 }
 
 export function toggleNavHidden(cfg: NavCustomization, id: string): NavCustomization {
-  const hidden = cfg.hidden.includes(id)
-    ? cfg.hidden.filter((x) => x !== id)
-    : [...cfg.hidden, id];
+  const hidden = cfg.hidden.includes(id) ? cfg.hidden.filter((x) => x !== id) : [...cfg.hidden, id];
   return { ...cfg, hidden };
 }
 

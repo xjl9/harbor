@@ -52,6 +52,7 @@ pub struct MpvStartArgs {
     pub mac_edr: Option<bool>,
     pub is_live: Option<bool>,
     pub full_download: Option<bool>,
+    pub startup_profile: Option<String>,
     pub headers: Option<HashMap<String, String>>,
     pub extra_options: Option<String>,
 }
@@ -182,6 +183,7 @@ const OBSERVED_PROPS: &[(&str, u64, PropertyKind)] = &[
     ("demuxer-cache-duration", 17, PropertyKind::Double),
     ("paused-for-cache", 18, PropertyKind::Flag),
     ("secondary-sub-text", 19, PropertyKind::String),
+    ("path", 20, PropertyKind::String),
 ];
 
 #[derive(Clone, Copy)]
@@ -218,7 +220,10 @@ fn force_c_numeric_locale() {}
 #[tauri::command]
 pub async fn mpv_probe(_app: AppHandle) -> MpvProbe {
     force_c_numeric_locale();
-    match Mpv::with_initializer(|init| init.set_property("media-controls", "no")) {
+    match Mpv::with_initializer(|init| {
+        let _ = init.set_property("media-controls", "no");
+        Ok(())
+    }) {
         Ok(mpv) => {
             let version = mpv
                 .get_property::<String>("mpv-version")
@@ -290,8 +295,11 @@ pub async fn mpv_audio_devices(state: State<'_, MpvState>) -> Result<Vec<AudioDe
         return Ok(read_audio_devices(&mpv));
     }
     force_c_numeric_locale();
-    let mpv = Mpv::with_initializer(|init| init.set_property("media-controls", "no"))
-        .map_err(|e| format!("mpv init: {}", e))?;
+    let mpv = Mpv::with_initializer(|init| {
+        let _ = init.set_property("media-controls", "no");
+        Ok(())
+    })
+    .map_err(|e| format!("mpv init: {}", e))?;
     Ok(read_audio_devices(&mpv))
 }
 
@@ -510,6 +518,20 @@ fn network_timeout_for(url: &str) -> &'static str {
     }
 }
 
+fn source_kind(url: &str) -> &'static str {
+    if is_local_network_url(url) {
+        "local-http"
+    } else if url.starts_with("https://") {
+        "https"
+    } else if url.starts_with("http://") {
+        "http"
+    } else if url.starts_with("file://") || !url.contains("://") {
+        "local-file"
+    } else {
+        "other"
+    }
+}
+
 #[tauri::command]
 pub async fn mpv_start(
     app: AppHandle,
@@ -554,8 +576,10 @@ pub async fn mpv_start(
         None
     };
     eprintln!(
-        "[harbor::mpv] start url={} want_embed={} embed_hwnd={:?}",
-        args.url, want_embed, embed_hwnd
+        "[harbor::mpv] start source_kind={} want_embed={} embed_hwnd={:?}",
+        source_kind(&args.url),
+        want_embed,
+        embed_hwnd
     );
     let embed_hwnd_for_init = embed_hwnd.clone();
     let args_for_init = args.clone();
@@ -690,12 +714,60 @@ pub async fn mpv_start(
         let _ = mpv.set_property("stream-buffer-size", "16MiB");
     } else {
         let full_dl = args.full_download.unwrap_or(false);
+        let high_bitrate = args.startup_profile.as_deref() == Some("high-bitrate");
         let _ = mpv.set_property("cache", "yes");
-        let _ = mpv.set_property("cache-secs", if full_dl { "100000" } else { "300" });
+        let _ = mpv.set_property(
+            "cache-secs",
+            if full_dl {
+                "100000"
+            } else if high_bitrate {
+                "45"
+            } else {
+                "30"
+            },
+        );
         let _ = mpv.set_property("cache-pause", "yes");
-        let _ = mpv.set_property("demuxer-max-bytes", if full_dl { "48GiB" } else { "512MiB" });
-        let _ = mpv.set_property("demuxer-max-back-bytes", if full_dl { "48GiB" } else { "64MiB" });
-        let _ = mpv.set_property("demuxer-readahead-secs", if full_dl { "100000" } else { "300" });
+        let _ = mpv.set_property("cache-pause-initial", "no");
+        let _ = mpv.set_property(
+            "cache-pause-wait",
+            if full_dl {
+                "10"
+            } else if high_bitrate {
+                "2"
+            } else {
+                "1"
+            },
+        );
+        let _ = mpv.set_property(
+            "demuxer-max-bytes",
+            if full_dl {
+                "48GiB"
+            } else if high_bitrate {
+                "256MiB"
+            } else {
+                "128MiB"
+            },
+        );
+        let _ = mpv.set_property(
+            "demuxer-max-back-bytes",
+            if full_dl {
+                "48GiB"
+            } else if high_bitrate {
+                "64MiB"
+            } else {
+                "32MiB"
+            },
+        );
+        let _ = mpv.set_property(
+            "demuxer-readahead-secs",
+            if full_dl {
+                "100000"
+            } else if high_bitrate {
+                "45"
+            } else {
+                "30"
+            },
+        );
         if let Ok(base) = app.path().app_cache_dir() {
             let dvr = base.join("mpv-cache");
             let _ = std::fs::create_dir_all(&dvr);
@@ -710,8 +782,18 @@ pub async fn mpv_start(
             Ok(()) => eprintln!("[harbor::mpv] stream-lavf-o set {}", reconnect_opts),
             Err(e) => eprintln!("[harbor::mpv] stream-lavf-o rejected: {:?}", e),
         }
-        let _ = mpv.set_property("stream-buffer-size", "32MiB");
+        let _ = mpv.set_property(
+            "stream-buffer-size",
+            if high_bitrate { "32MiB" } else { "16MiB" },
+        );
     }
+    // mpv may auto-select an embedded subtitle as soon as loadfile runs. Keep
+    // both subtitle slots empty until Harbor applies the user's language choice.
+    // Still discover sidecars beside local files so they are available in the
+    // track picker even for libraries indexed before sidecars were persisted.
+    let _ = mpv.set_property("sub-auto", "all");
+    let _ = mpv.set_property("sid", "no");
+    let _ = mpv.set_property("secondary-sid", "no");
     if want_embed {
         let _ = mpv.set_property("sub-visibility", "no");
         let _ = mpv.set_property("secondary-sub-visibility", "no");
@@ -725,13 +807,6 @@ pub async fn mpv_start(
     let _ = mpv.set_property("sub-font-provider", "auto");
     let _ = mpv.set_property("sub-font", "Noto Sans JP");
     let _ = mpv.set_property("embeddedfonts", "yes");
-
-    if let Some(subs) = &args.subtitles {
-        for s in subs {
-            let url = s.url.replace('\\', "/");
-            let _ = mpv_argv_command(&mpv, &["sub-add", &url, "auto"]);
-        }
-    }
 
     if let Some(extra) = args.extra_options.as_deref() {
         apply_extra_mpv_options(&mpv, extra);
@@ -770,12 +845,30 @@ pub async fn mpv_start(
         args.mac_edr.unwrap_or(false),
     );
 
-    eprintln!("[harbor::mpv] loadfile {}", args.url);
+    eprintln!(
+        "[harbor::mpv] loadfile source_kind={}",
+        source_kind(&args.url)
+    );
     mpv_argv_command(&*mpv_arc, &["loadfile", &args.url, "replace"]).map_err(|e| {
         eprintln!("[harbor::mpv] loadfile FAILED: {}", e);
         format!("loadfile: {}", e)
     })?;
     eprintln!("[harbor::mpv] loadfile OK");
+
+    // `loadfile replace` clears tracks added to the previous playlist entry,
+    // so explicit sidecars must be attached after the video is loaded.
+    // This is required for sidecars whose filename differs from the video and
+    // therefore cannot be discovered by mpv's `sub-auto` matching alone.
+    if let Some(subs) = &args.subtitles {
+        for subtitle in subs {
+            let url = subtitle.url.replace('\\', "/");
+            if let Err(error) = mpv_argv_command(&mpv_arc, &["sub-add", &url, "auto"])
+            {
+                eprintln!("[harbor::mpv] sub-add failed for {}: {}", url, error);
+            }
+        }
+    }
+    attach_local_sidecars(&mpv_arc, &args.url);
 
     *g = Some(MpvSession {
         mpv: mpv_arc,
@@ -1057,7 +1150,28 @@ pub async fn mpv_command(state: State<'_, MpvState>, cmd: Vec<Value>) -> Result<
     for s in &tail {
         argv.push(s.as_str());
     }
-    mpv_argv_command(&mpv, &argv)
+    mpv_argv_command(&mpv, &argv)?;
+    if head == "loadfile" {
+        if let Some(url) = tail.first() {
+            attach_local_sidecars(&mpv, url);
+        }
+    }
+    Ok(())
+}
+
+fn attach_local_sidecars(mpv: &Mpv, url: &str) {
+    if url.contains("://") {
+        return;
+    }
+    for subtitle in crate::local_lib::adjacent_subtitles(std::path::Path::new(url)) {
+        let normalized = subtitle.replace('\\', "/");
+        if let Err(error) = mpv_argv_command(mpv, &["sub-add", &normalized, "auto"]) {
+            eprintln!(
+                "[harbor::mpv] adjacent sub-add failed for {}: {}",
+                normalized, error
+            );
+        }
+    }
 }
 
 const MPV_ALLOWED_COMMANDS: &[&str] = &[
@@ -1396,7 +1510,7 @@ pub async fn mpv_save_screenshot(
     }
     let _ = mpv.set_property("screenshot-format", "png");
     let _ = mpv.set_property("screenshot-png-compression", "3");
-    let _ = mpv.set_property("screenshot-sw", "no");
+    let _ = mpv.set_property("screenshot-sw", "yes");
     mpv_argv_command(&mpv, &["screenshot-to-file", path.as_str(), "video"])
         .map_err(|e| format!("screenshot-to-file: {}", e))?;
     let target = std::path::Path::new(&path).to_path_buf();
@@ -1464,7 +1578,7 @@ pub async fn mpv_gif_start(state: State<'_, MpvState>) -> Result<(), String> {
         let started = std::time::Instant::now();
         let _ = mpv.set_property("screenshot-format", "jpg");
         let _ = mpv.set_property("screenshot-jpeg-quality", "92");
-        let _ = mpv.set_property("screenshot-sw", "no");
+        let _ = mpv.set_property("screenshot-sw", "yes");
         let mut frame: u32 = 0;
         while !stop_task.load(std::sync::atomic::Ordering::Relaxed) && frame < GIF_MAX_FRAMES {
             let path = dir_task.join(format!("f{:05}.jpg", frame));
@@ -1760,7 +1874,10 @@ pub async fn mpv_screenshot_data_url(state: State<'_, MpvState>) -> Result<Strin
     let path_str = temp.to_string_lossy().to_string();
     let _ = mpv.set_property("screenshot-format", "jpg");
     let _ = mpv.set_property("screenshot-jpeg-quality", "72");
-    let _ = mpv.set_property("screenshot-sw", "no");
+    let _ = mpv.set_property("screenshot-high-bit-depth", "no");
+    // X-Ray samples frequently. Software screenshots avoid reinitializing the
+    // live video renderer for every sample, which can retain large 4K surfaces.
+    let _ = mpv.set_property("screenshot-sw", "yes");
     mpv_argv_command(&mpv, &["screenshot-to-file", path_str.as_str(), "video"])
         .map_err(|e| format!("screenshot-to-file: {}", e))?;
     let mut waited = 0u64;
@@ -1932,29 +2049,77 @@ fn normalize_subtitle_bytes(
     text.trim_start_matches('\u{feff}').as_bytes().to_vec()
 }
 
-fn extract_subtitle_from_zip(bytes: &[u8]) -> Option<Vec<u8>> {
+const SUBTITLE_NETWORK_LIMIT: usize = 12 * 1024 * 1024;
+const SUBTITLE_ARCHIVE_LIMIT: u64 = 32 * 1024 * 1024;
+const SUBTITLE_ENTRY_LIMIT: u64 = 4 * 1024 * 1024;
+const SUBTITLE_ARCHIVE_ENTRIES: usize = 100;
+
+fn is_zip_magic(bytes: &[u8]) -> bool {
+    bytes.len() >= 4
+        && (&bytes[..4] == b"PK\x03\x04"
+            || &bytes[..4] == b"PK\x05\x06"
+            || &bytes[..4] == b"PK\x07\x08")
+}
+
+fn extract_subtitle_from_zip(bytes: &[u8]) -> Result<Vec<u8>, String> {
     const SUB_EXTS: &[&str] = &["srt", "ass", "ssa", "vtt", "sub"];
-    let mut archive = zip::ZipArchive::new(std::io::Cursor::new(bytes)).ok()?;
-    let mut best: Option<(usize, u64)> = None;
+    const ARCHIVE_EXTS: &[&str] = &["zip", "rar", "7z", "gz", "tgz", "bz2", "xz", "tar"];
+    let mut archive = zip::ZipArchive::new(std::io::Cursor::new(bytes))
+        .map_err(|_| "invalid subtitle archive".to_string())?;
+    if archive.len() > SUBTITLE_ARCHIVE_ENTRIES {
+        return Err("subtitle archive has too many entries".to_string());
+    }
+    let mut best: Option<(usize, u64, String)> = None;
+    let mut total_size = 0u64;
     for i in 0..archive.len() {
-        let entry = archive.by_index(i).ok()?;
+        let entry = archive
+            .by_index(i)
+            .map_err(|_| "invalid subtitle archive entry")?;
+        let safe_path = entry
+            .enclosed_name()
+            .ok_or_else(|| "unsafe subtitle archive path".to_string())?;
+        if safe_path.is_absolute() {
+            return Err("unsafe absolute subtitle archive path".to_string());
+        }
         if entry.is_dir() {
             continue;
         }
-        let name = entry.name().to_ascii_lowercase();
+        total_size = total_size.saturating_add(entry.size());
+        if total_size > SUBTITLE_ARCHIVE_LIMIT {
+            return Err("subtitle archive inflated size limit exceeded".to_string());
+        }
+        let name = safe_path.to_string_lossy().to_ascii_lowercase();
         let ext = name.rsplit('.').next().unwrap_or("");
+        if ARCHIVE_EXTS.contains(&ext) {
+            return Err("nested subtitle archive rejected".to_string());
+        }
         if SUB_EXTS.contains(&ext) {
             let size = entry.size();
-            if best.is_none_or(|(_, best_size)| size > best_size) {
-                best = Some((i, size));
+            if size > SUBTITLE_ENTRY_LIMIT {
+                return Err("subtitle archive entry size limit exceeded".to_string());
+            }
+            if best.as_ref().is_none_or(|(_, best_size, best_name)| {
+                size > *best_size || (size == *best_size && name < *best_name)
+            }) {
+                best = Some((i, size, name));
             }
         }
     }
-    let (idx, _) = best?;
-    let mut file = archive.by_index(idx).ok()?;
+    let (idx, _, _) = best.ok_or_else(|| "subtitle archive is empty".to_string())?;
+    let mut file = archive
+        .by_index(idx)
+        .map_err(|_| "invalid subtitle archive entry")?;
     let mut out = Vec::with_capacity(file.size() as usize);
-    std::io::Read::read_to_end(&mut file, &mut out).ok()?;
-    Some(out)
+    let mut limited = std::io::Read::take(&mut file, SUBTITLE_ENTRY_LIMIT + 1);
+    std::io::Read::read_to_end(&mut limited, &mut out)
+        .map_err(|_| "subtitle archive extraction failed".to_string())?;
+    if out.len() as u64 > SUBTITLE_ENTRY_LIMIT {
+        return Err("subtitle archive entry size limit exceeded".to_string());
+    }
+    if is_zip_magic(&out) {
+        return Err("nested subtitle archive rejected".to_string());
+    }
+    Ok(out)
 }
 
 fn prepare_subtitle_download(
@@ -1972,7 +2137,25 @@ fn prepare_subtitle_download(
 
 #[cfg(test)]
 mod subtitle_download_tests {
-    use super::{normalize_subtitle_bytes, prepare_subtitle_download, subtitle_extension};
+    use super::{
+        extract_subtitle_from_zip, normalize_subtitle_bytes, prepare_subtitle_download,
+        subtitle_extension, SUBTITLE_ARCHIVE_ENTRIES,
+    };
+    use std::io::{Cursor, Write};
+
+    fn make_zip(entries: &[(&str, &[u8])]) -> Vec<u8> {
+        let mut cursor = Cursor::new(Vec::new());
+        {
+            let mut archive = zip::ZipWriter::new(&mut cursor);
+            let options = zip::write::SimpleFileOptions::default();
+            for (name, body) in entries {
+                archive.start_file(*name, options).unwrap();
+                archive.write_all(body).unwrap();
+            }
+            archive.finish().unwrap();
+        }
+        cursor.into_inner()
+    }
 
     #[test]
     fn uses_explicit_ass_format_when_download_url_has_no_extension() {
@@ -2059,6 +2242,52 @@ mod subtitle_download_tests {
         assert_eq!(extension, "ass");
         assert_eq!(String::from_utf8(normalized).unwrap(), text);
     }
+
+    #[test]
+    fn safe_zip_rejects_traversal_and_nested_archives() {
+        let traversal = make_zip(&[("../escape.srt", b"subtitle")]);
+        assert!(extract_subtitle_from_zip(&traversal)
+            .unwrap_err()
+            .contains("unsafe subtitle archive path"));
+
+        let nested = make_zip(&[("nested.zip", b"PK\x03\x04")]);
+        assert!(extract_subtitle_from_zip(&nested)
+            .unwrap_err()
+            .contains("nested subtitle archive"));
+
+        let disguised = make_zip(&[("nested.srt", b"PK\x03\x04")]);
+        assert!(extract_subtitle_from_zip(&disguised)
+            .unwrap_err()
+            .contains("nested subtitle archive"));
+    }
+
+    #[test]
+    fn safe_zip_caps_entries_and_requires_a_subtitle() {
+        let names: Vec<String> = (0..=SUBTITLE_ARCHIVE_ENTRIES)
+            .map(|index| format!("file-{index}.txt"))
+            .collect();
+        let entries: Vec<(&str, &[u8])> = names
+            .iter()
+            .map(|name| (name.as_str(), b"x".as_slice()))
+            .collect();
+        assert!(extract_subtitle_from_zip(&make_zip(&entries))
+            .unwrap_err()
+            .contains("too many entries"));
+
+        let empty = make_zip(&[("readme.txt", b"nothing")]);
+        assert!(extract_subtitle_from_zip(&empty)
+            .unwrap_err()
+            .contains("archive is empty"));
+    }
+
+    #[test]
+    fn safe_zip_extracts_a_supported_subtitle_deterministically() {
+        let archive = make_zip(&[("b.srt", b"large subtitle"), ("a.srt", b"large subtitle")]);
+        assert_eq!(
+            extract_subtitle_from_zip(&archive).unwrap(),
+            b"large subtitle"
+        );
+    }
 }
 
 #[tauri::command]
@@ -2074,7 +2303,7 @@ pub async fn sub_download(
         .gzip(true)
         .build()
         .map_err(|e| format!("client: {}", e))?;
-    let res = client
+    let mut res = client
         .get(&url)
         .header(
             "User-Agent",
@@ -2087,24 +2316,43 @@ pub async fn sub_download(
     if !res.status().is_success() {
         return Err(format!("status {}", res.status()));
     }
+    if res
+        .content_length()
+        .is_some_and(|size| size > SUBTITLE_NETWORK_LIMIT as u64)
+    {
+        return Err("subtitle download size limit exceeded".to_string());
+    }
     let ct = res
         .headers()
         .get(reqwest::header::CONTENT_TYPE)
         .and_then(|v| v.to_str().ok())
         .map(|s| s.to_lowercase());
-    let raw = res.bytes().await.map_err(|e| format!("read: {}", e))?;
-    let unpacked: Vec<u8> = if raw.len() >= 2 && raw[0] == 0x1f && raw[1] == 0x8b {
+    let mut raw = Vec::new();
+    while let Some(chunk) = res.chunk().await.map_err(|e| format!("read: {}", e))? {
+        if raw.len().saturating_add(chunk.len()) > SUBTITLE_NETWORK_LIMIT {
+            return Err("subtitle download size limit exceeded".to_string());
+        }
+        raw.extend_from_slice(&chunk);
+    }
+    let was_gzip = raw.len() >= 2 && raw[0] == 0x1f && raw[1] == 0x8b;
+    let unpacked: Vec<u8> = if was_gzip {
         let mut decoder = flate2::read::GzDecoder::new(&raw[..]);
         let mut decoded = Vec::with_capacity(raw.len() * 4);
-        decoder
+        std::io::Read::take(&mut decoder, SUBTITLE_ARCHIVE_LIMIT + 1)
             .read_to_end(&mut decoded)
             .map_err(|e| format!("gunzip: {}", e))?;
+        if decoded.len() as u64 > SUBTITLE_ARCHIVE_LIMIT {
+            return Err("subtitle archive inflated size limit exceeded".to_string());
+        }
         decoded
     } else {
         raw.to_vec()
     };
-    let unpacked = if unpacked.len() >= 4 && &unpacked[..4] == b"PK\x03\x04" {
-        extract_subtitle_from_zip(&unpacked).unwrap_or(unpacked)
+    if was_gzip && is_zip_magic(&unpacked) {
+        return Err("nested subtitle archive rejected".to_string());
+    }
+    let unpacked = if is_zip_magic(&unpacked) {
+        extract_subtitle_from_zip(&unpacked)?
     } else {
         unpacked
     };
@@ -2163,6 +2411,58 @@ pub async fn mpv_stop(app: AppHandle, state: State<'_, MpvState>) -> Result<(), 
     }
     let _ = app;
     Ok(())
+}
+
+#[tauri::command]
+pub async fn mpv_release_media(app: AppHandle, state: State<'_, MpvState>) -> Result<bool, String> {
+    #[cfg(windows)]
+    {
+        let (mpv, embedded) = {
+            let g = state.inner.lock().await;
+            let Some(session) = g.as_ref() else {
+                return Ok(false);
+            };
+            (session.mpv.clone(), session.embedded)
+        };
+        if !embedded {
+            return Ok(false);
+        }
+        mpv.command("stop", &[])
+            .map_err(|e| format!("stop retained mpv media: {e}"))?;
+        set_embedded_mpv_children_visible(&app, false)?;
+        return Ok(true);
+    }
+    #[cfg(not(windows))]
+    {
+        let _ = app;
+        let _ = state;
+        Ok(false)
+    }
+}
+
+#[tauri::command]
+pub async fn mpv_restore_media_surface(
+    app: AppHandle,
+    state: State<'_, MpvState>,
+) -> Result<bool, String> {
+    #[cfg(windows)]
+    {
+        let embedded = {
+            let g = state.inner.lock().await;
+            g.as_ref().is_some_and(|session| session.embedded)
+        };
+        if !embedded {
+            return Ok(false);
+        }
+        set_embedded_mpv_children_visible(&app, true)?;
+        return Ok(true);
+    }
+    #[cfg(not(windows))]
+    {
+        let _ = app;
+        let _ = state;
+        Ok(false)
+    }
 }
 
 #[cfg(windows)]
@@ -2241,6 +2541,56 @@ static MPV_POS_LAST_RECT: std::sync::Mutex<Option<(isize, i32, i32, u32, u32)>> 
 
 #[cfg(windows)]
 static MPV_HDR_STAGE: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
+#[cfg(windows)]
+fn set_embedded_mpv_children_visible(app: &AppHandle, visible: bool) -> Result<(), String> {
+    use windows::core::BOOL;
+    use windows::Win32::Foundation::{HWND, LPARAM};
+    use windows::Win32::UI::WindowsAndMessaging::{
+        EnumChildWindows, GetClassNameW, GetWindowTextW, SetWindowPos, HWND_BOTTOM, SWP_HIDEWINDOW,
+        SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE, SWP_SHOWWINDOW,
+    };
+
+    let window = app
+        .get_webview_window("main")
+        .ok_or_else(|| "main window missing".to_string())?;
+    let parent_hwnd = window.hwnd().map_err(|e| format!("hwnd: {e}"))?;
+    let mut children: Vec<isize> = Vec::new();
+    let children_ptr = &mut children as *mut Vec<isize>;
+
+    unsafe extern "system" fn enum_proc(hwnd: HWND, lparam: LPARAM) -> BOOL {
+        let mut class_buf = [0u16; 256];
+        let class_len = GetClassNameW(hwnd, &mut class_buf);
+        let class_name = String::from_utf16_lossy(&class_buf[..class_len as usize]);
+        let mut title_buf = [0u16; 256];
+        let title_len = GetWindowTextW(hwnd, &mut title_buf);
+        let title = String::from_utf16_lossy(&title_buf[..title_len as usize]);
+        let is_mpv = class_name == "mpv"
+            || class_name.starts_with("mpv ")
+            || (class_name.is_empty() && title.starts_with("Harbor"));
+        if is_mpv {
+            (*(lparam.0 as *mut Vec<isize>)).push(hwnd.0 as isize);
+        }
+        BOOL(1)
+    }
+
+    unsafe {
+        let _ = EnumChildWindows(
+            Some(parent_hwnd),
+            Some(enum_proc),
+            LPARAM(children_ptr as isize),
+        );
+        let flags = if visible {
+            SWP_NOACTIVATE | SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW
+        } else {
+            SWP_NOACTIVATE | SWP_NOMOVE | SWP_NOSIZE | SWP_HIDEWINDOW
+        };
+        for child in children {
+            let _ = SetWindowPos(HWND(child as *mut _), Some(HWND_BOTTOM), 0, 0, 0, 0, flags);
+        }
+    }
+    Ok(())
+}
 
 #[cfg(windows)]
 fn position_embedded_mpv_child(app: &AppHandle, css: MpvGeometry) -> Result<(), String> {

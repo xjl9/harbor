@@ -1,6 +1,16 @@
 import type { GpAxis, GpButton } from "./protocol";
 
-export type NavAction = "up" | "down" | "left" | "right" | "select" | "back" | "home";
+export type NavAction =
+  | "up"
+  | "down"
+  | "left"
+  | "right"
+  | "select"
+  | "back"
+  | "home"
+  | "prevTab"
+  | "nextTab"
+  | "options";
 export type PlayerKey = { key: string; code: string };
 
 export const NAV_BUTTON: Partial<Record<GpButton, NavAction>> = {
@@ -12,6 +22,9 @@ export const NAV_BUTTON: Partial<Record<GpButton, NavAction>> = {
   east: "back",
   start: "home",
   guide: "home",
+  lb: "prevTab",
+  rb: "nextTab",
+  north: "options",
 };
 
 export const NAV_REPEATABLE = new Set<GpButton>(["dup", "ddown", "dleft", "dright"]);

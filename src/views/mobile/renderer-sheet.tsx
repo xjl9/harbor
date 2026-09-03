@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { Cast, Check, MonitorSmartphone, Wifi } from "lucide-react";
+import { useT } from "@/lib/i18n";
 import { useMobileRemote } from "./mobile-remote";
 import { SHEET_EXIT_CSS, useSheetPresence } from "./remote-extras";
 import { APP_VERSION } from "@/lib/build-info";
@@ -7,7 +8,24 @@ import { isMobileNative } from "@/lib/platform";
 import { useSettings } from "@/lib/settings";
 import { useRemoteDiscovery } from "@/lib/remote/use-remote-discovery";
 
-export function RendererSheet({ open, onClose, title = "Play on" }: { open: boolean; onClose: () => void; title?: string }) {
+const GENERIC_LOCAL_LABELS = new Set(["", "this pc", "your computer", "local"]);
+
+function hostLabel(raw: string | undefined): string | null {
+  const trimmed = (raw ?? "").trim();
+  if (!trimmed || GENERIC_LOCAL_LABELS.has(trimmed.toLowerCase())) return null;
+  return trimmed;
+}
+
+export function RendererSheet({
+  open,
+  onClose,
+  title = "Play on",
+}: {
+  open: boolean;
+  onClose: () => void;
+  title?: string;
+}) {
+  const t = useT();
   const { snapshot, sendCommand, connected } = useMobileRemote();
   const { render, leaving } = useSheetPresence(open);
   const { settings, update } = useSettings();
@@ -24,6 +42,8 @@ export function RendererSheet({ open, onClose, title = "Play on" }: { open: bool
 
   const target = snapshot.target;
   const localActive = target.kind === "local";
+  const localName =
+    hostLabel(target.kind === "local" ? target.label : undefined) ?? t("This Harbor");
 
   return (
     <div
@@ -34,7 +54,7 @@ export function RendererSheet({ open, onClose, title = "Play on" }: { open: bool
       {/* A busy Wi-Fi can discover a dozen targets; bound the panel to the visible
           viewport and scroll the list so the handle and title never leave the screen. */}
       <div
-        className={`flex min-h-0 flex-col rounded-t-[28px] border-t border-edge-soft/60 bg-elevated ${leaving ? "harbor-sheet-panel-out" : "animate-in slide-in-from-bottom-4 duration-300"}`}
+        className={`flex min-h-0 flex-col rounded-t-2xl border-t border-edge-soft/60 bg-elevated ${leaving ? "harbor-sheet-panel-out" : "animate-in slide-in-from-bottom-4 duration-300"}`}
         style={{
           maxHeight: "calc(100% - env(safe-area-inset-top, 0px) - 12px)",
           paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 22px)",
@@ -43,9 +63,9 @@ export function RendererSheet({ open, onClose, title = "Play on" }: { open: bool
       >
         <div className="mx-auto mt-3 h-1 w-10 shrink-0 rounded-full bg-ink/20" />
         <div className="flex shrink-0 items-center justify-between gap-3 px-5 pb-2 pt-4">
-          <h3 className="min-w-0 flex-1 text-[16px] font-semibold text-ink">{title}</h3>
+          <h3 className="min-w-0 flex-1 text-[16px] font-semibold text-ink">{t(title)}</h3>
           {snapshot.castDiscovering && (
-            <span className="shrink-0 text-[12px] text-ink-subtle">Scanning…</span>
+            <span className="shrink-0 text-[12px] text-ink-subtle">{t("Scanning…")}</span>
           )}
         </div>
         <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain px-2 pb-2">
@@ -69,8 +89,9 @@ export function RendererSheet({ open, onClose, title = "Play on" }: { open: bool
                 />
               );
             })}
+          <SectionLabel>Harbor</SectionLabel>
           <DeviceRow
-            name="Your computer"
+            name={localName}
             badge={`Harbor ${hostVersion}`}
             icon={<MonitorSmartphone size={20} strokeWidth={2} />}
             active={localActive}
@@ -79,6 +100,7 @@ export function RendererSheet({ open, onClose, title = "Play on" }: { open: bool
               onClose();
             }}
           />
+          <SectionLabel>{t("Cast to")}</SectionLabel>
           {snapshot.castDevices.map((d) => (
             <DeviceRow
               key={d.id}
@@ -94,12 +116,20 @@ export function RendererSheet({ open, onClose, title = "Play on" }: { open: bool
           ))}
           {snapshot.castDevices.length === 0 && !snapshot.castDiscovering && (
             <p className="px-4 py-6 text-center text-[13px] text-ink-muted">
-              No cast devices found on your network.
+              {t("No cast devices found on your network.")}
             </p>
           )}
         </div>
       </div>
     </div>
+  );
+}
+
+function SectionLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <span className="px-4 pb-1 pt-3 text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-subtle">
+      {children}
+    </span>
   );
 }
 
@@ -126,12 +156,18 @@ function DeviceRow({
       onClick={onSelect}
       className="flex min-h-[3.25rem] shrink-0 items-center gap-3.5 rounded-2xl px-4 py-3 text-start transition-colors active:bg-raised/60"
     >
-      <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${active ? "bg-accent-soft text-accent" : "bg-raised text-ink-muted"}`}>
+      <span
+        className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${active ? "bg-accent-soft text-accent" : "bg-raised text-ink-muted"}`}
+      >
         {icon}
       </span>
       <span className="flex min-w-0 flex-1 flex-col gap-0.5">
         <span className="flex items-center gap-2">
-          <span className={`truncate text-[15px] font-semibold ${active ? "text-accent" : "text-ink"}`}>{name}</span>
+          <span
+            className={`truncate text-[15px] font-semibold ${active ? "text-accent" : "text-ink"}`}
+          >
+            {name}
+          </span>
           {badge && (
             <span className="shrink-0 rounded-md bg-raised px-1.5 py-0.5 text-[10.5px] font-semibold text-ink-subtle">
               {badge}

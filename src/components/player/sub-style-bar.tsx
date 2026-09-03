@@ -13,7 +13,7 @@ function clamp(n: number, lo: number, hi: number): number {
   return Math.max(lo, Math.min(hi, n));
 }
 
-const GROUP = "flex h-11 items-center overflow-hidden rounded-[12px] bg-raised";
+const GROUP = "flex h-11 items-center overflow-hidden rounded-md bg-raised";
 
 // Landscape puts the notch on one edge and the rounded corner on the other. The
 // bar is centered, so padding the two edges by different insets would push it off
@@ -60,13 +60,13 @@ export function SubStyleBar() {
 
   return (
     <div
-      className="pointer-events-none absolute inset-x-0 top-0 z-30 flex justify-center pt-[68px] animate-in fade-in slide-in-from-top-2 duration-200"
+      className="pointer-events-none absolute inset-x-0 top-0 z-30 flex justify-center pt-[68px] animate-sub-bar-drop"
       style={{ paddingLeft: SAFE_X, paddingRight: SAFE_X }}
     >
       <div
         role="toolbar"
         aria-label={t("Subtitle appearance")}
-        className="pointer-events-auto flex flex-wrap items-center justify-center gap-2 rounded-[16px] border border-edge bg-elevated px-2 py-2 shadow-[0_18px_44px_-22px_rgba(0,0,0,0.85)]"
+        className="pointer-events-auto flex flex-wrap items-center justify-center gap-2 rounded-md bg-elevated px-2 py-2 shadow-[0_10px_30px_-12px_rgba(0,0,0,0.6)]"
         style={{ maxWidth: SAFE_MAX_W }}
       >
         <div className={GROUP}>
@@ -91,7 +91,7 @@ export function SubStyleBar() {
           type="button"
           onClick={closeStyleBar}
           aria-label={t("Done")}
-          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[10px] text-ink-subtle transition-colors hover:bg-raised hover:text-ink"
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-ink-subtle transition-colors hover:bg-raised hover:text-ink"
         >
           <X size={18} strokeWidth={2.2} />
         </button>

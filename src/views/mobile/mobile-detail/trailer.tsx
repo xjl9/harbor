@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { createPortal } from "react-dom";
 import { X } from "lucide-react";
+import { useT } from "@/lib/i18n";
 import { useReducedMotion, useSheetExit } from "./data";
 
 export function MobileTrailerOverlay({
@@ -12,6 +13,7 @@ export function MobileTrailerOverlay({
   title: string;
   onClose: () => void;
 }) {
+  const t = useT();
   const reduced = useReducedMotion();
   const { leaving, close } = useSheetExit(onClose);
   useEffect(() => {
@@ -30,7 +32,7 @@ export function MobileTrailerOverlay({
     playsinline: "1",
     fs: "1",
   });
-  const proto = typeof window !== "undefined" ? window.location?.protocol ?? "" : "";
+  const proto = typeof window !== "undefined" ? (window.location?.protocol ?? "") : "";
   if (/^https?:$/.test(proto) && window.location?.origin) {
     params.set("origin", window.location.origin);
   }
@@ -39,7 +41,7 @@ export function MobileTrailerOverlay({
     <div
       role="dialog"
       aria-modal="true"
-      aria-label={`${title} trailer`}
+      aria-label={t("{title} trailer", { title })}
       onClick={close}
       className={`fixed inset-0 z-[120] flex items-center justify-center bg-black/90 px-4 ${
         reduced ? "" : leaving ? "md-fade-out" : "md-sheet-fade"
@@ -48,7 +50,7 @@ export function MobileTrailerOverlay({
       <button
         type="button"
         onClick={close}
-        aria-label="Close trailer"
+        aria-label={t("Close trailer")}
         className="absolute end-4 grid h-11 w-11 place-items-center rounded-full bg-canvas/90 text-ink shadow-[0_8px_22px_-8px_rgba(0,0,0,0.6)]"
         style={{ top: "calc(env(safe-area-inset-top, 0px) + 12px)" }}
       >
@@ -62,7 +64,7 @@ export function MobileTrailerOverlay({
       >
         <iframe
           src={`https://www.youtube-nocookie.com/embed/${id}?${params.toString()}`}
-          title={`${title} trailer`}
+          title={t("{title} trailer", { title })}
           allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
           allowFullScreen
           referrerPolicy="strict-origin-when-cross-origin"

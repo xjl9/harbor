@@ -9,12 +9,14 @@ import { StreamSwitcher } from "@/components/player/stream-switcher";
 import { StreamCheckPill } from "@/components/player/stream-check-pill";
 import { AdReportButton } from "@/components/player/ad-report-button";
 import { XrayOverlay } from "@/components/player/xray/xray-overlay";
+import { BufferingIndicator } from "@/components/player/buffering-indicator";
 import { P2pStatusChip } from "@/components/player/p2p-status-chip";
 import type { VolumeHudPosition, VolumeIndicatorState } from "@/components/player/volume-indicator";
 import type { ParentalCategory } from "@/lib/providers/harbor-imdb";
 import { capabilityFlags, type PlayerBridge, type PlayerSnapshot } from "@/lib/player/bridge";
 import { writePlayerPrefs } from "@/lib/player-prefs";
 import type { PlayerSrc, PlayEpisode } from "@/lib/view";
+import { BpTenFootLayer } from "./bp-ten-foot";
 import { CastLayer } from "./cast-layer";
 import { DragClickStage } from "./drag-click-stage";
 import { LiveLayer } from "./live-layer";
@@ -40,6 +42,10 @@ type Pill = ComponentProps<typeof StreamCheckPill>;
 type Loader = ComponentProps<typeof LoaderLayer>;
 
 export type PlayerOverlayLayersProps = {
+  // Big Picture is driving: every mouse-era surface with a ten-foot replacement
+  // is suppressed and BpTenFootLayer renders the replacement. Never both. Two
+  // transports on two independent timers shipped that way once.
+  tenFoot: boolean;
   snap: PlayerSnapshot;
   engine: "html5" | "mpv" | "native";
   src: PlayerSrc;
@@ -126,7 +132,7 @@ export type PlayerOverlayLayersProps = {
   setHideOthersDrawings: (fn: (h: boolean) => boolean) => void;
   canPickAnother: boolean;
   resolvedImdbId: string | null;
-  contentAdvisory: { categories: ParentalCategory[]; playKey: string };
+  contentAdvisory: { categories: ParentalCategory[]; playKey: string; imdbId: string | null };
   tmdbKey: string | null;
   download: Shell["download"];
   liveOverlay: Live["liveOverlay"];
@@ -167,6 +173,7 @@ export type PlayerOverlayLayersProps = {
   streamPillVariant: Pill["variant"] | null;
   mpvEmbedWindowsActive: boolean;
   setStreamCheckOpen: (v: boolean) => void;
+  dismissStreamPill: () => void;
   dvrOpen: boolean;
   setSwitcherOpen: (fn: (v: boolean) => boolean) => void;
   onSwitchStream: Switcher["onPick"];
@@ -191,6 +198,7 @@ export type PlayerOverlayLayersProps = {
   syncApi: ReturnType<typeof useTextSync>;
   syncToast: ToastInfo | null;
   onSyncPlayPause: () => void;
+  homeServerQualityControl?: Shell["homeServerQualityControl"];
 };
 
 export const PlayerOverlayLayers = memo(function PlayerOverlayLayers(p: PlayerOverlayLayersProps) {
@@ -205,6 +213,20 @@ export const PlayerOverlayLayers = memo(function PlayerOverlayLayers(p: PlayerOv
     return () => window.removeEventListener(MOBILE_OPEN_EPISODES_EVENT, onOpen);
   }, [mobile, setEpisodePanelOpen]);
   const flags = capabilityFlags(p.bridgeRef.current?.capabilities());
+  const roomAvatarTopLeft =
+    p.inRoom && !p.avatarsHidden && p.participants.length > 0 && p.avatarsCorner === "top-left";
+  const roomAvatarTopRight =
+    p.inRoom && !p.avatarsHidden && p.participants.length > 0 && p.avatarsCorner === "top-right";
+  const roomChatTopLeft = p.inRoom && !p.chatHidden && p.chatCorner === "top-left";
+  const roomChatTopRight = p.inRoom && !p.chatHidden && p.chatCorner === "top-right";
+  const topLeftOccupied = p.showStats || roomAvatarTopLeft || roomChatTopLeft;
+  const topRightOccupied = roomAvatarTopRight || roomChatTopRight;
+  const contentAdvisoryPosition = topLeftOccupied
+    ? topRightOccupied
+      ? "top-center"
+      : "top-end"
+    : "top-start";
+
   return (
     <>
       <StageOverlays
@@ -221,7 +243,11 @@ export const PlayerOverlayLayers = memo(function PlayerOverlayLayers(p: PlayerOv
         videoFillPill={p.videoFillPill}
         subDropToast={p.subDropToast}
         contentAdvisory={p.contentAdvisory}
-        onSubDelay={(s) => { p.bridgeRef.current?.setSubDelay(s); writePlayerPrefs(p.metaId, { subDelaySec: s }); }}
+        contentAdvisoryPosition={contentAdvisoryPosition}
+        onSubDelay={(s) => {
+          p.bridgeRef.current?.setSubDelay(s);
+          writePlayerPrefs(p.metaId, { subDelaySec: s });
+        }}
         onEnterSync={p.onEnterSync}
         chromeVisible={p.showChrome}
       />
@@ -263,18 +289,28 @@ export const PlayerOverlayLayers = memo(function PlayerOverlayLayers(p: PlayerOv
         />
       )}
 
-      <LoaderLayer
-        src={p.src}
-        snap={p.snap}
-        isLocalSrc={p.isLocalSrc}
-        forceShow={p.swappingEp || p.swapResolvingKey != null}
-        sourceFailed={p.sourceFailed}
-        onCancel={p.cancelToPicker}
-        engineStats={p.engineStats}
-        onShowingChange={p.setLoaderShowing}
-        onRetry={p.onLoaderRetry}
-        onBrowseChannels={p.liveOverlay.isLive ? () => p.liveOverlay.setOpen(true) : undefined}
-      />
+      {p.tenFoot ? (
+        <BpTenFootLayer p={p} />
+      ) : (
+        <LoaderLayer
+          src={p.src}
+          snap={p.snap}
+          isLocalSrc={p.isLocalSrc}
+          forceShow={p.swappingEp || p.swapResolvingKey != null}
+          sourceFailed={p.sourceFailed}
+          onCancel={p.cancelToPicker}
+          engineStats={p.engineStats}
+          onShowingChange={p.setLoaderShowing}
+          onRetry={p.onLoaderRetry}
+          onBrowseChannels={p.liveOverlay.isLive ? () => p.liveOverlay.setOpen(true) : undefined}
+        />
+      )}
+
+      {!p.tenFoot && !p.pipMode && (
+        <BufferingIndicator
+          show={p.snap.buffering && (p.snap.status === "playing" || p.snap.status === "paused")}
+        />
+      )}
 
       {!p.pipMode && !p.cast.castDevice && (
         <StrokesLayer
@@ -304,6 +340,7 @@ export const PlayerOverlayLayers = memo(function PlayerOverlayLayers(p: PlayerOv
       )}
 
       <ToolsLayer
+        tenFoot={p.tenFoot}
         engine={p.engine}
         pipMode={p.pipMode}
         drawMode={p.drawMode}
@@ -340,10 +377,15 @@ export const PlayerOverlayLayers = memo(function PlayerOverlayLayers(p: PlayerOv
       )}
 
       {!p.pipMode && !p.drawMode && (
-        <XrayOverlay meta={p.src.meta} visible={p.showChrome} isPaused={p.snap.status === "paused"} bridgeRef={p.bridgeRef} />
+        <XrayOverlay
+          meta={p.src.meta}
+          visible={p.showChrome}
+          isPaused={p.snap.status === "paused"}
+          bridgeRef={p.bridgeRef}
+        />
       )}
 
-      {!p.loaderActive && p.syncMode === "idle" && (
+      {!p.loaderActive && !p.tenFoot && p.syncMode === "idle" && (
         <ShellLayer
           skipSegments={p.skipSegments}
           shellId={p.playerShellId}
@@ -410,6 +452,7 @@ export const PlayerOverlayLayers = memo(function PlayerOverlayLayers(p: PlayerOv
           onOpenDvr={p.openDvr}
           sleep={p.sleep}
           onVolumeFeedback={p.onVolumeFeedback}
+          homeServerQualityControl={p.homeServerQualityControl}
         />
       )}
 
@@ -465,7 +508,11 @@ export const PlayerOverlayLayers = memo(function PlayerOverlayLayers(p: PlayerOv
           visible
           compact={p.mpvEmbedWindowsActive}
           live={p.liveOverlay.isLive}
-          onLooksGood={p.streamPillVariant === "check" ? () => p.setStreamCheckOpen(false) : undefined}
+          onDismiss={
+            p.streamPillVariant === "check"
+              ? () => p.setStreamCheckOpen(false)
+              : p.dismissStreamPill
+          }
           onPickAnother={p.pickAnotherOrGuide}
         />
       )}
@@ -483,7 +530,7 @@ export const PlayerOverlayLayers = memo(function PlayerOverlayLayers(p: PlayerOv
         channelName={p.src.meta.name ?? p.src.title}
       />
       <StreamSwitcher
-        open={p.switcherOpen}
+        open={p.switcherOpen && !p.tenFoot}
         onClose={() => p.setSwitcherOpen(() => false)}
         onPick={p.onSwitchStream}
         resolvingKey={p.swapResolvingKey}
@@ -500,6 +547,7 @@ export const PlayerOverlayLayers = memo(function PlayerOverlayLayers(p: PlayerOv
       />
 
       <PanelsLayer
+        tenFoot={p.tenFoot}
         engine={p.engine}
         isSeriesPlayback={p.isSeriesPlayback}
         meta={p.src.meta}

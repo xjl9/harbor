@@ -14,6 +14,7 @@
     "core:window:allow-is-maximized",
     "core:window:allow-set-decorations",
     "core:window:allow-set-icon",
+    "core:window:allow-set-progress-bar",
     "core:window:allow-set-fullscreen",
     "core:window:allow-is-fullscreen",
     "core:window:allow-start-resize-dragging",
@@ -32,6 +33,7 @@
         { "url": "http://*/**" }
       ]
     },
+    "shell:allow-open",
     {
       "identifier": "http:default",
       "allow": [
@@ -39,6 +41,7 @@
         { "url": "http://*:*/**" }
       ]
     },
+    "clipboard-manager:allow-read-text",
     "dialog:default",
     "dialog:allow-open",
     "dialog:allow-save",
@@ -47,8 +50,6 @@
     "dialog:allow-message",
     "fs:default",
     "deep-link:default",
-    "updater:default",
-    "process:default",
     {
       "identifier": "fs:allow-write-file",
       "allow": [{ "path": "**" }]

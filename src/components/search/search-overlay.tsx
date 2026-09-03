@@ -1,4 +1,5 @@
-import { Search, X, Loader2, CornerDownLeft, CalendarRange, Tag } from "lucide-react";
+import { X, Loader2, CornerDownLeft, CalendarRange, Tag } from "lucide-react";
+import { Search } from "@/components/icons/search-icon";
 import { isDesktopTauri } from "@/lib/platform";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
@@ -7,7 +8,9 @@ import type { Meta } from "@/lib/cinemeta";
 import { useSearch } from "@/lib/search-context";
 import { useView } from "@/lib/view";
 import { MOVIE_GENRES, TV_GENRES } from "@/lib/feed/tags";
+import { metaLooksAnime } from "@/lib/anime-detect";
 import { AnimeRow } from "./anime-row";
+import { AnimeRelations } from "./anime-relations";
 import { MangaRow } from "./manga-row";
 import { CharacterGroup } from "./character-group";
 import { EmptyState } from "./empty-state";
@@ -162,13 +165,19 @@ export function SearchOverlay() {
 
   const trimmed = query.trim();
   const personMatch = matchPersonForQuery(currentResults?.people, trimmed);
+  const topMatchIsAnime =
+    !personMatch &&
+    !!currentResults?.topMatch &&
+    currentResults.anime.length > 0 &&
+    metaLooksAnime(currentResults.topMatch.meta);
+  const topAnime = topMatchIsAnime && currentResults ? currentResults.anime[0] : null;
   const magnetInput = !!trimmed && isMagnetInput(trimmed);
   const urlInput = !!trimmed && !magnetInput && isDirectVideoUrl(trimmed);
   const directInput = magnetInput || urlInput;
 
   return createPortal(
     <div
-      className={`fixed inset-0 z-[200] flex flex-col ${closing ? "pointer-events-none" : ""}`}
+      className={`fixed inset-0 z-[200] flex flex-col overflow-hidden ${closing ? "pointer-events-none" : ""}`}
       role="dialog"
       aria-modal="true"
       aria-label={t("Search")}
@@ -176,7 +185,7 @@ export function SearchOverlay() {
       <button
         aria-label={t("Close search")}
         onMouseDown={beginDragOrClose}
-        className={`harbor-search-backdrop absolute inset-0 cursor-default ${
+        className={`harbor-search-backdrop absolute -inset-6 cursor-default ${
           closing ? "harbor-search-scrim-out" : "harbor-search-scrim-in"
         }`}
       />
@@ -366,6 +375,7 @@ export function SearchOverlay() {
                   />
                 )
               )}
+              {topAnime && <AnimeRelations anime={topAnime} onClose={commit} />}
               <LiveTvRow items={currentResults.liveTv} onClose={commit} />
               <AddonHits hits={currentResults.addons} onClose={commit} />
               <PeopleRow
@@ -374,8 +384,8 @@ export function SearchOverlay() {
                 onOpenPerson={(p) => pushExplore({ kind: "person", id: p.id, name: p.name })}
               />
               <div className="grid gap-8 lg:grid-cols-2">
-                <MetaList title={t("Movies")} items={currentResults.movies} onClose={commit} />
-                <MetaList title={t("Series")} items={currentResults.series} onClose={commit} />
+                <MetaList title={t("Movies")} items={currentResults.movies} onClose={commit} stagger />
+                <MetaList title={t("Series")} items={currentResults.series} onClose={commit} stagger />
               </div>
               {collectionHits.length > 0 && (
                 <CollectionHitsRow

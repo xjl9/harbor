@@ -20,10 +20,14 @@ const SETTLE_SWEEP_CSS = `
 }
 `;
 
+const P2P_SEARCHING_DELAY_MS = 6000;
+const P2P_SLOW_DELAY_MS = 25000;
+
 export function AutoPlayTransition({
   meta,
   episode,
   resolving,
+  p2p = false,
   attemptIdx,
   onCancel,
   download = false,
@@ -31,6 +35,7 @@ export function AutoPlayTransition({
   meta: Meta;
   episode?: PlayEpisode;
   resolving: boolean;
+  p2p?: boolean;
   attemptIdx?: number;
   onCancel: () => void;
   download?: boolean;
@@ -40,6 +45,7 @@ export function AutoPlayTransition({
   const phone = isPhoneShell();
   const backdrop = episode?.still || meta.background || meta.poster;
   const [stubNotice, setStubNotice] = useState<string | null>(null);
+  const [p2pStage, setP2pStage] = useState<0 | 1 | 2>(0);
   useEffect(() => {
     const ev = consumeRecentStubEvent(8000);
     if (!ev) return;
@@ -47,21 +53,41 @@ export function AutoPlayTransition({
     const timer = window.setTimeout(() => setStubNotice(null), 6000);
     return () => window.clearTimeout(timer);
   }, [t]);
+  useEffect(() => {
+    setP2pStage(0);
+    if (!resolving || !p2p) return;
+    const searchingTimer = window.setTimeout(() => setP2pStage(1), P2P_SEARCHING_DELAY_MS);
+    const slowTimer = window.setTimeout(() => setP2pStage(2), P2P_SLOW_DELAY_MS);
+    return () => {
+      window.clearTimeout(searchingTimer);
+      window.clearTimeout(slowTimer);
+    };
+  }, [attemptIdx, p2p, resolving]);
+
+  const caption = download
+    ? t("Preparing download")
+    : p2pStage === 2
+      ? `P2P · ${t("Stream is taking a while")}`
+      : p2pStage === 1
+        ? `P2P · ${t("Searching sources…")}`
+        : attemptIdx && attemptIdx > 0
+          ? t("Trying source {n}", { n: attemptIdx + 1 })
+          : t("Connecting");
   return (
-    <main className={`fixed inset-0 z-[120] overflow-hidden ${kid ? "bg-[#0c4a6e]" : "bg-black"}`}>
+    <main className={`harbor-connecting fixed inset-0 z-[120] overflow-hidden ${kid ? "bg-[#0c4a6e]" : "bg-black"}`}>
       <div data-tauri-drag-region className={`absolute inset-x-0 top-0 z-20 h-16${phone ? " hidden" : ""}`} />
       {backdrop && (
         <img
           src={backdrop}
           alt=""
           aria-hidden
-          className={`absolute inset-0 h-full w-full object-cover saturate-150 ${
+          className={`harbor-connecting-art absolute inset-0 h-full w-full object-cover saturate-150 ${
             kid ? "opacity-20 blur-[36px]" : "opacity-40 blur-[28px]"
           }`}
         />
       )}
       <div
-        className={`absolute inset-0 ${
+        className={`harbor-connecting-veil absolute inset-0 ${
           kid
             ? "bg-gradient-to-b from-[#3aa6c4]/85 via-[#1c789f]/88 to-[#0a3d5c]/94"
             : "bg-gradient-to-b from-black/65 via-black/55 to-black/85"
@@ -105,7 +131,7 @@ export function AutoPlayTransition({
         </div>
       )}
       <div
-        className={`relative flex h-full flex-col items-center justify-center gap-7 px-8 text-center${phone ? " landscape:gap-5" : ""}`}
+        className={`harbor-connecting-body relative flex h-full flex-col items-center justify-center gap-7 px-8 text-center${phone ? " landscape:gap-5" : ""}`}
         style={{
           paddingLeft: "max(2rem, env(safe-area-inset-left))",
           paddingRight: "max(2rem, env(safe-area-inset-right))",
@@ -133,20 +159,14 @@ export function AutoPlayTransition({
             {episode.name ? ` · ${episode.name}` : ""}
           </p>
         )}
-        <HarborLoader
-          size="md"
-          caption={
-            download
-              ? t("Preparing download")
-              : attemptIdx && attemptIdx > 0
-                ? t("Trying source {n}", { n: attemptIdx + 1 })
-                : t("Connecting")
-          }
-        />
-        {stubNotice && (
-          <p className="max-w-md text-[13px] leading-relaxed text-amber-200/80">
-            {stubNotice}
+        <HarborLoader size="md" caption={caption} />
+        {p2pStage === 2 && !download && (
+          <p className="max-w-md text-[13px] leading-relaxed text-white/60" role="status">
+            {t("This source is slow. Try another.")}
           </p>
+        )}
+        {stubNotice && (
+          <p className="max-w-md text-[13px] leading-relaxed text-amber-200/80">{stubNotice}</p>
         )}
       </div>
       {phone && (
@@ -166,7 +186,7 @@ export function AutoPlayTransition({
         className={
           phone
             ? "absolute left-1/2 z-10 flex h-12 w-[min(320px,calc(100%-80px))] -translate-x-1/2 cursor-pointer items-center justify-center gap-2 rounded-full border border-white/15 bg-black/45 px-6 text-[13.5px] font-medium text-white backdrop-blur-md transition-colors hover:border-white/30 hover:bg-black/60"
-            : "absolute bottom-10 left-1/2 z-10 flex h-11 -translate-x-1/2 cursor-pointer items-center gap-2 rounded-full border border-white/15 bg-black/45 px-6 text-[13.5px] font-medium text-white/75 backdrop-blur-md transition-colors hover:border-white/30 hover:bg-black/60 hover:text-white"
+            : "harbor-connecting-btn absolute bottom-10 left-1/2 z-10 flex h-11 -translate-x-1/2 cursor-pointer items-center gap-2 rounded-full bg-[#34343b] px-6 text-[13.5px] font-medium text-white/85 transition-colors hover:bg-[#41414a]"
         }
         style={phone ? { bottom: "calc(env(safe-area-inset-bottom, 0px) + 20px)" } : undefined}
       >
@@ -178,7 +198,11 @@ export function AutoPlayTransition({
             strokeLinecap="round"
           />
         </svg>
-        {phone && !resolving ? t("Choose yourself") : t("Cancel")}
+        {phone && !resolving
+          ? t("Choose yourself")
+          : p2pStage === 2 && !download
+            ? t("Choose another source")
+            : t("Cancel")}
       </button>
     </main>
   );

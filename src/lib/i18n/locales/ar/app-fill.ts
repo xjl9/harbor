@@ -140,7 +140,7 @@ const appFill: Record<string, string> = {
   "Use it": "استخدامها",
   "Searching…": "جارٍ البحث…",
   "Not the one? Search every source again": "ليست المطلوبة؟ ابحث في كل المصادر مجددًا",
-  "Appearance": "المظهر",
+  Appearance: "المظهر",
   "Manual offset": "إزاحة يدوية",
   "Sync is unavailable right now.": "المزامنة غير متاحة حالياً.",
   "Couldn't line up these subtitles automatically.": "تعذّرت مزامنة هذه الترجمة تلقائياً.",
@@ -216,7 +216,7 @@ const appFill: Record<string, string> = {
     "اختر صورة واحدة أو عدة صور. تُجمَع في مجموعة Uploads داخل مكتبتك. تعمل جميع صيغ PNG وJPG وWebP وGIF.",
   "Import a folder, keep your sets": "استورد مجلدًا واحتفظ بمجموعاتك",
   "Label the subfolders inside the folder you pick, and each one becomes its own set (like Heroes or Cats). Loose images in the folder go to Uploads.":
-    "سمِّ المجلدات الفرعية داخل المجلد الذي تختاره، فيصبح كل منها مجموعة مستقلة (مثل الأبطال أو القطط). أما الصور المتناثرة في المجلد فتذهب إلى Uploads.",
+    "سمِّ المجلدات الفرعية داخل المجلد الذي تختاره، فيصبح كل منها مجموعة مستقلة (مثل الأبطال أو القطط). أما الصور غير الموجودة في مجلدات فرعية فتذهب إلى «المرفوعات».",
   "Square looks best": "الشكل المربع هو الأفضل",
   "Avatars display as squares, so square images fill the tile cleanly. Others are center-cropped.":
     "تظهر الصور الرمزية على هيئة مربعات، لذا تملأ الصور المربعة الخانة بالكامل. أما الصور الأخرى فتُقتَص من المنتصف.",
@@ -230,7 +230,7 @@ const appFill: Record<string, string> = {
   "Drop images to add them": "أفلِت الصور لإضافتها",
   "Import folder": "استيراد مجلد",
   "How packs work": "كيف تعمل الحزم",
-  Uploads: "Uploads",
+  Uploads: "المرفوعات",
   Beta: "بيتا",
   "Open manga": "فتح المانجا",
   "Undo All": "التراجع عن الكل",
@@ -733,7 +733,7 @@ const appFill: Record<string, string> = {
   "Avg ★ {rating}": "المتوسط ★ {rating}",
   "You ★ {rating}": "أنت ★ {rating}",
   "Not rated": "غير مُقيَّم",
-  "★ {rating} — Change": "★ {rating} — تغيير",
+  "★ {rating} — Change": "★ {rating}، تغيير",
   "★ Rate": "★ تقييم",
   "✓ Watched": "✓ مُشاهَد",
   "○ Mark watched": "○ تحديد كمُشاهَد",
@@ -899,6 +899,8 @@ const appFill: Record<string, string> = {
   Channel: "قناة",
   "Browse by country": "تصفّح حسب البلد",
   "Next {time}": "التالي {time}",
+  "Started at {time}": "بدأ في {time}",
+  "24/7": "24/7",
   "Spotlight {n}": "المميّز {n}",
   "Live channel": "قناة مباشرة",
   TBD: "يُحدَّد لاحقًا",
@@ -973,9 +975,9 @@ const appFill: Record<string, string> = {
   Folders: "المجلدات",
   Select: "تحديد",
   "1 title needs review — help us identify it.":
-    "عنوان واحد يحتاج إلى مراجعة — ساعدنا في التعرّف عليه.",
+    "عنوان واحد يحتاج إلى مراجعة، ساعدنا في التعرّف عليه.",
   "{n} titles need review — help us identify them.":
-    "{n} عنوانًا تحتاج إلى مراجعة — ساعدنا في التعرّف عليها.",
+    "{n} عنوانًا تحتاج إلى مراجعة، ساعدنا في التعرّف عليها.",
   Review: "مراجعة",
   Scanning: "جارٍ الفحص",
   "Remove from MyAnimeList": "إزالة من MyAnimeList",
@@ -1243,48 +1245,53 @@ const appFill: Record<string, string> = {
   "Turn this off to take Cinemeta out entirely and use only your own metadata addons, such as AIOMetadata or AIOStreams. Cinemeta can go stale and show already released episodes as TBA. Leave it on unless you have a metadata addon installed, or titles will have no details.":
     "عطّل هذا لإزالة Cinemeta تمامًا واستخدام إضافات البيانات الخاصة بك فقط، مثل AIOMetadata أو AIOStreams. قد تصبح بيانات Cinemeta قديمة وتعرض حلقات صدرت بالفعل على أنها قريبًا. اتركه مفعّلًا ما لم تكن لديك إضافة بيانات مثبتة، وإلا فلن تظهر تفاصيل العناوين.",
   "Join Harbor": "انضم Harbor",
-  "One free account for your handle, themes, and sync.": "حساب مجاني واحد لاسم المستخدم، والسمات، والمزامنة.",
+  "One free account for your handle, themes, and sync.":
+    "حساب مجاني واحد لاسم المستخدم، والسمات، والمزامنة.",
   "Sign in to pick up where you left off.": "سجّل الدخول لاستكمال ما بدأته.",
   "At least 8 characters": "8 حروف على الاقل",
   "Your password": "كلمة المرور الخاصة بك",
-  "yourname": "الاسم الخاص بك",
+  yourname: "الاسم الخاص بك",
   "Forgot password ?": "هل نسيت كلمة المرور؟",
   "We'll show a one-time recovery key right after you sign up. Save it: it's the only way back in if you forget your password.":
-  "سنعرض لك مفتاح استعادة لمرة واحدة فور تسجيلك. احفظه: فهو السبيل الوحيد لاستعادة حسابك في حال نسيان كلمة المرور.",
+    "سنعرض لك مفتاح استعادة لمرة واحدة فور تسجيلك. احفظه: فهو السبيل الوحيد لاستعادة حسابك في حال نسيان كلمة المرور.",
   "Reset your password": "استعادة كلمة المرور الخاصة بك",
-  "Enter your username and the recovery key you saved. We'll set a new password and sign you in.": 
-  "أدخل اسم المستخدم ومفتاح الاسترداد الذي قمت بحفظه. سنقوم بتعيين كلمة مرور جديدة وتسجيل دخولك.",
+  "Enter your username and the recovery key you saved. We'll set a new password and sign you in.":
+    "أدخل اسم المستخدم ومفتاح الاسترداد الذي قمت بحفظه. سنقوم بتعيين كلمة مرور جديدة وتسجيل دخولك.",
   "New password": "كلمة مرور جديدة",
-  "The 20-character key from when you created your account. Paste it or type each block.": 
-  "أدخل المفتاح المكوَّن من 20 حرفًا الذي تم تزويدك به عند إنشاء حسابك، وذلك بلصقه أو بكتابة كل جزء منه.",
+  "The 20-character key from when you created your account. Paste it or type each block.":
+    "أدخل المفتاح المكوَّن من 20 حرفًا الذي تم تزويدك به عند إنشاء حسابك، وذلك بلصقه أو بكتابة كل جزء منه.",
   "Recovery key": "مفتاح الاسترداد",
-  "Paste": "الصق",
+  Paste: "الصق",
   "Signed in as {username}": "تم تسجيل الدخول ك{username}",
   "Signed in to your Harbor account": "تم تسجيل الدخول لحسابك في Harbor",
   "Claim your @handle": "احجز @المعرّف",
   "A name people can find you by across Harbor.": "اسم يمكن للآخرين العثور عليك به عبر Harbor.",
   "Sync everywhere": "مزامنة في كل مكان",
-  "Your themes, lists, and profile follow you to any device.": "تتم مزامنة السمات والقوائم وملفك الشخصي على جميع أجهزتك.",
+  "Your themes, lists, and profile follow you to any device.":
+    "تتم مزامنة السمات والقوائم وملفك الشخصي على جميع أجهزتك.",
   "Show off your taste": "اعرض ذوقك",
-  "A public profile with your stats, lists, badges, and custom styling.": "ملف شخصي عام يعرض إحصاءاتك وقوائمك وشاراتك وتخصيصاتك.",
+  "A public profile with your stats, lists, badges, and custom styling.":
+    "ملف شخصي عام يعرض إحصاءاتك وقوائمك وشاراتك وتخصيصاتك.",
   "Change your handle?": "تغيير المعرّف؟",
   "You are changing": "أنت تغيّر",
-  "to": "إلى",
-  "You will not be able to change it again for 14 days, and your old handle may be taken by someone else.": "لن تتمكن من تغييره مرة أخرى لمدة 14 يومًا، وقد يصبح معرّفك القديم متاحًا لشخص آخر.",
-  "Keep": "الاحتفاظ بـ",
+  to: "إلى",
+  "You will not be able to change it again for 14 days, and your old handle may be taken by someone else.":
+    "لن تتمكن من تغييره مرة أخرى لمدة 14 يومًا، وقد يصبح معرّفك القديم متاحًا لشخص آخر.",
+  Keep: "الاحتفاظ بـ",
   "Change handle": "تغيير المعرّف",
   "once every 14 days": "مرة كل 14 يومًا",
-  "soon": "قريبًا",
+  soon: "قريبًا",
   "Locked until": "مقفل حتى",
   "You can change your handle": "يمكنك تغيير المعرّف",
-  "yourhandle": "المعرف",
-  "Change": "تغيير",
-  "Claim": "حجز",
+  yourhandle: "المعرف",
+  Change: "تغيير",
+  Claim: "حجز",
   "so pick one you'll keep.": "لذا اختر معرفًا ستحتفظ به.",
   "after you claim it.": "بعد حجزه.",
-  "Handle": "المعرّف",
+  Handle: "المعرّف",
   "How people find you across Harbor.": "هكذا يعثر عليك الآخرون عبر Harbor.",
-  "Claim one so people can find you across Harbor.": "احجز معرفًا ليتمكن الآخرون من العثور عليك عبر Harbor.",
+  "Claim one so people can find you across Harbor.":
+    "احجز معرفًا ليتمكن الآخرون من العثور عليك عبر Harbor.",
   "Checking availability": "جارٍ التحقق من التوفر",
   "That handle is yours to claim.": "هذا المعرّف متاح للحجز.",
   "Sign in to Harbor to check availability.": "سجل الدخول إلى Harbor للتحقق من توفر المعرّف.",
@@ -1293,17 +1300,49 @@ const appFill: Record<string, string> = {
   "That handle is not valid.": "هذا المعرّف غير صالح.",
   "Ownership verified": "تم التحقق من الملكية",
   "Linked to a real Stremio account.": "مرتبط بحساب Stremio حقيقي.",
-  "Verified": "موثّق",
+  Verified: "موثّق",
   "Verify ownership": "التحقق من الملكية",
-  "Confirm you own this Stremio account ({{email}}).": "أكد أنك تملك حساب Stremio هذا ({{email}}).",
   "Confirm you own your Stremio account.": "أكد أنك تملك حساب Stremio الخاص بك.",
   "Prove you own a real Stremio account.": "أثبت أنك تملك حساب Stremio حقيقيًا.",
   "Verifying...": "جارٍ التحقق...",
   "Verify with Stremio": "التحقق عبر Stremio",
-  "Open Harbor on desktop to verify ownership in your browser.": "افتح Harbor على سطح المكتب للتحقق من الملكية عبر المتصفح.",
+  "Open Harbor on desktop to verify ownership in your browser.":
+    "افتح Harbor على سطح المكتب للتحقق من الملكية عبر المتصفح.",
   "Use a different Stremio account": "استخدام حساب Stremio آخر",
-  "Opens Stremio in your browser. Works with email, Facebook, and Apple. Harbor never sees your password.": 
-  "يفتح Stremio في متصفحك. يدعم تسجيل الدخول بالبريد الإلكتروني وFacebook وApple. لا يرى Harbor كلمة مرورك أبدًا."
+  "Opens Stremio in your browser. Works with email, Facebook, and Apple. Harbor never sees your password.":
+    "يفتح Stremio في متصفحك. يدعم تسجيل الدخول بالبريد الإلكتروني وFacebook وApple. لا يرى Harbor كلمة مرورك أبدًا.",
+  "Subtitles already aligned": "الترجمة متزامنة بالفعل",
+  "Not enough dialogue to sync": "لا يوجد حوار كافٍ للمزامنة",
+  "Variable timing corrected": "تم تصحيح التوقيت المتغيّر",
+  Delay: "التأخير",
+  "Timing rate": "معدل التوقيت",
+  "No timing change was needed. This subtitle already matches the audio.":
+    "لم يلزم تغيير التوقيت. هذه الترجمة متوافقة مع الصوت بالفعل.",
+  "Harbor couldn't analyze the audio for this source. Try again or adjust it manually.":
+    "تعذّر على Harbor تحليل صوت هذا المصدر. حاول مجددًا أو اضبطه يدويًا.",
+  "There isn't enough readable dialogue in this subtitle to measure its timing.":
+    "لا يوجد حوار مقروء كافٍ في هذه الترجمة لقياس توقيتها.",
+  "This subtitle appears to be for a different cut. Try another match.":
+    "يبدو أن هذه الترجمة تخص نسخة مختلفة. جرّب تطابقًا آخر.",
+  "The timing checks disagreed, so Harbor left the subtitle unchanged.":
+    "اختلفت نتائج فحوص التوقيت، لذلك ترك Harbor الترجمة دون تغيير.",
+  "The timing difference was too large to correct safely. Try another subtitle.":
+    "كان فرق التوقيت كبيرًا جدًا لتصحيحه بأمان. جرّب ترجمة أخرى.",
+  "There wasn't enough matching dialogue to make a safe correction.":
+    "لم يوجد حوار متطابق كافٍ لإجراء تصحيح آمن.",
+  "Harbor couldn't find a reliable timing correction for this subtitle.":
+    "لم يتمكن Harbor من إيجاد تصحيح توقيت موثوق لهذه الترجمة.",
+  "Sequels & Prequels": "الأجزاء اللاحقة والسابقة",
+  "This one also replaces Harbor's bundled players and tools, so it installs through Harbor Setup. Harbor closes, the installer finishes, then Harbor reopens.":
+    "يستبدل هذا التحديث أيضًا المشغّلات والأدوات المضمّنة في Harbor، لذلك يُثبّت عبر Harbor Setup. سيُغلق Harbor، ويُنهي المثبّت عمله، ثم يُفتح Harbor من جديد.",
+  "This one installs through Harbor Setup, but the update manifest carries no signature for it. Harbor will not run an installer it cannot verify. Download it and run it yourself.":
+    "يُثبّت هذا التحديث عبر Harbor Setup، لكن بيان التحديث لا يحمل توقيعًا له. لن يشغّل Harbor مثبّتًا لا يستطيع التحقق منه. نزّله وشغّله بنفسك.",
+  "Download installer": "تنزيل المثبّت",
+  "Install and reopen": "التثبيت وإعادة الفتح",
+  "Harbor is closing. Harbor Setup will finish and reopen it.":
+    "يجري إغلاق Harbor. سيُنهي Harbor Setup التثبيت ثم يعيد فتحه.",
+  "Harbor Setup did not finish updating Harbor. Nothing was changed.":
+    "لم يُكمل Harbor Setup تحديث Harbor. لم يتغيّر شيء.",
 };
 
 export default appFill;

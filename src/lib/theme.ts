@@ -1,8 +1,10 @@
+import { kawaiiCss } from "./theme-kawaii";
 import auroraPreview from "@/assets/theme-previews/aurora.png";
 import crunchPreview from "@/assets/theme-previews/crunchy.png";
 import draculaPreview from "@/assets/theme-previews/dracula.png";
 import forestPreview from "@/assets/theme-previews/forest.png";
 import harborPreview from "@/assets/theme-previews/harbor.png";
+import kawaiiPreview from "@/assets/theme-previews/kawaii.jpg";
 import minuiPreview from "@/assets/theme-previews/minui.png";
 import noirPreview from "@/assets/theme-previews/noir.png";
 import nordPreview from "@/assets/theme-previews/nord.png";
@@ -10,6 +12,15 @@ import royalPreview from "@/assets/theme-previews/royal.png";
 import stremioPreview from "@/assets/theme-previews/stremio.png";
 import velvetPreview from "@/assets/theme-previews/velvet.png";
 import { getCustomThemes } from "./custom-themes";
+import { t } from "./i18n";
+
+function escapeGeneratedHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
 
 export type ThemePresetId =
   | "cool-grey"
@@ -21,7 +32,18 @@ export type ThemePresetId =
   | "forest"
   | "noir";
 
-export type ThemeLayout = "sidebar" | "topdock" | "rail" | "stremio" | "minui" | "dracula" | "nord" | "forest" | "royal" | "cinematic" | "custom";
+export type ThemeLayout =
+  | "sidebar"
+  | "topdock"
+  | "rail"
+  | "stremio"
+  | "minui"
+  | "dracula"
+  | "nord"
+  | "forest"
+  | "royal"
+  | "cinematic"
+  | "custom";
 export type ThemeCardStyle = "flat" | "glass" | "stremio" | "minui" | "crunch" | "noir" | "custom";
 export type ThemeButtonStyle = "flat" | "glossy" | "minui" | "crunch" | "noir" | "custom";
 
@@ -406,7 +428,7 @@ aside[data-harbor-sidebar] [data-tauri-drag-region] > span > span {
   background-color: color-mix(in srgb, var(--color-accent) 24%, transparent) !important;
   color: var(--color-accent) !important;
 }
-aside[data-harbor-sidebar].w-\[72px\] [data-harbor-nav][data-active],
+aside[data-harbor-sidebar].w-[72px] [data-harbor-nav][data-active],
 html:not(.lg) [data-harbor-nav][data-active] {
   box-shadow: inset 0 0 0 var(--ef-border-w) color-mix(in srgb, var(--color-accent) 55%, transparent) !important;
 }
@@ -419,7 +441,7 @@ aside[data-harbor-sidebar] .h-px.bg-gradient-to-r {
   ) !important;
 }
 aside[data-harbor-sidebar] > div:last-child .rounded-full.border,
-aside[data-harbor-sidebar] > div:last-child .bg-elevated\/50 {
+aside[data-harbor-sidebar] > div:last-child .bg-elevated/50 {
   background-color: color-mix(in srgb, var(--color-raised) 40%, transparent) !important;
   border-color: color-mix(in srgb, var(--ef-hairline) 80%, transparent) !important;
 }
@@ -516,11 +538,11 @@ h3.truncate.font-medium.tracking-tight {
   letter-spacing: -0.018em !important;
   color: var(--color-ink) !important;
 }
-.group\/va {
+.group/va {
   color: var(--color-ink-subtle) !important;
   transition: color 125ms ease !important;
 }
-.group\/va:hover {
+.group/va:hover {
   color: var(--color-accent) !important;
 }
 .harbor-row-arrow {
@@ -589,7 +611,7 @@ button.group > p.line-clamp-2 {
   font-weight: 500 !important;
   color: var(--color-ink) !important;
 }
-.harbor-poster > .absolute.rounded-md.bg-canvas\/95 {
+.harbor-poster > .absolute.rounded-md.bg-canvas/95 {
   background-color: color-mix(in srgb, var(--ef-panel-glass) 95%, transparent) !important;
   backdrop-filter: blur(5px);
   -webkit-backdrop-filter: blur(5px);
@@ -598,7 +620,7 @@ button.group > p.line-clamp-2 {
   color: var(--color-accent) !important;
   border: var(--ef-border-w) solid color-mix(in srgb, var(--color-accent) 45%, transparent) !important;
 }
-.harbor-poster .rounded-full.bg-canvas\/85 {
+.harbor-poster .rounded-full.bg-canvas/85 {
   background-color: color-mix(in srgb, var(--ef-panel-glass) 85%, transparent) !important;
 }
 
@@ -942,20 +964,23 @@ main.absolute.inset-0 .rounded-xl.border.bg-elevated\\/70 {
   -webkit-backdrop-filter: blur(18px) saturate(125%);
 }`;
 
-const elegantFinHtml = `<div id="ef-topleft">
-  <button id="ef-back" type="button" aria-label="Back" style="display:none">
+function buildElegantFinHtml(): string {
+  return `<div id="ef-topleft">
+  <button id="ef-back" type="button" aria-label="${escapeGeneratedHtml(t("Back"))}" style="display:none">
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M19 12H5m0 0l7 7m-7-7l7-7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
   </button>
-  <button id="ef-home" type="button" aria-label="Home" style="display:none">
+  <button id="ef-home" type="button" aria-label="${escapeGeneratedHtml(t("Home"))}" style="display:none">
     <svg width="19" height="19" viewBox="0 0 24 24" fill="none"><path d="M3 10.5L12 3l9 7.5M5.5 8.5V20a1 1 0 001 1H10v-6h4v6h3.5a1 1 0 001-1V8.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
   </button>
-  <button id="ef-menu" type="button" aria-label="Menu">
+  <button id="ef-menu" type="button" aria-label="${escapeGeneratedHtml(t("Menu"))}">
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M4 6.5h16M4 12h16M4 17.5h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
   </button>
 </div>
 <div id="ef-scrim"></div>`;
+}
 
-const elegantFinJs = `(function () {
+function buildElegantFinJs(): string {
+  return `(function () {
   var w = window;
   if (typeof w.__efChromeCleanup === "function") {
     try { w.__efChromeCleanup(); } catch (e) {}
@@ -996,7 +1021,13 @@ const elegantFinJs = `(function () {
       return;
     }
     if (t.closest("#ef-profile")) {
-      setOpen(true);
+      var opened = false;
+      try {
+        if (w.harbor && typeof w.harbor.tryViewMyProfile === "function") {
+          opened = w.harbor.tryViewMyProfile() === true;
+        }
+      } catch (e) {}
+      setOpen(!opened);
       return;
     }
     if (t.closest("aside[data-harbor-sidebar] [data-harbor-nav]")) {
@@ -1027,14 +1058,14 @@ const elegantFinJs = `(function () {
       search = document.createElement("button");
       search.id = "ef-search";
       search.type = "button";
-      search.setAttribute("aria-label", "Search");
+      search.setAttribute("aria-label", ${JSON.stringify(t("Search"))});
       search.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg>';
     }
     if (!prof) {
       prof = document.createElement("button");
       prof.id = "ef-profile";
       prof.type = "button";
-      prof.setAttribute("aria-label", "Profile");
+      prof.setAttribute("aria-label", ${JSON.stringify(t("Profile"))});
     }
     var controls = cluster.querySelector(":scope > div.ms-1");
     var anchor = controls || null;
@@ -1078,6 +1109,7 @@ const elegantFinJs = `(function () {
   w.__efChromeCleanup = cleanup;
   w.__harborThemeCleanup = cleanup;
 })();`;
+}
 
 const feishinCss = `/* ===== FEISHIN THEME FOR HARBOR ===== */
 /* Retoken Harbor's @theme palette to Feishin's near-black ladder + electric blue */
@@ -1289,20 +1321,21 @@ html[data-theme-layout="custom"] [class*="shadow-"] { --tw-shadow: 0 0 #0000; }
 /* Selection / focus accent everywhere = blue */
 html[data-theme-layout="custom"] ::selection { background: rgba(53,116,252,0.35); }`;
 
-const feishinHtml = `<aside class="fsh-rail" data-tauri-drag-region>
+function buildFeishinHtml(): string {
+  return `<aside class="fsh-rail" data-tauri-drag-region>
   <div class="fsh-actionbar">
-    <button class="fsh-search" type="button" onclick="window.harbor.search()" aria-label="Search" title="Search">
+    <button class="fsh-search" type="button" onclick="window.harbor.search()" aria-label="${escapeGeneratedHtml(t("Search"))}" title="${escapeGeneratedHtml(t("Search"))}">
       <svg class="fsh-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m21 21-4.3-4.3"></path></svg>
-      <span class="fsh-search-ph">Search</span>
+      <span class="fsh-search-ph">${escapeGeneratedHtml(t("Search"))}</span>
     </button>
     <div class="fsh-actionbtns">
-      <button class="fsh-iconbtn" type="button" onclick="window.harbor.navigate('settings')" aria-label="Menu" title="Menu">
+      <button class="fsh-iconbtn" type="button" onclick="window.harbor.navigate('settings')" aria-label="${escapeGeneratedHtml(t("Menu"))}" title="${escapeGeneratedHtml(t("Menu"))}">
         <svg class="fsh-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
       </button>
-      <button class="fsh-iconbtn" type="button" onclick="window.harbor.back()" aria-label="Back" title="Back">
+      <button class="fsh-iconbtn" type="button" onclick="window.harbor.back()" aria-label="${escapeGeneratedHtml(t("Back"))}" title="${escapeGeneratedHtml(t("Back"))}">
         <svg class="fsh-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"></path></svg>
       </button>
-      <button class="fsh-iconbtn" type="button" onclick="window.harbor.navigate('home')" aria-label="Forward" title="Home">
+      <button class="fsh-iconbtn" type="button" onclick="window.harbor.navigate('home')" aria-label="${escapeGeneratedHtml(t("Forward"))}" title="${escapeGeneratedHtml(t("Home"))}">
         <svg class="fsh-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"></path></svg>
       </button>
     </div>
@@ -1310,69 +1343,71 @@ const feishinHtml = `<aside class="fsh-rail" data-tauri-drag-region>
 
   <div class="fsh-scroll">
     <div class="fsh-section">
-      <div class="fsh-section-head">My Library</div>
+      <div class="fsh-section-head">${escapeGeneratedHtml(t("My Library"))}</div>
       <nav class="fsh-nav">
         <button data-harbor-nav="home" onclick="window.harbor.navigate('home')">
           <svg class="fsh-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5"></path><path d="M5 9.5V21h14V9.5"></path></svg>
-          <span>Home</span>
+          <span>${escapeGeneratedHtml(t("Home"))}</span>
         </button>
         <button data-harbor-nav="discover" onclick="window.harbor.navigate('discover')">
           <svg class="fsh-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="m15.5 8.5-2.2 5.3-5.3 2.2 2.2-5.3z"></path></svg>
-          <span>Discover</span>
+          <span>${escapeGeneratedHtml(t("Discover"))}</span>
         </button>
         <button data-harbor-nav="movies" onclick="window.harbor.navigate('movies')">
           <svg class="fsh-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"></rect><path d="M7 4v16M17 4v16M3 9h4M17 9h4M3 15h4M17 15h4"></path></svg>
-          <span>Movies</span>
+          <span>${escapeGeneratedHtml(t("Movies"))}</span>
         </button>
         <button data-harbor-nav="shows" onclick="window.harbor.navigate('shows')">
           <svg class="fsh-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="7" width="20" height="13" rx="2"></rect><path d="m8 3 4 4 4-4"></path></svg>
-          <span>Shows</span>
+          <span>${escapeGeneratedHtml(t("Shows"))}</span>
         </button>
         <button data-harbor-nav="anime" onclick="window.harbor.navigate('anime')">
           <svg class="fsh-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3c4.5 0 8 3 8 7 0 3-2 5-5 6l1 4-4-2.5L8 20l1-4c-3-1-5-3-5-6 0-4 3.5-7 8-7z"></path></svg>
-          <span>Anime</span>
+          <span>${escapeGeneratedHtml(t("Anime"))}</span>
         </button>
         <button data-harbor-nav="live" onclick="window.harbor.navigate('live')">
           <svg class="fsh-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="7" width="20" height="14" rx="2"></rect><path d="m8 7 4-4 4 4"></path></svg>
-          <span>Live TV</span>
+          <span>${escapeGeneratedHtml(t("Live TV"))}</span>
         </button>
         <button data-harbor-nav="vod" onclick="window.harbor.navigate('vod')">
           <svg class="fsh-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h11M4 12h11M4 18h7"></path><path d="m17 9 4 3-4 3z"></path></svg>
-          <span>Playlists</span>
+          <span>${escapeGeneratedHtml(t("Playlists"))}</span>
         </button>
       </nav>
     </div>
 
     <div class="fsh-section">
-      <div class="fsh-section-head">Collections</div>
+      <div class="fsh-section-head">${escapeGeneratedHtml(t("Collections"))}</div>
       <nav class="fsh-nav">
         <button data-harbor-nav="library" onclick="window.harbor.navigate('library')">
           <svg class="fsh-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4h4v16H4zM10 4h4v16h-4z"></path><path d="m17 5 3.5 1-3 14-3.4-1z"></path></svg>
-          <span>Library</span>
+          <span>${escapeGeneratedHtml(t("Library"))}</span>
         </button>
         <button data-harbor-nav="calendar" onclick="window.harbor.navigate('calendar')">
           <svg class="fsh-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"></rect><path d="M3 10h18M8 3v4M16 3v4"></path></svg>
-          <span>Calendar</span>
+          <span>${escapeGeneratedHtml(t("Calendar"))}</span>
         </button>
         <button data-harbor-nav="downloads" onclick="window.harbor.navigate('downloads')">
           <svg class="fsh-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"></path><path d="m7 11 5 5 5-5"></path><path d="M4 20h16"></path></svg>
-          <span>Downloads</span>
+          <span>${escapeGeneratedHtml(t("Downloads"))}</span>
         </button>
         <button data-harbor-nav="addons" onclick="window.harbor.navigate('addons')">
           <svg class="fsh-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="8" height="8" rx="1.5"></rect><rect x="13" y="3" width="8" height="8" rx="1.5"></rect><rect x="3" y="13" width="8" height="8" rx="1.5"></rect><path d="M17 13v8M13 17h8"></path></svg>
-          <span>Addons</span>
+          <span>${escapeGeneratedHtml(t("Addons"))}</span>
         </button>
         <button data-harbor-nav="settings" onclick="window.harbor.navigate('settings')">
           <svg class="fsh-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1A1.7 1.7 0 0 0 4.6 9a1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"></path></svg>
-          <span>Settings</span>
+          <span>${escapeGeneratedHtml(t("Settings"))}</span>
         </button>
       </nav>
     </div>
   </div>
 </aside>
 `;
+}
 
-const feishinJs = `(function () {
+function buildFeishinJs(): string {
+  return `(function () {
   var root = document.documentElement;
   function syncActive() {
     var kind = "";
@@ -1387,12 +1422,14 @@ const feishinJs = `(function () {
   syncActive();
   window.__harborThemeCleanup = function () { obs.disconnect(); };
 })();`;
+}
 
 export const BETA_THEMES: ThemePreset[] = [
   {
     id: "elegantfin" as ThemePresetId,
     name: "ElegantFin",
-    blurb: "Dark navy glass with one purple accent, rounded cards, and a soft shine sweep. Ported from Jellyfin's ElegantFin.",
+    blurb:
+      "Dark navy glass with one purple accent, rounded cards, and a soft shine sweep. Ported from Jellyfin's ElegantFin.",
     swatch: ["#111827", "#1e2836", "#775bf4"],
     tokens: {
       "--color-canvas": "#111827",
@@ -1414,8 +1451,12 @@ export const BETA_THEMES: ThemePreset[] = [
     buttonStyle: "flat",
     fontPair: "fraunces-inter",
     css: elegantFinCss,
-    html: elegantFinHtml,
-    js: elegantFinJs,
+    get html() {
+      return buildElegantFinHtml();
+    },
+    get js() {
+      return buildElegantFinJs();
+    },
   },
 ];
 
@@ -1423,7 +1464,8 @@ const PARKED_THEMES: ThemePreset[] = [
   {
     id: "feishin" as ThemePresetId,
     name: "Feishin",
-    blurb: "Layered near-black with one electric-blue accent, tight 5px corners, and heavy Inter. Ported from the Feishin player.",
+    blurb:
+      "Layered near-black with one electric-blue accent, tight 5px corners, and heavy Inter. Ported from the Feishin player.",
     swatch: ["#0C0C0C", "#141414", "#3574FC"],
     tokens: {
       "--color-canvas": "#0C0C0C",
@@ -1444,12 +1486,43 @@ const PARKED_THEMES: ThemePreset[] = [
     buttonStyle: "flat",
     fontPair: "fraunces-inter",
     css: feishinCss,
-    html: feishinHtml,
-    js: feishinJs,
+    get html() {
+      return buildFeishinHtml();
+    },
+    get js() {
+      return buildFeishinJs();
+    },
   },
 ];
 
 export const FEATURED_CUSTOM_THEMES: ThemePreset[] = [
+  {
+    id: "kawaii" as ThemePresetId,
+    name: "Kawaii",
+    blurb: "Pink gingham over cream, white cards, rounded Japanese type. Sweet and soft.",
+    swatch: ["#fdefe0", "#fbd8e2", "#f090ae"],
+    tokens: {
+      "--color-canvas": "#fdefe0",
+      "--color-surface": "#ffffff",
+      "--color-elevated": "#ffffff",
+      "--color-raised": "#fdeef3",
+      "--color-ink": "#7d5c4e",
+      "--color-ink-muted": "#a5867a",
+      "--color-ink-subtle": "#c3a89c",
+      "--color-edge": "rgba(240,144,174,0.45)",
+      "--color-edge-soft": "rgba(240,144,174,0.22)",
+      "--color-accent": "#f090ae",
+      "--color-accent-soft": "rgba(240,144,174,0.20)",
+      "--color-danger": "#e2607a",
+    },
+    background: { image: "none", dim: 0 },
+    layout: "topdock",
+    cardStyle: "flat",
+    buttonStyle: "flat",
+    bokeh: false,
+    css: kawaiiCss,
+    previewImage: kawaiiPreview,
+  },
   {
     id: "aurora" as ThemePresetId,
     name: "Aurora",
@@ -1501,8 +1574,7 @@ export const FEATURED_CUSTOM_THEMES: ThemePreset[] = [
       "--color-danger": "#b91c1c",
     },
     background: {
-      image:
-        "radial-gradient(ellipse 120% 70% at 50% -10%, #ffffff 0%, #f4f4f6 45%, #ececef 100%)",
+      image: "radial-gradient(ellipse 120% 70% at 50% -10%, #ffffff 0%, #f4f4f6 45%, #ececef 100%)",
       dim: 0,
     },
     layout: "minui",
@@ -1534,8 +1606,7 @@ export const TEMPLATE_THEMES: ThemePreset[] = [
       "--color-danger": "#e87474",
     },
     background: {
-      image:
-        "radial-gradient(ellipse 100% 70% at 50% 0%, #3a1f44 0%, #1f1226 40%, #0c0610 100%)",
+      image: "radial-gradient(ellipse 100% 70% at 50% 0%, #3a1f44 0%, #1f1226 40%, #0c0610 100%)",
       dim: 0,
     },
     layout: "rail",
@@ -1699,11 +1770,37 @@ function resolveTokens(theme: ThemeSettings): Record<string, string> {
   return THEME_PRESETS["cool-grey"].tokens;
 }
 
+export function isLightColor(value: string | undefined): boolean {
+  const s = (value ?? "").trim();
+  const oklch = /^oklch\(\s*([\d.]+)(%?)/i.exec(s);
+  if (oklch) return (oklch[2] ? Number(oklch[1]) / 100 : Number(oklch[1])) > 0.55;
+  const rgb = /^rgba?\(\s*([\d.]+)[,\s]+([\d.]+)[,\s]+([\d.]+)/i.exec(s);
+  const hex = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(s);
+  let r: number;
+  let g: number;
+  let b: number;
+  if (rgb) {
+    r = Number(rgb[1]);
+    g = Number(rgb[2]);
+    b = Number(rgb[3]);
+  } else if (hex) {
+    const h = hex[1].length === 3 ? hex[1].replace(/./g, (c) => c + c) : hex[1];
+    r = parseInt(h.slice(0, 2), 16);
+    g = parseInt(h.slice(2, 4), 16);
+    b = parseInt(h.slice(4, 6), 16);
+  } else {
+    return false;
+  }
+  return (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255 > 0.55;
+}
+
 export function applyTheme(theme: ThemeSettings): void {
   const root = document.documentElement;
-  for (const [k, v] of Object.entries(resolveTokens(theme))) {
+  const tokens = resolveTokens(theme);
+  for (const [k, v] of Object.entries(tokens)) {
     root.style.setProperty(k, v);
   }
+  root.dataset.themeMode = isLightColor(tokens["--color-canvas"]) ? "light" : "dark";
   const preset = theme.preset !== "custom" ? getThemeById(theme.preset) : null;
   const fontPairId = preset?.fontPair ?? theme.fontPair;
   const pair = FONT_PAIRS[fontPairId] ?? FONT_PAIRS["sentient-switzer"];

@@ -1,4 +1,14 @@
-import { Check, ChevronDown, ChevronLeft, ChevronRight, Loader2, Plus, Save, X } from "lucide-react";
+import {
+  Check,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  Loader2,
+  Info,
+  Plus,
+  Save,
+  X,
+} from "lucide-react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Flag } from "@/components/flag";
 import { useContextMenu } from "@/lib/context-menu";
@@ -6,7 +16,12 @@ import { saveSubtitleToDisk } from "@/lib/subtitles/save-to-disk";
 import { markAddedSub, useAddedSubs } from "@/lib/subtitles/added-subs";
 import { wasLimitReached } from "@/lib/subtitles/limit-signal";
 import type { SubResult } from "@/lib/subtitles/types";
+import { parseRelease } from "@/lib/subtitles/release-match";
+import { providerLabel } from "@/lib/subtitles/provider-label";
 import { useT } from "@/lib/i18n";
+import { subtitleSearchMatchDetails } from "@/lib/subtitles/match-explanation";
+import type { StreamHints } from "@/lib/subtitles/stream-hints";
+import { subtitleClassificationLabels } from "@/lib/subtitles/classification-labels";
 
 const PAGE_SIZE = 30;
 
@@ -21,7 +36,10 @@ function isMeaningful(s: string | undefined | null): s is string {
 function filenameFromUrl(url: string): string | null {
   try {
     const last = decodeURIComponent(url.split(/[?#]/)[0].split("/").pop() ?? "");
-    const withoutExt = last.replace(/\.(srt|vtt|ass|ssa|sub|zip)$/i, "").replace(/[._]+/g, " ").trim();
+    const withoutExt = last
+      .replace(/\.(srt|vtt|ass|ssa|sub|zip)$/i, "")
+      .replace(/[._]+/g, " ")
+      .trim();
     return isMeaningful(withoutExt) ? withoutExt : null;
   } catch {
     return null;
@@ -33,11 +51,13 @@ export function LangGroup({
   items,
   defaultOpen,
   onAdd,
+  streamHints,
 }: {
   lang: string;
   items: SubResult[];
   defaultOpen: boolean;
   onAdd: (r: SubResult) => void | Promise<boolean | void>;
+  streamHints?: StreamHints;
 }) {
   const t = useT();
   const [open, setOpen] = useState(defaultOpen);
@@ -65,7 +85,9 @@ export function LangGroup({
         className="flex w-full select-none items-center gap-2 bg-canvas/40 px-4 py-2 text-start transition-colors hover:bg-canvas/60"
       >
         <Flag language={lang} size="sm" showLabel={false} />
-        <span className="text-[11.5px] font-bold uppercase tracking-[0.16em] text-ink-muted">{lang}</span>
+        <span className="text-[11.5px] font-bold uppercase tracking-[0.16em] text-ink-muted">
+          {lang}
+        </span>
         <span className="text-[11px] tabular-nums text-ink-subtle">{items.length}</span>
         {open && pageCount > 1 && (
           <span className="ms-1 flex items-center gap-0.5">
@@ -106,7 +128,13 @@ export function LangGroup({
       </div>
       {open &&
         pageItems.map((r) => (
-          <ResultRow key={`${r.source}:${r.id}:${r.url}`} result={r} lang={lang} onAdd={() => onAdd(r)} />
+          <ResultRow
+            key={`${r.source}:${r.id}:${r.url}`}
+            result={r}
+            lang={lang}
+            onAdd={() => onAdd(r)}
+            streamHints={streamHints}
+          />
         ))}
     </div>
   );
@@ -116,13 +144,15 @@ function ResultRow({
   result,
   lang,
   onAdd,
+  streamHints,
 }: {
   result: SubResult;
   lang: string;
   onAdd: () => void | Promise<boolean | void>;
+  streamHints?: StreamHints;
 }) {
   const t = useT();
-  const { open } = useContextMenu();
+  const { openAt } = useContextMenu();
   const addedSubs = useAddedSubs();
   const added = addedSubs.has(result.url);
   const [busy, setBusy] = useState(false);
@@ -170,6 +200,7 @@ function ResultRow({
         title: result.title,
         lang: result.lang,
         format: result.format,
+        downloadAuth: result.downloadAuth,
         label: t("Subtitle"),
       });
       if (outcome === "ok") {
@@ -205,13 +236,42 @@ function ResultRow({
   const primaryName =
     (isMeaningful(result.release) ? result.release : null) ||
     filenameFromUrl(result.url) ||
+    result.displayTitle ||
     result.title ||
     lang;
-  const sourceLabel = result.title && result.title !== primaryName ? result.title : null;
+  const providerName = providerLabel(result);
+  const releaseTags = parseRelease(result.release || primaryName);
+  const quality = [
+    releaseTags.resolution,
+    releaseTags.source?.toUpperCase(),
+    ...releaseTags.hdr.map((tag) => tag.toUpperCase()),
+  ]
+    .filter(Boolean)
+    .join(" · ");
+  const matchDetails = subtitleSearchMatchDetails(result, streamHints);
+  const classificationLabels = subtitleClassificationLabels(result, t);
+  const contextTarget = {
+    kind: "subtitle" as const,
+    label: primaryName,
+    details: {
+      language: result.langName || lang,
+      source: result.source,
+      provider: providerName,
+      format: result.format?.toUpperCase(),
+      fps: result.fps,
+      quality: quality || undefined,
+      release: result.release,
+      author: result.author,
+      downloads: result.downloads,
+      compatibilityPercent: matchDetails.compatibilityPercent,
+      matchReasons: matchDetails.reasons,
+      flags: classificationLabels.map(({ label }) => label),
+    },
+    download,
+  };
 
   return (
     <div
-      onContextMenu={(e) => open(e, { kind: "subtitle", label: primaryName, download })}
       className={`group flex w-full items-start gap-3 px-4 py-2.5 transition-colors duration-300 ${
         added ? "bg-emerald-400/12" : addStatus ? "bg-red-400/10" : "hover:bg-canvas/60"
       }`}
@@ -223,7 +283,11 @@ function ResultRow({
       >
         <span
           className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full ${
-            added ? "bg-emerald-400/20 text-emerald-300" : addStatus ? "bg-red-400/20 text-red-300" : ""
+            added
+              ? "bg-emerald-400/20 text-emerald-300"
+              : addStatus
+                ? "bg-red-400/20 text-red-300"
+                : ""
           }`}
         >
           {adding ? (
@@ -233,7 +297,11 @@ function ResultRow({
           ) : addStatus ? (
             <X size={12} strokeWidth={3} className="animate-in zoom-in-50 duration-200" />
           ) : (
-            <Plus size={14} strokeWidth={2.4} className="text-ink-subtle transition-colors group-hover:text-ink" />
+            <Plus
+              size={14}
+              strokeWidth={2.4}
+              className="text-ink-subtle transition-colors group-hover:text-ink"
+            />
           )}
         </span>
         <div className="flex min-w-0 flex-1 flex-col gap-0.5">
@@ -252,14 +320,8 @@ function ResultRow({
               </span>
             )}
           </span>
-          <span className="flex items-center gap-2 text-[11.5px] text-ink-subtle">
-            <span className={`font-semibold capitalize ${sourceColor}`}>{result.source}</span>
-            {sourceLabel && (
-              <>
-                <span aria-hidden>·</span>
-                <span className="truncate">{sourceLabel}</span>
-              </>
-            )}
+          <span className="flex flex-wrap items-center gap-2 text-[11.5px] text-ink-subtle">
+            <span className={`truncate font-semibold ${sourceColor}`}>{providerName}</span>
             {result.format && (
               <>
                 <span aria-hidden>·</span>
@@ -272,18 +334,39 @@ function ResultRow({
                 <span>{t("{count} dl", { count: compactNumber(result.downloads) })}</span>
               </>
             )}
-            {result.hearingImpaired && (
-              <span className="rounded bg-amber-400/15 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.12em] text-amber-200">
-                {t("HI/SDH")}
-              </span>
+            {matchDetails.compatibilityPercent > 0 && (
+              <>
+                <span aria-hidden>·</span>
+                <span>{matchDetails.compatibilityPercent}%</span>
+              </>
             )}
-            {result.forced && (
-              <span className="rounded bg-sky-400/15 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.12em] text-sky-200">
-                {t("Forced")}
+            {classificationLabels.map(({ kind, label }) => (
+              <span
+                key={kind}
+                className={`rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.12em] ${
+                  kind === "hearingImpaired" || kind === "machineTranslated"
+                    ? "bg-amber-400/15 text-amber-200"
+                    : "bg-sky-400/15 text-sky-200"
+                }`}
+              >
+                {label}
               </span>
-            )}
+            ))}
           </span>
         </div>
+      </button>
+      <button
+        type="button"
+        aria-label={t("Open subtitle details")}
+        title={t("Subtitle details")}
+        onClick={(event) => {
+          event.stopPropagation();
+          const rect = event.currentTarget.getBoundingClientRect();
+          openAt({ x: rect.right, y: rect.bottom }, contextTarget);
+        }}
+        className="mt-0.5 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-ink-subtle transition-colors hover:bg-elevated hover:text-ink focus-visible:ring-2 focus-visible:ring-accent"
+      >
+        <Info size={13} strokeWidth={2} />
       </button>
       <span
         role="button"
@@ -310,7 +393,11 @@ function ResultRow({
           }
         }}
         className={`mt-0.5 inline-flex h-7 w-7 shrink-0 cursor-pointer items-center justify-center rounded-md transition-colors ${
-          saved ? "text-accent" : downloadStatus ? "text-red-400" : "text-ink-subtle hover:bg-elevated hover:text-ink"
+          saved
+            ? "text-accent"
+            : downloadStatus
+              ? "text-red-400"
+              : "text-ink-subtle hover:bg-elevated hover:text-ink"
         }`}
       >
         {busy ? (
@@ -327,12 +414,22 @@ function ResultRow({
   );
 }
 
-export function FilterChip({ active, onClick, children }: { active: boolean; onClick: () => void; children: ReactNode }) {
+export function FilterChip({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: ReactNode;
+}) {
   return (
     <button
       onClick={onClick}
       className={`flex h-7 items-center rounded-full px-2.5 text-[11.5px] font-semibold transition-colors ${
-        active ? "bg-elevated text-ink ring-1 ring-edge" : "bg-raised text-ink-muted hover:bg-elevated/80"
+        active
+          ? "bg-elevated text-ink ring-1 ring-edge"
+          : "bg-raised text-ink-muted hover:bg-elevated/80"
       }`}
     >
       {children}

@@ -1,5 +1,6 @@
 import { Suspense, lazy, useEffect, useMemo, useRef, useState } from "react";
 import type { Meta } from "@/lib/cinemeta";
+import { useBigPicture } from "@/lib/big-picture";
 import { useSettings } from "@/lib/settings";
 import { useView } from "@/lib/view";
 import { useIdleScreensaver } from "@/lib/screensaver/use-idle-screensaver";
@@ -30,6 +31,7 @@ function toItems(metas: Meta[]): AmbientItem[] {
 export function ScreensaverRoot() {
   const { settings } = useSettings();
   const { player, picker, topKind } = useView();
+  const { active: bigPicture } = useBigPicture();
   const enabled = settings.screensaver;
   const delayMs = Math.max(1, settings.screensaverDelayMin || 5) * 60000;
   // A handheld already has an idle screen: the system one. Running ours there
@@ -38,7 +40,10 @@ export function ScreensaverRoot() {
   // every native mobile build (iPad included, which auto-locks the same way) plus
   // phone-sized web. Desktop, where the app may be the only thing on screen, keeps it.
   const handheld = isMobileNative() || isMobileWeb();
-  const suppressed = handheld || !!player || !!picker || topKind === "live" || topKind === "vod";
+  // Big Picture claims keydown in the capture phase, so this hook's bubble
+  // listeners never see its navigation and it would idle out mid use.
+  const suppressed =
+    handheld || bigPicture || !!player || !!picker || topKind === "live" || topKind === "vod";
   const { active, dismiss } = useIdleScreensaver(enabled, delayMs, suppressed);
 
   const [items, setItems] = useState<AmbientItem[]>([]);
@@ -93,7 +98,7 @@ export function ScreensaverRoot() {
   if (!mounted || suppressed) return null;
   return (
     <Suspense fallback={null}>
-      <AmbientOverlay items={items} reduce={reduce} visible={visible} onDismiss={dismiss} />
+      <AmbientOverlay items={items} reduce={reduce} visible={visible} onDismiss={dismiss} neverDeep />
     </Suspense>
   );
 }

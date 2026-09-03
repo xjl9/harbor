@@ -10,6 +10,7 @@ export function DragClickStage(props: {
   const { drawMode, pipMode, onClick, onDoubleClick, onWheelVolume } = props;
   return (
     <div
+      data-player-click-stage
       className="pointer-events-auto absolute inset-0 z-[3]"
       onWheel={(e) => {
         if (drawMode || pipMode) return;

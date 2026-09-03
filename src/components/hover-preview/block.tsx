@@ -1,5 +1,7 @@
-import { ArrowUpRight, Bookmark, BookmarkCheck, Play } from "lucide-react";
+import { ArrowUpRight, Bookmark, BookmarkCheck } from "lucide-react";
+import { Play } from "@/components/icons/play-filled";
 import { useMemo, type ReactNode } from "react";
+import { useT } from "@/lib/i18n";
 import type { PreviewData } from "@/lib/hover-preview/preview-data";
 import { tmdbImdbCached } from "@/lib/providers/tmdb";
 import { toggleWatchlist, useInWatchlist } from "@/lib/watchlist";
@@ -25,7 +27,10 @@ function DecisionLine({ data }: { data: PreviewData }) {
   if (data.genre) parts.push(<span key="genre">{data.genre}</span>);
   if (parts.length === 0) return null;
   return (
-    <div data-stagger="1" className="truncate text-[12.5px] font-medium tabular-nums text-ink-muted">
+    <div
+      data-stagger="1"
+      className="truncate text-[12.5px] font-medium tabular-nums text-ink-muted"
+    >
       {parts.flatMap((p, i) =>
         i === 0
           ? [p]
@@ -41,6 +46,7 @@ function DecisionLine({ data }: { data: PreviewData }) {
 }
 
 function WatchlistToggle({ data }: { data: PreviewData }) {
+  const t = useT();
   const meta = data.meta;
   const alt = tmdbImdbCached(meta.id);
   const altIds = useMemo(() => [alt ?? undefined], [alt]);
@@ -49,12 +55,20 @@ function WatchlistToggle({ data }: { data: PreviewData }) {
     <button
       type="button"
       tabIndex={-1}
-      title={active ? "In watchlist" : "Add to watchlist"}
-      aria-label={active ? "In watchlist" : "Add to watchlist"}
+      title={active ? t("In watchlist") : t("Add to watchlist")}
+      aria-label={active ? t("In watchlist") : t("Add to watchlist")}
       onPointerDown={(e) => e.stopPropagation()}
       onClick={(e) => {
         e.stopPropagation();
-        toggleWatchlist({ id: meta.id, type: meta.type, name: meta.name, poster: meta.poster, imdbId: alt ?? undefined });
+        toggleWatchlist({
+          id: meta.id,
+          type: meta.type,
+          name: meta.name,
+          poster: meta.poster,
+          imdbId: alt ?? undefined,
+          addonOrigin: meta.addonOrigin,
+          videos: meta.videos,
+        });
       }}
       className="flex h-7 w-7 items-center justify-center rounded-md text-ink-subtle transition-colors duration-150 hover:bg-raised hover:text-ink"
     >
@@ -68,13 +82,14 @@ function WatchlistToggle({ data }: { data: PreviewData }) {
 }
 
 export function PreviewBlock({ data, onDetails }: { data: PreviewData; onDetails: () => void }) {
+  const t = useT();
   const resume = data.resume;
   const inProgress = !!resume && !resume.external;
   const verb = inProgress
     ? resume.season != null && resume.episode != null
-      ? `Resume S${resume.season} E${resume.episode}`
-      : "Resume"
-    : "Details";
+      ? t("Resume S{season} E{episode}", { season: resume.season, episode: resume.episode })
+      : t("Resume")
+    : t("Details");
   return (
     <div className="flex flex-col gap-3 px-5 pb-4 pt-4">
       <DecisionLine data={data} />
@@ -105,7 +120,7 @@ export function PreviewBlock({ data, onDetails }: { data: PreviewData; onDetails
             }}
             className="text-[11px] font-semibold uppercase tracking-[0.12em] text-ink-subtle transition-colors duration-150 hover:text-ink"
           >
-            Details
+            {t("Details")}
           </button>
         ) : (
           <WatchlistToggle data={data} />

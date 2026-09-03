@@ -155,7 +155,7 @@ export function PosterTile({ meta, onOpenDetail }: { meta: Meta; onOpenDetail?: 
       onClick={() => open(meta)}
       className={`w-[124px] shrink-0 text-start ${TILE_CULL} [contain-intrinsic-size:auto_235px]`}
     >
-      <Poster src={src} onError={onError} seed={meta.id} ratio="portrait" lazy="release" className="rounded-[14px] ring-1 ring-white/[0.06]">
+      <Poster src={src} onError={onError} seed={meta.id} ratio="portrait" lazy="release" className="rounded-lg ring-1 ring-white/[0.06]">
         {award && <AwardCorner award={award} />}
         {!settings.rpdbKey && meta.imdbRating && (
           <span className="pointer-events-none absolute bottom-1.5 end-1.5 flex items-center gap-0.5 rounded-md bg-black/70 px-1.5 py-0.5 text-[10.5px] font-bold text-white backdrop-blur-sm">
@@ -206,7 +206,7 @@ function LandscapeTile({ meta, onOpenDetail }: { meta: Meta; onOpenDetail?: Open
         seed={meta.id}
         ratio="landscape"
         lazy="release"
-        className="rounded-[14px] ring-1 ring-edge-soft/50"
+        className="rounded-lg ring-1 ring-edge-soft/50"
       />
       <p className="mt-1.5 line-clamp-1 text-[13px] font-medium text-ink-muted">{meta.name}</p>
     </button>

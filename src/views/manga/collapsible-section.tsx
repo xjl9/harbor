@@ -1,5 +1,6 @@
 import { ChevronDown, EyeOff } from "lucide-react";
 import { useState, type ReactNode, type Ref } from "react";
+import { useT } from "@/lib/i18n";
 import { hideMangaRow, useMangaHiddenRows } from "./manga-row-visibility";
 
 function readOpen(key: string): boolean {
@@ -29,6 +30,7 @@ export function CollapsibleSection({
   hideKey?: string;
   children: ReactNode;
 }) {
+  const t = useT();
   const [open, setOpen] = useState(() => readOpen(storageKey));
   const hiddenRows = useMangaHiddenRows();
 
@@ -70,21 +72,15 @@ export function CollapsibleSection({
           <button
             type="button"
             onClick={() => hideMangaRow(hideKey)}
-            aria-label={`Hide ${title}`}
+            aria-label={t("Hide {title}", { title })}
             className="ms-auto grid h-8 w-8 shrink-0 place-items-center rounded-full text-ink-subtle opacity-0 transition-[opacity,background-color,color] hover:bg-elevated/60 hover:text-ink focus-visible:opacity-100 group-hover/section:opacity-100 motion-reduce:transition-none"
           >
             <EyeOff size={15} strokeWidth={2.2} />
           </button>
         )}
       </div>
-      <div
-        className={`grid transition-[grid-template-rows] duration-300 ease-[cubic-bezier(0.22,0.61,0.36,1)] motion-reduce:transition-none ${
-          open ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
-        }`}
-      >
-        <div className="overflow-hidden">
-          <div className="flex flex-col gap-3 pt-0.5">{children}</div>
-        </div>
+      <div className={open ? "" : "hidden"}>
+        <div className="flex flex-col gap-3 pt-0.5">{children}</div>
       </div>
     </section>
   );

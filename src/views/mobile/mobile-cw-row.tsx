@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
-import { Play, X } from "lucide-react";
+import { X } from "lucide-react";
+import { Play } from "@/components/icons/play-filled";
 import type { Meta } from "@/lib/cinemeta";
 import { useAuth } from "@/lib/auth";
 import { FLIP_ORIGIN_ATTR } from "@/lib/motion";
@@ -17,10 +18,12 @@ import {
   useLocalCwLibraryItems,
 } from "@/lib/continue-watching";
 import { useCwDismissVersion } from "@/lib/cw-dismiss";
+import { useExternalCw } from "@/lib/feed/external-cw";
 import { useMobileRemote } from "./mobile-remote";
 import { manualWatchedVersion, subscribeManualWatched } from "@/lib/manual-watched";
 import { readSnapshot, useSnapshotVersion } from "@/lib/snapshots";
 import { useSettings } from "@/lib/settings";
+import { useT } from "@/lib/i18n";
 import { loadSimklStatusMap, loadSimklWatchedMap, type WatchlistStatus } from "@/lib/simkl/list-status";
 import { useSimkl } from "@/lib/simkl/provider";
 import { fetchWatchedKeySet } from "@/lib/trakt/history";
@@ -29,7 +32,44 @@ import { episodeFromVideoId, isAnimeCwItem, libraryMetaType, type LibraryItem } 
 import { useCwAdvance } from "@/views/home/hooks/use-cw-advance";
 import { useLayerActive } from "./layer-active";
 
-const NO_SIMKL_CW: LibraryItem[] = [];
+type Translate = (key: string, vars?: Record<string, string | number>) => string;
+
+// listLocalCw() is synchronous while the cloud library is not, so the first
+// merge is local-only. Consumers that must not flash a partial list wait on this.
+let cwReady = false;
+const readySubs = new Set<() => void>();
+
+// The latch is global but the cloud list is per mount, so a remount used to
+// arrive with ready already true and an empty list, and home rendered the
+// local-only merge for a frame before the cloud library landed. Holding the
+// last resolved list here means a remount starts correct instead of wrong.
+let cloudCache: LibraryItem[] = [];
+let cloudKey: string | null = null;
+
+function markCwReady(): void {
+  if (cwReady) return;
+  cwReady = true;
+  for (const fn of readySubs) fn();
+}
+
+// A different profile has a different library, so the cache cannot answer for
+// it and consumers have to wait again rather than show the outgoing profile's.
+function resetCwReady(): void {
+  if (!cwReady) return;
+  cwReady = false;
+  for (const fn of readySubs) fn();
+}
+
+export function useMobileCwReady(): boolean {
+  return useSyncExternalStore(
+    (cb) => {
+      readySubs.add(cb);
+      return () => void readySubs.delete(cb);
+    },
+    () => cwReady,
+    () => cwReady,
+  );
+}
 
 // External watched sources feeding useCwAdvance's episode-watched checks.
 // Mirrors the loaders desktop home runs; maps stay empty when a service is
@@ -111,7 +151,14 @@ export function useMobileCw(limit = 14): LibraryItem[] {
   const { settings } = useSettings();
   const hideAnime = useHideAnime();
   const layerActive = useLayerActive();
-  const items = useCwCloudLibrary(authKey, layerActive);
+  const cloudItems = useCwCloudLibrary(authKey, layerActive);
+  // A remount reaches useCwCloudLibrary before its fetch resolves, so fall back
+  // to the last list resolved for this profile instead of an empty one.
+  const items =
+    cloudItems.length > 0 || cloudKey !== authKey ? cloudItems : cloudCache;
+  const externalCw = useExternalCw(
+    !settings.cwPerProfile && settings.externalContinueWatching,
+  );
   const localItems = useLocalCwLibraryItems();
   const dismissVersion = useCwDismissVersion();
   const manualWatchedVer = useSyncExternalStore(subscribeManualWatched, manualWatchedVersion);
@@ -122,15 +169,46 @@ export function useMobileCw(limit = 14): LibraryItem[] {
     void detectAnimeForCw(items);
   }, [items]);
 
+  // useCwCloudLibrary owns the fetch and reports no settle event of its own, so
+  // the latch releases on its first delivery, and on a short cap so an empty
+  // library still lets consumers render.
+  useEffect(() => {
+    if (!authKey) {
+      cloudKey = null;
+      cloudCache = [];
+      markCwReady();
+      return;
+    }
+    if (cloudKey !== authKey) resetCwReady();
+    const cap = window.setTimeout(markCwReady, 1500);
+    return () => window.clearTimeout(cap);
+  }, [authKey]);
+
+  useEffect(() => {
+    if (!authKey || cloudItems.length === 0) return;
+    cloudKey = authKey;
+    cloudCache = cloudItems;
+    markCwReady();
+  }, [authKey, cloudItems]);
+
   const merged = useMemo(() => {
     void dismissVersion;
     void rootsVersion;
     void animeDetectVer;
-    return mergeContinueWatching(items, NO_SIMKL_CW, localItems, {
+    return mergeContinueWatching(items, externalCw, localItems, {
       cwPerProfile: settings.cwPerProfile,
       hideAnime,
     });
-  }, [items, localItems, dismissVersion, rootsVersion, animeDetectVer, hideAnime, settings.cwPerProfile]);
+  }, [
+    items,
+    externalCw,
+    localItems,
+    dismissVersion,
+    rootsVersion,
+    animeDetectVer,
+    hideAnime,
+    settings.cwPerProfile,
+  ]);
 
   const resurfaceLibrary = useMemo(() => {
     void manualWatchedVer;
@@ -220,6 +298,7 @@ export function MobileCwRow({
   items: LibraryItem[];
   onOpenDetail: (m: Meta) => void;
 }) {
+  const t = useT();
   const { settings } = useSettings();
   const { authKey } = useAuth();
   useSnapshotVersion();
@@ -230,7 +309,9 @@ export function MobileCwRow({
 
   return (
     <section className="flex flex-col gap-3 [content-visibility:auto] [contain-intrinsic-size:auto_215px]">
-      <h2 className="px-4 font-display text-[19px] font-medium tracking-[-0.01em] text-ink">Continue watching</h2>
+      <h2 className="px-4 font-display text-[19px] font-medium tracking-[-0.01em] text-ink">
+        {t("Continue watching")}
+      </h2>
       <div className="flex gap-3 overflow-x-auto px-4 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {items.map((item) => (
           <MobileCwCard
@@ -257,6 +338,7 @@ function MobileCwCard({
   onOpenDetail: (m: Meta) => void;
   onDismiss: () => void;
 }) {
+  const t = useT();
   const meta = toMeta(item);
   const { ref, show } = useImgRelease();
   const dur = item.state?.duration ?? 0;
@@ -265,14 +347,14 @@ function MobileCwCard({
   const external = item.external === "simkl";
   // Up-next entries carry the previous episode's duration with a reset
   // offset, so a remaining-time label would be wrong for them.
-  const remaining = dur > 0 && !external && !item.upNext ? formatRemaining(dur - off) : "";
+  const remaining = dur > 0 && !external && !item.upNext ? formatRemaining(dur - off, t) : "";
   const ep = episodeInfo(item);
   const { playOnHost } = useMobileRemote();
   const sub =
     item.type !== "movie" && ep
       ? isAnimeCwItem(item)
-        ? `Ep ${ep.episode}`
-        : `S${ep.season} · E${ep.episode}`
+        ? t("Ep {episode}", { episode: ep.episode })
+        : t("S{season} · E{episode}", { season: ep.season, episode: ep.episode })
       : "";
   const bg = downscaleTmdb(readSnapshot(item._id) ?? item.background ?? item.poster);
 
@@ -293,6 +375,7 @@ function MobileCwCard({
         <button
           type="button"
           onClick={() => playOnHost(meta, ep ? { season: ep.season, episode: ep.episode } : undefined)}
+          aria-label={t("Play {title}", { title: item.name })}
           {...{ [FLIP_ORIGIN_ATTR]: "" }}
           className="relative block aspect-[16/9] w-full overflow-hidden rounded-[16px] bg-surface text-start ring-1 ring-edge-soft/50"
         >
@@ -330,7 +413,7 @@ function MobileCwCard({
                 )}
               </>
             ) : (
-              <span className="shrink-0">{remaining || "Resume"}</span>
+              <span className="shrink-0">{remaining || t("Resume")}</span>
             )}
           </span>
           <div className="absolute inset-x-0 bottom-0 h-[3px] bg-white/25">
@@ -343,7 +426,7 @@ function MobileCwCard({
             e.stopPropagation();
             onDismiss();
           }}
-          aria-label="Remove from Continue watching"
+          aria-label={t("Remove from Continue watching")}
           className="absolute end-1.5 top-1.5 flex h-9 w-9 items-center justify-center rounded-full bg-black/55 text-white/90 backdrop-blur-sm"
         >
           <X size={17} strokeWidth={2.4} />
@@ -352,6 +435,7 @@ function MobileCwCard({
       <button
         type="button"
         onClick={() => onOpenDetail(meta)}
+        aria-label={t("View {title}", { title: item.name })}
         className="mt-1.5 line-clamp-1 w-full text-start text-[13px] font-medium text-ink-muted"
       >
         {item.name}
@@ -374,12 +458,14 @@ function episodeInfo(i: LibraryItem): { season: number; episode: number } | null
   return parsed && parsed.episode > 0 ? parsed : null;
 }
 
-function formatRemaining(ms: number): string {
+function formatRemaining(ms: number, t: Translate): string {
   const minutes = Math.max(0, Math.round(ms / 60000));
-  if (minutes < 60) return `${minutes}m left`;
-  const h = Math.floor(minutes / 60);
-  const m = minutes % 60;
-  return m === 0 ? `${h}h left` : `${h}h ${m}m left`;
+  if (minutes < 60) return t("{count}m left", { count: minutes });
+  const hours = Math.floor(minutes / 60);
+  const remainder = minutes % 60;
+  return remainder === 0
+    ? t("{count}h left", { count: hours })
+    : t("{hours}h {minutes}m left", { hours, minutes: remainder });
 }
 
 function downscaleTmdb(url?: string): string | undefined {

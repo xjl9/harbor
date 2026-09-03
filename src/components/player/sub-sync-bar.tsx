@@ -27,7 +27,6 @@ type Props = {
 };
 
 export function SubSyncBar({ delaySec, onDelay, onEnterSync, syncAvailable }: Props) {
-
   const t = useT();
   const { open, initialDelaySec } = useSyncBarState();
   const autoSyncHandle = useAutoSyncHandle();
@@ -94,9 +93,9 @@ export function SubSyncBar({ delaySec, onDelay, onEnterSync, syncAvailable }: Pr
       <div
         role="toolbar"
         aria-label={t("Subtitle sync")}
-        className="pointer-events-auto flex items-stretch gap-2.5 rounded-[16px] border border-edge bg-elevated/95 px-2.5 py-2 shadow-[0_24px_64px_rgba(0,0,0,0.8)] backdrop-blur-2xl"
+        className="pointer-events-auto flex items-stretch gap-2.5 rounded-md bg-elevated px-2.5 py-2 shadow-[0_10px_30px_-12px_rgba(0,0,0,0.6)]"
       >
-        {/* Left Side: Text Sync (Fixed width to center the middle section) */}
+        {/* Left Side: Live Sync (Fixed width to center the middle section) */}
         <div className="flex w-[240px] items-center gap-1.5">
           {onEnterSync && (
             <button
@@ -106,8 +105,10 @@ export function SubSyncBar({ delaySec, onDelay, onEnterSync, syncAvailable }: Pr
                 onEnterSync();
               }}
               disabled={!syncAvailable}
-              title={syncAvailable ? t("Sync subtitles via text") : t("Select a subtitle track to sync")}
-              aria-label={t("Sync via text")}
+              title={
+                syncAvailable ? t("Open guided live sync") : t("Select a subtitle track to sync")
+              }
+              aria-label={t("Live sync")}
               className={`flex h-10 items-center gap-2 rounded-xl px-3.5 text-[13px] font-semibold transition-all ${
                 syncAvailable
                   ? "bg-raised text-ink-muted hover:bg-elevated hover:text-ink active:scale-95"
@@ -115,36 +116,22 @@ export function SubSyncBar({ delaySec, onDelay, onEnterSync, syncAvailable }: Pr
               }`}
             >
               <Type size={15} strokeWidth={2} />
-              <span className="hidden lg:inline">{t("Text Sync")}</span>
+              <span className="hidden lg:inline">{t("Live sync")}</span>
             </button>
           )}
         </div>
 
         {/* Center Side: Sync Controls */}
         <div className="flex items-center gap-[2px] rounded-xl bg-raised p-[2px] shadow-inner">
-          <StepBtn
-            label="−0.5s"
-            onClick={() => applyDelay(delaySec - 0.5)}
-            wide
-          />
-          <StepBtn
-            label="−0.1s"
-            onClick={() => applyDelay(delaySec - 0.1)}
-          />
-          
+          <StepBtn label="−0.5s" onClick={() => applyDelay(delaySec - 0.5)} wide />
+          <StepBtn label="−0.1s" onClick={() => applyDelay(delaySec - 0.1)} />
+
           <div className="mx-1.5 flex h-10 w-[96px] items-center justify-center rounded-lg bg-elevated">
             <DelayDisplay value={delaySec} nonZero={isNonZero} onReset={() => applyDelay(0)} />
           </div>
 
-          <StepBtn
-            label="+0.1s"
-            onClick={() => applyDelay(delaySec + 0.1)}
-          />
-          <StepBtn
-            label="+0.5s"
-            onClick={() => applyDelay(delaySec + 0.5)}
-            wide
-          />
+          <StepBtn label="+0.1s" onClick={() => applyDelay(delaySec + 0.1)} />
+          <StepBtn label="+0.5s" onClick={() => applyDelay(delaySec + 0.5)} wide />
         </div>
 
         {/* Right Side: Save & Discard (Fixed width to match left side) */}
@@ -187,20 +174,12 @@ export function SubSyncBar({ delaySec, onDelay, onEnterSync, syncAvailable }: Pr
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
-function StepBtn({
-  label,
-  onClick,
-  wide,
-}: {
-  label: string;
-  onClick: () => void;
-  wide?: boolean;
-}) {
+function StepBtn({ label, onClick, wide }: { label: string; onClick: () => void; wide?: boolean }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className={`flex h-[36px] items-center justify-center rounded-[10px] font-mono text-[13px] font-bold tabular-nums text-ink-muted transition-colors hover:bg-elevated hover:text-ink active:scale-95 ${
+      className={`flex h-[36px] items-center justify-center rounded-md font-mono text-[13px] font-bold tabular-nums text-ink-muted transition-colors hover:bg-elevated hover:text-ink active:scale-95 ${
         wide ? "w-14" : "w-12"
       }`}
     >
@@ -243,4 +222,3 @@ function DelayDisplay({
     </div>
   );
 }
-
