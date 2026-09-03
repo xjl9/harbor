@@ -78,6 +78,8 @@ mod hdr_overlay;
 mod installer_handoff;
 #[cfg(desktop)]
 mod media_controls;
+// Builds its window with always_on_top, which is a desktop-only builder method.
+#[cfg(desktop)]
 mod modal_overlay;
 #[cfg(desktop)]
 mod mpv;
