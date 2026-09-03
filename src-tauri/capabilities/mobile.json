@@ -32,7 +32,7 @@
     "dialog:allow-message",
     "fs:default",
     "deep-link:default",
-    "process:default",
+    "clipboard-manager:default",
     "harbor-player:default",
     "barcode-scanner:default",
     {
