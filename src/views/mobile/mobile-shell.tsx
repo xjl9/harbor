@@ -193,9 +193,9 @@ function ShellBody() {
           aria-hidden
           className="pointer-events-none fixed inset-x-0 top-0 z-[65]"
           style={{
-            height: "calc(env(safe-area-inset-top, 0px) + 12px)",
+            height: "calc(env(safe-area-inset-top, 0px) + 18px)",
             background:
-              "linear-gradient(to bottom, color-mix(in oklab, var(--color-canvas) 72%, transparent) 0%, color-mix(in oklab, var(--color-canvas) 40%, transparent) 60%, transparent 100%)",
+              "linear-gradient(to bottom, color-mix(in oklab, var(--color-canvas) 92%, transparent) 0%, color-mix(in oklab, var(--color-canvas) 78%, transparent) 55%, transparent 100%)",
           }}
         />,
         document.body,
