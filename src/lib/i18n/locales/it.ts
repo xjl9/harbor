@@ -14,6 +14,15 @@ import catalog11 from "./it/catalog-11";
 import catalog12 from "./it/catalog-12";
 import coverage from "./it/coverage";
 import mobilePlayer from "./it/mobile-player";
+import mobilePlayerChrome from "./it/mobile-player-chrome";
+import mobileDestinations from "./it/mobile-destinations";
+import mobileLibrary from "./it/mobile-library";
+import mobileBrowse from "./it/mobile-browse";
+import mobileDetail from "./it/mobile-detail";
+import mobileAddons from "./it/mobile-addons";
+import mobileAccount from "./it/mobile-account";
+import mobileSettings from "./it/mobile-settings";
+import mobileNav from "./it/mobile-nav";
 import plugins from "./it/plugins";
 import brands from "./it/brands";
 
@@ -33,6 +42,15 @@ const it: Record<string, string> = {
   ...catalog12,
   ...coverage,
   ...mobilePlayer,
+  ...mobilePlayerChrome,
+  ...mobileDestinations,
+  ...mobileLibrary,
+  ...mobileBrowse,
+  ...mobileDetail,
+  ...mobileAddons,
+  ...mobileAccount,
+  ...mobileSettings,
+  ...mobileNav,
   ...settingsRefinements,
   ...plugins,
   ...brands,

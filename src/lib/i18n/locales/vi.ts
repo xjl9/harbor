@@ -2,6 +2,15 @@ import ebookSources from "./vi/ebook-sources";
 import settingsRefinements from "./vi/settings-refinements";
 import coverage from "./vi/coverage";
 import mobilePlayer from "./vi/mobile-player";
+import mobilePlayerChrome from "./vi/mobile-player-chrome";
+import mobileDestinations from "./vi/mobile-destinations";
+import mobileLibrary from "./vi/mobile-library";
+import mobileBrowse from "./vi/mobile-browse";
+import mobileDetail from "./vi/mobile-detail";
+import mobileAddons from "./vi/mobile-addons";
+import mobileAccount from "./vi/mobile-account";
+import mobileSettings from "./vi/mobile-settings";
+import mobileNav from "./vi/mobile-nav";
 import gap from "./vi/gap";
 import plurals from "./vi/plurals";
 import settingsFill from "./vi/settings-fill";
@@ -70,6 +79,15 @@ const vi: Record<string, string> = {
   ...spotlights,
   ...misc,
   ...mobilePlayer,
+  ...mobilePlayerChrome,
+  ...mobileDestinations,
+  ...mobileLibrary,
+  ...mobileBrowse,
+  ...mobileDetail,
+  ...mobileAddons,
+  ...mobileAccount,
+  ...mobileSettings,
+  ...mobileNav,
   ...awards,
   ...addons,
   ...extra,

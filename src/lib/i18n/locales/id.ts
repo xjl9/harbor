@@ -2,6 +2,15 @@ import ebookSources from "./id/ebook-sources";
 import settingsRefinements from "./id/settings-refinements";
 import coverage from "./id/coverage";
 import mobilePlayer from "./id/mobile-player";
+import mobilePlayerChrome from "./id/mobile-player-chrome";
+import mobileDestinations from "./id/mobile-destinations";
+import mobileLibrary from "./id/mobile-library";
+import mobileBrowse from "./id/mobile-browse";
+import mobileDetail from "./id/mobile-detail";
+import mobileAddons from "./id/mobile-addons";
+import mobileAccount from "./id/mobile-account";
+import mobileSettings from "./id/mobile-settings";
+import mobileNav from "./id/mobile-nav";
 import catalog01 from "./id/catalog-01";
 import catalog02 from "./id/catalog-02";
 import catalog03 from "./id/catalog-03";
@@ -37,6 +46,15 @@ const id: Record<string, string> = {
   ...catalog12,
   ...catalog13,
   ...mobilePlayer,
+  ...mobilePlayerChrome,
+  ...mobileDestinations,
+  ...mobileLibrary,
+  ...mobileBrowse,
+  ...mobileDetail,
+  ...mobileAddons,
+  ...mobileAccount,
+  ...mobileSettings,
+  ...mobileNav,
   ...audit,
   ...identityAudit,
   ...settingsRefinements,

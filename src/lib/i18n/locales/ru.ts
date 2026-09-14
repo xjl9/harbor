@@ -25,6 +25,15 @@ import discover from "./ru/discover";
 import spotlights from "./ru/spotlights";
 import misc from "./ru/misc";
 import mobilePlayer from "./ru/mobile-player";
+import mobilePlayerChrome from "./ru/mobile-player-chrome";
+import mobileDestinations from "./ru/mobile-destinations";
+import mobileLibrary from "./ru/mobile-library";
+import mobileBrowse from "./ru/mobile-browse";
+import mobileDetail from "./ru/mobile-detail";
+import mobileAddons from "./ru/mobile-addons";
+import mobileAccount from "./ru/mobile-account";
+import mobileSettings from "./ru/mobile-settings";
+import mobileNav from "./ru/mobile-nav";
 import awards from "./ru/awards";
 import addons from "./ru/addons";
 import extra from "./ru/extra";
@@ -72,6 +81,15 @@ const ru: Record<string, string> = {
   ...spotlights,
   ...misc,
   ...mobilePlayer,
+  ...mobilePlayerChrome,
+  ...mobileDestinations,
+  ...mobileLibrary,
+  ...mobileBrowse,
+  ...mobileDetail,
+  ...mobileAddons,
+  ...mobileAccount,
+  ...mobileSettings,
+  ...mobileNav,
   ...awards,
   ...addons,
   ...extra,

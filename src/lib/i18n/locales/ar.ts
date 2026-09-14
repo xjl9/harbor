@@ -4,6 +4,15 @@ import uiFallback from "./ui-fallback";
 import experimentalUpdates from "./ar/experimental-updates";
 import coverage from "./ar/coverage";
 import mobilePlayer from "./ar/mobile-player";
+import mobilePlayerChrome from "./ar/mobile-player-chrome";
+import mobileDestinations from "./ar/mobile-destinations";
+import mobileLibrary from "./ar/mobile-library";
+import mobileBrowse from "./ar/mobile-browse";
+import mobileDetail from "./ar/mobile-detail";
+import mobileAddons from "./ar/mobile-addons";
+import mobileAccount from "./ar/mobile-account";
+import mobileSettings from "./ar/mobile-settings";
+import mobileNav from "./ar/mobile-nav";
 import settingsFill from "./ar/settings-fill";
 import profileFill from "./ar/profile-fill";
 import appFill from "./ar/app-fill";
@@ -70,6 +79,15 @@ const ar: Record<string, string> = {
   ...spotlights,
   ...misc,
   ...mobilePlayer,
+  ...mobilePlayerChrome,
+  ...mobileDestinations,
+  ...mobileLibrary,
+  ...mobileBrowse,
+  ...mobileDetail,
+  ...mobileAddons,
+  ...mobileAccount,
+  ...mobileSettings,
+  ...mobileNav,
   ...awards,
   ...addons,
   ...controllers,

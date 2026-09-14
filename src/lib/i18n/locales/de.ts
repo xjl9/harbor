@@ -36,6 +36,15 @@ import bpSources from "./de/bp-sources";
 import together from "./de/together";
 import coverage from "./de/coverage";
 import mobilePlayer from "./de/mobile-player";
+import mobilePlayerChrome from "./de/mobile-player-chrome";
+import mobileDestinations from "./de/mobile-destinations";
+import mobileLibrary from "./de/mobile-library";
+import mobileBrowse from "./de/mobile-browse";
+import mobileDetail from "./de/mobile-detail";
+import mobileAddons from "./de/mobile-addons";
+import mobileAccount from "./de/mobile-account";
+import mobileSettings from "./de/mobile-settings";
+import mobileNav from "./de/mobile-nav";
 import plugins from "./de/plugins";
 import brands from "./de/brands";
 
@@ -73,6 +82,15 @@ const de: Record<string, string> = {
   ...downloads,
   ...lists,
   ...mobilePlayer,
+  ...mobilePlayerChrome,
+  ...mobileDestinations,
+  ...mobileLibrary,
+  ...mobileBrowse,
+  ...mobileDetail,
+  ...mobileAddons,
+  ...mobileAccount,
+  ...mobileSettings,
+  ...mobileNav,
   ...awards,
   ...bpSources,
   ...together,

@@ -10,6 +10,15 @@ import common from "./ja/common";
 import controllers from "./ja/controllers";
 import coverage from "./ja/coverage";
 import mobilePlayer from "./ja/mobile-player";
+import mobilePlayerChrome from "./ja/mobile-player-chrome";
+import mobileDestinations from "./ja/mobile-destinations";
+import mobileLibrary from "./ja/mobile-library";
+import mobileBrowse from "./ja/mobile-browse";
+import mobileDetail from "./ja/mobile-detail";
+import mobileAddons from "./ja/mobile-addons";
+import mobileAccount from "./ja/mobile-account";
+import mobileSettings from "./ja/mobile-settings";
+import mobileNav from "./ja/mobile-nav";
 import detail from "./ja/detail";
 import discover from "./ja/discover";
 import downloads from "./ja/downloads";
@@ -65,6 +74,15 @@ const ja: Record<string, string> = {
   ...masthead,
   ...misc,
   ...mobilePlayer,
+  ...mobilePlayerChrome,
+  ...mobileDestinations,
+  ...mobileLibrary,
+  ...mobileBrowse,
+  ...mobileDetail,
+  ...mobileAddons,
+  ...mobileAccount,
+  ...mobileSettings,
+  ...mobileNav,
   ...player,
   ...plurals,
   ...rails,

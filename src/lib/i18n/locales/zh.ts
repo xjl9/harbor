@@ -2,6 +2,15 @@ import ebookSources from "./zh/ebook-sources";
 import settingsRefinements from "./zh/settings-refinements";
 import coverage from "./zh/coverage";
 import mobilePlayer from "./zh/mobile-player";
+import mobilePlayerChrome from "./zh/mobile-player-chrome";
+import mobileDestinations from "./zh/mobile-destinations";
+import mobileLibrary from "./zh/mobile-library";
+import mobileBrowse from "./zh/mobile-browse";
+import mobileDetail from "./zh/mobile-detail";
+import mobileAddons from "./zh/mobile-addons";
+import mobileAccount from "./zh/mobile-account";
+import mobileSettings from "./zh/mobile-settings";
+import mobileNav from "./zh/mobile-nav";
 import sweepA from "./zh/sweep-a";
 import sweepB from "./zh/sweep-b";
 import sweepC from "./zh/sweep-c";
@@ -41,6 +50,15 @@ const zh: Record<string, string> = {
   ...books,
   ...system,
   ...mobilePlayer,
+  ...mobilePlayerChrome,
+  ...mobileDestinations,
+  ...mobileLibrary,
+  ...mobileBrowse,
+  ...mobileDetail,
+  ...mobileAddons,
+  ...mobileAccount,
+  ...mobileSettings,
+  ...mobileNav,
   ...settingsRefinements,
   ...plugins,
   ...brands,

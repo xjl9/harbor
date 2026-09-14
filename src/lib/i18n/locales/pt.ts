@@ -23,6 +23,15 @@ import discover from "./pt/discover";
 import spotlights from "./pt/spotlights";
 import misc from "./pt/misc";
 import mobilePlayer from "./pt/mobile-player";
+import mobilePlayerChrome from "./pt/mobile-player-chrome";
+import mobileDestinations from "./pt/mobile-destinations";
+import mobileLibrary from "./pt/mobile-library";
+import mobileBrowse from "./pt/mobile-browse";
+import mobileDetail from "./pt/mobile-detail";
+import mobileAddons from "./pt/mobile-addons";
+import mobileAccount from "./pt/mobile-account";
+import mobileSettings from "./pt/mobile-settings";
+import mobileNav from "./pt/mobile-nav";
 import awards from "./pt/awards";
 import addons from "./pt/addons";
 import extra from "./pt/extra";
@@ -65,6 +74,15 @@ const pt: Record<string, string> = {
   ...spotlights,
   ...misc,
   ...mobilePlayer,
+  ...mobilePlayerChrome,
+  ...mobileDestinations,
+  ...mobileLibrary,
+  ...mobileBrowse,
+  ...mobileDetail,
+  ...mobileAddons,
+  ...mobileAccount,
+  ...mobileSettings,
+  ...mobileNav,
   ...awards,
   ...addons,
   ...extra,

@@ -2,6 +2,15 @@ import ebookSources from "./ko/ebook-sources";
 import settingsRefinements from "./ko/settings-refinements";
 import coverage from "./ko/coverage";
 import mobilePlayer from "./ko/mobile-player";
+import mobilePlayerChrome from "./ko/mobile-player-chrome";
+import mobileDestinations from "./ko/mobile-destinations";
+import mobileLibrary from "./ko/mobile-library";
+import mobileBrowse from "./ko/mobile-browse";
+import mobileDetail from "./ko/mobile-detail";
+import mobileAddons from "./ko/mobile-addons";
+import mobileAccount from "./ko/mobile-account";
+import mobileSettings from "./ko/mobile-settings";
+import mobileNav from "./ko/mobile-nav";
 import catalog01 from "./ko/catalog-01";
 import catalog02 from "./ko/catalog-02";
 import catalog03 from "./ko/catalog-03";
@@ -36,6 +45,15 @@ const ko: Record<string, string> = {
   ...catalog12,
   ...catalog13,
   ...mobilePlayer,
+  ...mobilePlayerChrome,
+  ...mobileDestinations,
+  ...mobileLibrary,
+  ...mobileBrowse,
+  ...mobileDetail,
+  ...mobileAddons,
+  ...mobileAccount,
+  ...mobileSettings,
+  ...mobileNav,
   ...currentTail,
   ...settingsRefinements,
   ...plugins,

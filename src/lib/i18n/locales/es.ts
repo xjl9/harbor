@@ -30,6 +30,15 @@ import controllers from "./es/controllers";
 import bpSources from "./es/bp-sources";
 import coverage from "./es/coverage";
 import mobilePlayer from "./es/mobile-player";
+import mobilePlayerChrome from "./es/mobile-player-chrome";
+import mobileDestinations from "./es/mobile-destinations";
+import mobileLibrary from "./es/mobile-library";
+import mobileBrowse from "./es/mobile-browse";
+import mobileDetail from "./es/mobile-detail";
+import mobileAddons from "./es/mobile-addons";
+import mobileAccount from "./es/mobile-account";
+import mobileSettings from "./es/mobile-settings";
+import mobileNav from "./es/mobile-nav";
 import plugins from "./es/plugins";
 import brands from "./es/brands";
 
@@ -59,6 +68,15 @@ const es: Record<string, string> = {
   ...discover,
   ...spotlights,
   ...mobilePlayer,
+  ...mobilePlayerChrome,
+  ...mobileDestinations,
+  ...mobileLibrary,
+  ...mobileBrowse,
+  ...mobileDetail,
+  ...mobileAddons,
+  ...mobileAccount,
+  ...mobileSettings,
+  ...mobileNav,
   ...awards,
   ...addons,
   ...manga,

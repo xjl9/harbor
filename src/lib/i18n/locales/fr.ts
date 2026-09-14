@@ -33,6 +33,15 @@ import plurals from "./fr/plurals";
 import bpSources from "./fr/bp-sources";
 import coverage from "./fr/coverage";
 import mobilePlayer from "./fr/mobile-player";
+import mobilePlayerChrome from "./fr/mobile-player-chrome";
+import mobileDestinations from "./fr/mobile-destinations";
+import mobileLibrary from "./fr/mobile-library";
+import mobileBrowse from "./fr/mobile-browse";
+import mobileDetail from "./fr/mobile-detail";
+import mobileAddons from "./fr/mobile-addons";
+import mobileAccount from "./fr/mobile-account";
+import mobileSettings from "./fr/mobile-settings";
+import mobileNav from "./fr/mobile-nav";
 import plugins from "./fr/plugins";
 import brands from "./fr/brands";
 
@@ -64,6 +73,15 @@ const fr: Record<string, string> = {
   ...spotlights,
   ...misc,
   ...mobilePlayer,
+  ...mobilePlayerChrome,
+  ...mobileDestinations,
+  ...mobileLibrary,
+  ...mobileBrowse,
+  ...mobileDetail,
+  ...mobileAddons,
+  ...mobileAccount,
+  ...mobileSettings,
+  ...mobileNav,
   ...awards,
   ...addons,
   ...manga,
