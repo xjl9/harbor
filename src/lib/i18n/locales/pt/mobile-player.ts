@@ -47,6 +47,11 @@ const mobilePlayer: Record<string, string> = {
   "No subtitles are built into this file.": "Este arquivo não tem legendas embutidas.",
   "Fill screen": "Preencher a tela",
   "Loading settings": "Carregando configurações",
+  "Step 4 · Sources": "Etapa 4 · Fontes",
+  "Step 5 · Debrid": "Etapa 5 · Debrid",
+  "Step 6 · Subtitles": "Etapa 6 · Legendas",
+  "Step 7 · Taste": "Etapa 7 · Seus gostos",
+  "· Install a stream addon from Profile, under Addons.": "· Instale um addon de streams em Perfil, em Addons.",
 };
 
 export default mobilePlayer;

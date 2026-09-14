@@ -98,17 +98,22 @@ export function ObTaste({
   const atMax = selected.length >= TASTE_MAX;
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex flex-col gap-1.5">
-        <div className="flex items-baseline justify-between gap-3">
-          <h2 className="text-[23px] font-semibold tracking-tight text-ink">
-            {t("Pick a few you love")}
-          </h2>
-          <span className="font-mono text-[12px] tabular-nums text-ink-subtle">
-            {selected.length}/{TASTE_MAX}
-          </span>
-        </div>
-        <p className="text-[13.5px] leading-relaxed text-ink-muted">
+    <div className="flex flex-col gap-6">
+      {/* pe-12 keeps the counter clear of the close button the shell floats over
+          the top-right corner; every other step leaves that corner empty. */}
+      <div className="flex items-center justify-between gap-3 pe-12">
+        <span className="text-[12.5px] font-medium uppercase tracking-[0.16em] text-ink-subtle">
+          {t("Step 7 · Taste")}
+        </span>
+        <span className="font-mono text-[12px] tabular-nums text-ink-subtle">
+          {selected.length}/{TASTE_MAX}
+        </span>
+      </div>
+      <div className="flex flex-col gap-3">
+        <h1 className="font-display text-[30px] font-medium leading-[1.08] tracking-tight text-ink">
+          {t("Pick a few you love")}
+        </h1>
+        <p className="text-[15px] leading-relaxed text-ink-muted">
           {t(
             "Choose up to 5 movies or shows you already like. Harbor uses them to tune your featured picks and recommendations. Totally optional.",
           )}

@@ -51,6 +51,11 @@ const mobilePlayer: Record<string, string> = {
   "Showing 80 of {n}": "{n} sonuçtan 80 tanesi gösteriliyor",
   "The touchpad controls Harbor running on a computer. Pick one on your Wi-Fi to start.":
     "Dokunmatik yüzey, bilgisayarda çalışan Harbor'ı kontrol eder. Başlamak için Wi-Fi ağınızdaki bir bilgisayarı seçin.",
+  "Step 4 · Sources": "4. Adım · Kaynaklar",
+  "Step 5 · Debrid": "5. Adım · Debrid",
+  "Step 6 · Subtitles": "6. Adım · Altyazılar",
+  "Step 7 · Taste": "7. Adım · Zevkler",
+  "· Install a stream addon from Profile, under Addons.": "· Profil › Eklentiler bölümünden bir akış eklentisi yükleyin.",
 };
 
 export default mobilePlayer;

@@ -1,4 +1,5 @@
 import type { Meta } from "@/lib/cinemeta";
+import { useT } from "@/lib/i18n";
 import { useView } from "@/lib/view";
 import { requestMobileIntent } from "@/views/mobile/mobile-intent";
 import { isPhoneShell } from "./picker-utils";
@@ -6,6 +7,7 @@ import { isPhoneShell } from "./picker-utils";
 export function NoSourcesConfiguredModal({ meta }: { meta: Meta }) {
   const { goBack, setView, openSettings } = useView();
   const phone = isPhoneShell();
+  const t = useT();
   // The phone shell has no addons or settings frame, so setView/openSettings
   // drop this modal and land nowhere. Route both to the addons sheet instead,
   // which is where a phone user actually fixes "no sources".
@@ -37,7 +39,13 @@ export function NoSourcesConfiguredModal({ meta }: { meta: Meta }) {
           Harbor needs at least one streaming source before it can play {title}. Pick one of the options below to get set up.
         </p>
         <ul className="mt-3 space-y-1.5 text-[13.5px] leading-relaxed text-ink-muted">
-          <li>· Install a stream addon (Torrentio, Comet, MediaFusion).</li>
+          {/* The public phone build does not name specific stream addons; it
+              points at the place in the app where any addon gets installed. */}
+          {phone ? (
+            <li>{t("· Install a stream addon from Profile, under Addons.")}</li>
+          ) : (
+            <li>· Install a stream addon (Torrentio, Comet, MediaFusion).</li>
+          )}
           <li>· Add a debrid key (TorBox, Real-Debrid, AllDebrid, Premiumize, Debrid-Link).</li>
         </ul>
         <div className="mt-7 flex flex-col gap-2.5">

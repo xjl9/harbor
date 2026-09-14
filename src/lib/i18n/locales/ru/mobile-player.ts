@@ -47,6 +47,11 @@ const mobilePlayer: Record<string, string> = {
   "No subtitles are built into this file.": "В этом файле нет встроенных субтитров.",
   "Fill screen": "Заполнить экран",
   "Loading settings": "Загрузка настроек",
+  "Step 4 · Sources": "Шаг 4 · Источники",
+  "Step 5 · Debrid": "Шаг 5 · Debrid",
+  "Step 6 · Subtitles": "Шаг 6 · Субтитры",
+  "Step 7 · Taste": "Шаг 7 · Ваши вкусы",
+  "· Install a stream addon from Profile, under Addons.": "· Установите дополнение для стримов в Профиле, в разделе Дополнения.",
 };
 
 export default mobilePlayer;

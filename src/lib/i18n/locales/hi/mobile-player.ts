@@ -51,6 +51,11 @@ const mobilePlayer: Record<string, string> = {
   "Showing 80 of {n}": "{n} में से 80 दिखाए जा रहे हैं",
   "The touchpad controls Harbor running on a computer. Pick one on your Wi-Fi to start.":
     "टचपैड से आप कंप्यूटर पर चल रहे Harbor को कंट्रोल करते हैं। शुरू करने के लिए अपने Wi-Fi पर मौजूद कोई कंप्यूटर चुनें।",
+  "Step 4 · Sources": "चरण 4 · स्रोत",
+  "Step 5 · Debrid": "चरण 5 · डीब्रिड",
+  "Step 6 · Subtitles": "चरण 6 · सबटाइटल",
+  "Step 7 · Taste": "चरण 7 · आपकी पसंद",
+  "· Install a stream addon from Profile, under Addons.": "· प्रोफ़ाइल में ऐडऑन के अंतर्गत एक स्ट्रीम ऐडऑन इंस्टॉल करें।",
 };
 
 export default mobilePlayer;

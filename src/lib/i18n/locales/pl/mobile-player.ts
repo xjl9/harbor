@@ -51,6 +51,11 @@ const mobilePlayer: Record<string, string> = {
   "Showing 80 of {n}": "Wyświetlono 80 z {n}",
   "The touchpad controls Harbor running on a computer. Pick one on your Wi-Fi to start.":
     "Touchpad steruje aplikacją Harbor uruchomioną na komputerze. Aby zacząć, wybierz komputer w swojej sieci Wi-Fi.",
+  "Step 4 · Sources": "Krok 4 · Źródła",
+  "Step 5 · Debrid": "Krok 5 · Debrid",
+  "Step 6 · Subtitles": "Krok 6 · Napisy",
+  "Step 7 · Taste": "Krok 7 · Twój gust",
+  "· Install a stream addon from Profile, under Addons.": "· Zainstaluj dodatek strumieni w Profilu, w sekcji Dodatki.",
 };
 
 export default mobilePlayer;

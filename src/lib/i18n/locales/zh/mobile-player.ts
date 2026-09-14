@@ -51,6 +51,11 @@ const mobilePlayer: Record<string, string> = {
   "Showing 80 of {n}": "共 {n} 项，显示 80 项",
   "The touchpad controls Harbor running on a computer. Pick one on your Wi-Fi to start.":
     "触控板用于控制在电脑上运行的 Harbor。选择同一 Wi-Fi 下的一台电脑即可开始。",
+  "Step 4 · Sources": "第 4 步 · 来源",
+  "Step 5 · Debrid": "第 5 步 · Debrid",
+  "Step 6 · Subtitles": "第 6 步 · 字幕",
+  "Step 7 · Taste": "第 7 步 · 口味",
+  "· Install a stream addon from Profile, under Addons.": "· 在“个人资料”的“插件”中安装一个流媒体插件。",
 };
 
 export default mobilePlayer;

@@ -47,6 +47,11 @@ const mobilePlayer: Record<string, string> = {
   "No subtitles are built into this file.": "لا توجد ترجمات مضمّنة في هذا الملف.",
   "Fill screen": "ملء الشاشة",
   "Loading settings": "جارٍ تحميل الإعدادات",
+  "Step 4 · Sources": "الخطوة 4 · المصادر",
+  "Step 5 · Debrid": "الخطوة 5 · Debrid",
+  "Step 6 · Subtitles": "الخطوة 6 · الترجمات",
+  "Step 7 · Taste": "الخطوة 7 · ذوقك",
+  "· Install a stream addon from Profile, under Addons.": "· ثبّت إضافة بث من الملف الشخصي، ضمن الإضافات.",
 };
 
 export default mobilePlayer;

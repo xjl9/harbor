@@ -179,6 +179,27 @@ function ShellBody() {
           backgroundSize: "140px 140px",
         }}
       />
+      {/* Status bar scrim. Every screen scrolls under the notch, and without
+          this the clock and battery sit on whatever text happens to be up
+          there (a debrid row on the profile tab, an episode synopsis on a
+          scrolled detail page). A short gradient across the top inset keeps
+          the system UI legible without boxing heroes in with a solid bar.
+          Portaled to body because the detail page and the other full-screen
+          pages are siblings of this shell at z-50; z-[65] sits above them and
+          below sheets, the picker and the player, whose own top chrome already
+          handles the inset. */}
+      {createPortal(
+        <div
+          aria-hidden
+          className="pointer-events-none fixed inset-x-0 top-0 z-[65]"
+          style={{
+            height: "calc(env(safe-area-inset-top, 0px) + 12px)",
+            background:
+              "linear-gradient(to bottom, color-mix(in oklab, var(--color-canvas) 72%, transparent) 0%, color-mix(in oklab, var(--color-canvas) 40%, transparent) 60%, transparent 100%)",
+          }}
+        />,
+        document.body,
+      )}
       <div className="relative flex min-h-0 flex-1 flex-col">
         <TabLayer active={tab === "home"}>
           {seen.has("home") && <MobileBrowse />}

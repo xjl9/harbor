@@ -51,6 +51,11 @@ const mobilePlayer: Record<string, string> = {
   "Showing 80 of {n}": "Đang hiển thị 80 trong số {n}",
   "The touchpad controls Harbor running on a computer. Pick one on your Wi-Fi to start.":
     "Bàn di chuột điều khiển Harbor đang chạy trên máy tính. Hãy chọn một máy trong mạng Wi-Fi của bạn để bắt đầu.",
+  "Step 4 · Sources": "Bước 4 · Nguồn",
+  "Step 5 · Debrid": "Bước 5 · Debrid",
+  "Step 6 · Subtitles": "Bước 6 · Phụ đề",
+  "Step 7 · Taste": "Bước 7 · Sở thích",
+  "· Install a stream addon from Profile, under Addons.": "· Cài đặt tiện ích bổ sung luồng từ Hồ sơ, trong mục Tiện ích bổ sung.",
 };
 
 export default mobilePlayer;

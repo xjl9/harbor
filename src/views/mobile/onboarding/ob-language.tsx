@@ -147,13 +147,17 @@ function Greeting({ index, fade }: { index: number; fade: boolean }) {
             dir={lang.rtl ? "rtl" : "ltr"}
             className={`col-start-1 row-start-1 justify-self-start text-[32px] font-medium leading-[1.2] tracking-tight text-ink-muted ${
               lang.rtl ? "font-arabic" : "font-display"
-            } ${active ? "opacity-100" : "opacity-0"}`}
+            } ${active ? "visible opacity-100" : "invisible opacity-0"}`}
             style={
               fade
                 ? {
-                    transition: `opacity ${GREETING_FADE_MS}ms ease-in-out`,
                     // The incoming word waits for the outgoing one to finish.
-                    transitionDelay: active ? `${GREETING_FADE_MS}ms` : "0ms",
+                    // visibility flips only once the fade has landed, so the
+                    // outgoing word stops being painted instead of sitting at
+                    // opacity 0 in the same cell: WebKit on iOS otherwise keeps
+                    // fragments of the old glyph run composited under the new one
+                    // (the "你好o" ghost on first launch).
+                    transition: `opacity ${GREETING_FADE_MS}ms ease-in-out ${active ? GREETING_FADE_MS : 0}ms, visibility 0s linear ${GREETING_FADE_MS}ms`,
                   }
                 : undefined
             }

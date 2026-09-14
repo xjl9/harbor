@@ -33,7 +33,7 @@ export function ObDebrid({ onAdvance }: { onAdvance: () => void }) {
   return (
     <div className="flex flex-col gap-6">
       <span className="text-[12.5px] font-medium uppercase tracking-[0.16em] text-ink-subtle">
-        {t("Step 4 · Debrid")}
+        {t("Step 5 · Debrid")}
       </span>
       <div className="flex flex-col gap-3">
         <h1 className="font-display text-[30px] font-medium leading-[1.08] tracking-tight text-ink">
