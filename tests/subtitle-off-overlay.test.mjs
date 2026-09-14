@@ -22,6 +22,7 @@ new Function("require", "module", "exports", compiled)(
     if (id === "react") return { memo: (component) => component };
     if (id === "react/jsx-runtime") return { jsx, jsxs: jsx, Fragment: "fragment" };
     if (id === "@/lib/i18n") return { useT: () => (text) => text };
+    if (id === "@/lib/platform") return { isMobileNative: () => false };
     if (id === "@/lib/player/captions-popout-state")
       return { useCaptionsPopoutOpen: () => popoutOpen };
     if (id.startsWith("@/components/player/")) {

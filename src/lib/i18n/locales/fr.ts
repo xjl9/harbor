@@ -32,6 +32,7 @@ import controllers from "./fr/controllers";
 import plurals from "./fr/plurals";
 import bpSources from "./fr/bp-sources";
 import coverage from "./fr/coverage";
+import mobilePlayer from "./fr/mobile-player";
 import plugins from "./fr/plugins";
 import brands from "./fr/brands";
 
@@ -62,6 +63,7 @@ const fr: Record<string, string> = {
   ...discover,
   ...spotlights,
   ...misc,
+  ...mobilePlayer,
   ...awards,
   ...addons,
   ...manga,

@@ -1,6 +1,7 @@
 import ebookSources from "./vi/ebook-sources";
 import settingsRefinements from "./vi/settings-refinements";
 import coverage from "./vi/coverage";
+import mobilePlayer from "./vi/mobile-player";
 import gap from "./vi/gap";
 import plurals from "./vi/plurals";
 import settingsFill from "./vi/settings-fill";
@@ -68,6 +69,7 @@ const vi: Record<string, string> = {
   ...discover,
   ...spotlights,
   ...misc,
+  ...mobilePlayer,
   ...awards,
   ...addons,
   ...extra,

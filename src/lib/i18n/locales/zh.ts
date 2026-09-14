@@ -1,6 +1,7 @@
 import ebookSources from "./zh/ebook-sources";
 import settingsRefinements from "./zh/settings-refinements";
 import coverage from "./zh/coverage";
+import mobilePlayer from "./zh/mobile-player";
 import sweepA from "./zh/sweep-a";
 import sweepB from "./zh/sweep-b";
 import sweepC from "./zh/sweep-c";
@@ -39,6 +40,7 @@ const zh: Record<string, string> = {
   ...live,
   ...books,
   ...system,
+  ...mobilePlayer,
   ...settingsRefinements,
   ...plugins,
   ...brands,

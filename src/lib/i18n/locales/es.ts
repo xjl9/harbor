@@ -29,6 +29,7 @@ import manga from "./es/manga";
 import controllers from "./es/controllers";
 import bpSources from "./es/bp-sources";
 import coverage from "./es/coverage";
+import mobilePlayer from "./es/mobile-player";
 import plugins from "./es/plugins";
 import brands from "./es/brands";
 
@@ -57,6 +58,7 @@ const es: Record<string, string> = {
   ...masthead,
   ...discover,
   ...spotlights,
+  ...mobilePlayer,
   ...awards,
   ...addons,
   ...manga,

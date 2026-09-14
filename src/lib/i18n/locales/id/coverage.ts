@@ -748,6 +748,8 @@ const coverage: Record<string, string> = {
     "Pilih apakah Harbor mengutamakan sumber langsung dan debrid, torrent peer-to-peer, atau menampilkan keduanya.",
   "Linking your Discord account also joins you to Harbor's Discord server, so the bot can send your Backup keys privately.":
     "Linking your Discord account also joins you to Harbor's Discord server, so the bot can send your Backup keys privately.",
+  "Cast to another device": "Cast ke perangkat lain",
+  "Add an addon": "Tambahkan addon",
 };
 
 export default coverage;

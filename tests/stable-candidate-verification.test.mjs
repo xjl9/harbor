@@ -45,6 +45,7 @@ async function fullscreenHarness(mode, maximized = false) {
     "src/lib/fullscreen-state.ts",
     {
       "@/lib/settings/load": { loadStoredSettings: () => settings },
+      "@/lib/platform": { isMobileNative: () => false },
       "@tauri-apps/api/core": { invoke: async (command) => calls.push(["invoke", command]) },
       "@tauri-apps/api/window": {
         getCurrentWindow: () => win,

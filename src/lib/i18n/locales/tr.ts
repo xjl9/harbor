@@ -15,6 +15,7 @@ import recent from "./tr/recent";
 import residual from "./tr/residual";
 import finalResidual from "./tr/final";
 import coverage from "./tr/coverage";
+import mobilePlayer from "./tr/mobile-player";
 import plugins from "./tr/plugins";
 import brands from "./tr/brands";
 
@@ -35,6 +36,7 @@ const tr: Record<string, string> = {
   ...residual,
   ...finalResidual,
   ...coverage,
+  ...mobilePlayer,
   ...settingsRefinements,
   ...plugins,
   ...brands,

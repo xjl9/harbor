@@ -35,6 +35,7 @@ import awards from "./de/awards";
 import bpSources from "./de/bp-sources";
 import together from "./de/together";
 import coverage from "./de/coverage";
+import mobilePlayer from "./de/mobile-player";
 import plugins from "./de/plugins";
 import brands from "./de/brands";
 
@@ -71,6 +72,7 @@ const de: Record<string, string> = {
   ...controllers,
   ...downloads,
   ...lists,
+  ...mobilePlayer,
   ...awards,
   ...bpSources,
   ...together,

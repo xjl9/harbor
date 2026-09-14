@@ -9,6 +9,7 @@ import chrome from "./ja/chrome";
 import common from "./ja/common";
 import controllers from "./ja/controllers";
 import coverage from "./ja/coverage";
+import mobilePlayer from "./ja/mobile-player";
 import detail from "./ja/detail";
 import discover from "./ja/discover";
 import downloads from "./ja/downloads";
@@ -63,6 +64,7 @@ const ja: Record<string, string> = {
   ...manga,
   ...masthead,
   ...misc,
+  ...mobilePlayer,
   ...player,
   ...plurals,
   ...rails,

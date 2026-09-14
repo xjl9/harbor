@@ -17,6 +17,7 @@ import catalog14 from "./pl/catalog-14";
 import catalog15 from "./pl/catalog-15";
 import catalog16 from "./pl/catalog-16";
 import coverage from "./pl/coverage";
+import mobilePlayer from "./pl/mobile-player";
 import plurals from "./pl/plurals";
 import plugins from "./pl/plugins";
 import brands from "./pl/brands";
@@ -40,6 +41,7 @@ const pl: Record<string, string> = {
   ...catalog15,
   ...catalog16,
   ...coverage,
+  ...mobilePlayer,
   ...plurals,
   ...settingsRefinements,
   ...plugins,

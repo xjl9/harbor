@@ -909,6 +909,8 @@ const coverage: Record<string, string> = {
   "NYT Books API key": "API-Schlüssel für NYT Books",
   "Choose whether Harbor prefers direct and debrid sources, peer-to-peer torrents, or shows both.":
     "Wähle, ob Harbor direkte und Debrid-Quellen oder Peer-to-Peer-Torrents bevorzugt oder beides anzeigt.",
+  "Cast to another device": "Auf ein anderes Gerät übertragen",
+  "Add an addon": "Add-on hinzufügen",
 };
 
 export default coverage;
