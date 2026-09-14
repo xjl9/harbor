@@ -29,6 +29,10 @@ export const MOBILE_GLYPH = {
   subtitles: `${B}subtitle.svg`,
   fill: `${B}aspect.svg`,
   upNext: `${B}up-next.png`,
+  downloadIdle: `${B}download--idle.svg`,
+  downloadActive: `${B}download--downloading.svg`,
+  downloadDone: `${B}download--complete.svg`,
+  downloadError: `${B}download--error.svg`,
 } as const;
 
 // The set ships a glyph per seek step with the number drawn into it, so the button

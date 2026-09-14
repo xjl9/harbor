@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { Check } from "lucide-react";
+import { Check, Info } from "lucide-react";
 import { Poster } from "@/components/poster";
 import { daysFromTodayLocal, formatAirDate } from "@/lib/dates";
 import { formatRelativeWatched, type EpisodeProgress } from "@/lib/episode-progress";
@@ -21,6 +21,7 @@ export function EpisodeItem({
   nextUp,
   showRating,
   download,
+  onInfo,
 }: {
   ep: Ep;
   onPlay: (ep: Ep) => void;
@@ -31,6 +32,9 @@ export function EpisodeItem({
   // Optional trailing control (offline download button). Rendered as a sibling
   // of the play button so it stays a valid, separately-focusable target.
   download?: ReactNode;
+  // Opens the episode page. Desktop reaches it from the card's Info control;
+  // the row keeps tap-to-play, so this is its own 44pt target beside download.
+  onInfo?: (ep: Ep) => void;
 }) {
   const t = useT();
   const upcoming = isUpcoming(ep.airDate);
@@ -43,7 +47,7 @@ export function EpisodeItem({
     .filter(Boolean)
     .join("  ·  ");
   return (
-    <div className="group flex items-center gap-1">
+    <div className="group flex items-center gap-0.5" data-ep={ep.episode}>
       <button
         type="button"
         onClick={() => onPlay(ep)}
@@ -120,6 +124,16 @@ export function EpisodeItem({
         )}
       </div>
       </button>
+      {onInfo && (
+        <button
+          type="button"
+          onClick={() => onInfo(ep)}
+          aria-label={t("Episode details")}
+          className="no-press flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-ink-subtle transition-[color,background-color,transform] duration-150 active:scale-[0.92] active:bg-ink/10 motion-reduce:transition-none"
+        >
+          <Info size={18} strokeWidth={2} />
+        </button>
+      )}
       {download && <div className="shrink-0 pe-1">{download}</div>}
     </div>
   );

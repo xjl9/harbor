@@ -19,10 +19,11 @@ import { useMobileRemoteStyle } from "./remote-style";
 import { ScrollToTop } from "./scroll-to-top";
 import { LayerActiveContext, useLayerParked } from "./layer-active";
 import { noteScroll, noteTab, restoredTab, restoreScroll } from "./reload-restore";
-import { MOBILE_INTENT_EVENT } from "./mobile-intent";
+import { consumeMobileIntent, MOBILE_INTENT_EVENT, type MobileIntent } from "./mobile-intent";
 import { installBugReportErrorCapture } from "@/lib/bug-report";
 import { MangaNowBar } from "./manga-remote/manga-now-bar";
 import { MOBILE_CHROME_CLEARANCE } from "./chrome-metrics";
+import { MobileThemeSheet } from "./mobile-theme-sheet";
 
 const RemoteApp = lazy(() => import("@/views/remote-app").then((m) => ({ default: m.RemoteApp })));
 const MangaRemote = lazy(() => import("./manga-remote/manga-remote").then((m) => ({ default: m.MangaRemote })));
@@ -138,11 +139,27 @@ function ShellBody() {
 
   // A surface outside the tab tree asked for a destination that lives in one.
   // Switching here mounts it; the destination consumes the intent on mount.
+  // The theme picker is hosted here rather than inside a tab, so a request from
+  // any surface opens it over whatever the user is looking at, without a tab
+  // switch and without that surface having to own the page.
+  const [themeOpen, setThemeOpen] = useState(false);
+
   useEffect(() => {
     const onIntent = (e: Event) => {
-      // Both destinations live under the profile tab, so both switch to it and
-      // let the tab consume the flag on mount.
-      const which = (e as CustomEvent<string>).detail;
+      const which = (e as CustomEvent<MobileIntent>).detail;
+      if (which === "theme") {
+        if (consumeMobileIntent("theme")) setThemeOpen(true);
+        return;
+      }
+      // Library is the My Stuff tab itself, so arriving is the whole action and
+      // the flag is consumed here.
+      if (which === "library") {
+        consumeMobileIntent("library");
+        selectTab("mystuff");
+        return;
+      }
+      // The remaining sheets live under the profile tab, so those switch to it
+      // and let the tab consume the flag on mount.
       if (which === "addons" || which === "settings" || which === "debrid") selectTab("profile");
     };
     window.addEventListener(MOBILE_INTENT_EVENT, onIntent);
@@ -231,6 +248,7 @@ function ShellBody() {
       </div>
       {showNowPlaying && <NowPlayingBar onExpand={() => selectTab("remote")} />}
       <BottomTabBar active={tab} onSelect={selectTab} />
+      {themeOpen && <MobileThemeSheet onClose={() => setThemeOpen(false)} />}
       <LocalPlayback />
     </div>
   );

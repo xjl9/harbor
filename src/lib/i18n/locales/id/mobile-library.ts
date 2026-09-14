@@ -1,6 +1,37 @@
 // Phone shell strings for library surfaces; the i18n coverage test requires every
 // translated locale to carry every t() key used by the app.
 const mobileLibrary: Record<string, string> = {
+  "Filter by type": "Filter menurut jenis",
+  "Name and description": "Nama dan deskripsi",
+  "Reorder items": "Ubah urutan item",
+  "Nothing is streaming right now.": "Tidak ada yang sedang streaming.",
+  "Simkl section": "Bagian Simkl",
+  "Download paused": "Unduhan dijeda",
+  "Download episode": "Unduh episode",
+  "Saved movies and episodes for offline use": "Film dan episode tersimpan untuk ditonton offline",
+  "Filter downloads": "Filter unduhan",
+  "Stored on this device": "Tersimpan di perangkat ini",
+  "1 saved": "1 tersimpan",
+  "{count} saved": "{count} tersimpan",
+  "{size} in progress": "{size} sedang berjalan",
+  "Open a movie or episode, tap Download, and pick a source. It saves here for offline watching.": "Buka film atau episode, ketuk Unduh, lalu pilih sumber. Hasilnya tersimpan di sini untuk ditonton offline.",
+  "Your library is empty": "Pustaka Anda kosong",
+  "Everything you save from Stremio, Trakt, and this device collects here.": "Semua yang Anda simpan dari Stremio, Trakt, dan perangkat ini terkumpul di sini.",
+  "Save a movie or show from any detail page and it lines up here for later.": "Simpan film atau acara dari halaman detail mana pun dan akan menunggu di sini untuk nanti.",
+  "Press play on something. It shows up here once you start watching.": "Putar sesuatu. Akan muncul di sini begitu Anda mulai menonton.",
+  "Your local library is empty": "Pustaka lokal Anda kosong",
+  "Scan local folders in Harbor and your movies and shows will appear here.": "Pindai folder lokal di Harbor dan film serta acara Anda akan muncul di sini.",
+  "No media-server titles": "Tidak ada judul dari server media",
+  "Enable and sync Plex, Jellyfin, or Emby in Harbor to browse them here.": "Aktifkan dan sinkronkan Plex, Jellyfin, atau Emby di Harbor untuk menjelajahinya di sini.",
+  "any quality": "kualitas apa pun",
+  "up to 4K": "hingga 4K",
+  "up to 1080p": "hingga 1080p",
+  "up to 720p": "hingga 720p",
+  "cached only": "hanya yang di-cache",
+  "allow P2P downloads": "izinkan unduhan P2P",
+  "for 3 more episodes": "untuk 3 episode lagi",
+  "for 5 more episodes": "untuk 5 episode lagi",
+  "for 10 more episodes": "untuk 10 episode lagi",
 };
 
 export default mobileLibrary;

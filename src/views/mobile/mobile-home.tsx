@@ -1,8 +1,8 @@
-import { Puzzle } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import type { Meta } from "@/lib/cinemeta";
 import type { HomeRow } from "@/views/home/home-types";
 import {
+  buildAnimeHomeRows,
   buildCinemetaRows,
   buildTmdbRows,
   isStreamingServiceRow,
@@ -13,9 +13,10 @@ import { loadAddonRows, type AddonRow } from "@/lib/addons";
 import { isAnimeRow } from "@/views/anime/anime-rows";
 import { useAuth } from "@/lib/auth";
 import { useSettings, type StreamingService } from "@/lib/settings";
-import { useT } from "@/lib/i18n";
+import { useT, useUiLanguage } from "@/lib/i18n";
 import { useHideAnimeMetas, useHideAnimeRows } from "@/lib/anime-hide";
 import { usePinnedRows } from "@/views/home/hooks/use-pinned-rows";
+import { useNewEpisodes } from "@/views/home/hooks/use-new-episodes";
 import { useMediaFavorites, type MediaEntry } from "@/lib/media-favorites";
 import { useLocalWatchlist } from "@/lib/local-watchlist";
 import { useTrakt } from "@/lib/trakt/provider";
@@ -24,6 +25,24 @@ import { useSimkl } from "@/lib/simkl/provider";
 import { buildSimklHomeRows } from "@/lib/simkl/home-rails";
 import { useLetterboxd } from "@/lib/stremboxd/provider";
 import { buildLetterboxdHomeRows } from "@/lib/stremboxd/home-rails";
+import { buildArabicHomeRows } from "@/lib/arabic/home-rows";
+import { buildRussianHomeRows } from "@/lib/russian/home-rows";
+import { fetchHeroFeed } from "@/lib/feed/hero-pool";
+import {
+  applyHomeRowCustomization,
+  moveRow,
+  renameRow,
+  resetHomeRows,
+  toggleCwTop,
+  toggleHeroSource,
+  toggleRowHidden,
+  toggleRowNumerals,
+  type HomeRowCustomization,
+} from "@/lib/home-customization";
+import { useCustomLists } from "@/lib/custom-lists";
+import { useCollectionRowsForPage } from "@/lib/page-collection-rows";
+import { setTop10Metas } from "@/lib/top10-set";
+import { NavGlyph } from "@/components/icons/nav-glyph";
 import { MobileHero } from "./mobile-hero";
 import { MobileCwRow, useMobileCw } from "./mobile-cw-row";
 import { MobileRail, MobileRankRail } from "./mobile-rail";
@@ -33,6 +52,12 @@ import { MobileServicePage } from "./mobile-service-page";
 import { MobileDetail } from "./mobile-detail";
 import { loadInstalled } from "@/lib/addon-store";
 import { requestMobileIntent } from "./mobile-intent";
+import { HeroSkeleton, RailSkeleton } from "./mobile-movies";
+import { MobileNewEpisodesRow } from "./browse/new-episodes-row";
+import { CustomizePill, CustomizeSheet } from "./browse/customize-sheet";
+import { MobileGridSheet, type GridFetcher } from "./browse/grid-sheet";
+
+const FIRST_PAGE = 20;
 
 function dedupeMetas(metas: Meta[]): Meta[] {
   const seen = new Set<string>();
@@ -51,17 +76,23 @@ function dedupeMetas(metas: Meta[]): Meta[] {
 
 export function MobileHome() {
   const t = useT();
-  const { settings } = useSettings();
+  const uiLang = useUiLanguage();
+  const { settings, update } = useSettings();
   const { authKey } = useAuth();
-  const [hero, setHero] = useState<Meta[]>([]);
+  const [heroPool, setHeroPool] = useState<Meta[]>([]);
   const [rows, setRows] = useState<HomeRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
   const [detailMeta, setDetailMeta] = useState<Meta | null>(null);
   const [serviceOpen, setServiceOpen] = useState<StreamingService | null>(null);
-  const cw = useMobileCw(14);
+  const [customizeOpen, setCustomizeOpen] = useState(false);
+  const [grid, setGrid] = useState<{ title: string; fetcher: GridFetcher; initial: Meta[] } | null>(null);
+  const cwAll = useMobileCw(40);
+  const cw = useMemo(() => cwAll.slice(0, 14), [cwAll]);
   const isClassic = settings.homeMode === "classic";
+  const custom = settings.homeRows as HomeRowCustomization;
+  const mutate = (next: HomeRowCustomization) => update({ homeRows: next });
 
   useEffect(() => {
     let alive = true;
@@ -76,7 +107,7 @@ export function MobileHome() {
         // Harbor mode = curated built-in specs, then deduped addon rows appended.
         // Classic mode = installed-addon catalogs only, in install order, no built-ins.
         let builtRows: HomeRow[] = [];
-        let heroPool: Meta[] = [];
+        let pool: Meta[] = [];
         if (!isClassic) {
           const onErr = () => {
             sawError = true;
@@ -89,11 +120,20 @@ export function MobileHome() {
             built = await buildCinemetaRows().catch(onErr);
           }
           builtRows = built.rows;
-          heroPool = built.hero;
+          pool = built.hero;
         }
         if (!alive) return;
-        setHero(dedupeMetas(heroPool.filter((m) => m.background)).slice(0, 8));
+        setHeroPool(pool);
         setRows(mergeRows(builtRows, []));
+        // The hero feed setting (Trending now, Trakt, Simkl) swaps the built pool
+        // for Harbor's hosted hero list, the same source desktop home reads.
+        if (!isClassic && settings.heroFeed && settings.heroFeed !== "classic") {
+          fetchHeroFeed(settings.heroFeed)
+            .then((feed) => {
+              if (alive && feed.length >= 4) setHeroPool(feed);
+            })
+            .catch(() => {});
+        }
 
         // homeShowAllAddonRows is the orthogonal dedup toggle; classic never dedups.
         const dedup = isClassic ? false : !settings.homeShowAllAddonRows;
@@ -121,6 +161,7 @@ export function MobileHome() {
     return () => {
       alive = false;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     authKey,
     settings.tmdbKey,
@@ -131,6 +172,7 @@ export function MobileHome() {
     settings.region,
     settings.homeMode,
     settings.homeShowAllAddonRows,
+    settings.heroFeed,
     reloadKey,
   ]);
 
@@ -140,6 +182,51 @@ export function MobileHome() {
     window.addEventListener("harbor:addons-changed", onChanged);
     return () => window.removeEventListener("harbor:addons-changed", onChanged);
   }, []);
+
+  // Anime rows, plus the Arabic and Russian home rows desktop adds when the UI
+  // speaks that language. Harbor mode only, like desktop.
+  const [animeRows, setAnimeRows] = useState<HomeRow[]>([]);
+  const [arabicRows, setArabicRows] = useState<HomeRow[]>([]);
+  const [russianRows, setRussianRows] = useState<HomeRow[]>([]);
+  useEffect(() => {
+    if (settings.hideContent.anime || isClassic) {
+      setAnimeRows([]);
+      return;
+    }
+    let cancelled = false;
+    buildAnimeHomeRows()
+      .then((rs) => !cancelled && setAnimeRows(rs))
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [settings.hideContent.anime, isClassic]);
+  useEffect(() => {
+    if (uiLang !== "ar" || isClassic || !settings.tmdbKey) {
+      setArabicRows([]);
+      return;
+    }
+    let cancelled = false;
+    buildArabicHomeRows(settings.tmdbKey)
+      .then((rs) => !cancelled && setArabicRows(rs))
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [uiLang, isClassic, settings.tmdbKey, settings.tmdbLanguage]);
+  useEffect(() => {
+    if (uiLang !== "ru" || isClassic || !settings.tmdbKey) {
+      setRussianRows([]);
+      return;
+    }
+    let cancelled = false;
+    buildRussianHomeRows(settings.tmdbKey)
+      .then((rs) => !cancelled && setRussianRows(rs))
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [uiLang, isClassic, settings.tmdbKey, settings.tmdbLanguage]);
 
   // Personal service rails (Trakt / Simkl / Letterboxd) built from the same
   // platform-agnostic builders desktop home uses. Providers are mounted app-wide,
@@ -246,6 +333,8 @@ export function MobileHome() {
           type: e.type,
           name: e.name,
           poster: e.poster,
+          addonOrigin: e.addonOrigin,
+          videos: e.videos,
         }));
     const out: HomeRow[] = [];
     if (favItems.size > 0) {
@@ -273,6 +362,46 @@ export function MobileHome() {
     return out;
   }, [favItems, localItems]);
 
+  // List rows the user added from My Lists, and the collections pinned to home:
+  // both are part of the desktop customizable row set.
+  const customLists = useCustomLists();
+  const listRows = useMemo<HomeRow[]>(() => {
+    const ids = custom.listRows ?? [];
+    if (ids.length === 0) return [];
+    const byId = new Map(customLists.map((l) => [l.id, l]));
+    const out: HomeRow[] = [];
+    for (const id of ids) {
+      const l = byId.get(id);
+      if (!l || l.items.length === 0) continue;
+      out.push({
+        key: `list-${l.id}`,
+        type: "movie",
+        name: l.name,
+        metas: l.items.map((it) => ({ id: it.id, type: it.type, name: it.name, poster: it.poster })),
+        page: 1,
+        hasMore: false,
+        noDedup: true,
+      });
+    }
+    return out;
+  }, [customLists, custom.listRows]);
+  const homeCollections = useCollectionRowsForPage("home");
+  const collectionRows = useMemo<HomeRow[]>(
+    () =>
+      homeCollections
+        .filter((c) => c.items.length > 0)
+        .map((c) => ({
+          key: `collection-${c.id}`,
+          type: "movie" as const,
+          name: c.name,
+          metas: c.items.map((it) => ({ id: it.id, type: it.type, name: it.name, poster: it.poster })),
+          page: 1,
+          hasMore: false,
+          noDedup: true,
+        })),
+    [homeCollections],
+  );
+
   const enabledServices = useMemo<StreamingService[]>(
     () =>
       settings.tmdbKey
@@ -283,26 +412,91 @@ export function MobileHome() {
     [settings.tmdbKey, settings.streaming],
   );
 
-  const extraRows = useMemo(
-    () => [...traktRows, ...simklRows, ...letterboxdRows],
-    [traktRows, simklRows, letterboxdRows],
-  );
-  const shownHero = useHideAnimeMetas(hero);
   const shownRows = useHideAnimeRows(rows);
-  const shownPinned = useHideAnimeRows(pinnedRows);
-  const shownExtras = useHideAnimeRows(extraRows);
+
+  // The hero follows the row the user chose as its source, when there is one.
+  const heroSourceRow = useMemo<HomeRow | null>(() => {
+    const k = custom.heroSource;
+    if (!k) return null;
+    const hit = [...personalRows, ...traktRows, ...simklRows, ...letterboxdRows, ...rows, ...animeRows].find((r) => r.key === k);
+    return hit && hit.metas.some((m) => m.background || m.poster) ? hit : null;
+  }, [custom.heroSource, personalRows, traktRows, simklRows, letterboxdRows, rows, animeRows]);
+  const heroMetas = useMemo(() => {
+    const pool = heroSourceRow
+      ? [...heroSourceRow.metas.filter((m) => m.background), ...heroSourceRow.metas.filter((m) => !m.background && m.poster)]
+      : heroPool.filter((m) => m.background);
+    return dedupeMetas(pool).slice(0, 8);
+  }, [heroSourceRow, heroPool]);
+  const shownHero = useHideAnimeMetas(heroMetas);
+
+  // Same split desktop home makes: a Top 10 from the head of the first row that
+  // skips hero titles, then every later row with already-shown titles removed
+  // from its first page (rows that fall under four are dropped unless noDedup).
+  const displayed = useMemo(() => {
+    if (isClassic) return { top10: [] as Meta[], rest: shownRows };
+    const seen = new Set<string>(shownHero.map((m) => m.id));
+    const first = shownRows[0];
+    const top10 = dedupeMetas((first?.metas ?? []).slice(0, FIRST_PAGE))
+      .filter((m) => !seen.has(m.id))
+      .slice(0, 10);
+    for (const m of top10) seen.add(m.id);
+    const rest: HomeRow[] = [];
+    for (const row of shownRows.slice(1)) {
+      const head = row.metas.slice(0, FIRST_PAGE);
+      const tail = row.metas.slice(FIRST_PAGE);
+      const filteredHead = row.noDedup ? head : head.filter((m) => !seen.has(m.id));
+      if (!row.noDedup && filteredHead.length < 4) continue;
+      for (const m of filteredHead) seen.add(m.id);
+      rest.push({ ...row, metas: [...filteredHead, ...tail] });
+    }
+    return { top10, rest };
+  }, [shownRows, shownHero, isClassic]);
+  const top10 = displayed.top10;
+  // Publishing the Top 10 lets the Top-10 ribbon mark those titles on every card.
+  useEffect(() => {
+    setTop10Metas(top10);
+  }, [top10]);
+
+  const filterableRows = useMemo(
+    () => [
+      ...listRows,
+      ...collectionRows,
+      ...pinnedRows,
+      ...arabicRows,
+      ...russianRows,
+      ...personalRows,
+      ...traktRows,
+      ...simklRows,
+      ...letterboxdRows,
+      ...displayed.rest,
+      ...animeRows,
+    ],
+    [listRows, collectionRows, pinnedRows, arabicRows, russianRows, personalRows, traktRows, simklRows, letterboxdRows, displayed.rest, animeRows],
+  );
+  const shownFilterable = useHideAnimeRows(filterableRows);
+  const visibleRows = useMemo(() => applyHomeRowCustomization(shownFilterable, custom, false), [shownFilterable, custom]);
+  const editRows = useMemo(() => applyHomeRowCustomization(shownFilterable, custom, true), [shownFilterable, custom]);
+
+  const cwHidden = custom.hidden.includes("cw");
+  const newEpisodesHidden = custom.hidden.includes("new-episodes");
+  const heroHidden = custom.hidden.includes("hero");
+  const top10Hidden = custom.hidden.includes("top10");
+  const collectionsHidden = custom.hidden.includes("collections");
+  const cwTop = !!custom.cwTop;
+  const newEpisodes = useNewEpisodes(cwAll, settings.homeNewEpisodes && !newEpisodesHidden);
+
+  const nothing =
+    rows.length === 0 &&
+    cw.length === 0 &&
+    pinnedRows.length === 0 &&
+    personalRows.length === 0 &&
+    listRows.length === 0;
 
   if (loading && rows.length === 0) {
     return <HomeSkeleton />;
   }
 
-  if (
-    failed &&
-    rows.length === 0 &&
-    cw.length === 0 &&
-    shownPinned.length === 0 &&
-    personalRows.length === 0
-  ) {
+  if (failed && nothing) {
     return (
       <div className="flex h-[70vh] flex-col items-center justify-center gap-4 px-8 text-center">
         <h2 className="font-display text-[20px] font-medium text-ink">
@@ -328,130 +522,153 @@ export function MobileHome() {
   // rows, the hero and collections, so with no addons installed every source of
   // content is empty and nothing threw. Distinct from the failure state above:
   // there is nothing to retry, the user needs a catalog.
-  if (
-    isClassic &&
-    !failed &&
-    rows.length === 0 &&
-    cw.length === 0 &&
-    shownPinned.length === 0 &&
-    personalRows.length === 0
-  ) {
+  if (isClassic && !failed && nothing) {
     return (
       <div className="flex h-[70vh] flex-col items-center justify-center gap-4 px-8 text-center">
         <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-elevated/60 text-ink-muted">
-          <Puzzle size={22} strokeWidth={1.8} />
+          <NavGlyph name="addons" className="h-6 w-6" />
         </span>
         <h2 className="font-display text-[20px] font-medium text-ink">
-          No catalogs yet
+          {t("No catalogs yet")}
         </h2>
         {/* Stream addons like Torrentio provide no catalogs, so someone can have
             addons installed and still land here. Say which kind is missing. */}
         <p className="max-w-xs text-[13.5px] leading-relaxed text-ink-muted">
           {loadInstalled().length === 0
-            ? "Classic home shows the catalogs your addons provide, and you have none installed. Add one and your rows show up here."
-            : "Your addons provide streams but no catalogs. Add a catalog addon like Cinemeta to fill these rows."}
+            ? t("Classic home shows the catalogs your addons provide, and you have none installed. Add one and your rows show up here.")
+            : t("Your addons provide streams but no catalogs. Add a catalog addon like Cinemeta to fill these rows.")}
         </p>
         <button
           type="button"
           onClick={() => requestMobileIntent("addons")}
           className="no-press flex h-11 items-center rounded-full bg-ink px-6 text-[14px] font-semibold text-canvas transition-transform active:scale-95"
         >
-          Add an addon
+          {t("Add an addon")}
         </button>
       </div>
     );
   }
 
-  const personalAndPinned = (
+  const firstRow = shownRows[0];
+  const top10Title = firstRow
+    ? firstRow.name.toLowerCase().includes("top")
+      ? t(firstRow.name)
+      : t("Top 10 {name}", { name: t(firstRow.name) })
+    : t("Top 10 Today");
+
+  const cwBlock = (
     <>
-      {shownPinned.map((r) => (
-        <MobileRail
-          key={r.key}
-          title={r.name}
-          metas={dedupeMetas(r.metas).slice(0, 18)}
-          onOpenDetail={setDetailMeta}
+      {!cwHidden && cw.length > 0 && <MobileCwRow items={cw} onOpenDetail={setDetailMeta} />}
+      {settings.homeNewEpisodes && !newEpisodesHidden && (
+        <MobileNewEpisodesRow
+          episodes={newEpisodes.episodes}
+          onDismissOne={newEpisodes.dismissOne}
+          onDismissAll={newEpisodes.dismissAll}
+          onOpen={setDetailMeta}
         />
-      ))}
-      {personalRows.map((r) => (
-        <MobileRail
-          key={r.key}
-          title={r.name}
-          metas={r.metas.slice(0, 18)}
-          onOpenDetail={setDetailMeta}
-        />
-      ))}
+      )}
     </>
   );
 
-  // Trakt / Simkl / Letterboxd rails. Desktop orders these right after the personal
-  // rows and before the addon catalog rows; empty results render nothing (MobileRail
-  // returns null on an empty list). Cleared to [] in classic mode by the effects above.
-  const harborExtras = (
-    <>
-      {shownExtras.map((r) => (
-        <MobileRail
-          key={r.key}
-          title={r.name}
-          metas={dedupeMetas(r.metas).slice(0, 18)}
-          onOpenDetail={setDetailMeta}
-        />
-      ))}
-    </>
-  );
-  // Collections gets its own row after Top 10, matching desktop home placement.
-  const collectionsRow = isClassic ? null : (
-    <MobileCollectionsRail onOpenDetail={setDetailMeta} />
-  );
+  const openGrid = (title: string, row: HomeRow) =>
+    row.fetcher ? () => setGrid({ title, fetcher: row.fetcher!, initial: row.metas }) : undefined;
 
   return (
     <div className="flex flex-col gap-7 [@media(max-height:500px)]:gap-4 pt-3 motion-safe:[animation:harbor-step-in_420ms_var(--ease-out)_both]">
-      {!isClassic && (
-        <MobileHero slides={shownHero} onOpenDetail={setDetailMeta} />
-      )}
-      {cw.length > 0 && <MobileCwRow items={cw} onOpenDetail={setDetailMeta} />}
+      {cwTop && <div className="flex flex-col gap-7" style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 48px)" }}>{cwBlock}</div>}
+      {!isClassic && !heroHidden && !cwTop && <MobileHero slides={shownHero} onOpenDetail={setDetailMeta} />}
+      <div
+        className={`flex justify-end px-4 ${!isClassic && !heroHidden && !cwTop ? "-mt-4" : ""}`}
+        style={isClassic || heroHidden ? { paddingTop: "calc(env(safe-area-inset-top, 0px) + 48px)" } : undefined}
+      >
+        <CustomizePill label={t("Customize home")} onClick={() => setCustomizeOpen(true)} />
+      </div>
+      {!isClassic && !heroHidden && cwTop && <MobileHero slides={shownHero} onOpenDetail={setDetailMeta} />}
+      {!cwTop && cwBlock}
       {!isClassic && enabledServices.length > 0 && (
         <MobileStreamingRail
           services={enabledServices}
           onOpen={setServiceOpen}
         />
       )}
-      {!isClassic && shownRows[0] && shownRows[0].metas.length >= 6 ? (
-        <>
-          <MobileRankRail
-            title={t("Top 10 Today")}
-            metas={dedupeMetas(shownRows[0].metas)}
-            onOpenDetail={setDetailMeta}
-          />
-          {collectionsRow}
-          {personalAndPinned}
-          {harborExtras}
-          {shownRows.slice(1).map((r) => (
-            <MobileRail
-              key={r.key}
-              title={displayRowTitle(r, false, t)}
-              metas={dedupeMetas(r.metas).slice(0, 18)}
-              onOpenDetail={setDetailMeta}
-            />
-          ))}
-        </>
-      ) : (
-        // Classic mode, or row 0 too small for the ranked treatment: render every
-        // row as a normal rail instead of silently dropping row 0.
-        <>
-          {collectionsRow}
-          {personalAndPinned}
-          {harborExtras}
-          {shownRows.map((r) => (
-            <MobileRail
-              key={r.key}
-              title={displayRowTitle(r, false, t)}
-              metas={dedupeMetas(r.metas).slice(0, 18)}
-              onOpenDetail={setDetailMeta}
-            />
-          ))}
-        </>
+      {!isClassic && !top10Hidden && top10.length >= 6 && firstRow && (
+        <MobileRankRail
+          title={top10Title}
+          metas={top10}
+          onSeeAll={openGrid(top10Title, firstRow)}
+          onOpenDetail={setDetailMeta}
+        />
       )}
+      {!isClassic && !collectionsHidden && <MobileCollectionsRail onOpenDetail={setDetailMeta} />}
+      {visibleRows.map((r) => {
+        const title = displayRowTitle(r, r.key in custom.renamed, t);
+        const metas = dedupeMetas(r.metas);
+        return (custom.numerals ?? []).includes(r.key) && metas.length >= 10 ? (
+          <MobileRankRail key={r.key} title={title} metas={metas} onSeeAll={openGrid(title, r)} onOpenDetail={setDetailMeta} />
+        ) : (
+          <MobileRail key={r.key} title={title} metas={metas.slice(0, 18)} onSeeAll={openGrid(title, r)} onOpenDetail={setDetailMeta} />
+        );
+      })}
       <div className="h-4" />
+
+      {customizeOpen && (
+        <CustomizeSheet
+          title={t("Customize home")}
+          sections={[
+            ...(!isClassic ? [{ key: "hero", name: t("Featured hero"), hidden: heroHidden, onToggle: () => mutate(toggleRowHidden(custom, "hero")) }] : []),
+            { key: "cw", name: t("Continue Watching"), hidden: cwHidden, onToggle: () => mutate(toggleRowHidden(custom, "cw")) },
+            { key: "cw-top", name: t("Continue Watching at top"), hidden: !cwTop, onToggle: () => mutate(toggleCwTop(custom)) },
+            ...(settings.homeNewEpisodes
+              ? [{ key: "new-episodes", name: t("New Episodes"), hidden: newEpisodesHidden, onToggle: () => mutate(toggleRowHidden(custom, "new-episodes")) }]
+              : []),
+            ...(!isClassic
+              ? [
+                  { key: "top10", name: t("Top 10 Trending This Week"), hidden: top10Hidden, onToggle: () => mutate(toggleRowHidden(custom, "top10")) },
+                  ...(settings.tmdbKey
+                    ? [{ key: "collections", name: t("Collections"), hidden: collectionsHidden, onToggle: () => mutate(toggleRowHidden(custom, "collections")) }]
+                    : []),
+                ]
+              : []),
+          ]}
+          rows={editRows.map((r) => ({
+            key: r.key,
+            name: displayRowTitle(r, r.key in custom.renamed, t),
+            hidden: custom.hidden.includes(r.key),
+            renamed: r.key in custom.renamed,
+            extras: [
+              ...(r.metas.length >= 10
+                ? [{ id: "numerals", label: t("Show as a Top 10 with big numerals"), on: (custom.numerals ?? []).includes(r.key), onToggle: () => mutate(toggleRowNumerals(custom, r.key)) }]
+                : []),
+              ...(!isClassic && r.metas.some((m) => m.background)
+                ? [{ id: "hero", label: t("Feature this catalog in the hero carousel"), on: custom.heroSource === r.key, onToggle: () => mutate(toggleHeroSource(custom, r.key)) }]
+                : []),
+            ],
+          }))}
+          hasChanges={
+            custom.order.length > 0 ||
+            custom.hidden.length > 0 ||
+            Object.keys(custom.renamed).length > 0 ||
+            (custom.numerals ?? []).length > 0 ||
+            !!custom.heroSource ||
+            !!custom.cwTop
+          }
+          onMove={(k, d) => mutate(moveRow(custom, editRows, k, d))}
+          onToggleHidden={(k) => mutate(toggleRowHidden(custom, k))}
+          onRename={(k, v) => mutate(renameRow(custom, k, v))}
+          onReset={() =>
+            mutate({ ...resetHomeRows(), customSources: custom.customSources ?? [], listRows: custom.listRows ?? [] })
+          }
+          onClose={() => setCustomizeOpen(false)}
+        />
+      )}
+      {grid && (
+        <MobileGridSheet
+          title={grid.title}
+          fetcher={grid.fetcher}
+          initial={grid.initial.length >= 20 ? grid.initial.slice(0, 20) : undefined}
+          onClose={() => setGrid(null)}
+        />
+      )}
       {detailMeta && (
         <MobileDetail meta={detailMeta} onClose={() => setDetailMeta(null)} />
       )}
@@ -475,59 +692,5 @@ function HomeSkeleton() {
       <RailSkeleton titleW="w-28" />
       <RailSkeleton titleW="w-36" />
     </div>
-  );
-}
-
-function HeroSkeleton() {
-  // Geometry mirrors the real full-bleed MobileHero so the load->loaded swap is a
-  // cross-fade of identical boxes, not a reflow (was an inset rounded card -> jump).
-  return (
-    <section
-      className="relative -mt-3 mb-1"
-      style={{
-        marginLeft: "calc(-1 * env(safe-area-inset-left, 0px))",
-        marginRight: "calc(-1 * env(safe-area-inset-right, 0px))",
-      }}
-    >
-      <div className="relative h-[62svh] min-h-[min(440px,72svh)] [@media(max-height:500px)]:h-[50svh] [@media(max-height:500px)]:min-h-0 w-full overflow-hidden bg-surface">
-        <div className="absolute inset-x-0 bottom-0 h-[38%] bg-gradient-to-t from-canvas to-transparent" />
-        <div
-          className="absolute inset-x-0 bottom-0 flex flex-col gap-3.5"
-          style={{
-            paddingBottom: "1.75rem",
-            paddingLeft: "max(1.25rem, env(safe-area-inset-left, 0px))",
-            paddingRight: "max(1.25rem, env(safe-area-inset-right, 0px))",
-          }}
-        >
-          <div className="h-3.5 w-32 rounded bg-elevated/50" />
-          <div className="h-9 w-3/5 rounded-lg bg-elevated/55" />
-          <div className="h-3.5 w-2/5 rounded bg-elevated/40" />
-          <div className="mt-1.5 flex items-center gap-2.5">
-            <div className="h-[54px] flex-1 rounded-full bg-elevated/50" />
-            <div className="h-[54px] w-[54px] shrink-0 rounded-full bg-elevated/45" />
-            <div className="h-[54px] w-[54px] shrink-0 rounded-full bg-elevated/45" />
-          </div>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function RailSkeleton({ titleW }: { titleW: string }) {
-  return (
-    <section className="flex flex-col gap-3">
-      <div className="px-4">
-        <div className={`h-[18px] ${titleW} rounded-md bg-elevated/45`} />
-      </div>
-      <div className="flex gap-3 overflow-hidden px-4 pb-1">
-        {Array.from({ length: 5 }).map((_, i) => (
-          <div key={i} className="w-[124px] shrink-0">
-            <div className="aspect-[2/3] rounded-lg bg-elevated/40" />
-            <div className="mt-1.5 h-2.5 w-4/5 rounded bg-elevated/35" />
-            <div className="mt-1.5 h-2.5 w-3/5 rounded bg-elevated/30" />
-          </div>
-        ))}
-      </div>
-    </section>
   );
 }

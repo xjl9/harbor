@@ -1,10 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { Meta } from "@/lib/cinemeta";
 import { topMovies } from "@/lib/cinemeta";
 import { recentlyPlayed } from "@/lib/playback-history";
 import { useSettings } from "@/lib/settings";
 import { useT } from "@/lib/i18n";
 import { useHideAnimeMetas, useHideAnimeRows } from "@/lib/anime-hide";
+import { useCollectionRowsForPage } from "@/lib/page-collection-rows";
 import {
   buildMovieHero,
   HERO_POOL_TARGET,
@@ -12,10 +13,10 @@ import {
   rotateDaily,
 } from "@/views/movies/movie-specs";
 import { MobileHero } from "./mobile-hero";
-import { MobileRail, MobileRankRail } from "./mobile-rail";
 import { MobileDetail } from "./mobile-detail";
+import { CatalogPageRows, listPager, type PageRow } from "./browse/catalog-page-rows";
 
-type RowData = { key: string; title: string; metas: Meta[] };
+type RowData = { key: string; title: string; metas: Meta[]; fetcher?: (page: number) => Promise<Meta[]> };
 
 const GENRES = [
   "Action",
@@ -72,7 +73,12 @@ export function MobileMovies() {
           const pages = await Promise.all(specs.map((s) => s.fetcher(1).catch(() => [] as Meta[])));
           if (!alive) return;
           const tmdbRows = specs
-            .map((spec, i) => ({ key: spec.key, title: spec.title, metas: pages[i] }))
+            .map((spec, i) => ({
+              key: spec.key,
+              title: spec.title,
+              metas: pages[i],
+              fetcher: spec.noPaginate ? listPager(pages[i]) : spec.fetcher,
+            }))
             .filter((r) => r.metas.length > 0);
           if (tmdbRows.length > 0) {
             heroPool = built;
@@ -90,14 +96,15 @@ export function MobileMovies() {
             HERO_POOL_TARGET,
             seen,
           );
-          rowList = [{ key: "cinemeta-top", title: "Top Movies", metas: top }];
+          rowList = [{ key: "cinemeta-top", title: "Top Movies", metas: top, fetcher: listPager(top) }];
           for (let i = 0; i < GENRES.length; i++) {
             const list = byGenre[i] ?? [];
             if (list.length === 0) continue;
             rowList.push({
-              key: `cinemeta-${GENRES[i].toLowerCase().replace(/[^a-z]/g, "")}`,
+              key: `cinemeta-genre-${GENRES[i].toLowerCase().replace(/[^a-z]/g, "")}`,
               title: `Top ${GENRES[i]}`,
               metas: list,
+              fetcher: listPager(list),
             });
           }
         }
@@ -117,6 +124,43 @@ export function MobileMovies() {
 
   const shownRows = useHideAnimeRows(rows);
   const shownHero = useHideAnimeMetas(hero);
+  const movieCollections = useCollectionRowsForPage("movies");
+
+  // Same composition as the desktop Movies page: a Top 10 from the trending row,
+  // then the user's collections for this page, then the spec rows with titles
+  // already shown higher up removed.
+  const catalogRows = useMemo<PageRow[]>(() => {
+    const trending = shownRows.find((r) => r.key === "trending");
+    const top10 = dedupeMetas(trending?.metas ?? []).slice(0, 10);
+    const seen = new Set<string>(shownHero.map((m) => m.id));
+    if (top10.length >= 10) for (const m of top10) seen.add(m.id);
+    const rest: PageRow[] = shownRows
+      .filter((r) => r.key !== "trending" || top10.length < 10)
+      .map((r) => ({
+        key: r.key,
+        title: r.title,
+        fetcher: r.fetcher,
+        metas: dedupeMetas(r.metas).filter((m) => {
+          if (seen.has(m.id)) return false;
+          seen.add(m.id);
+          return true;
+        }),
+      }))
+      .filter((r) => r.metas.length >= 4);
+    const collections: PageRow[] = movieCollections
+      .filter((c) => c.items.length > 0)
+      .map((c) => ({
+        key: `collection-${c.id}`,
+        title: c.name,
+        translate: false,
+        metas: c.items.map((it) => ({ id: it.id, type: it.type, name: it.name, poster: it.poster })),
+      }));
+    const head: PageRow[] =
+      top10.length >= 10
+        ? [{ key: "top10", title: "Top 10 Movies Today", metas: top10, fetcher: trending?.fetcher, variant: "rank" }]
+        : [];
+    return [...head, ...collections, ...rest];
+  }, [shownRows, shownHero, movieCollections]);
 
   if (loading && rows.length === 0) {
     return <MoviesSkeleton />;
@@ -145,21 +189,7 @@ export function MobileMovies() {
   return (
     <div className="flex flex-col gap-7 [@media(max-height:500px)]:gap-4 pt-3 motion-safe:[animation:harbor-step-in_420ms_var(--ease-out)_both]">
       <MobileHero slides={shownHero} onOpenDetail={setDetailMeta} />
-      {shownRows[0] && shownRows[0].metas.length >= 6 && (
-        <MobileRankRail
-          title={t("Top 10 Movies Today")}
-          metas={dedupeMetas(shownRows[0].metas)}
-          onOpenDetail={setDetailMeta}
-        />
-      )}
-      {shownRows.slice(1).map((r) => (
-        <MobileRail
-          key={r.key}
-          title={t(r.title)}
-          metas={dedupeMetas(r.metas).slice(0, 18)}
-          onOpenDetail={setDetailMeta}
-        />
-      ))}
+      <CatalogPageRows page="movies" rows={catalogRows} customizeTitle={t("Movies")} onOpenDetail={setDetailMeta} />
       <div className="h-4" />
       {detailMeta && <MobileDetail meta={detailMeta} onClose={() => setDetailMeta(null)} />}
     </div>
@@ -177,33 +207,42 @@ function MoviesSkeleton() {
   );
 }
 
-function HeroSkeleton() {
+export function HeroSkeleton() {
+  // Geometry mirrors the full-bleed MobileHero so the load to loaded swap is a
+  // cross-fade of identical boxes rather than a reflow.
   return (
-    <section className="flex flex-col gap-3">
-      <div className="px-4">
-        <div className="relative aspect-[16/11] w-full overflow-hidden rounded-3xl bg-surface ring-1 ring-edge-soft/50 [@media(max-height:500px)]:aspect-auto [@media(max-height:500px)]:h-[62svh]">
-          <div className="absolute inset-x-0 bottom-0 flex flex-col gap-3 p-5">
-            <div className="h-5 w-28 rounded-md bg-elevated/50" />
-            <div className="h-7 w-2/3 rounded-lg bg-elevated/55" />
-            <div className="h-3.5 w-2/5 rounded bg-elevated/40" />
+    <section
+      className="relative -mt-3 mb-1"
+      style={{
+        marginLeft: "calc(-1 * env(safe-area-inset-left, 0px))",
+        marginRight: "calc(-1 * env(safe-area-inset-right, 0px))",
+      }}
+    >
+      <div className="relative h-[62svh] min-h-[min(440px,72svh)] [@media(max-height:500px)]:h-[50svh] [@media(max-height:500px)]:min-h-0 w-full overflow-hidden bg-surface">
+        <div className="absolute inset-x-0 bottom-0 h-[38%] bg-gradient-to-t from-canvas to-transparent" />
+        <div
+          className="absolute inset-x-0 bottom-0 flex flex-col gap-3.5"
+          style={{
+            paddingBottom: "1.75rem",
+            paddingLeft: "max(1.25rem, env(safe-area-inset-left, 0px))",
+            paddingRight: "max(1.25rem, env(safe-area-inset-right, 0px))",
+          }}
+        >
+          <div className="h-3.5 w-32 rounded bg-elevated/50" />
+          <div className="h-9 w-3/5 rounded-lg bg-elevated/55" />
+          <div className="h-3.5 w-2/5 rounded bg-elevated/40" />
+          <div className="mt-1.5 flex items-center gap-2.5">
+            <div className="h-[54px] flex-1 rounded-full bg-elevated/50" />
+            <div className="h-[54px] w-[54px] shrink-0 rounded-full bg-elevated/45" />
+            <div className="h-[54px] w-[54px] shrink-0 rounded-full bg-elevated/45" />
           </div>
         </div>
-        <div className="mt-3.5 flex items-center gap-2.5">
-          <div className="h-[52px] w-[132px] rounded-full bg-elevated/45" />
-          <div className="h-[52px] w-[52px] shrink-0 rounded-full bg-elevated/40" />
-          <div className="h-[52px] w-[52px] shrink-0 rounded-full bg-elevated/40" />
-        </div>
-      </div>
-      <div className="flex items-center justify-center gap-1.5">
-        <span className="h-1.5 w-5 rounded-full bg-ink/20" />
-        <span className="h-1.5 w-1.5 rounded-full bg-ink/12" />
-        <span className="h-1.5 w-1.5 rounded-full bg-ink/12" />
       </div>
     </section>
   );
 }
 
-function RailSkeleton({ titleW }: { titleW: string }) {
+export function RailSkeleton({ titleW }: { titleW: string }) {
   return (
     <section className="flex flex-col gap-3">
       <div className="px-4">

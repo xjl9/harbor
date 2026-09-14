@@ -104,6 +104,46 @@ pub(crate) async fn set_audio_delay<R: Runtime>(
 }
 
 #[tauri::command]
+pub(crate) async fn add_subtitle<R: Runtime>(
+    app: AppHandle<R>,
+    payload: AddSubtitleRequest,
+) -> crate::Result<EmptyResponse> {
+    app.harbor_player().add_subtitle(payload)
+}
+
+#[tauri::command]
+pub(crate) async fn set_sub_visible<R: Runtime>(
+    app: AppHandle<R>,
+    payload: SubVisibleRequest,
+) -> crate::Result<EmptyResponse> {
+    app.harbor_player().set_sub_visible(payload)
+}
+
+#[tauri::command]
+pub(crate) async fn set_secondary_subtitle_track<R: Runtime>(
+    app: AppHandle<R>,
+    payload: TrackRequest,
+) -> crate::Result<EmptyResponse> {
+    app.harbor_player().set_secondary_subtitle_track(payload)
+}
+
+#[tauri::command]
+pub(crate) async fn set_sub_style<R: Runtime>(
+    app: AppHandle<R>,
+    payload: SubStyleRequest,
+) -> crate::Result<EmptyResponse> {
+    app.harbor_player().set_sub_style(payload)
+}
+
+#[tauri::command]
+pub(crate) async fn set_sub_fps<R: Runtime>(
+    app: AppHandle<R>,
+    payload: SubFpsRequest,
+) -> crate::Result<EmptyResponse> {
+    app.harbor_player().set_sub_fps(payload)
+}
+
+#[tauri::command]
 pub(crate) async fn show_route_picker<R: Runtime>(
     app: AppHandle<R>,
 ) -> crate::Result<EmptyResponse> {

@@ -1,6 +1,37 @@
 // Phone shell strings for library surfaces; the i18n coverage test requires every
 // translated locale to carry every t() key used by the app.
 const mobileLibrary: Record<string, string> = {
+  "Filter by type": "प्रकार के अनुसार फ़िल्टर करें",
+  "Name and description": "नाम और विवरण",
+  "Reorder items": "आइटम का क्रम बदलें",
+  "Nothing is streaming right now.": "अभी कुछ भी स्ट्रीम नहीं हो रहा है।",
+  "Simkl section": "Simkl सेक्शन",
+  "Download paused": "डाउनलोड रोका गया",
+  "Download episode": "एपिसोड डाउनलोड करें",
+  "Saved movies and episodes for offline use": "ऑफ़लाइन देखने के लिए सेव की गई फ़िल्में और एपिसोड",
+  "Filter downloads": "डाउनलोड फ़िल्टर करें",
+  "Stored on this device": "इस डिवाइस पर स्टोर है",
+  "1 saved": "1 सेव किया गया",
+  "{count} saved": "{count} सेव किए गए",
+  "{size} in progress": "{size} जारी है",
+  "Open a movie or episode, tap Download, and pick a source. It saves here for offline watching.": "कोई फ़िल्म या एपिसोड खोलें, डाउनलोड पर टैप करें और कोई सोर्स चुनें। यह ऑफ़लाइन देखने के लिए यहाँ सेव हो जाएगा।",
+  "Your library is empty": "आपकी लाइब्रेरी खाली है",
+  "Everything you save from Stremio, Trakt, and this device collects here.": "Stremio, Trakt और इस डिवाइस से सेव की गई हर चीज़ यहाँ इकट्ठा होती है।",
+  "Save a movie or show from any detail page and it lines up here for later.": "किसी भी डिटेल पेज से कोई फ़िल्म या शो सेव करें, वह बाद के लिए यहाँ रहेगा।",
+  "Press play on something. It shows up here once you start watching.": "कुछ चलाएँ। देखना शुरू करते ही वह यहाँ दिखेगा।",
+  "Your local library is empty": "आपकी लोकल लाइब्रेरी खाली है",
+  "Scan local folders in Harbor and your movies and shows will appear here.": "Harbor में लोकल फ़ोल्डर स्कैन करें, आपकी फ़िल्में और शो यहाँ दिखेंगे।",
+  "No media-server titles": "मीडिया सर्वर का कोई टाइटल नहीं",
+  "Enable and sync Plex, Jellyfin, or Emby in Harbor to browse them here.": "यहाँ ब्राउज़ करने के लिए Harbor में Plex, Jellyfin या Emby चालू करके सिंक करें।",
+  "any quality": "कोई भी क्वालिटी",
+  "up to 4K": "4K तक",
+  "up to 1080p": "1080p तक",
+  "up to 720p": "720p तक",
+  "cached only": "सिर्फ़ कैश्ड",
+  "allow P2P downloads": "P2P डाउनलोड की अनुमति दें",
+  "for 3 more episodes": "3 और एपिसोड के लिए",
+  "for 5 more episodes": "5 और एपिसोड के लिए",
+  "for 10 more episodes": "10 और एपिसोड के लिए",
 };
 
 export default mobileLibrary;

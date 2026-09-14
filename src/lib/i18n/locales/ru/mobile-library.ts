@@ -1,6 +1,37 @@
 // Phone shell strings for library surfaces; the i18n coverage test requires every
 // translated locale to carry every t() key used by the app.
 const mobileLibrary: Record<string, string> = {
+  "Filter by type": "Фильтр по типу",
+  "Name and description": "Название и описание",
+  "Reorder items": "Изменить порядок",
+  "Nothing is streaming right now.": "Сейчас ничего не транслируется.",
+  "Simkl section": "Раздел Simkl",
+  "Download paused": "Загрузка приостановлена",
+  "Download episode": "Скачать эпизод",
+  "Saved movies and episodes for offline use": "Сохранённые фильмы и эпизоды для просмотра офлайн",
+  "Filter downloads": "Фильтр загрузок",
+  "Stored on this device": "Хранится на этом устройстве",
+  "1 saved": "Сохранено: 1",
+  "{count} saved": "Сохранено: {count}",
+  "{size} in progress": "В процессе: {size}",
+  "Open a movie or episode, tap Download, and pick a source. It saves here for offline watching.": "Откройте фильм или эпизод, нажмите «Скачать» и выберите источник. Файл сохранится здесь для просмотра офлайн.",
+  "Your library is empty": "Ваша библиотека пуста",
+  "Everything you save from Stremio, Trakt, and this device collects here.": "Всё, что вы сохраняете из Stremio, Trakt и на этом устройстве, собирается здесь.",
+  "Save a movie or show from any detail page and it lines up here for later.": "Сохраните фильм или сериал на любой странице с подробностями, и он будет ждать здесь.",
+  "Press play on something. It shows up here once you start watching.": "Включите что-нибудь. Оно появится здесь, как только вы начнёте смотреть.",
+  "Your local library is empty": "Ваша локальная библиотека пуста",
+  "Scan local folders in Harbor and your movies and shows will appear here.": "Просканируйте локальные папки в Harbor, и ваши фильмы и сериалы появятся здесь.",
+  "No media-server titles": "Нет тайтлов с медиасерверов",
+  "Enable and sync Plex, Jellyfin, or Emby in Harbor to browse them here.": "Включите и синхронизируйте Plex, Jellyfin или Emby в Harbor, чтобы просматривать их здесь.",
+  "any quality": "любое качество",
+  "up to 4K": "до 4K",
+  "up to 1080p": "до 1080p",
+  "up to 720p": "до 720p",
+  "cached only": "только из кеша",
+  "allow P2P downloads": "разрешить P2P-загрузки",
+  "for 3 more episodes": "ещё на 3 эпизода",
+  "for 5 more episodes": "ещё на 5 эпизодов",
+  "for 10 more episodes": "ещё на 10 эпизодов",
 };
 
 export default mobileLibrary;

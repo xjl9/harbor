@@ -4,7 +4,7 @@ import type { AwardEntry, AwardType } from "@/lib/providers/wikidata";
 import { useT } from "@/lib/i18n";
 import { SectionTitle } from "./ui";
 
-const AWARD_TITLE: Record<AwardType, string> = {
+export const AWARD_TITLE: Record<AwardType, string> = {
   oscar: "Academy Awards",
   emmy: "Primetime Emmys",
   golden_globe: "Golden Globes",

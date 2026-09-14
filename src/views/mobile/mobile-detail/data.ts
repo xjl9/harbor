@@ -1,6 +1,29 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type Dispatch,
+  type SetStateAction,
+} from "react";
 import { meta as fetchCinemetaMeta, narrowMediaType, type Meta } from "@/lib/cinemeta";
-import { tmdbDetails, type TmdbDetail } from "@/lib/providers/tmdb";
+import {
+  tmdbDetails,
+  tmdbWatchProviders,
+  type CastEntry,
+  type TmdbDetail,
+  type WatchProvider,
+} from "@/lib/providers/tmdb";
+import { omdbScores, type OmdbScores } from "@/lib/providers/omdb";
+import { useMdblistScores, type MdblistScores } from "@/lib/providers/mdblist";
+import { harborImdbTitle } from "@/lib/providers/harbor-imdb";
+import { useSettings } from "@/lib/settings";
+import { useTvdbCastFallback } from "@/views/detail/use-tvdb-cast-fallback";
+import {
+  loadDetailCustomization,
+  type DetailCustomization,
+} from "@/lib/detail-customization";
 import { EASE_IN, EASE_OUT, MOTION } from "@/lib/motion";
 
 // Same incremental windowing as desktop anime-episodes: long seasons (absolute
@@ -13,6 +36,12 @@ export function useEpisodeWindow(total: number, resetSig: string) {
   useEffect(() => {
     setRenderCount(WINDOW_STEP);
   }, [resetSig]);
+  // "Go to episode" needs a row that may not be mounted yet: grow the window to
+  // cover it before the scroll looks for it.
+  const reveal = useCallback(
+    (index: number) => setRenderCount((c) => (index < c ? c : Math.min(total, index + 1))),
+    [total],
+  );
   const hasMore = renderCount < total;
   const sentinelRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -30,7 +59,7 @@ export function useEpisodeWindow(total: number, resetSig: string) {
     io.observe(el);
     return () => io.disconnect();
   }, [hasMore, total]);
-  return { renderCount, hasMore, sentinelRef };
+  return { renderCount, hasMore, sentinelRef, reveal };
 }
 
 export const prefersReducedMotion = () =>
@@ -244,4 +273,134 @@ export function tmdbTvId(meta: Meta, detail: TmdbDetail | null): number | null {
 export function stillFrom(path: string | null, url?: string): string | undefined {
   if (path) return path.startsWith("http") ? path : `https://image.tmdb.org/t/p/w300${path}`;
   return url;
+}
+
+function needsCast(detail: TmdbDetail | null): boolean {
+  if (!detail) return false;
+  if (detail.cast.length === 0) return true;
+  return detail.cast.every((c) => c.id < 0 && !c.profilePath);
+}
+
+/**
+ * Desktop's TVDB cast fallback wants a state setter for the whole detail. The
+ * phone's detail comes out of two hooks that own their own state, so the
+ * setter it is handed grafts the fetched cast onto whatever detail is current
+ * instead of replacing it. The graft is keyed on the title so a stale cast can
+ * never land on the next title after in-stack navigation.
+ */
+export function useCastFallbackDetail(
+  meta: Meta,
+  base: TmdbDetail | null,
+  kitsuId: number | null,
+): TmdbDetail | null {
+  const [patch, setPatch] = useState<{ id: string; cast: CastEntry[] } | null>(null);
+  const baseRef = useRef(base);
+  baseRef.current = base;
+  const idRef = useRef(meta.id);
+  idRef.current = meta.id;
+  const setDetail = useCallback<Dispatch<SetStateAction<TmdbDetail | null>>>((action) => {
+    const prev = baseRef.current;
+    const next = typeof action === "function" ? action(prev) : action;
+    if (next && next !== prev && next.cast.length > 0) {
+      setPatch({ id: idRef.current, cast: next.cast });
+    }
+  }, []);
+  const detail = useMemo(() => {
+    if (!base || !patch || patch.id !== meta.id || !needsCast(base)) return base;
+    return { ...base, cast: patch.cast };
+  }, [base, patch, meta.id]);
+  useTvdbCastFallback(meta, detail, kitsuId, setDetail);
+  return detail;
+}
+
+/**
+ * The extra rating sources the desktop hero shows: OMDb (RT critics, Metacritic,
+ * an IMDb figure), MDBList (Letterboxd, Trakt, RT audience, Simkl, its own
+ * score) and Harbor's hosted IMDb figure. Each is keyed off the IMDb id and
+ * silently absent without its key, exactly as on desktop.
+ */
+export function useRatingSources(
+  imdbId: string | null,
+  mediaType: "movie" | "show",
+): { scores: OmdbScores | null; mdblist: MdblistScores | null; harborImdb: string | null } {
+  const { settings } = useSettings();
+  const [scores, setScores] = useState<OmdbScores | null>(null);
+  const [harborImdb, setHarborImdb] = useState<string | null>(null);
+  const mdblist = useMdblistScores(settings.mdblistKey, imdbId, mediaType);
+
+  useEffect(() => {
+    setScores(null);
+    if (!imdbId || !settings.omdbKey) return;
+    let alive = true;
+    omdbScores(settings.omdbKey, imdbId, mediaType === "movie" ? "movie" : "series")
+      .then((s) => {
+        if (alive) setScores(s);
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [imdbId, settings.omdbKey, mediaType]);
+
+  useEffect(() => {
+    setHarborImdb(null);
+    if (!imdbId || !imdbId.startsWith("tt")) return;
+    let alive = true;
+    harborImdbTitle(imdbId)
+      .then((r) => {
+        if (alive && r != null) setHarborImdb(r.toFixed(1));
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [imdbId]);
+
+  return { scores, mdblist, harborImdb };
+}
+
+export function useWatchProviders(
+  detail: TmdbDetail | null,
+  enabled: boolean,
+): WatchProvider[] {
+  const { settings } = useSettings();
+  const [providers, setProviders] = useState<WatchProvider[]>([]);
+  const kind = detail?.kind;
+  const id = detail?.id;
+  useEffect(() => {
+    setProviders([]);
+    if (!enabled || !settings.tmdbKey || !detail) return;
+    if ((kind !== "movie" && kind !== "tv") || !Number.isFinite(Number(id))) return;
+    let alive = true;
+    tmdbWatchProviders(settings.tmdbKey, kind, id as number, settings.region)
+      .then((p) => {
+        if (alive) setProviders(p);
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+    // The identity is (kind, id); the detail object itself churns as extras land.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [enabled, settings.tmdbKey, settings.region, kind, id]);
+  return providers;
+}
+
+const LAYOUT_KEY = "harbor.detailLayout";
+
+/**
+ * The section order and hidden set the user arranged on the desktop detail
+ * page. Read once and refreshed when another tab writes it, so a phone that
+ * shares the store (browser build, or a settings transfer) follows along.
+ */
+export function useDetailLayout(): DetailCustomization {
+  const [layout, setLayout] = useState<DetailCustomization>(loadDetailCustomization);
+  useEffect(() => {
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === null || e.key === LAYOUT_KEY) setLayout(loadDetailCustomization());
+    };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, []);
+  return layout;
 }

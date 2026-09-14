@@ -15,9 +15,9 @@ import { MobileTimeLabel } from "./mobile-seek-bar";
 // a permanent grey background. At 1x it is the plain text on the picture; changing
 // the speed lights it, which is the one state worth painting.
 //
-// No Episodes button: the UP NEXT tab on the screen edge opens the same panel and
-// is visible whether the chrome is up or not, so a second way in only made the row
-// longer.
+// An Episodes button for series. The UP NEXT edge tab still exists, but it fades
+// with the chrome, sits on the side the notch covers in landscape, and on a phone
+// is a 32pt-wide target; the row is where every other control already lives.
 export function MobileActionRow({
   durationSec,
   active,
@@ -26,15 +26,18 @@ export function MobileActionRow({
   hdrGamma,
   rate,
   showRate,
+  sleepActive = false,
   canPickAnother,
   hasPrevEp,
   hasNextEp,
   showPiP,
+  showEpisodes = false,
   onSpeed,
   onPickAnother,
   onPrevEp,
   onNextEp,
   onPiP,
+  onEpisodes,
 }: {
   durationSec: number;
   active: boolean;
@@ -43,26 +46,40 @@ export function MobileActionRow({
   hdrGamma: string;
   rate: number;
   showRate: boolean;
+  /** A running sleep timer lights the speed control, where the timer is set. */
+  sleepActive?: boolean;
   canPickAnother: boolean;
   hasPrevEp: boolean;
   hasNextEp: boolean;
   showPiP: boolean;
+  showEpisodes?: boolean;
   onSpeed: () => void;
   onPickAnother: () => void;
   onPrevEp: () => void;
   onNextEp: () => void;
   onPiP: () => void;
+  onEpisodes?: () => void;
 }) {
   const t = useT();
   const leftGroup = canPickAnother;
-  const rightGroup = hasPrevEp || hasNextEp || showPiP;
+  const rightGroup = hasPrevEp || hasNextEp || showPiP || showEpisodes;
   return (
     <div className="flex h-11 items-center justify-between">
       <div className="flex min-w-0 items-center gap-2.5 overflow-hidden">
         <MobileTimeLabel durationSec={durationSec} active={active} />
-        <MobileQualityBadges videoWidth={videoWidth} videoHeight={videoHeight} hdrGamma={hdrGamma} />
+        {/* The badges go first on a narrow portrait phone: with Episodes added, a
+            series on a 393pt screen needs the room for its transport buttons, and
+            the resolution is already on the stream the viewer picked. */}
+        <span className="flex items-center [@media(max-width:400px)]:hidden">
+          <MobileQualityBadges videoWidth={videoWidth} videoHeight={videoHeight} hdrGamma={hdrGamma} />
+        </span>
         {showRate && (
-          <MobileButton label={t("Playback speed")} onClick={onSpeed} active={rate !== 1} wide>
+          <MobileButton
+            label={t("Speed and sleep timer")}
+            onClick={onSpeed}
+            active={rate !== 1 || sleepActive}
+            wide
+          >
             <span className="font-jakarta text-[13px] font-semibold tabular-nums">{fmtRate(rate)}</span>
           </MobileButton>
         )}
@@ -82,6 +99,11 @@ export function MobileActionRow({
         {hasNextEp && (
           <MobileButton label={t("Next episode")} onClick={onNextEp}>
             <MobileGlyph url={MOBILE_GLYPH.nextEpisode} size={MOBILE_GLYPH_SIZE} />
+          </MobileButton>
+        )}
+        {showEpisodes && onEpisodes && (
+          <MobileButton label={t("Episodes")} onClick={onEpisodes}>
+            <MobileGlyph url={MOBILE_GLYPH.upNext} size={MOBILE_GLYPH_SIZE} />
           </MobileButton>
         )}
         {showPiP && (

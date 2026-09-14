@@ -1,11 +1,13 @@
-import { ChevronRight, Star } from "lucide-react";
+import { useCallback, useRef, useState, type ReactNode } from "react";
+import { ChevronRight } from "lucide-react";
 import type { Meta } from "@/lib/cinemeta";
 import { Poster } from "@/components/poster";
 import { useSettings } from "@/lib/settings";
 import { usePosterChain } from "@/components/poster";
-import { findTopAward, awardSourceMeta, parseAwardYear } from "@/lib/anime-awards";
-import { resolveAwardIcon, useAwardPacks } from "@/lib/award-icons";
 import { useMobileRemote } from "./mobile-remote";
+import { TileChrome } from "./browse/card-chrome";
+import { CardActionsSheet } from "./browse/card-actions-sheet";
+import { useLongPress } from "./browse/use-long-press";
 
 type OpenDetail = (m: Meta) => void;
 
@@ -20,37 +22,79 @@ const TILE_CULL = "[content-visibility:auto]";
 // override it with a slower duration and their own scale target, which is why a
 // poster felt different under the finger than the button beside it.
 
-export function MobileRail({
+export function RailHeader({
   title,
-  metas,
+  kicker,
   onSeeAll,
-  onOpenDetail,
-  variant = "poster",
+  trailing,
 }: {
-  title: string;
-  metas: Meta[];
+  title: ReactNode;
+  kicker?: string;
   onSeeAll?: () => void;
-  onOpenDetail?: OpenDetail;
-  variant?: "poster" | "landscape";
+  trailing?: ReactNode;
 }) {
-  if (metas.length === 0) return null;
   return (
-    <section className={`flex flex-col gap-3 ${RAIL_CULL}`}>
+    <div className="flex items-end justify-between gap-3 px-4">
       <button
         type="button"
         onClick={onSeeAll}
         disabled={!onSeeAll}
-        className="flex items-center gap-1 px-4 text-start disabled:cursor-default"
+        className="flex min-h-[28px] min-w-0 flex-col items-start text-start disabled:cursor-default"
       >
-        <h2 className="font-display text-[19px] font-medium tracking-[-0.01em] text-ink">{title}</h2>
-        {onSeeAll && <ChevronRight size={19} strokeWidth={2.4} className="text-ink-subtle" />}
+        <span className="flex max-w-full items-center gap-1">
+          <h2 className="truncate font-display text-[19px] font-medium tracking-[-0.01em] text-ink">{title}</h2>
+          {onSeeAll && <ChevronRight size={19} strokeWidth={2.4} className="dir-icon shrink-0 text-ink-subtle" />}
+        </span>
+        {kicker && (
+          <span className="max-w-full truncate text-[10.5px] font-semibold uppercase tracking-[0.16em] text-ink-subtle">
+            {kicker}
+          </span>
+        )}
       </button>
+      {trailing}
+    </div>
+  );
+}
+
+export function MobileRail({
+  title,
+  kicker,
+  metas,
+  onSeeAll,
+  onOpenDetail,
+  variant = "poster",
+  leading,
+  trailing,
+  awardLookup,
+}: {
+  title: ReactNode;
+  kicker?: string;
+  metas: Meta[];
+  onSeeAll?: () => void;
+  onOpenDetail?: OpenDetail;
+  variant?: "poster" | "landscape";
+  // A tile placed before the posters (the spotlight rail's person card).
+  leading?: ReactNode;
+  trailing?: ReactNode;
+  // Award lookup names per meta id, for rails whose titles are franchise roots.
+  awardLookup?: Record<string, string>;
+}) {
+  if (metas.length === 0) return null;
+  return (
+    <section className={`flex flex-col gap-3 ${RAIL_CULL}`}>
+      <RailHeader title={title} kicker={kicker} onSeeAll={onSeeAll} trailing={trailing} />
       <div className="flex gap-3 overflow-x-auto px-4 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-        {metas.map((m) =>
+        {leading}
+        {metas.map((m, i) =>
           variant === "poster" ? (
-            <PosterTile key={m.id} meta={m} onOpenDetail={onOpenDetail} />
+            <PosterTile
+              key={`${m.id}-${i}`}
+              meta={m}
+              onOpenDetail={onOpenDetail}
+              awardLookupName={awardLookup?.[m.id]}
+            />
           ) : (
-            <LandscapeTile key={m.id} meta={m} onOpenDetail={onOpenDetail} />
+            <LandscapeTile key={`${m.id}-${i}`} meta={m} onOpenDetail={onOpenDetail} />
           ),
         )}
       </div>
@@ -72,15 +116,7 @@ export function MobileRankRail({
   if (metas.length === 0) return null;
   return (
     <section className={`flex flex-col gap-3 ${RAIL_CULL}`}>
-      <button
-        type="button"
-        onClick={onSeeAll}
-        disabled={!onSeeAll}
-        className="flex items-center gap-1 px-4 text-start disabled:cursor-default"
-      >
-        <h2 className="font-display text-[19px] font-medium tracking-[-0.01em] text-ink">{title}</h2>
-        {onSeeAll && <ChevronRight size={19} strokeWidth={2.4} className="text-ink-subtle" />}
-      </button>
+      <RailHeader title={title} onSeeAll={onSeeAll} />
       <div className="flex gap-1 overflow-x-auto ps-4 pe-4 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {metas.slice(0, 10).map((m, i) => (
           <RankTile key={m.id} meta={m} rank={i + 1} onOpenDetail={onOpenDetail} />
@@ -95,9 +131,22 @@ function useOpen(onOpenDetail?: OpenDetail) {
   return (meta: Meta) => (onOpenDetail ? onOpenDetail(meta) : openOnHost(meta));
 }
 
+// Long-press actions shared by every tile shape: a hold opens the card sheet,
+// the same actions the desktop card offers on right-click.
+function useCardSheet(meta: Meta, onOpenDetail?: OpenDetail) {
+  const open = useOpen(onOpenDetail);
+  const [sheet, setSheet] = useState(false);
+  const onLong = useCallback(() => setSheet(true), []);
+  const press = useLongPress(onLong);
+  const node = sheet ? (
+    <CardActionsSheet meta={meta} onClose={() => setSheet(false)} onOpenDetail={open} />
+  ) : null;
+  return { open, press, node };
+}
+
 function RankTile({ meta, rank, onOpenDetail }: { meta: Meta; rank: number; onOpenDetail?: OpenDetail }) {
   const { settings } = useSettings();
-  const open = useOpen(onOpenDetail);
+  const { open, press, node } = useCardSheet(meta, onOpenDetail);
   const { src, onError } = usePosterChain(
     settings.rpdbKey,
     meta.id,
@@ -105,110 +154,105 @@ function RankTile({ meta, rank, onOpenDetail }: { meta: Meta; rank: number; onOp
     meta.type === "series" ? "series" : "movie",
   );
   return (
-    <button
-      type="button"
-      onClick={() => open(meta)}
-      className={`w-[164px] shrink-0 text-start ${TILE_CULL} [contain-intrinsic-size:auto_210px]`}
-    >
-      <div className="relative w-full" style={{ aspectRatio: "164 / 184" }}>
-        {/* Confident solid serif numeral — editorial ranked-list, not Netflix's ghost outline. */}
-        <span
-          aria-hidden
-          className="pointer-events-none absolute bottom-0 -start-[3%] select-none font-medium leading-[0.7] text-raised"
-          style={{
-            fontFamily: "var(--font-display)",
-            fontSize: rank >= 10 ? "134px" : "180px",
-            letterSpacing: "-0.06em",
-          }}
-        >
-          {rank}
-        </span>
-        <div className="absolute bottom-0 end-0 w-[64%]">
-          <Poster
-            src={src}
-            onError={onError}
-            seed={meta.id}
-            ratio="portrait"
-            lazy="release"
-            className="rounded-[12px] shadow-[0_14px_32px_-16px_rgba(0,0,0,0.85)] ring-1 ring-white/[0.07]"
-          />
-        </div>
-      </div>
-      <p className="mt-2 line-clamp-1 ps-[36%] text-[12px] font-medium text-ink-muted">{meta.name}</p>
-    </button>
-  );
-}
-
-export function PosterTile({ meta, onOpenDetail }: { meta: Meta; onOpenDetail?: OpenDetail }) {
-  const { settings } = useSettings();
-  const open = useOpen(onOpenDetail);
-  const { src, onError } = usePosterChain(
-    settings.rpdbKey,
-    meta.id,
-    meta.poster,
-    meta.type === "series" ? "series" : "movie",
-  );
-  const award = findTopAward(meta.name, parseAwardYear(meta.releaseInfo));
-  return (
-    <button
-      type="button"
-      onClick={() => open(meta)}
-      className={`w-[124px] shrink-0 text-start ${TILE_CULL} [contain-intrinsic-size:auto_235px]`}
-    >
-      <Poster src={src} onError={onError} seed={meta.id} ratio="portrait" lazy="release" className="rounded-lg ring-1 ring-white/[0.06]">
-        {award && <AwardCorner award={award} />}
-        {!settings.rpdbKey && meta.imdbRating && (
-          <span className="pointer-events-none absolute bottom-1.5 end-1.5 flex items-center gap-0.5 rounded-md bg-black/70 px-1.5 py-0.5 text-[10.5px] font-bold text-white backdrop-blur-sm">
-            <Star size={9} strokeWidth={0} fill="#f5c518" className="text-[#f5c518]" />
-            {meta.imdbRating}
+    <>
+      <button
+        type="button"
+        onClick={() => open(meta)}
+        {...press}
+        className={`w-[164px] shrink-0 select-none text-start [-webkit-touch-callout:none] ${TILE_CULL} [contain-intrinsic-size:auto_210px]`}
+      >
+        <div className="relative w-full" style={{ aspectRatio: "164 / 184" }}>
+          {/* Confident solid serif numeral, an editorial ranked list rather than a ghost outline. */}
+          <span
+            aria-hidden
+            className="pointer-events-none absolute bottom-0 -start-[3%] select-none font-medium leading-[0.7] text-raised"
+            style={{
+              fontFamily: "var(--font-display)",
+              fontSize: rank >= 10 ? "134px" : "180px",
+              letterSpacing: "-0.06em",
+            }}
+          >
+            {rank}
           </span>
-        )}
-      </Poster>
-      <p className="mt-1.5 line-clamp-2 min-h-[2.7em] text-[12.5px] font-medium leading-snug text-ink-muted">
-        {meta.name}
-      </p>
-    </button>
+          <div className="absolute bottom-0 end-0 w-[64%]">
+            <Poster
+              src={src}
+              onError={onError}
+              seed={meta.id}
+              ratio="portrait"
+              lazy="release"
+              className="rounded-[12px] shadow-[0_14px_32px_-16px_rgba(0,0,0,0.85)] ring-1 ring-white/[0.07]"
+            />
+          </div>
+        </div>
+        <p className="mt-2 line-clamp-1 ps-[36%] text-[12px] font-medium text-ink-muted">{meta.name}</p>
+      </button>
+      {node}
+    </>
   );
 }
 
-function AwardCorner({ award }: { award: ReturnType<typeof findTopAward> }) {
-  useAwardPacks();
-  if (!award) return null;
-  const src = awardSourceMeta(award.source);
-  const custom = resolveAwardIcon(award.source);
+export function PosterTile({
+  meta,
+  onOpenDetail,
+  awardLookupName,
+  width = "w-[124px]",
+}: {
+  meta: Meta;
+  onOpenDetail?: OpenDetail;
+  awardLookupName?: string;
+  width?: string;
+}) {
+  const { settings } = useSettings();
+  const { open, press, node } = useCardSheet(meta, onOpenDetail);
+  const hostRef = useRef<HTMLButtonElement>(null);
+  const { src, onError } = usePosterChain(
+    settings.rpdbKey,
+    meta.id,
+    meta.poster,
+    meta.type === "series" ? "series" : "movie",
+  );
   return (
-    <span className="pointer-events-none absolute end-1.5 top-1.5 flex items-center gap-1 rounded-md bg-black/65 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white backdrop-blur-md">
-      <img
-        src={custom ?? src.iconSmall}
-        alt=""
-        width={10}
-        height={10}
-        className={`h-2.5 w-2.5 object-contain ${!custom && award.source === "animation_kobe" ? "brightness-0 invert" : ""}`}
-      />
-      {award.year}
-    </span>
+    <>
+      <button
+        ref={hostRef}
+        type="button"
+        onClick={() => open(meta)}
+        {...press}
+        className={`${width} shrink-0 select-none text-start [-webkit-touch-callout:none] ${TILE_CULL} [contain-intrinsic-size:auto_235px]`}
+      >
+        <div className="relative">
+          <Poster src={src} onError={onError} seed={meta.id} ratio="portrait" lazy="release" className="rounded-lg ring-1 ring-white/[0.06]" />
+          <TileChrome meta={meta} hostRef={hostRef} awardLookupName={awardLookupName} />
+        </div>
+        {!settings.hidePosterTitles && (
+          <p className="mt-1.5 line-clamp-2 min-h-[2.7em] text-[12.5px] font-medium leading-snug text-ink-muted">
+            {meta.name}
+          </p>
+        )}
+      </button>
+      {node}
+    </>
   );
 }
 
 function LandscapeTile({ meta, onOpenDetail }: { meta: Meta; onOpenDetail?: OpenDetail }) {
-  const open = useOpen(onOpenDetail);
+  const { open, press, node } = useCardSheet(meta, onOpenDetail);
   const bg = meta.background ?? meta.poster;
   return (
-    <button
-      type="button"
-      onClick={() => open(meta)}
-      className={`w-[240px] shrink-0 text-start ${TILE_CULL} [contain-intrinsic-size:auto_160px]`}
-    >
-      {/* Poster (not a raw img) so backdrops get tier right-sizing plus release-mode
-          unload; the raw w1280 img here was a top offender in the rail decode weight. */}
-      <Poster
-        src={bg}
-        seed={meta.id}
-        ratio="landscape"
-        lazy="release"
-        className="rounded-lg ring-1 ring-edge-soft/50"
-      />
-      <p className="mt-1.5 line-clamp-1 text-[13px] font-medium text-ink-muted">{meta.name}</p>
-    </button>
+    <>
+      <button
+        type="button"
+        onClick={() => open(meta)}
+        {...press}
+        className={`w-[240px] shrink-0 select-none text-start [-webkit-touch-callout:none] ${TILE_CULL} [contain-intrinsic-size:auto_160px]`}
+      >
+        {/* Poster (not a raw img) so backdrops get tier right-sizing plus release-mode
+            unload; the raw w1280 img here was a top offender in the rail decode weight. */}
+        <Poster src={bg} seed={meta.id} ratio="landscape" lazy="release" className="rounded-lg ring-1 ring-edge-soft/50" />
+        <p className="mt-1.5 line-clamp-1 text-[13px] font-medium text-ink-muted">{meta.name}</p>
+      </button>
+      {node}
+    </>
   );
 }

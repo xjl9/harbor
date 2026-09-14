@@ -102,6 +102,10 @@ import { HarborNameSync } from "@/components/harbor-name-sync";
 import { SettingsProfileBridge } from "@/lib/settings-profile-bridge";
 import { TrackerProfileBridge } from "@/lib/tracker-profile-bridge";
 import { ProfilePickerModal } from "@/components/profile-picker/picker-modal";
+// The phone shell answers pickerOpen and the kids curfew with its own screens.
+const MobileAccountOverlays = lazy(() =>
+  import("@/views/mobile/account/overlays").then((m) => ({ default: m.MobileAccountOverlays })),
+);
 import { WatchlistSync } from "@/lib/watchlist-sync";
 import { ContextMenuProvider } from "@/lib/context-menu";
 import { TopRankModalProvider } from "@/lib/top-rank-modal";
@@ -447,8 +451,16 @@ export function App({ onReady }: { onReady?: () => void }) {
                                                   <HoverPreview />
                                                   <CustomHoverCssMount />
                                                   <TopRankModal />
-                                                  <ProfilePickerModal />
-                                                  <CurfewGuard />
+                                                  {isMobileWeb() || isMobileNative() || isRemoteRoute() ? (
+                                                    <Suspense fallback={null}>
+                                                      <MobileAccountOverlays />
+                                                    </Suspense>
+                                                  ) : (
+                                                    <>
+                                                      <ProfilePickerModal />
+                                                      <CurfewGuard />
+                                                    </>
+                                                  )}
                                                   <SearchOverlay />
                                                   <SearchHotkey />
                                                   <LinkOutInterstitial />

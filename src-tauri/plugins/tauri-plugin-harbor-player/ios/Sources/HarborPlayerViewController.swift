@@ -17,6 +17,24 @@ struct NativeTrackEntry {
   // Only the mpv engine can read this from the container; the key is optional
   // on the wire and Android omits it too when unknown.
   var channelCount: Int? = nil
+  // Track identity the desktop subtitle menu filters and labels on (codec for
+  // text vs image subs, forced, SDH, embedded vs external). Defaulted so every
+  // existing construction site keeps compiling; mpv fills all of them, AVPlayer
+  // only the flags a media selection option exposes.
+  var codec: String? = nil
+  var title: String? = nil
+  var forced: Bool = false
+  var isDefault: Bool = false
+  var hearingImpaired: Bool = false
+  var external: Bool = false
+  var externalFilename: String? = nil
+  var secondary: Bool = false
+}
+
+/// One entry of mpv's chapter-list, carried to the JS seek bar as a marker.
+struct NativeChapter {
+  let title: String
+  let startSec: Double
 }
 
 final class HarborPlayerViewController: AVPlayerViewController, AVPlayerViewControllerDelegate,
@@ -132,6 +150,16 @@ final class HarborPlayerViewController: AVPlayerViewController, AVPlayerViewCont
   // strings Android plays but URL(string:) rejects, such as unencoded spaces.
   // Only reached when the raw parse failed, so valid URLs never re-encode.
   private static func foundationURL(_ raw: String) -> URL? {
+    // A saved download arrives as an absolute path (or a file:// URL built from
+    // one). URL(string:) turns a bare path into a scheme-less relative URL that
+    // AVPlayer rejects, and a file URL with an unencoded space fails to parse at
+    // all, so local files are built as file URLs from the path itself.
+    if raw.hasPrefix("/") { return URL(fileURLWithPath: raw) }
+    if raw.lowercased().hasPrefix("file://") {
+      if let url = URL(string: raw), url.isFileURL { return url }
+      let path = String(raw.dropFirst("file://".count))
+      return URL(fileURLWithPath: path.removingPercentEncoding ?? path)
+    }
     if let url = URL(string: raw) { return url }
     guard let encoded = raw.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) else {
       return nil
@@ -373,12 +401,18 @@ final class HarborPlayerViewController: AVPlayerViewController, AVPlayerViewCont
     guard let group = item.asset.mediaSelectionGroup(forMediaCharacteristic: characteristic)
     else { return [] }
     let selected = item.currentMediaSelection.selectedMediaOption(in: group)
-    return group.options.enumerated().map { index, option in
+    return group.options.enumerated().map { index, option -> NativeTrackEntry in
       let lang = option.extendedLanguageTag ?? ""
       let display = option.displayName
       let label = !display.isEmpty ? display : (!lang.isEmpty ? lang : "Track \(index + 1)")
-      return NativeTrackEntry(
+      var entry = NativeTrackEntry(
         id: "\(prefix)/\(index)", lang: lang, label: label, selected: option == selected)
+      // AVFoundation exposes forced and SDH as media characteristics, which are
+      // the two flags the subtitle list labels and filters on.
+      entry.forced = option.hasMediaCharacteristic(.containsOnlyForcedSubtitles)
+      entry.hearingImpaired = option.hasMediaCharacteristic(
+        .describesMusicAndSoundForAccessibility)
+      return entry
     }
   }
 

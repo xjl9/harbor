@@ -49,6 +49,11 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
             commands::set_volume,
             commands::set_sub_delay,
             commands::set_audio_delay,
+            commands::add_subtitle,
+            commands::set_sub_visible,
+            commands::set_secondary_subtitle_track,
+            commands::set_sub_style,
+            commands::set_sub_fps,
             commands::show_route_picker,
             commands::haptic,
         ])

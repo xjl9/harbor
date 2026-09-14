@@ -18,6 +18,11 @@ Allows the Harbor native player commands.
 - `allow-set-volume`
 - `allow-set-sub-delay`
 - `allow-set-audio-delay`
+- `allow-add-subtitle`
+- `allow-set-sub-visible`
+- `allow-set-secondary-subtitle-track`
+- `allow-set-sub-style`
+- `allow-set-sub-fps`
 - `allow-show-route-picker`
 - `allow-haptic`
 - `allow-registerListener`
@@ -32,6 +37,32 @@ Allows the Harbor native player commands.
 <th>Description</th>
 </tr>
 
+
+<tr>
+<td>
+
+`harbor-player:allow-add-subtitle`
+
+</td>
+<td>
+
+Enables the add_subtitle command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`harbor-player:deny-add-subtitle`
+
+</td>
+<td>
+
+Denies the add_subtitle command without any pre-configured scope.
+
+</td>
+</tr>
 
 <tr>
 <td>
@@ -374,6 +405,32 @@ Denies the set_rate command without any pre-configured scope.
 <tr>
 <td>
 
+`harbor-player:allow-set-secondary-subtitle-track`
+
+</td>
+<td>
+
+Enables the set_secondary_subtitle_track command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`harbor-player:deny-set-secondary-subtitle-track`
+
+</td>
+<td>
+
+Denies the set_secondary_subtitle_track command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
 `harbor-player:allow-set-sub-delay`
 
 </td>
@@ -393,6 +450,84 @@ Enables the set_sub_delay command without any pre-configured scope.
 <td>
 
 Denies the set_sub_delay command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`harbor-player:allow-set-sub-fps`
+
+</td>
+<td>
+
+Enables the set_sub_fps command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`harbor-player:deny-set-sub-fps`
+
+</td>
+<td>
+
+Denies the set_sub_fps command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`harbor-player:allow-set-sub-style`
+
+</td>
+<td>
+
+Enables the set_sub_style command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`harbor-player:deny-set-sub-style`
+
+</td>
+<td>
+
+Denies the set_sub_style command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`harbor-player:allow-set-sub-visible`
+
+</td>
+<td>
+
+Enables the set_sub_visible command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`harbor-player:deny-set-sub-visible`
+
+</td>
+<td>
+
+Denies the set_sub_visible command without any pre-configured scope.
 
 </td>
 </tr>

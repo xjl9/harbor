@@ -86,5 +86,59 @@ pub struct HapticRequest {
     pub kind: String,
 }
 
+/// External subtitle for the running item, the same mpv `sub-add` the sidecar
+/// batch already uses at load. Only the mpv engine honors it; the JS side never
+/// sends it to the AVPlayer engine because that engine reports the flag off.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AddSubtitleRequest {
+    pub url: String,
+    #[serde(default)]
+    pub title: Option<String>,
+    #[serde(default)]
+    pub lang: Option<String>,
+    /// Select the track once added; false leaves the current selection alone.
+    #[serde(default)]
+    pub select: bool,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SubVisibleRequest {
+    pub visible: bool,
+}
+
+/// Subtitle appearance for the mpv engine, mirroring the desktop applySubStyle
+/// mapping (src/lib/player/sub-style.ts) so a phone and a desktop render the
+/// same settings the same way. Colors are #RRGGBB; opacities are 0..1.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SubStyleRequest {
+    pub font_size: f64,
+    pub color: String,
+    pub border_size: f64,
+    pub border_color: String,
+    pub box_opacity: f64,
+    pub margin_y: f64,
+    // "left" | "center" | "right"
+    pub align_x: String,
+    pub bold: bool,
+    /// "shadow" | "outline" | "box"; missing means shadow.
+    #[serde(default)]
+    pub style: Option<String>,
+    #[serde(default)]
+    pub box_color: Option<String>,
+    /// Text opacity 0..1; missing means opaque.
+    #[serde(default)]
+    pub opacity: Option<f64>,
+}
+
+/// Subtitle source frame rate for mpv's `sub-fps`; 0 restores the default.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SubFpsRequest {
+    pub fps: f64,
+}
+
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct EmptyResponse {}

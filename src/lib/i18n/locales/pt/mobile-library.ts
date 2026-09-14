@@ -1,6 +1,37 @@
 // Phone shell strings for library surfaces; the i18n coverage test requires every
 // translated locale to carry every t() key used by the app.
 const mobileLibrary: Record<string, string> = {
+  "Filter by type": "Filtrar por tipo",
+  "Name and description": "Nome e descrição",
+  "Reorder items": "Reordenar títulos",
+  "Nothing is streaming right now.": "Nada sendo transmitido agora.",
+  "Simkl section": "Seção do Simkl",
+  "Download paused": "Download pausado",
+  "Download episode": "Baixar episódio",
+  "Saved movies and episodes for offline use": "Filmes e episódios salvos para assistir offline",
+  "Filter downloads": "Filtrar downloads",
+  "Stored on this device": "Armazenado neste dispositivo",
+  "1 saved": "1 salvo",
+  "{count} saved": "{count} salvos",
+  "{size} in progress": "{size} em andamento",
+  "Open a movie or episode, tap Download, and pick a source. It saves here for offline watching.": "Abra um filme ou episódio, toque em Baixar e escolha uma fonte. Ele fica salvo aqui para assistir offline.",
+  "Your library is empty": "Sua biblioteca está vazia",
+  "Everything you save from Stremio, Trakt, and this device collects here.": "Tudo o que você salva no Stremio, no Trakt e neste dispositivo se reúne aqui.",
+  "Save a movie or show from any detail page and it lines up here for later.": "Salve um filme ou série em qualquer página de detalhes e ele fica aqui para depois.",
+  "Press play on something. It shows up here once you start watching.": "Dê play em algo. Aparece aqui assim que você começar a assistir.",
+  "Your local library is empty": "Sua biblioteca local está vazia",
+  "Scan local folders in Harbor and your movies and shows will appear here.": "Escaneie pastas locais no Harbor e seus filmes e séries aparecerão aqui.",
+  "No media-server titles": "Nenhum título de servidores de mídia",
+  "Enable and sync Plex, Jellyfin, or Emby in Harbor to browse them here.": "Ative e sincronize Plex, Jellyfin ou Emby no Harbor para navegar por eles aqui.",
+  "any quality": "qualquer qualidade",
+  "up to 4K": "até 4K",
+  "up to 1080p": "até 1080p",
+  "up to 720p": "até 720p",
+  "cached only": "somente em cache",
+  "allow P2P downloads": "permitir downloads P2P",
+  "for 3 more episodes": "por mais 3 episódios",
+  "for 5 more episodes": "por mais 5 episódios",
+  "for 10 more episodes": "por mais 10 episódios",
 };
 
 export default mobileLibrary;

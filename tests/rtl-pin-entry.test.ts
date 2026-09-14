@@ -18,6 +18,10 @@ const KEYPADS = [
 
 const BP_KEYPADS = ["src/views/big-picture/bp-who-is-watching-pin.tsx"];
 
+// The phone shell's PIN sheet draws its own keypad: the desktop modal keeps a
+// hidden, refocused input, which on iOS raises the system keyboard over the pad.
+const PHONE_KEYPADS = ["src/views/mobile/mobile-view-switcher.tsx"];
+
 test("Arabic really does flip the document, so PIN order is at risk", () => {
   assert.match(read("src/lib/i18n/store.ts"), /root\.dir = isRtl\(lang\) \? "rtl" : "ltr";/);
   assert.match(read("src/lib/i18n/languages.ts"), /code: "ar",[^\n]*rtl: true/);
@@ -55,6 +59,22 @@ test("the ten-foot keypad stays left to right too", () => {
   }
 });
 
+test("the phone keypad stays left to right too", () => {
+  for (const p of PHONE_KEYPADS) {
+    const src = read(p);
+    assert.match(
+      src,
+      /<div dir="ltr" className="relative grid grid-cols-3 gap-2\.5">/,
+      `${p} keypad would render 3,2,1 in Arabic`,
+    );
+    assert.match(
+      src,
+      /<div dir="ltr" className="relative flex items-center justify-center gap-3\.5 pb-2">/,
+      `${p} PIN dots would fill right to left in Arabic`,
+    );
+  }
+});
+
 test("these are still the only numeric keypads in the app", () => {
   const found: string[] = [];
   const walk = (dir: URL) => {
@@ -70,5 +90,5 @@ test("these are still the only numeric keypads in the app", () => {
     }
   };
   walk(at("src/"));
-  assert.deepEqual(found.sort(), [...KEYPADS, ...BP_KEYPADS].sort());
+  assert.deepEqual(found.sort(), [...KEYPADS, ...BP_KEYPADS, ...PHONE_KEYPADS].sort());
 });

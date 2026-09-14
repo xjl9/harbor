@@ -1,10 +1,12 @@
 import {
+  Suspense,
   useCallback,
   useEffect,
   useLayoutEffect,
   useMemo,
   useRef,
   useState,
+  type ReactNode,
 } from "react";
 import { createPortal } from "react-dom";
 import {
@@ -23,23 +25,40 @@ import {
   pickHeroAwards,
   useAwards,
 } from "@/lib/providers/wikidata";
+import { parseKitsuId } from "@/lib/providers/kitsu";
 import { mergeBundledAwards } from "@/lib/awards-history";
 import { useSettings } from "@/lib/settings";
 import { useT } from "@/lib/i18n";
 import { useHideAnimeMetas } from "@/lib/anime-hide";
 import { sizeImageUrl } from "@/lib/img-size";
+import { openUrl } from "@/lib/window";
+import { lastPlayedEpisode } from "@/lib/resume";
+import { manualWatchedState } from "@/lib/manual-watched";
+import { orderedSectionKeys } from "@/lib/detail-customization";
+import { stremioIdToTraktTarget, type IdResolution } from "@/lib/trakt/ids";
+import { useTogether } from "@/lib/together/provider";
+import { HeroRatings } from "@/views/detail/hero-ratings";
+import { isTitleUpcoming } from "@/views/detail/helpers";
+import { StreamingLinks } from "@/views/detail/streaming-links";
+import { WatchOn } from "@/views/detail/watch-on";
+import { MobilePerson } from "../destinations";
 import { useMobileRemote } from "../mobile-remote";
 import { useRegisterSheet } from "../mobile-sheet-lock";
 import {
   DETAIL_CSS,
   firstEpisode,
   seasonList,
+  useCastFallbackDetail,
   useCinemetaFull,
+  useDetailLayout,
+  useRatingSources,
   useReducedMotion,
   useTmdbDetail,
+  useWatchProviders,
+  type Ep,
 } from "./data";
 import { Hero } from "./hero";
-import { DetailActions } from "./actions";
+import { DetailActions, isResumingMovie } from "./actions";
 import { Line, Overview } from "./ui";
 import { EpisodeSection } from "./episodes";
 import {
@@ -70,6 +89,11 @@ import { useAnimeAnilistDetails } from "@/views/detail/use-anime-anilist-details
 import { useAnimeCharacters } from "@/views/detail/use-anime-characters";
 import { useMalRating } from "@/lib/mal-rating";
 import { MOBILE_INTENT_EVENT } from "../mobile-intent";
+import { PhoneCollectionRow, PhoneLetterboxdPanel } from "./sections";
+import { PhoneMediaGallery } from "./gallery";
+import { AnilistCommentsPhone, LetterboxdReviewsPhone, TraktCommentsPhone } from "./comments";
+import { EpisodePage } from "./episode-page";
+import { PersonPage } from "./person-page";
 
 export function MobileDetail({
   meta,
@@ -248,6 +272,7 @@ export function MobileDetail({
       role="dialog"
       aria-modal="true"
       aria-label={current.name}
+      data-md-scroll
       onAnimationEnd={(e) => {
         if (closing && e.target === e.currentTarget) finish();
       }}
@@ -276,6 +301,10 @@ export function MobileDetail({
     : node;
 }
 
+// Agent-built phone Person page, when the destinations module provides one.
+// Held in a local so the conditional below narrows it.
+const ExternalPerson = MobilePerson;
+
 function DetailBody({
   meta,
   onBack,
@@ -287,13 +316,16 @@ function DetailBody({
 }) {
   const t = useT();
   const { settings } = useSettings();
-  const { playOnHost, openOnHost, snapshot } = useMobileRemote();
+  const { playOnHost, snapshot } = useMobileRemote();
+  const { snapshot: room, claimHost } = useTogether();
   const key = settings.tmdbKey;
   const isAnime = isAnimeId(meta.id);
   const full = useCinemetaFull(meta);
   const tmdb = useTmdbDetail(meta, key);
   const anime = useAnimeDetail(meta, isAnime);
-  const detail = isAnime ? anime.detail : tmdb.detail;
+  const kitsuId = anime.canonicalId ? parseKitsuId(anime.canonicalId) : null;
+  // Desktop fills an empty or placeholder cast from TVDB; the phone does too.
+  const detail = useCastFallbackDetail(meta, isAnime ? anime.detail : tmdb.detail, kitsuId);
   const loading = isAnime ? anime.loading : tmdb.loading;
 
   // Everything below the synopsis mounts in one commit the moment the fetch
@@ -328,10 +360,14 @@ function DetailBody({
       : undefined,
   );
 
+  // Person taps used to forward to the desktop host. They now open on the
+  // phone: the destinations Person page when it exists, otherwise the
+  // filmography page built here from the desktop person hooks.
+  const [person, setPerson] = useState<{ id: number; name: string } | null>(null);
+  const [episodePage, setEpisodePage] = useState<{ season: number; episode: number } | null>(null);
   const handlePerson = useCallback(
-    (id: number, name: string) =>
-      openOnHost({ id: `person:${id}`, type: "movie", name } as Meta),
-    [openOnHost],
+    (id: number, name: string) => setPerson({ id, name }),
+    [],
   );
 
   const isSeries =
@@ -344,12 +380,42 @@ function DetailBody({
     detail?.backdrop || full?.background || meta.background || meta.poster;
   const backdrop = backdropSrc ? sizeImageUrl(backdropSrc, 1280) : undefined;
   const year = (detail?.year || meta.releaseInfo || "").slice(0, 4);
-  const imdbRating = meta.imdbRating || full?.imdbRating;
-  const rating = isAnime ? malRating : imdbRating || detail?.rating;
   const runtime = detail?.runtime;
   const genres = (detail?.genres?.length ? detail.genres : meta.genres) ?? [];
   const overview =
     detail?.overview || full?.description || meta.description || "";
+
+  const imdbId = detail?.imdbId ?? (meta.id.startsWith("tt") ? meta.id : null);
+  const { scores, mdblist, harborImdb } = useRatingSources(
+    imdbId,
+    meta.type === "movie" ? "movie" : "show",
+  );
+  // Same precedence as desktop: hosted IMDb, OMDb, then the Cinemeta figure.
+  const imdbRatingValue =
+    harborImdb ??
+    scores?.imdbRating ??
+    (meta.id.startsWith("tt") ? meta.imdbRating : undefined) ??
+    full?.imdbRating;
+  const rating = isAnime ? malRating : imdbRatingValue || detail?.rating || meta.imdbRating;
+  const ratings = (
+    // The rating links are desktop-size; the negative margin grows each hit
+    // area to the 44pt floor without spreading the wrapped rows apart.
+    <div className="empty:hidden [&_button]:-my-[13px] [&_button]:min-h-11">
+      <HeroRatings
+        compact
+        bare
+        rating={rating || undefined}
+        isAnime={isAnime}
+        scores={scores}
+        mdblist={mdblist}
+        imdbId={imdbId}
+        mediaType={meta.type === "movie" ? "movie" : "show"}
+        ratingSource={isAnime || imdbRatingValue ? "imdb" : "tmdb"}
+        animeImdbRating={isAnime ? harborImdb : null}
+        onOpenUrl={openUrl}
+      />
+    </div>
+  );
 
   const availability = useMemo(() => {
     const ids = new Set(
@@ -363,13 +429,13 @@ function DetailBody({
         const match = meta.id.match(/^tmdb:(?:movie|tv|series):(\d+)$/i);
         return match ? Number(match[1]) : undefined;
       })();
-    const imdbId = (
+    const imdb = (
       detail?.imdbId ?? (meta.id.startsWith("tt") ? meta.id : undefined)
     )?.toLowerCase();
     const matches = (item: NonNullable<typeof snapshot.library>["local"][number]) =>
       ids.has(item.id.toLowerCase()) ||
       (tmdbId != null && item.tmdbId === tmdbId) ||
-      (!!imdbId && item.imdbId?.toLowerCase() === imdbId);
+      (!!imdb && item.imdbId?.toLowerCase() === imdb);
     const local = snapshot.library?.local?.some(matches) ?? false;
     const providers = new Set<"jellyfin" | "emby" | "plex">();
     for (const item of snapshot.library?.mediaServers ?? []) {
@@ -379,7 +445,6 @@ function DetailBody({
     return { local, providers: [...providers] };
   }, [meta.id, detail, snapshot.library]);
 
-  const imdbId = detail?.imdbId ?? (meta.id.startsWith("tt") ? meta.id : null);
   const releaseYear = Number(year) || undefined;
   const liveAwards = useAwards(imdbId ?? undefined, isSeries);
   const awards = useMemo(
@@ -396,6 +461,9 @@ function DetailBody({
   const first = useMemo(() => firstEpisode(full, seasons), [full, seasons]);
   const trailerId =
     detail?.trailerCandidates?.[0] ?? meta.trailerStreams?.[0]?.ytId ?? null;
+  const watchProviders = useWatchProviders(detail, !isAnime);
+  const layout = useDetailLayout();
+  const upcoming = !loading && isTitleUpcoming(detail, meta);
 
   const { recItems, simItems } = useMemo(() => {
     if (!detail) return { recItems: [] as Meta[], simItems: [] as Meta[] };
@@ -411,18 +479,163 @@ function DetailBody({
   const shownRecItems = useHideAnimeMetas(recItems);
   const shownSimItems = useHideAnimeMetas(simItems);
 
+  // Resume where the user left off, as the desktop Play does, unless that
+  // episode has since been marked unwatched by hand.
+  const lastPlay = useMemo(() => {
+    if (!isSeries) return null;
+    const lp = lastPlayedEpisode(meta.id);
+    if (!lp || lp.season < 1 || lp.episode < 1) return null;
+    if (manualWatchedState(meta.id, lp.season, lp.episode) === false) return null;
+    return lp;
+  }, [isSeries, meta.id]);
+  const inSession = room.state === "joined" && room.participants.length >= 2;
+  const playLabel = inSession
+    ? t("Play Together")
+    : lastPlay
+      ? t("Resume S{s}:E{e}", { s: lastPlay.displaySeason ?? lastPlay.season, e: lastPlay.episode })
+      : isResumingMovie(meta)
+        ? t("Resume")
+        : t("Play");
+
   const onPlay = () => {
+    if (inSession) claimHost(true);
     if (isAnime) {
       const firstAnime = firstAnimeEpisode(anime.episodes);
       if (firstAnime)
         playOnHost(playMeta, { playEpisode: toPlayEpisode(firstAnime) });
       else playOnHost(playMeta);
-    } else if (isSeries && first) {
-      playOnHost(meta, { season: first.season, episode: first.episode });
+    } else if (isSeries && (lastPlay || first)) {
+      const target = lastPlay ?? first!;
+      playOnHost(meta, { season: target.season, episode: target.episode });
     } else {
       playOnHost(meta);
     }
   };
+
+  const playEpisode = (ep: Ep) =>
+    playOnHost(meta, {
+      season: ep.season,
+      episode: ep.episode,
+      playEpisode: {
+        season: ep.season,
+        episode: ep.episode,
+        name: ep.name,
+        still: ep.still,
+        overview: ep.overview,
+        runtime: ep.runtime ?? undefined,
+      },
+    });
+
+  const traktResolution = useMemo((): IdResolution => {
+    if (isAnime) return { ok: false, reason: "anime" };
+    const tmdbId = detail?.id;
+    const ids: Record<string, string | number> = {};
+    if (imdbId) ids.imdb = imdbId;
+    if (tmdbId) ids.tmdb = tmdbId;
+    if (isSeries && (imdbId || (tmdbId && detail?.kind === "tv"))) {
+      return { ok: true, target: { kind: "show", ids } } as IdResolution;
+    }
+    if (!isSeries && (imdbId || tmdbId)) {
+      return { ok: true, target: { kind: "movie", ids } } as IdResolution;
+    }
+    return stremioIdToTraktTarget(meta.id);
+  }, [meta.id, isSeries, isAnime, imdbId, detail?.id, detail?.kind]);
+
+  // The customizable part of the page, keyed exactly as desktop keys its
+  // sections so an order or hidden set arranged there is honored here.
+  const sections: Array<{ key: string; node: ReactNode }> = [];
+  if (detail) {
+    sections.push({ key: "crew", node: <CrewSection detail={detail} onPerson={handlePerson} /> });
+  }
+  if (detail && detail.cast.length > 0) {
+    sections.push({
+      key: "cast",
+      node: <CastRow cast={detail.cast} onPerson={isAnime ? undefined : handlePerson} />,
+    });
+  } else if (isAnime ? loading : key && loading) {
+    sections.push({ key: "cast", node: <CastSkeleton /> });
+  }
+  if (isAnime && animeCharacters.length > 0) {
+    sections.push({
+      key: "animeCharacters",
+      node: <CharactersRow characters={dedupeCharacters(animeCharacters)} />,
+    });
+  }
+  if (detail?.collection) {
+    sections.push({
+      key: "collection",
+      node: <PhoneCollectionRow collection={detail.collection} currentId={meta.id} onOpen={onOpenMeta} />,
+    });
+  }
+  if (detail && shownRecItems.length > 0) {
+    sections.push({
+      key: "moreLikeThis",
+      node: <RecRail title={t("More Like This")} items={shownRecItems} onOpen={onOpenMeta} />,
+    });
+  }
+  if (detail && shownSimItems.length > 0) {
+    sections.push({
+      key: "similar",
+      node: <RecRail title={t("You Might Also Like")} items={shownSimItems} onOpen={onOpenMeta} />,
+    });
+  }
+  if (isAnime && anilist && anilist.relatedAnime.length > 0) {
+    sections.push({
+      key: "animeRelated",
+      node: (
+        <AnimeRelatedRow
+          title={t("Related Anime")}
+          nodes={dedupeRelated(anilist.relatedAnime)}
+          onOpen={(n) => onOpenMeta(relatedToMeta(n))}
+        />
+      ),
+    });
+  }
+  if (isAnime && anilist && anilist.adaptations.length > 0) {
+    sections.push({
+      key: "animeAdaptations",
+      node: <AnimeRelatedRow title={t("Adaptations")} nodes={dedupeRelated(anilist.adaptations)} />,
+    });
+  }
+  if (detail) {
+    sections.push({
+      key: "mediaGallery",
+      node: <PhoneMediaGallery detail={detail} title={title} logo={logo} metaId={meta.id} />,
+    });
+  }
+  if (awardGroups.length > 0) {
+    sections.push({ key: "awards", node: <AwardsSection groups={awardGroups} awards={awards} /> });
+  }
+  if (isAnime && anilist && hasAnimeTitles(anilist, title)) {
+    sections.push({ key: "animeTitles", node: <AnimeTitles details={anilist} primaryTitle={title} /> });
+  }
+  if (isAnime && (detail || anilist)) {
+    sections.push({
+      key: "info",
+      node: <AnimeInfo detail={detail} anilist={anilist} malRating={malRating} />,
+    });
+  }
+  if (isAnime && anilist && anilist.statusDistribution.length > 0) {
+    sections.push({ key: "animeStats", node: <AnimeStats details={anilist} /> });
+  }
+  if (!isAnime && settings.showTraktComments === true) {
+    sections.push({ key: "traktComments", node: <TraktCommentsPhone resolution={traktResolution} /> });
+  }
+  if (isAnime && settings.showAnilistComments === true) {
+    sections.push({
+      key: "anilistComments",
+      node: <AnilistCommentsPhone harborId={anime.canonicalId ?? meta.id} />,
+    });
+  }
+  if (!isAnime) {
+    sections.push({ key: "letterboxdPanel", node: <PhoneLetterboxdPanel meta={meta} imdbId={imdbId} /> });
+    sections.push({ key: "letterboxdReviews", node: <LetterboxdReviewsPhone meta={meta} imdbId={imdbId} /> });
+  }
+  const byKey = new Map(sections.map((s) => [s.key, s.node]));
+  const ordered = orderedSectionKeys(
+    sections.map((s) => s.key),
+    layout,
+  ).filter((k) => !layout.hidden.includes(k));
 
   return (
     <div>
@@ -433,8 +646,7 @@ function DetailBody({
         logo={logo}
         backdrop={backdrop}
         year={year}
-        rating={rating}
-        isImdb={!isAnime && !!imdbRating}
+        ratings={ratings}
         runtime={runtime}
         genres={genres}
         awardSummary={heroAwardSummary}
@@ -458,8 +670,14 @@ function DetailBody({
           meta={meta}
           detail={detail}
           title={title}
+          logo={logo}
           trailerId={trailerId}
           onPlay={onPlay}
+          playLabel={playLabel}
+          upcoming={upcoming}
+          isAnime={isAnime}
+          isSeries={isSeries}
+          trackerId={isAnime ? (anime.canonicalId ?? meta.id) : meta.id}
         />
 
         {overview ? (
@@ -474,6 +692,9 @@ function DetailBody({
 
         {settled && (
           <>
+            {isAnime && anime.streamers.length > 0 && <StreamingLinks streamers={anime.streamers} />}
+            {!isAnime && watchProviders.length > 0 && <WatchOn providers={watchProviders} />}
+
             {isSeries && (
               <EpisodeSection
                 meta={meta}
@@ -481,9 +702,8 @@ function DetailBody({
                 detail={detail}
                 tmdbKey={key}
                 seasons={seasons}
-                onPlay={(ep) =>
-                  playOnHost(meta, { season: ep.season, episode: ep.episode })
-                }
+                onPlay={playEpisode}
+                onOpenEpisode={(ep) => setEpisodePage({ season: ep.season, episode: ep.episode })}
               />
             )}
 
@@ -497,74 +717,41 @@ function DetailBody({
               />
             )}
 
-            {detail && <CrewSection detail={detail} onPerson={handlePerson} />}
-
-            {detail && detail.cast.length > 0 ? (
-              <CastRow
-                cast={detail.cast}
-                onPerson={isAnime ? undefined : handlePerson}
-              />
-            ) : (isAnime ? loading : key && loading) ? (
-              <CastSkeleton />
-            ) : null}
-
-            {isAnime && animeCharacters.length > 0 && (
-              <CharactersRow characters={dedupeCharacters(animeCharacters)} />
-            )}
-
-            {detail && shownRecItems.length > 0 && (
-              <RecRail
-                title={t("More Like This")}
-                items={shownRecItems}
-                onOpen={onOpenMeta}
-              />
-            )}
-
-            {detail && shownSimItems.length > 0 && (
-              <RecRail
-                title={t("You Might Also Like")}
-                items={shownSimItems}
-                onOpen={onOpenMeta}
-              />
-            )}
-
-            {isAnime && anilist && anilist.relatedAnime.length > 0 && (
-              <AnimeRelatedRow
-                title={t("Related Anime")}
-                nodes={dedupeRelated(anilist.relatedAnime)}
-                onOpen={(n) => onOpenMeta(relatedToMeta(n))}
-              />
-            )}
-
-            {isAnime && anilist && anilist.adaptations.length > 0 && (
-              <AnimeRelatedRow
-                title={t("Adaptations")}
-                nodes={dedupeRelated(anilist.adaptations)}
-              />
-            )}
-
-            {isAnime && (detail || anilist) && (
-              <AnimeInfo
-                detail={detail}
-                anilist={anilist}
-                malRating={malRating}
-              />
-            )}
-
-            {isAnime && anilist && hasAnimeTitles(anilist, title) && (
-              <AnimeTitles details={anilist} primaryTitle={title} />
-            )}
-
-            {isAnime && anilist && anilist.statusDistribution.length > 0 && (
-              <AnimeStats details={anilist} />
-            )}
-
-            {awardGroups.length > 0 && (
-              <AwardsSection groups={awardGroups} awards={awards} />
-            )}
+            {ordered.map((k) => (
+              <div key={k} data-section={k} className="contents">
+                {byKey.get(k)}
+              </div>
+            ))}
           </>
         )}
       </div>
+
+      {episodePage && (
+        <EpisodePage
+          seriesMeta={meta}
+          season={episodePage.season}
+          episode={episodePage.episode}
+          onBack={() => setEpisodePage(null)}
+          onPlay={playEpisode}
+          onPerson={handlePerson}
+        />
+      )}
+      {person &&
+        (ExternalPerson ? (
+          <Suspense fallback={null}>
+            <ExternalPerson personId={String(person.id)} onBack={() => setPerson(null)} />
+          </Suspense>
+        ) : (
+          <PersonPage
+            personId={person.id}
+            onBack={() => setPerson(null)}
+            onOpenMeta={(m) => {
+              setPerson(null);
+              setEpisodePage(null);
+              onOpenMeta(m);
+            }}
+          />
+        ))}
     </div>
   );
 }

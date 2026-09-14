@@ -10,6 +10,7 @@ import { toggleWatchlist, useInWatchlist } from "@/lib/watchlist";
 import { ImdbIcon } from "@/components/icons/imdb-icon";
 import { useMobileRemote } from "./mobile-remote";
 import { useLayerActive } from "./layer-active";
+import { HeroTrailerLayer } from "./browse/hero-trailer";
 
 const AUTO_MS = 8000;
 const DISSOLVE_MS = 900;
@@ -58,6 +59,14 @@ export function MobileHero({
   const busyRef = useRef(false);
   const pausedUntil = useRef(0);
   const timers = useRef<number[]>([]);
+  // A playing trailer holds the carousel on its slide; rotating away mid-clip
+  // would tear the video down a few seconds after it faded in.
+  const trailerRef = useRef(false);
+  const [trailerPlaying, setTrailerPlaying] = useState(false);
+  const onTrailer = useCallback((playing: boolean) => {
+    trailerRef.current = playing;
+    setTrailerPlaying(playing);
+  }, []);
 
   useEffect(() => {
     const mq = window.matchMedia?.("(prefers-reduced-motion: reduce)");
@@ -121,7 +130,7 @@ export function MobileHero({
   useEffect(() => {
     if (!layerActive || shown.length < 2) return;
     const id = window.setInterval(() => {
-      if (reduceRef.current || busyRef.current || Date.now() < pausedUntil.current) return;
+      if (reduceRef.current || busyRef.current || trailerRef.current || Date.now() < pausedUntil.current) return;
       const cur = slotsRef.current[frontRef.current];
       goTo((cur + 1) % shown.length);
     }, AUTO_MS);
@@ -218,6 +227,13 @@ export function MobileHero({
           <div className="absolute inset-x-0 bottom-0 top-[30%] bg-gradient-to-t from-canvas via-canvas/70 to-transparent" />
           <div className="absolute inset-x-0 bottom-0 h-[38%] bg-gradient-to-t from-canvas to-transparent" />
         </button>
+        {/* Trailer autoplay (heroTrailers). It sits above the artwork but lets
+            every tap through to the art button beneath, and repaints the bottom
+            blend over itself so the caption stays legible on moving video. */}
+        <HeroTrailerLayer meta={current} active={layerActive && textOn} onPlaying={onTrailer} />
+        {trailerPlaying && (
+          <div aria-hidden className="pointer-events-none absolute inset-x-0 bottom-0 top-[30%] bg-gradient-to-t from-canvas via-canvas/70 to-transparent" />
+        )}
         {/* The column is capped so landscape does not stretch Play into a 740px
             slab. Portrait is narrower than the cap and so is unaffected, and the
             box stays anchored to the inline start, which flips under RTL. */}

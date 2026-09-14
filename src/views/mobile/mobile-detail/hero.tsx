@@ -1,8 +1,7 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { ChevronLeft, Star } from "lucide-react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { ChevronLeft } from "lucide-react";
 import { narrowMediaType, type Meta } from "@/lib/cinemeta";
 import { Poster, usePosterChain } from "@/components/poster";
-import { ImdbIcon } from "@/components/icons/imdb-icon";
 import { HeroAwardsCorner } from "@/views/detail/hero-awards";
 import { useSettings } from "@/lib/settings";
 import { useT } from "@/lib/i18n";
@@ -30,8 +29,7 @@ export function Hero({
   logo,
   backdrop,
   year,
-  rating,
-  isImdb,
+  ratings,
   runtime,
   genres,
   awardSummary,
@@ -44,8 +42,9 @@ export function Hero({
   logo?: string;
   backdrop?: string;
   year: string;
-  rating?: string;
-  isImdb: boolean;
+  // The desktop rating strip (every source with its logo), rendered by the
+  // caller so this component stays free of the rating providers.
+  ratings?: ReactNode;
   runtime?: string;
   genres: string[];
   awardSummary: HeroSummary;
@@ -112,12 +111,11 @@ export function Hero({
           )}
           <MetaPills
             year={year}
-            rating={rating}
-            isImdb={isImdb}
             runtime={runtime}
             genres={genres}
             availability={availability}
           />
+          {ratings}
         </div>
       </div>
     </div>
@@ -252,21 +250,18 @@ function HeroPoster({
 
 function MetaPills({
   year,
-  rating,
-  isImdb,
   runtime,
   genres,
   availability,
 }: {
   year: string;
-  rating?: string;
-  isImdb: boolean;
   runtime?: string;
   genres: string[];
   availability: { local: boolean; providers: MediaServerProvider[] };
 }) {
   // Clean inline metadata (matches the home hero) instead of a row of identical gray
-  // capsules — year/runtime recede, the rating is emphasized, genres are subtle.
+  // capsules: year and runtime recede, genres are subtle. The ratings live on
+  // their own line beneath, where up to nine logos have room to wrap.
   const items: React.ReactNode[] = [];
   if (year)
     items.push(
@@ -296,22 +291,6 @@ function MetaPills({
           name={mediaServerProviderName(provider)}
           compact
         />
-      </span>,
-    );
-  if (rating)
-    items.push(
-      <span key="r" className="flex items-center gap-1.5">
-        {isImdb ? (
-          <ImdbIcon className="h-[14px] w-auto rounded-[3px]" />
-        ) : (
-          <Star
-            size={12}
-            strokeWidth={0}
-            fill="currentColor"
-            className="text-accent"
-          />
-        )}
-        <span className="font-semibold text-ink">{rating}</span>
       </span>,
     );
   if (runtime) items.push(<span key="rt">{runtime}</span>);

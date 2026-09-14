@@ -56,6 +56,24 @@ impl<R: Runtime> HarborPlayer<R> {
     pub fn set_audio_delay(&self, _payload: DelayRequest) -> crate::Result<EmptyResponse> {
         Ok(EmptyResponse {})
     }
+    pub fn add_subtitle(&self, _payload: AddSubtitleRequest) -> crate::Result<EmptyResponse> {
+        Ok(EmptyResponse {})
+    }
+    pub fn set_sub_visible(&self, _payload: SubVisibleRequest) -> crate::Result<EmptyResponse> {
+        Ok(EmptyResponse {})
+    }
+    pub fn set_secondary_subtitle_track(
+        &self,
+        _payload: TrackRequest,
+    ) -> crate::Result<EmptyResponse> {
+        Ok(EmptyResponse {})
+    }
+    pub fn set_sub_style(&self, _payload: SubStyleRequest) -> crate::Result<EmptyResponse> {
+        Ok(EmptyResponse {})
+    }
+    pub fn set_sub_fps(&self, _payload: SubFpsRequest) -> crate::Result<EmptyResponse> {
+        Ok(EmptyResponse {})
+    }
     pub fn show_route_picker(&self) -> crate::Result<EmptyResponse> {
         Ok(EmptyResponse {})
     }

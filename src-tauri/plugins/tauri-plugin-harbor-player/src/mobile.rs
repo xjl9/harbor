@@ -99,6 +99,34 @@ impl<R: Runtime> HarborPlayer<R> {
             .run_mobile_plugin("setAudioDelay", payload)
             .map_err(Into::into)
     }
+    pub fn add_subtitle(&self, payload: AddSubtitleRequest) -> crate::Result<EmptyResponse> {
+        self.0
+            .run_mobile_plugin("addSubtitle", payload)
+            .map_err(Into::into)
+    }
+    pub fn set_sub_visible(&self, payload: SubVisibleRequest) -> crate::Result<EmptyResponse> {
+        self.0
+            .run_mobile_plugin("setSubVisible", payload)
+            .map_err(Into::into)
+    }
+    pub fn set_secondary_subtitle_track(
+        &self,
+        payload: TrackRequest,
+    ) -> crate::Result<EmptyResponse> {
+        self.0
+            .run_mobile_plugin("setSecondarySubtitleTrack", payload)
+            .map_err(Into::into)
+    }
+    pub fn set_sub_style(&self, payload: SubStyleRequest) -> crate::Result<EmptyResponse> {
+        self.0
+            .run_mobile_plugin("setSubStyle", payload)
+            .map_err(Into::into)
+    }
+    pub fn set_sub_fps(&self, payload: SubFpsRequest) -> crate::Result<EmptyResponse> {
+        self.0
+            .run_mobile_plugin("setSubFps", payload)
+            .map_err(Into::into)
+    }
     pub fn show_route_picker(&self) -> crate::Result<EmptyResponse> {
         self.0
             .run_mobile_plugin("showRoutePicker", ())

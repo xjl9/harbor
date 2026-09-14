@@ -375,6 +375,9 @@ final class HarborMpvViewController: UIViewController, HarborPlayerEngine {
     mpv_observe_property(handle, 0, "paused-for-cache", MPV_FORMAT_FLAG)
     mpv_observe_property(handle, 0, "eof-reached", MPV_FORMAT_FLAG)
     mpv_observe_property(handle, 0, "track-list", MPV_FORMAT_NONE)
+    // Chapters ride on the tracks event, so a container whose chapter table
+    // resolves after the tracks still reaches the seek bar.
+    mpv_observe_property(handle, 0, "chapter-list", MPV_FORMAT_NONE)
     // Not for display: the surface geometry depends on the decoded aspect, which
     // is unknown until the first frame. See layoutSurface.
     mpv_observe_property(handle, 0, "dwidth", MPV_FORMAT_NONE)
@@ -541,8 +544,10 @@ final class HarborMpvViewController: UIViewController, HarborPlayerEngine {
         // leave the end screen.
         emitState("ready")
       }
-    case "track-list":
-      // Covers late-appearing tracks and selection changes from any source.
+    case "track-list", "chapter-list":
+      // Covers late-appearing tracks, selection changes from any source, and a
+      // chapter table that resolves after the tracks (chapters ride on the
+      // tracks event).
       if fileLoaded { emitTracks() }
     default:
       break
@@ -636,6 +641,25 @@ final class HarborMpvViewController: UIViewController, HarborPlayerEngine {
     }
   }
 
+  /// A subtitle chosen after load: a search result, a local file, a finished
+  /// download. The same sub-add as the load-time sidecars and on the same event
+  /// queue, so a slow subtitle host never blocks main; the track-list observer
+  /// publishes the new track. Before the file has loaded there is nothing to
+  /// attach to, so it joins the sidecar batch instead.
+  func doAddSubtitle(_ args: AddSubtitleArgs) {
+    guard !args.url.isEmpty, mpv != nil, !shuttingDown else { return }
+    guard fileLoaded else {
+      pendingSubtitles.append(SubArg(url: args.url, lang: args.lang, label: args.title))
+      return
+    }
+    var commandArgs = [args.url, args.select ? "select" : "auto"]
+    if let title = args.title ?? args.lang {
+      commandArgs.append(title)
+      if let lang = args.lang { commandArgs.append(lang) }
+    }
+    runSubtitleBatch([commandArgs])
+  }
+
   private func addSidecarSubtitles() {
     guard !pendingSubtitles.isEmpty else { return }
     // Android flags every sidecar SELECTION_FLAG_DEFAULT and lets media3 pick
@@ -722,9 +746,12 @@ final class HarborMpvViewController: UIViewController, HarborPlayerEngine {
     onState?(status, code)
   }
 
-  private func emitTracks() {
+  // Internal, not private: the secondary-subtitle command in
+  // HarborMpvViewController+Commands.swift republishes the lists after a change.
+  func emitTracks() {
     guard mpv != nil, !shuttingDown else { return }
     let count = getInt64("track-list/count") ?? 0
+    let secondarySid = getString("secondary-sid")
     var audio: [NativeTrackEntry] = []
     var subtitle: [NativeTrackEntry] = []
     for index in 0..<count {
@@ -734,17 +761,36 @@ final class HarborMpvViewController: UIViewController, HarborPlayerEngine {
       else { continue }
       let lang = getString("\(base)/lang") ?? ""
       let title = getString("\(base)/title")
-      let selected = getFlag("\(base)/selected") ?? false
+      let rawSelected = getFlag("\(base)/selected") ?? false
       let ordinal = (type == "audio" ? audio.count : subtitle.count) + 1
       let label = (title?.isEmpty == false) ? title! : (!lang.isEmpty ? lang : "Track \(ordinal)")
+      let codec = getString("\(base)/codec")
+      let external = getFlag("\(base)/external") ?? false
       if type == "audio" {
         audio.append(
           NativeTrackEntry(
-            id: "a/\(id)", lang: lang, label: label, selected: selected,
-            channelCount: getInt64("\(base)/demux-channel-count").map { Int($0) }))
+            id: "a/\(id)", lang: lang, label: label, selected: rawSelected,
+            channelCount: getInt64("\(base)/demux-channel-count").map { Int($0) },
+            codec: codec, title: title, isDefault: getFlag("\(base)/default") ?? false,
+            external: external))
       } else {
+        // A secondary subtitle is also "selected" in mpv's track list, so tell the
+        // two apart the way the desktop bridge does: main-selection when this mpv
+        // reports it (1 is the secondary slot), otherwise the secondary-sid value.
+        let mainSelection = getInt64("\(base)/main-selection")
+        let secondary =
+          rawSelected
+          && (mainSelection.map { $0 == 1 } ?? (secondarySid == String(id)))
         subtitle.append(
-          NativeTrackEntry(id: "s/\(id)", lang: lang, label: label, selected: selected))
+          NativeTrackEntry(
+            id: "s/\(id)", lang: lang, label: label, selected: rawSelected && !secondary,
+            codec: codec, title: title,
+            forced: getFlag("\(base)/forced") ?? false,
+            isDefault: getFlag("\(base)/default") ?? false,
+            hearingImpaired: getFlag("\(base)/hearing-impaired") ?? false,
+            external: external,
+            externalFilename: getString("\(base)/external-filename"),
+            secondary: secondary))
       }
     }
     // Cache before emitting so the overlay's track picker reflects the same
@@ -1259,6 +1305,35 @@ final class HarborMpvViewController: UIViewController, HarborPlayerEngine {
       return .zero
     }
     return CGSize(width: Int(w), height: Int(h))
+  }
+
+  // Lives here for the same reason as decodedSize: the property getters are
+  // private to this file.
+  var chapters: [NativeChapter] {
+    let count = getInt64("chapter-list/count") ?? 0
+    guard count > 0 else { return [] }
+    var out: [NativeChapter] = []
+    for index in 0..<count {
+      guard let start = getDouble("chapter-list/\(index)/time"), start.isFinite else { continue }
+      out.append(
+        NativeChapter(title: getString("chapter-list/\(index)/title") ?? "", startSec: start))
+    }
+    return out
+  }
+
+  /// container-fps first: it is what the subtitle was most likely timed against,
+  /// and estimated-vf-fps wobbles during the first seconds of playback.
+  var videoFps: Double {
+    if let fps = getDouble("container-fps"), fps.isFinite, fps > 0 { return fps }
+    if let fps = getDouble("estimated-vf-fps"), fps.isFinite, fps > 0 { return fps }
+    return 0
+  }
+
+  private func getDouble(_ name: String) -> Double? {
+    guard let handle = mpv, !shuttingDown else { return nil }
+    var value = Double(0)
+    guard mpv_get_property(handle, name, MPV_FORMAT_DOUBLE, &value) >= 0 else { return nil }
+    return value
   }
 
   private func getInt64(_ name: String) -> Int64? {

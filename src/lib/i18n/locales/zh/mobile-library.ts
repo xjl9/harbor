@@ -1,6 +1,37 @@
 // Phone shell strings for library surfaces; the i18n coverage test requires every
 // translated locale to carry every t() key used by the app.
 const mobileLibrary: Record<string, string> = {
+  "Filter by type": "按类型筛选",
+  "Name and description": "名称和描述",
+  "Reorder items": "调整顺序",
+  "Nothing is streaming right now.": "当前没有正在播放的串流。",
+  "Simkl section": "Simkl 分区",
+  "Download paused": "下载已暂停",
+  "Download episode": "下载剧集",
+  "Saved movies and episodes for offline use": "已保存、可离线观看的电影和剧集",
+  "Filter downloads": "筛选下载内容",
+  "Stored on this device": "存储在此设备上",
+  "1 saved": "已保存 1 项",
+  "{count} saved": "已保存 {count} 项",
+  "{size} in progress": "{size} 进行中",
+  "Open a movie or episode, tap Download, and pick a source. It saves here for offline watching.": "打开电影或剧集，点按下载并选择来源。它会保存到这里以便离线观看。",
+  "Your library is empty": "你的片库为空",
+  "Everything you save from Stremio, Trakt, and this device collects here.": "你在 Stremio、Trakt 和此设备上保存的所有内容都会汇集在这里。",
+  "Save a movie or show from any detail page and it lines up here for later.": "在任意详情页保存电影或剧集，它会留在这里供你稍后观看。",
+  "Press play on something. It shows up here once you start watching.": "播放点什么吧。开始观看后就会显示在这里。",
+  "Your local library is empty": "你的本地片库为空",
+  "Scan local folders in Harbor and your movies and shows will appear here.": "在 Harbor 中扫描本地文件夹，你的电影和剧集就会显示在这里。",
+  "No media-server titles": "没有媒体服务器内容",
+  "Enable and sync Plex, Jellyfin, or Emby in Harbor to browse them here.": "在 Harbor 中启用并同步 Plex、Jellyfin 或 Emby，即可在这里浏览。",
+  "any quality": "任意画质",
+  "up to 4K": "最高 4K",
+  "up to 1080p": "最高 1080p",
+  "up to 720p": "最高 720p",
+  "cached only": "仅限已缓存",
+  "allow P2P downloads": "允许 P2P 下载",
+  "for 3 more episodes": "再下载 3 集",
+  "for 5 more episodes": "再下载 5 集",
+  "for 10 more episodes": "再下载 10 集",
 };
 
 export default mobileLibrary;

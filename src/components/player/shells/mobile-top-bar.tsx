@@ -1,4 +1,5 @@
-import type { CSSProperties } from "react";
+import { MoreHorizontal } from "lucide-react";
+import type { CSSProperties, ReactNode } from "react";
 import { useT } from "@/lib/i18n";
 import { SAFE_INLINE_20 } from "./mobile-chrome";
 import { MobileButton, MOBILE_GLYPH_SIZE } from "./mobile-button";
@@ -27,6 +28,9 @@ export function MobileTopBar({
   onToggleFill,
   onCast,
   onTracks,
+  onMore,
+  roomSlot,
+  belowBar,
 }: {
   title: string;
   subtitle?: string;
@@ -42,6 +46,12 @@ export function MobileTopBar({
   onToggleFill: () => void;
   onCast: () => void;
   onTracks: () => void;
+  /** Opens the More sheet; the last control, where the overflow always is. */
+  onMore?: () => void;
+  /** Watch Together avatars and chat, only while in a room. */
+  roomSlot?: ReactNode;
+  /** Hangs under the bar (the clock). */
+  belowBar?: ReactNode;
 }) {
   const t = useT();
   // Which episode is playing, not just which show. The bar used to carry the series
@@ -103,10 +113,23 @@ export function MobileTopBar({
             <MobileGlyph url={MOBILE_GLYPH.castIdle} size={MOBILE_GLYPH_SIZE} />
           </MobileButton>
         ) : null}
+        {roomSlot}
         <MobileButton label={t("Audio & Subtitles")} onClick={onTracks}>
           <MobileGlyph url={MOBILE_GLYPH.subtitles} size={MOBILE_GLYPH_SIZE} />
         </MobileButton>
+        {onMore && (
+          <MobileButton label={t("More")} onClick={onMore}>
+            <MoreHorizontal size={MOBILE_GLYPH_SIZE} strokeWidth={1.8} />
+          </MobileButton>
+        )}
       </div>
+      {/* Hangs under the bar and moves with it, the phone's version of the
+          desktop transport's local-time slot. */}
+      {belowBar && (
+        <div className="pointer-events-none relative mt-2 flex justify-center" style={zoneStyle}>
+          {belowBar}
+        </div>
+      )}
     </div>
   );
 }

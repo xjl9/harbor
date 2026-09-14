@@ -1,4 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
+import { useSyncExternalStore } from "react";
 import { isMobileNative, osClass } from "@/lib/platform";
 import type { PlayerCapabilities } from "./bridge";
 
@@ -40,12 +41,21 @@ export function setNativeVideoBehind(on: boolean): void {
   document.documentElement.classList.toggle(NATIVE_VIDEO_BEHIND_CLASS, on);
 }
 
+export function useNativeEngine(): NativeEngine | null {
+  return useSyncExternalStore(onNativeEngineChange, nativeEngine, nativeEngine);
+}
+
 /**
  * Capabilities for the native bridge, keyed on the iOS engine. AirPlay and PiP
  * only exist on the AVPlayer path (the mpv controller has neither a route
- * picker nor a PiP controller). Subtitle add/style/sync all depend on the web
- * subtitle renderer, which the native surfaces bypass. Android keeps its native
- * chrome, so the flags only matter to the iOS shell.
+ * picker nor a PiP controller). The mpv engine takes external subtitle files
+ * (sub-add), renders its own subtitles from the same sub-* properties the
+ * desktop styles, and exposes sub-fps, so it gets the full subtitle menu, the
+ * style sheet and manual timing. AVFoundation can do none of that for a
+ * progressive asset, so the AV engine keeps them off. Android keeps its native
+ * chrome and never reports an engine, so every engine-gated flag stays off there.
+ * Chromecast stays off on iOS: discovery needs Bonjour service types and the
+ * multicast entitlement the sideloaded build does not carry.
  */
 export function nativeCapabilities(): PlayerCapabilities {
   const ios = osClass() === "ios";
@@ -62,10 +72,34 @@ export function nativeCapabilities(): PlayerCapabilities {
     volume: true,
     subDelay: mpv,
     audioDelay: mpv,
-    addSubtitle: false,
-    subStyle: false,
-    subSync: false,
+    addSubtitle: mpv,
+    subStyle: mpv,
+    subSync: mpv,
   };
+}
+
+// Subtitle FPS state for the native mpv engine. The desktop panel reads these
+// straight from libmpv over invoke; the phone has no such command, so the plugin
+// reports the container frame rate with its tracks and the bridge remembers the
+// correction it last applied. Reset on every load, like the desktop transition.
+export type NativeSubFpsState = { videoFps: number; subFps: number };
+let subFpsState: NativeSubFpsState = { videoFps: 0, subFps: 0 };
+const subFpsListeners = new Set<() => void>();
+
+export function setNativeSubFpsState(patch: Partial<NativeSubFpsState>): void {
+  const next = { ...subFpsState, ...patch };
+  if (next.videoFps === subFpsState.videoFps && next.subFps === subFpsState.subFps) return;
+  subFpsState = next;
+  for (const l of subFpsListeners) l();
+}
+
+function subscribeSubFps(cb: () => void): () => void {
+  subFpsListeners.add(cb);
+  return () => subFpsListeners.delete(cb);
+}
+
+export function useNativeSubFpsState(): NativeSubFpsState {
+  return useSyncExternalStore(subscribeSubFps, () => subFpsState, () => subFpsState);
 }
 
 // Fire-and-forget plugin call for commands only iOS implements. Android

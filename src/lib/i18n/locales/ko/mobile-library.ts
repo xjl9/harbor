@@ -1,6 +1,37 @@
 // Phone shell strings for library surfaces; the i18n coverage test requires every
 // translated locale to carry every t() key used by the app.
 const mobileLibrary: Record<string, string> = {
+  "Filter by type": "유형별 필터",
+  "Name and description": "이름 및 설명",
+  "Reorder items": "항목 순서 변경",
+  "Nothing is streaming right now.": "현재 스트리밍 중인 항목이 없습니다.",
+  "Simkl section": "Simkl 섹션",
+  "Download paused": "다운로드 일시정지됨",
+  "Download episode": "에피소드 다운로드",
+  "Saved movies and episodes for offline use": "오프라인 시청용으로 저장한 영화와 에피소드",
+  "Filter downloads": "다운로드 필터",
+  "Stored on this device": "이 기기에 저장됨",
+  "1 saved": "1개 저장됨",
+  "{count} saved": "{count}개 저장됨",
+  "{size} in progress": "{size} 진행 중",
+  "Open a movie or episode, tap Download, and pick a source. It saves here for offline watching.": "영화나 에피소드를 열고 다운로드를 탭한 다음 소스를 선택하세요. 오프라인 시청을 위해 여기에 저장됩니다.",
+  "Your library is empty": "라이브러리가 비어 있습니다",
+  "Everything you save from Stremio, Trakt, and this device collects here.": "Stremio, Trakt, 이 기기에서 저장한 모든 항목이 여기에 모입니다.",
+  "Save a movie or show from any detail page and it lines up here for later.": "상세 페이지에서 영화나 프로그램을 저장하면 나중에 볼 수 있도록 여기에 모입니다.",
+  "Press play on something. It shows up here once you start watching.": "무언가를 재생해 보세요. 시청을 시작하면 여기에 표시됩니다.",
+  "Your local library is empty": "로컬 라이브러리가 비어 있습니다",
+  "Scan local folders in Harbor and your movies and shows will appear here.": "Harbor에서 로컬 폴더를 스캔하면 영화와 프로그램이 여기에 표시됩니다.",
+  "No media-server titles": "미디어 서버 타이틀 없음",
+  "Enable and sync Plex, Jellyfin, or Emby in Harbor to browse them here.": "Harbor에서 Plex, Jellyfin 또는 Emby를 켜고 동기화하면 여기에서 둘러볼 수 있습니다.",
+  "any quality": "모든 화질",
+  "up to 4K": "최대 4K",
+  "up to 1080p": "최대 1080p",
+  "up to 720p": "최대 720p",
+  "cached only": "캐시된 항목만",
+  "allow P2P downloads": "P2P 다운로드 허용",
+  "for 3 more episodes": "에피소드 3개 더",
+  "for 5 more episodes": "에피소드 5개 더",
+  "for 10 more episodes": "에피소드 10개 더",
 };
 
 export default mobileLibrary;

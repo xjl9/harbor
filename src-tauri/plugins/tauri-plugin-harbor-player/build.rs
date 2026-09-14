@@ -13,6 +13,11 @@ const COMMANDS: &[&str] = &[
     "set_volume",
     "set_sub_delay",
     "set_audio_delay",
+    "add_subtitle",
+    "set_sub_visible",
+    "set_secondary_subtitle_track",
+    "set_sub_style",
+    "set_sub_fps",
     "show_route_picker",
     "haptic",
     // Built-in mobile listener commands backing `addPluginListener`; handled by the

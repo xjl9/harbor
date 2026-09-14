@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { Suspense, useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { HarborLoader } from "@/components/harbor-loader";
 import { ScrollRootContext } from "@/components/row";
 import { MobileHome } from "./mobile-home";
 import { MobileMovies } from "./mobile-movies";
@@ -10,8 +11,14 @@ import { MobileDeviceSwitcher } from "./mobile-device-switcher";
 import { ScrollToTop } from "./scroll-to-top";
 import { LayerActiveContext, useLayerActive, useLayerParked } from "./layer-active";
 import { noteScroll, noteView, restoredView, restoreScroll } from "./reload-restore";
-import { MOBILE_CHROME_CLEARANCE } from "./chrome-metrics";
-import { useSheetLock } from "./mobile-sheet-lock";
+import { MOBILE_CHROME_CLEARANCE, MOBILE_SAFE_X } from "./chrome-metrics";
+import { useRegisterSheet, useSheetLock } from "./mobile-sheet-lock";
+import { requestMobileIntent } from "./mobile-intent";
+import { MobileAddons } from "./mobile-addons";
+import { MobileDownloads } from "./mobile-downloads";
+import { MobileSettings } from "./mobile-settings";
+import type { PhoneDestination } from "./destinations";
+import type { PhoneNavTarget, PhoneSheet } from "./nav-config";
 
 export type View = "home" | "movies" | "shows" | "anime" | "discover";
 
@@ -54,6 +61,22 @@ export function MobileBrowse() {
     setView(next);
     noteView(next);
     setSeen((prev) => (prev.has(next) ? prev : new Set(prev).add(next)));
+  };
+
+  // A destination is a desktop nav item the phone renders as its own page over
+  // the browse stack (Calendar, Live TV, the Catalogs hub). The section menu
+  // hands over whatever it picked: views switch in place, the existing sheets
+  // (Addons, Downloads, Settings) open over this tab, and intents go to the
+  // shell, which routes them to the tab that owns them.
+  const [page, setPage] = useState<PhoneDestination | null>(null);
+  const [sheet, setSheet] = useState<PhoneSheet | null>(null);
+  const closePage = useCallback(() => setPage(null), []);
+  const closeSheet = useCallback(() => setSheet(null), []);
+  const navigate = (target: PhoneNavTarget) => {
+    if (target.kind === "view") selectView(target.view);
+    else if (target.kind === "destination") setPage(target.destination);
+    else if (target.kind === "sheet") setSheet(target.sheet);
+    else requestMobileIntent(target.intent);
   };
 
   return (
@@ -106,9 +129,57 @@ export function MobileBrowse() {
           <MobileDeviceSwitcher />
         </div>
         <div className="pointer-events-auto">
-          <MobileViewSwitcher view={view} onSelect={selectView} />
+          <MobileViewSwitcher view={view} onNavigate={navigate} />
         </div>
       </div>
+
+      {page && <DestinationPage key={page.id} destination={page} onBack={closePage} />}
+      {sheet === "addons" && <MobileAddons onClose={closeSheet} />}
+      {sheet === "downloads" && <MobileDownloads onClose={closeSheet} />}
+      {sheet === "settings" && <MobileSettings onClose={closeSheet} />}
+    </div>
+  );
+}
+
+// The same page shape as mobile-settings.tsx: a full-screen sheet that slides in
+// from the trailing edge, registers with the sheet lock so the tab bar slides
+// away beneath it, and slides back out before unmounting. The destination owns
+// its own header and back chevron; this only hosts it and lazy-loads it.
+function DestinationPage({
+  destination,
+  onBack,
+}: {
+  destination: PhoneDestination;
+  onBack: () => void;
+}) {
+  useRegisterSheet(true);
+  const [closing, setClosing] = useState(false);
+  const Component = destination.Component;
+
+  useEffect(() => {
+    if (!closing) return;
+    const timer = window.setTimeout(onBack, 300);
+    return () => window.clearTimeout(timer);
+  }, [closing, onBack]);
+
+  return (
+    <div
+      className={`fixed inset-0 z-[70] flex flex-col bg-canvas ${
+        closing
+          ? "translate-x-full transition-transform duration-300 [transition-timing-function:var(--ease-out)]"
+          : "animate-slide-from-right"
+      }`}
+      style={MOBILE_SAFE_X}
+    >
+      <Suspense
+        fallback={
+          <div className="flex flex-1 items-center justify-center">
+            <HarborLoader size="lg" />
+          </div>
+        }
+      >
+        <Component onBack={() => setClosing(true)} />
+      </Suspense>
     </div>
   );
 }

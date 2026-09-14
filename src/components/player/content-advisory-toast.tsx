@@ -14,7 +14,7 @@ import { useT } from "@/lib/i18n";
 import { ignoreAdvisory } from "@/lib/player/content-advisory-ignore";
 import { usePlaybackPosition } from "@/lib/player/playback-clock";
 import { useSettings } from "@/lib/settings";
-import { isMobileNative } from "@/lib/platform";
+import { isMobileNative, isMobileWeb } from "@/lib/platform";
 
 export type Advisory = { category: string; severity: string };
 export type ContentAdvisoryPosition = "top-start" | "top-end" | "top-center";
@@ -193,6 +193,22 @@ export function ContentAdvisoryToast({
       : position === "top-center"
         ? "start-1/2 top-20 -translate-x-1/2 rtl:translate-x-1/2"
         : "start-6 top-20";
+  // The phone chrome owns the top 44pt under the safe area and the desktop
+  // corners sit right under it, so on a phone the card hangs below the bar at the
+  // chrome's own side inset. A touch has no hover, so a tap on the card is what
+  // holds it while someone reads, and a second tap hands back the short tail.
+  const phone = !preview && (isMobileNative() || isMobileWeb());
+  const phoneStyle = phone
+    ? {
+        top: "calc(env(safe-area-inset-top, 0px) + 64px)",
+        insetInlineStart: "calc(max(env(safe-area-inset-left, 0px), env(safe-area-inset-right, 0px)) + 20px)",
+      }
+    : undefined;
+  const handlePhoneTap = () => {
+    if (phase !== "holding") return;
+    if (paused) handleInteractionEnd();
+    else setPaused(true);
+  };
 
   return (
     <>
@@ -227,15 +243,17 @@ export function ContentAdvisoryToast({
         onMouseLeave={preview ? undefined : handleInteractionEnd}
         onFocusCapture={preview ? undefined : () => setPaused(true)}
         onBlurCapture={preview ? undefined : handleBlur}
+        onClick={phone ? handlePhoneTap : undefined}
         className={`${
           preview
             ? "relative"
-            : `${isMobileNative() ? "pointer-events-none" : isCardExiting ? "pointer-events-none" : "pointer-events-auto"} absolute ${positionClass} z-30`
+            : `${isCardExiting ? "pointer-events-none" : "pointer-events-auto"} absolute ${phone ? "" : positionClass} z-30`
         } harbor-content-advisory ${CARD_CLASS}`}
         style={
           preview
             ? undefined
             : {
+                ...phoneStyle,
                 animation: isCardExiting
                   ? `harborAdvisoryOut ${EXIT_MS}ms var(--ease-out) forwards`
                   : "harborAdvisoryIn 420ms var(--ease-out) both",
@@ -263,11 +281,17 @@ export function ContentAdvisoryToast({
               <button
                 type="button"
                 onClick={(event) => {
+                  event.stopPropagation();
                   event.currentTarget.blur();
                   setPhase("collapsing");
                 }}
                 aria-label={t("Dismiss")}
-                className="flex h-5 w-5 items-center justify-center rounded text-white/45 transition-[color,background-color,transform] duration-150 hover:bg-white/10 hover:text-white active:scale-[0.96] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-white/60"
+                // A 20px target is fine for a pointer and unhittable for a thumb; on
+                // a phone the hit area grows to 44pt while negative margins keep the
+                // header row the same height.
+                className={`flex items-center justify-center rounded text-white/45 transition-[color,background-color,transform] duration-150 hover:bg-white/10 hover:text-white active:scale-[0.96] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-white/60 ${
+                  phone ? "-my-3 -me-3 h-11 w-11" : "h-5 w-5"
+                }`}
               >
                 <X size={12} strokeWidth={2} />
               </button>
@@ -325,11 +349,14 @@ export function ContentAdvisoryToast({
             <button
               type="button"
               onClick={(event) => {
+                event.stopPropagation();
                 event.currentTarget.blur();
                 handleIgnore();
               }}
               title={t("Never show the content advisory for this title again")}
-              className="group inline-flex items-center justify-center gap-1.5 border-0 bg-transparent p-0 text-[10.5px] font-medium text-white/50 transition-all duration-200 hover:text-white focus-visible:outline-none"
+              className={`group inline-flex items-center justify-center gap-1.5 border-0 bg-transparent text-[10.5px] font-medium text-white/50 transition-all duration-200 hover:text-white focus-visible:outline-none ${
+                phone ? "-mb-2 min-h-11 px-3" : "p-0"
+              }`}
             >
               <EyeOff
                 size={11}

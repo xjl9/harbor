@@ -1,6 +1,37 @@
 // Phone shell strings for library surfaces; the i18n coverage test requires every
 // translated locale to carry every t() key used by the app.
 const mobileLibrary: Record<string, string> = {
+  "Filter by type": "Lọc theo loại",
+  "Name and description": "Tên và mô tả",
+  "Reorder items": "Sắp xếp lại mục",
+  "Nothing is streaming right now.": "Hiện không có nội dung nào đang phát trực tuyến.",
+  "Simkl section": "Mục Simkl",
+  "Download paused": "Đã tạm dừng tải xuống",
+  "Download episode": "Tải xuống tập",
+  "Saved movies and episodes for offline use": "Phim và tập đã lưu để xem ngoại tuyến",
+  "Filter downloads": "Lọc nội dung tải xuống",
+  "Stored on this device": "Được lưu trên thiết bị này",
+  "1 saved": "Đã lưu 1",
+  "{count} saved": "Đã lưu {count}",
+  "{size} in progress": "Đang xử lý {size}",
+  "Open a movie or episode, tap Download, and pick a source. It saves here for offline watching.": "Mở một phim hoặc tập, chạm vào Tải xuống và chọn nguồn. Nội dung sẽ được lưu tại đây để xem ngoại tuyến.",
+  "Your library is empty": "Thư viện của bạn đang trống",
+  "Everything you save from Stremio, Trakt, and this device collects here.": "Mọi thứ bạn lưu từ Stremio, Trakt và thiết bị này đều tập trung tại đây.",
+  "Save a movie or show from any detail page and it lines up here for later.": "Lưu phim hoặc chương trình từ bất kỳ trang chi tiết nào và nội dung sẽ chờ bạn tại đây.",
+  "Press play on something. It shows up here once you start watching.": "Hãy phát một nội dung nào đó. Nội dung sẽ xuất hiện ở đây khi bạn bắt đầu xem.",
+  "Your local library is empty": "Thư viện cục bộ của bạn đang trống",
+  "Scan local folders in Harbor and your movies and shows will appear here.": "Quét các thư mục cục bộ trong Harbor và phim cùng chương trình của bạn sẽ xuất hiện tại đây.",
+  "No media-server titles": "Không có nội dung từ máy chủ đa phương tiện",
+  "Enable and sync Plex, Jellyfin, or Emby in Harbor to browse them here.": "Bật và đồng bộ Plex, Jellyfin hoặc Emby trong Harbor để duyệt tại đây.",
+  "any quality": "mọi chất lượng",
+  "up to 4K": "tối đa 4K",
+  "up to 1080p": "tối đa 1080p",
+  "up to 720p": "tối đa 720p",
+  "cached only": "chỉ nguồn đã lưu đệm",
+  "allow P2P downloads": "cho phép tải xuống P2P",
+  "for 3 more episodes": "thêm 3 tập",
+  "for 5 more episodes": "thêm 5 tập",
+  "for 10 more episodes": "thêm 10 tập",
 };
 
 export default mobileLibrary;

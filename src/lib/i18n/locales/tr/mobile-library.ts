@@ -1,6 +1,37 @@
 // Phone shell strings for library surfaces; the i18n coverage test requires every
 // translated locale to carry every t() key used by the app.
 const mobileLibrary: Record<string, string> = {
+  "Filter by type": "Türe göre filtrele",
+  "Name and description": "Ad ve açıklama",
+  "Reorder items": "Öğeleri yeniden sırala",
+  "Nothing is streaming right now.": "Şu anda hiçbir şey yayınlanmıyor.",
+  "Simkl section": "Simkl bölümü",
+  "Download paused": "İndirme duraklatıldı",
+  "Download episode": "Bölümü indir",
+  "Saved movies and episodes for offline use": "Çevrimdışı izlemek için kaydedilen filmler ve bölümler",
+  "Filter downloads": "İndirmeleri filtrele",
+  "Stored on this device": "Bu cihazda depolanıyor",
+  "1 saved": "1 kaydedildi",
+  "{count} saved": "{count} kaydedildi",
+  "{size} in progress": "{size} devam ediyor",
+  "Open a movie or episode, tap Download, and pick a source. It saves here for offline watching.": "Bir film ya da bölüm açın, İndir'e dokunun ve bir kaynak seçin. Çevrimdışı izlemek için buraya kaydedilir.",
+  "Your library is empty": "Kitaplığınız boş",
+  "Everything you save from Stremio, Trakt, and this device collects here.": "Stremio, Trakt ve bu cihazdan kaydettiğiniz her şey burada toplanır.",
+  "Save a movie or show from any detail page and it lines up here for later.": "Herhangi bir ayrıntı sayfasından bir film ya da dizi kaydedin, sonrası için burada beklesin.",
+  "Press play on something. It shows up here once you start watching.": "Bir şey oynatın. İzlemeye başladığınızda burada görünür.",
+  "Your local library is empty": "Yerel kitaplığınız boş",
+  "Scan local folders in Harbor and your movies and shows will appear here.": "Harbor'da yerel klasörleri tarayın, filmleriniz ve dizileriniz burada görünsün.",
+  "No media-server titles": "Medya sunucusu içeriği yok",
+  "Enable and sync Plex, Jellyfin, or Emby in Harbor to browse them here.": "Burada göz atmak için Harbor'da Plex, Jellyfin veya Emby'yi etkinleştirip eşitleyin.",
+  "any quality": "herhangi bir kalite",
+  "up to 4K": "4K'ya kadar",
+  "up to 1080p": "1080p'ye kadar",
+  "up to 720p": "720p'ye kadar",
+  "cached only": "yalnızca önbellekteki",
+  "allow P2P downloads": "P2P indirmelere izin ver",
+  "for 3 more episodes": "3 bölüm daha",
+  "for 5 more episodes": "5 bölüm daha",
+  "for 10 more episodes": "10 bölüm daha",
 };
 
 export default mobileLibrary;

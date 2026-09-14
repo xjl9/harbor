@@ -1,12 +1,14 @@
 import { useCallback, useContext, useEffect, useRef, useState } from "react";
 import { useMediaQuery } from "@/lib/use-media-query";
-import { Star } from "lucide-react";
 import type { Meta } from "@/lib/cinemeta";
 import { Poster, usePosterChain } from "@/components/poster";
 import { ScrollRootContext } from "@/components/row";
 import { VirtualGrid } from "@/components/virtual-grid";
 import { useSettings } from "@/lib/settings";
 import { useT } from "@/lib/i18n";
+import { TileChrome } from "./browse/card-chrome";
+import { CardActionsSheet } from "./browse/card-actions-sheet";
+import { useLongPress } from "./browse/use-long-press";
 
 export const TMDB_PAGE_SIZE = 20;
 export const MAX_PAGE = 12;
@@ -58,10 +60,10 @@ export function MobileCatalogGrid({
   const fetchRef = useRef(fetchPage);
   fetchRef.current = fetchPage;
 
-  // Row-virtualize against the hosting scroller (BrowseScroll/ViewScroll) so a
-  // fully paged grid (12 pages x 20) keeps ~2 screens of tiles mounted instead
-  // of 240. The scroller arrives via ScrollRootContext; without one (unexpected
-  // host) the plain grid below still works.
+  // Row-virtualize against the hosting scroller (BrowseScroll/ViewScroll or a
+  // browse page shell) so a fully paged grid (12 pages x 20) keeps ~2 screens
+  // of tiles mounted instead of 240. The scroller arrives via ScrollRootContext;
+  // without one (unexpected host) the plain grid below still works.
   const scrollEl = useContext(ScrollRootContext);
   const scrollElRef = useRef<HTMLElement | null>(null);
   scrollElRef.current = scrollEl;
@@ -157,13 +159,13 @@ export function MobileCatalogGrid({
             gapX={12}
             gapY={20}
             getKey={(m) => m.id}
-            renderItem={(m) => <GridPoster meta={m} onOpen={onOpenDetail} />}
+            renderItem={(m) => <GridTile meta={m} onOpen={onOpenDetail} />}
           />
         </div>
       ) : (
         <div className="grid grid-cols-3 [@media(min-width:700px)_and_(min-height:600px)]:grid-cols-5 [@media(min-width:1000px)_and_(min-height:600px)]:grid-cols-6 gap-x-3 gap-y-5 px-4">
           {items.map((m) => (
-            <GridPoster key={m.id} meta={m} onOpen={onOpenDetail} />
+            <GridTile key={m.id} meta={m} onOpen={onOpenDetail} />
           ))}
         </div>
       )}
@@ -173,9 +175,16 @@ export function MobileCatalogGrid({
   );
 }
 
-function GridPoster({ meta, onOpen }: { meta: Meta; onOpen: (m: Meta) => void }) {
+// The grid tile every phone grid shares (catalog pages, genre sort grids, brand
+// browse, person filmography, see-all pages). It carries the same poster chrome
+// as a rail tile and the same long-press actions sheet.
+export function GridTile({ meta, onOpen }: { meta: Meta; onOpen: (m: Meta) => void }) {
   const t = useT();
   const { settings } = useSettings();
+  const hostRef = useRef<HTMLButtonElement>(null);
+  const [sheet, setSheet] = useState(false);
+  const onLong = useCallback(() => setSheet(true), []);
+  const press = useLongPress(onLong);
   const { src, onError } = usePosterChain(
     settings.rpdbKey,
     meta.id,
@@ -183,31 +192,34 @@ function GridPoster({ meta, onOpen }: { meta: Meta; onOpen: (m: Meta) => void })
     meta.type === "series" ? "series" : "movie",
   );
   return (
-    <button
-      type="button"
-      onClick={() => onOpen(meta)}
-      aria-label={t("View {title}", { title: meta.name })}
-      className="w-full text-start"
-    >
-      <Poster
-        src={src}
-        onError={onError}
-        seed={meta.id}
-        ratio="portrait"
-        lazy="release"
-        className="rounded-lg"
+    <>
+      <button
+        ref={hostRef}
+        type="button"
+        onClick={() => onOpen(meta)}
+        {...press}
+        aria-label={t("View {title}", { title: meta.name })}
+        className="w-full select-none text-start [-webkit-touch-callout:none]"
       >
-        {!settings.rpdbKey && meta.imdbRating && (
-          <span className="pointer-events-none absolute bottom-1.5 end-1.5 flex items-center gap-0.5 rounded-md bg-black/70 px-1.5 py-0.5 text-[10.5px] font-bold text-white backdrop-blur-sm">
-            <Star size={9} strokeWidth={0} fill="#f5c518" className="text-[#f5c518]" />
-            {meta.imdbRating}
-          </span>
+        <div className="relative">
+          <Poster
+            src={src}
+            onError={onError}
+            seed={meta.id}
+            ratio="portrait"
+            lazy="release"
+            className="rounded-lg"
+          />
+          <TileChrome meta={meta} hostRef={hostRef} />
+        </div>
+        {!settings.hidePosterTitles && (
+          <p className="mt-1.5 line-clamp-2 text-[12px] font-medium leading-snug text-ink-muted">
+            {meta.name}
+          </p>
         )}
-      </Poster>
-      <p className="mt-1.5 line-clamp-2 text-[12px] font-medium leading-snug text-ink-muted">
-        {meta.name}
-      </p>
-    </button>
+      </button>
+      {sheet && <CardActionsSheet meta={meta} onClose={() => setSheet(false)} onOpenDetail={onOpen} />}
+    </>
   );
 }
 

@@ -1,9 +1,9 @@
-import { memo, useEffect, type ComponentProps, type RefObject } from "react";
+import { memo, useEffect, useRef, useState, type ComponentProps, type RefObject } from "react";
 import { DrawCanvas, StrokesLayer, type Stroke } from "@/components/player/draw-canvas";
 import { isMobileNative } from "@/lib/platform";
 import { writePlayerVolume } from "@/lib/player-volume";
 import { MobileGestureStage } from "./mobile-gesture-stage";
-import { MOBILE_OPEN_EPISODES_EVENT } from "@/lib/player/mobile-events";
+import { MOBILE_OPEN_XRAY_EVENT } from "@/components/player/shells/mobile-chrome-events";
 import { cropTransform } from "./hooks/use-video-fill";
 import { StreamSwitcher } from "@/components/player/stream-switcher";
 import { StreamCheckPill } from "@/components/player/stream-check-pill";
@@ -203,15 +203,27 @@ export type PlayerOverlayLayersProps = {
 
 export const PlayerOverlayLayers = memo(function PlayerOverlayLayers(p: PlayerOverlayLayersProps) {
   const mobile = isMobileNative();
-  // The mobile shell lives inside ShellLayer and can only fire events; the episode
-  // panel's open state lives up in player.tsx, so bridge the event to it here.
-  const setEpisodePanelOpen = p.setEpisodePanelOpen;
+  // MOBILE_OPEN_EPISODES_EVENT is no longer bridged to the desktop EpisodePanel on
+  // a phone: the mobile shell listens for it and opens its own bottom-sheet episode
+  // list, and forwarding it here as well slid the 440px side drawer in underneath.
+
+  // X-Ray on a phone: the desktop entry is a button pinned under the top-left
+  // corner, which is where the phone top bar sits, so the phone hides that button
+  // and opens X-Ray from the More sheet. XrayOverlay keeps its open state private,
+  // so the sheet's event arms the (hidden) button for one render and presses it.
+  const xrayWrapRef = useRef<HTMLDivElement>(null);
+  const [xrayArmed, setXrayArmed] = useState(false);
   useEffect(() => {
     if (!mobile) return;
-    const onOpen = () => setEpisodePanelOpen(true);
-    window.addEventListener(MOBILE_OPEN_EPISODES_EVENT, onOpen);
-    return () => window.removeEventListener(MOBILE_OPEN_EPISODES_EVENT, onOpen);
-  }, [mobile, setEpisodePanelOpen]);
+    const onOpen = () => setXrayArmed(true);
+    window.addEventListener(MOBILE_OPEN_XRAY_EVENT, onOpen);
+    return () => window.removeEventListener(MOBILE_OPEN_XRAY_EVENT, onOpen);
+  }, [mobile]);
+  useEffect(() => {
+    if (!xrayArmed) return;
+    xrayWrapRef.current?.querySelector<HTMLButtonElement>(":scope > button")?.click();
+    setXrayArmed(false);
+  }, [xrayArmed]);
   const flags = capabilityFlags(p.bridgeRef.current?.capabilities());
   const roomAvatarTopLeft =
     p.inRoom && !p.avatarsHidden && p.participants.length > 0 && p.avatarsCorner === "top-left";
@@ -376,14 +388,27 @@ export const PlayerOverlayLayers = memo(function PlayerOverlayLayers(p: PlayerOv
         />
       )}
 
-      {!p.pipMode && !p.drawMode && (
-        <XrayOverlay
-          meta={p.src.meta}
-          visible={p.showChrome}
-          isPaused={p.snap.status === "paused"}
-          bridgeRef={p.bridgeRef}
-        />
-      )}
+      {!p.pipMode &&
+        !p.drawMode &&
+        (mobile ? (
+          // display: contents keeps the rail and browser positioned against the
+          // player exactly as before; only the corner button is hidden.
+          <div ref={xrayWrapRef} className="contents [&>button]:hidden">
+            <XrayOverlay
+              meta={p.src.meta}
+              visible={xrayArmed}
+              isPaused={p.snap.status === "paused"}
+              bridgeRef={p.bridgeRef}
+            />
+          </div>
+        ) : (
+          <XrayOverlay
+            meta={p.src.meta}
+            visible={p.showChrome}
+            isPaused={p.snap.status === "paused"}
+            bridgeRef={p.bridgeRef}
+          />
+        ))}
 
       {!p.loaderActive && !p.tenFoot && p.syncMode === "idle" && (
         <ShellLayer
@@ -479,12 +504,15 @@ export const PlayerOverlayLayers = memo(function PlayerOverlayLayers(p: PlayerOv
         participantLocations={p.participantLocations}
         now={p.now}
         avatarsCorner={p.avatarsCorner}
-        avatarsHidden={p.avatarsHidden}
+        // On a phone the dock and the chat stream would land on the top bar and
+        // the scrubber; the mobile shell shows the room in its top bar and the chat
+        // as a bottom sheet instead, so the corner overlays stay off there.
+        avatarsHidden={p.avatarsHidden || mobile}
         chat={p.chat}
         sendChat={p.sendChat}
         chromeVisible={p.chromeVisible}
         chatCorner={p.chatCorner}
-        chatHidden={p.chatHidden}
+        chatHidden={p.chatHidden || mobile}
         showWaiting={p.showWaiting}
         isHost={p.isHost}
         staleIds={p.staleIds}

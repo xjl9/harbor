@@ -7,18 +7,22 @@
 export const MOBILE_INTENT_EVENT = "harbor:mobile-intent";
 
 // "debrid" has no sub-screen: debrid keys are managed on the profile page
-// itself, so arriving at that tab is the whole action.
-type Intent = "addons" | "settings" | "debrid";
+// itself, so arriving at that tab is the whole action. "library" is the same
+// shape for the My Stuff tab, which the section menu on the home tab cannot
+// switch to on its own. "theme" opens the theme picker, which the shell hosts
+// itself so any surface (a settings row, an onboarding step) can send the user
+// there without owning the page.
+export type MobileIntent = "addons" | "settings" | "debrid" | "theme" | "library";
 
-let pending: Intent | null = null;
+let pending: MobileIntent | null = null;
 
-export function requestMobileIntent(intent: Intent): void {
+export function requestMobileIntent(intent: MobileIntent): void {
   pending = intent;
   if (typeof window === "undefined") return;
   window.dispatchEvent(new CustomEvent(MOBILE_INTENT_EVENT, { detail: intent }));
 }
 
-export function consumeMobileIntent(intent: Intent): boolean {
+export function consumeMobileIntent(intent: MobileIntent): boolean {
   if (pending !== intent) return false;
   pending = null;
   return true;

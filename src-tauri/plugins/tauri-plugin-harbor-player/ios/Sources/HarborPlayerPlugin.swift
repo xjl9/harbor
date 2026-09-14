@@ -84,6 +84,51 @@ struct HapticArgs: Decodable {
   let kind: String
 }
 
+/// A subtitle added after load (search result, local file, download). Mirrors
+/// AddSubtitleRequest in models.rs; select defaults off like the Rust side.
+struct AddSubtitleArgs: Decodable {
+  let url: String
+  let title: String?
+  let lang: String?
+  let select: Bool
+
+  private enum CodingKeys: String, CodingKey {
+    case url, title, lang, select
+  }
+
+  init(from decoder: Decoder) throws {
+    let c = try decoder.container(keyedBy: CodingKeys.self)
+    url = try c.decode(String.self, forKey: .url)
+    title = try c.decodeIfPresent(String.self, forKey: .title)
+    lang = try c.decodeIfPresent(String.self, forKey: .lang)
+    select = try c.decodeIfPresent(Bool.self, forKey: .select) ?? false
+  }
+}
+
+struct SubVisibleArgs: Decodable {
+  let visible: Bool
+}
+
+/// Subtitle appearance, the same fields the desktop applySubStyle maps onto mpv
+/// (src/lib/player/sub-style.ts). Colors arrive as #RRGGBB, opacities as 0..1.
+struct SubStyleArgs: Decodable {
+  let fontSize: Double
+  let color: String
+  let borderSize: Double
+  let borderColor: String
+  let boxOpacity: Double
+  let marginY: Double
+  let alignX: String
+  let bold: Bool
+  let style: String?
+  let boxColor: String?
+  let opacity: Double?
+}
+
+struct SubFpsArgs: Decodable {
+  let fps: Double
+}
+
 // Shared with the AppDelegate orientation override injected at iOS build time
 // (see .github/workflows/ios-build.yml "Inject orientation AppDelegate"). The
 // plugin compiles into the Rust staticlib, a separate Swift module from the app
@@ -119,13 +164,34 @@ protocol HarborPlayerEngine: AnyObject {
   func doSetVolume(_ volume: Double)
   func doSetSubDelay(_ seconds: Double)
   func doSetAudioDelay(_ seconds: Double)
+  func doAddSubtitle(_ args: AddSubtitleArgs)
+  func doSetSubVisible(_ visible: Bool)
+  func doSetSecondarySubtitleTrack(_ id: String?)
+  func doSetSubStyle(_ args: SubStyleArgs)
+  func doSetSubFps(_ fps: Double)
+  /// Chapter table of the current item; empty until the engine knows it.
+  var chapters: [NativeChapter] { get }
+  /// Container frame rate, which the subtitle FPS control offers as "match
+  /// video". Zero when unknown.
+  var videoFps: Double { get }
   func enterPip()
 }
 
-// Delay offsets only exist on the mpv engine; AVFoundation has no equivalent.
+// Delay offsets, external subtitles, subtitle styling and FPS correction only
+// exist on the mpv engine: AVFoundation cannot attach a sidecar to a progressive
+// asset and renders legible tracks with the system caption style. The JS side
+// reports these capabilities off for the AV engine, so these no-ops are only a
+// guard against a command racing an engine swap.
 extension HarborPlayerEngine {
   func doSetSubDelay(_ seconds: Double) {}
   func doSetAudioDelay(_ seconds: Double) {}
+  func doAddSubtitle(_ args: AddSubtitleArgs) {}
+  func doSetSubVisible(_ visible: Bool) {}
+  func doSetSecondarySubtitleTrack(_ id: String?) {}
+  func doSetSubStyle(_ args: SubStyleArgs) {}
+  func doSetSubFps(_ fps: Double) {}
+  var chapters: [NativeChapter] { [] }
+  var videoFps: Double { 0 }
 }
 
 class HarborPlayerPlugin: Plugin {
@@ -348,6 +414,46 @@ class HarborPlayerPlugin: Plugin {
     }
   }
 
+  @objc public func addSubtitle(_ invoke: Invoke) throws {
+    let args = try invoke.parseArgs(AddSubtitleArgs.self)
+    DispatchQueue.main.async {
+      self.controller?.doAddSubtitle(args)
+      invoke.resolve(JsonObject())
+    }
+  }
+
+  @objc public func setSubVisible(_ invoke: Invoke) throws {
+    let args = try invoke.parseArgs(SubVisibleArgs.self)
+    DispatchQueue.main.async {
+      self.controller?.doSetSubVisible(args.visible)
+      invoke.resolve(JsonObject())
+    }
+  }
+
+  @objc public func setSecondarySubtitleTrack(_ invoke: Invoke) throws {
+    let args = try invoke.parseArgs(TrackArgs.self)
+    DispatchQueue.main.async {
+      self.controller?.doSetSecondarySubtitleTrack(args.trackId)
+      invoke.resolve(JsonObject())
+    }
+  }
+
+  @objc public func setSubStyle(_ invoke: Invoke) throws {
+    let args = try invoke.parseArgs(SubStyleArgs.self)
+    DispatchQueue.main.async {
+      self.controller?.doSetSubStyle(args)
+      invoke.resolve(JsonObject())
+    }
+  }
+
+  @objc public func setSubFps(_ invoke: Invoke) throws {
+    let args = try invoke.parseArgs(SubFpsArgs.self)
+    DispatchQueue.main.async {
+      self.controller?.doSetSubFps(args.fps)
+      invoke.resolve(JsonObject())
+    }
+  }
+
   // AirPlay is an AVPlayer-engine feature; mpv renders its own frames and has
   // nothing to hand a route, so the picker is only raised for the AV engine.
   @objc public func showRoutePicker(_ invoke: Invoke) {
@@ -497,10 +603,29 @@ class HarborPlayerPlugin: Plugin {
           "id": entry.id, "lang": entry.lang, "label": entry.label, "selected": entry.selected,
         ]
         if let channelCount = entry.channelCount { row["channelCount"] = channelCount }
+        // Identity the desktop subtitle menu labels and filters on. Additive keys:
+        // Android sends none of them and the JS bridge treats absent as false.
+        if let codec = entry.codec, !codec.isEmpty { row["codec"] = codec }
+        if let title = entry.title, !title.isEmpty { row["title"] = title }
+        if let file = entry.externalFilename, !file.isEmpty { row["externalFilename"] = file }
+        row["forced"] = entry.forced
+        row["default"] = entry.isDefault
+        row["hearingImpaired"] = entry.hearingImpaired
+        row["external"] = entry.external
+        row["secondary"] = entry.secondary
         return row
       }
     }
-    let payload: JSObject = ["audio": rows(audio), "subtitle": rows(subtitle)]
+    var payload: JSObject = ["audio": rows(audio), "subtitle": rows(subtitle)]
+    // Chapters and the container frame rate travel with the tracks: both are known
+    // at the same moment (file loaded), and the mpv engine re-emits tracks when
+    // its chapter table changes.
+    let chapterRows: JSArray = (controller?.chapters ?? []).map { chapter -> JSValue in
+      let row: JSObject = ["title": chapter.title, "startSec": chapter.startSec]
+      return row
+    }
+    payload["chapters"] = chapterRows
+    if let fps = controller?.videoFps, fps > 0 { payload["videoFps"] = fps }
     trigger("tracks", data: payload)
   }
 }

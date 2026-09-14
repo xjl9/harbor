@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { Meta } from "@/lib/cinemeta";
 import { useSettings } from "@/lib/settings";
 import { animeDetails } from "@/lib/providers/anime-detail";
-import type { KitsuEpisode } from "@/lib/providers/kitsu";
+import type { KitsuEpisode, KitsuStreamer } from "@/lib/providers/kitsu";
 import type { CastEntry, TmdbDetail } from "@/lib/providers/tmdb";
 import type { AnimeCharacter } from "@/lib/providers/anime-characters";
 import type { AnilistRelatedNode } from "@/lib/anilist/media-details";
@@ -26,17 +26,20 @@ export function useAnimeDetail(
   canonicalId: string | null;
   loading: boolean;
   episodes: KitsuEpisode[];
+  streamers: KitsuStreamer[];
 } {
   const { settings } = useSettings();
   const [detail, setDetail] = useState<TmdbDetail | null>(null);
   const [resolvedKitsu, setResolvedKitsu] = useState<string | null>(null);
   const [episodes, setEpisodes] = useState<KitsuEpisode[]>([]);
+  const [streamers, setStreamers] = useState<KitsuStreamer[]>([]);
   const [loading, setLoading] = useState(isAnime);
 
   useEffect(() => {
     setDetail(null);
     setResolvedKitsu(null);
     setEpisodes([]);
+    setStreamers([]);
     if (!isAnime) {
       setLoading(false);
       return;
@@ -52,6 +55,7 @@ export function useAnimeDetail(
         setResolvedKitsu(`kitsu:${res.kitsuId}`);
         setDetail(res.detail);
         setEpisodes(res.episodes);
+        setStreamers(res.streamers);
         setLoading(false);
         // Enrichment fills in per-episode ratings/stills/tvdb ids; extras patch
         // the detail art/crew. Both resolve after the initial paint.
@@ -77,7 +81,7 @@ export function useAnimeDetail(
     [meta.id, resolvedKitsu],
   );
 
-  return { detail, canonicalId, loading, episodes };
+  return { detail, canonicalId, loading, episodes, streamers };
 }
 
 type ExtrasPatch = {

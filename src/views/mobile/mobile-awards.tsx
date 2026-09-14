@@ -52,9 +52,12 @@ function readMode(): Mode {
 export function MobileAwards({
   onClose,
   onOpenDetail,
+  initialType = "oscar",
 }: {
   onClose: () => void;
   onOpenDetail: (m: Meta) => void;
+  // Discover's award tiles open straight onto the award that was tapped.
+  initialType?: AwardType;
 }) {
   const t = useT();
   const { settings } = useSettings();
@@ -65,7 +68,10 @@ export function MobileAwards({
   const targetRef = useRef(INITIAL);
   const [reduced] = useState(prefersReducedMotion);
   const [closing, setClosing] = useState(false);
-  const [awardType, setAwardType] = useState<AwardType>("oscar");
+  const [awardType, setAwardType] = useState<AwardType>(initialType);
+  // The pill row carries the eight majors; an award opened from a Discover tile
+  // outside that set joins the row at the front so the active pill is visible.
+  const pills = MOBILE_AWARDS.includes(initialType) ? MOBILE_AWARDS : [initialType, ...MOBILE_AWARDS];
   const [mode, setMode] = useState<Mode>(readMode);
   const [films, setFilms] = useState<Meta[]>([]);
   const [loading, setLoading] = useState(true);
@@ -183,7 +189,7 @@ export function MobileAwards({
         </div>
 
         <div className="flex gap-2 overflow-x-auto px-5 pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          {MOBILE_AWARDS.map((type) => (
+          {pills.map((type) => (
             <AwardPill
               key={type}
               type={type}

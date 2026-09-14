@@ -1,6 +1,37 @@
 // Phone shell strings for library surfaces; the i18n coverage test requires every
 // translated locale to carry every t() key used by the app.
 const mobileLibrary: Record<string, string> = {
+  "Filter by type": "種類で絞り込む",
+  "Name and description": "名前と説明",
+  "Reorder items": "項目を並べ替え",
+  "Nothing is streaming right now.": "現在ストリーミング中のものはありません。",
+  "Simkl section": "Simklのセクション",
+  "Download paused": "ダウンロード一時停止中",
+  "Download episode": "エピソードをダウンロード",
+  "Saved movies and episodes for offline use": "オフライン用に保存した映画とエピソード",
+  "Filter downloads": "ダウンロードを絞り込む",
+  "Stored on this device": "このデバイスに保存",
+  "1 saved": "1件保存済み",
+  "{count} saved": "{count}件保存済み",
+  "{size} in progress": "{size}を処理中",
+  "Open a movie or episode, tap Download, and pick a source. It saves here for offline watching.": "映画やエピソードを開いてダウンロードをタップし、ソースを選びます。オフライン視聴用にここへ保存されます。",
+  "Your library is empty": "ライブラリは空です",
+  "Everything you save from Stremio, Trakt, and this device collects here.": "Stremio、Trakt、このデバイスで保存したものがすべてここに集まります。",
+  "Save a movie or show from any detail page and it lines up here for later.": "詳細ページで映画や番組を保存すると、あとで観られるようここに並びます。",
+  "Press play on something. It shows up here once you start watching.": "何か再生してみましょう。視聴を始めるとここに表示されます。",
+  "Your local library is empty": "ローカルライブラリは空です",
+  "Scan local folders in Harbor and your movies and shows will appear here.": "Harborでローカルフォルダをスキャンすると、映画や番組がここに表示されます。",
+  "No media-server titles": "メディアサーバーのタイトルはありません",
+  "Enable and sync Plex, Jellyfin, or Emby in Harbor to browse them here.": "HarborでPlex、Jellyfin、Embyを有効にして同期すると、ここで閲覧できます。",
+  "any quality": "画質指定なし",
+  "up to 4K": "最大4K",
+  "up to 1080p": "最大1080p",
+  "up to 720p": "最大720p",
+  "cached only": "キャッシュ済みのみ",
+  "allow P2P downloads": "P2Pダウンロードを許可",
+  "for 3 more episodes": "あと3話",
+  "for 5 more episodes": "あと5話",
+  "for 10 more episodes": "あと10話",
 };
 
 export default mobileLibrary;

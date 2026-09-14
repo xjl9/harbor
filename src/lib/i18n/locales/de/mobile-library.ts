@@ -1,6 +1,37 @@
 // Phone shell strings for library surfaces; the i18n coverage test requires every
 // translated locale to carry every t() key used by the app.
 const mobileLibrary: Record<string, string> = {
+  "Filter by type": "Nach Typ filtern",
+  "Name and description": "Name und Beschreibung",
+  "Reorder items": "Titel neu anordnen",
+  "Nothing is streaming right now.": "Gerade wird nichts gestreamt.",
+  "Simkl section": "Simkl-Bereich",
+  "Download paused": "Download pausiert",
+  "Download episode": "Folge herunterladen",
+  "Saved movies and episodes for offline use": "Gespeicherte Filme und Folgen für die Offline-Nutzung",
+  "Filter downloads": "Downloads filtern",
+  "Stored on this device": "Auf diesem Gerät gespeichert",
+  "1 saved": "1 gespeichert",
+  "{count} saved": "{count} gespeichert",
+  "{size} in progress": "{size} in Arbeit",
+  "Open a movie or episode, tap Download, and pick a source. It saves here for offline watching.": "Öffne einen Film oder eine Folge, tippe auf Download und wähle eine Quelle. Der Titel wird hier für die Offline-Wiedergabe gespeichert.",
+  "Your library is empty": "Deine Bibliothek ist leer",
+  "Everything you save from Stremio, Trakt, and this device collects here.": "Alles, was du aus Stremio, Trakt und auf diesem Gerät speicherst, landet hier.",
+  "Save a movie or show from any detail page and it lines up here for later.": "Speichere einen Film oder eine Serie auf einer Detailseite, dann steht der Titel hier für später bereit.",
+  "Press play on something. It shows up here once you start watching.": "Starte etwas. Es erscheint hier, sobald du mit dem Ansehen beginnst.",
+  "Your local library is empty": "Deine lokale Bibliothek ist leer",
+  "Scan local folders in Harbor and your movies and shows will appear here.": "Durchsuche lokale Ordner in Harbor, dann erscheinen deine Filme und Serien hier.",
+  "No media-server titles": "Keine Titel von Medienservern",
+  "Enable and sync Plex, Jellyfin, or Emby in Harbor to browse them here.": "Aktiviere und synchronisiere Plex, Jellyfin oder Emby in Harbor, um sie hier zu durchstöbern.",
+  "any quality": "beliebige Qualität",
+  "up to 4K": "bis 4K",
+  "up to 1080p": "bis 1080p",
+  "up to 720p": "bis 720p",
+  "cached only": "nur aus dem Cache",
+  "allow P2P downloads": "P2P-Downloads erlauben",
+  "for 3 more episodes": "für 3 weitere Folgen",
+  "for 5 more episodes": "für 5 weitere Folgen",
+  "for 10 more episodes": "für 10 weitere Folgen",
 };
 
 export default mobileLibrary;

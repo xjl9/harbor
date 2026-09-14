@@ -1,5 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ChevronRight, Layers, Search as SearchIcon, Trophy, X } from "lucide-react";
+import { ChevronRight, Search as SearchIcon, X } from "lucide-react";
+import { NavGlyph } from "@/components/icons/nav-glyph";
+import { fetchRankList, peekRankSnapshot, type HarborRankExplanation } from "@/lib/harbor-rank";
+import { TopPeopleSheet } from "./browse/discover-sections";
 import type { Meta, MetaType } from "@/lib/cinemeta";
 import { Poster, usePosterChain } from "@/components/poster";
 import { Laurel } from "@/components/icons/laurel";
@@ -100,6 +103,7 @@ export function MobileSearch() {
   const [genreView, setGenreView] = useState<(typeof CATEGORIES)[number] | null>(null);
   const [aiMode, setAiMode] = useState(false);
   const [awardsOpen, setAwardsOpen] = useState(false);
+  const [peopleOpen, setPeopleOpen] = useState(false);
   const [detailMeta, setDetailMeta] = useState<Meta | null>(null);
   const key = settings.tmdbKey;
   const hasAiKey = !!(settings.aiSearchKey.trim() || settings.aiGroqKey.trim());
@@ -173,9 +177,6 @@ export function MobileSearch() {
         ? `catalog:${catalog.title}`
         : "landing";
 
-  if (genreView) {
-    return <MobileGenrePage genre={genreView} onBack={() => setGenreView(null)} />;
-  }
 
   return (
     <div
@@ -243,10 +244,15 @@ export function MobileSearch() {
             onGenre={openGenre}
             onAwards={() => setAwardsOpen(true)}
             onCollections={() => setCollections(true)}
+            onPeople={() => setPeopleOpen(true)}
           />
         )}
       </div>
 
+      {/* The genre page is now a full rails page that slides over search, so
+          the search state underneath survives a trip into a genre and back. */}
+      {genreView && <MobileGenrePage genre={genreView} onBack={() => setGenreView(null)} />}
+      {peopleOpen && <TopPeopleSheet onClose={() => setPeopleOpen(false)} />}
       {awardsOpen && (
         <MobileAwards onClose={() => setAwardsOpen(false)} onOpenDetail={setDetailMeta} />
       )}
@@ -327,6 +333,7 @@ function Landing({
   onGenre,
   onAwards,
   onCollections,
+  onPeople,
 }: {
   recent: string[];
   onRecent: (q: string) => void;
@@ -335,6 +342,7 @@ function Landing({
   onGenre: (c: (typeof CATEGORIES)[number]) => void;
   onAwards: () => void;
   onCollections: () => void;
+  onPeople: () => void;
 }) {
   const t = useT();
   return (
@@ -373,6 +381,8 @@ function Landing({
         <AwardsCard onClick={onAwards} />
         <CollectionsCard onClick={onCollections} />
       </section>
+
+      <TopPeopleCard onClick={onPeople} />
 
       <section className="flex max-w-[770px] flex-col gap-3.5">
         <SectionTitle>{t("More to explore")}</SectionTitle>
@@ -449,6 +459,56 @@ function FeatureCardShell({
         <span className="text-[12.5px] leading-snug text-ink-muted">{caption}</span>
       </span>
     </button>
+  );
+}
+
+// Top People entry, the desktop TopPeopleCta as a single row: the first faces of
+// Harbor's ranked list (cached snapshot first, then the live list) and the page
+// that ranks actors, directors, writers and producers.
+function TopPeopleCard({ onClick }: { onClick: () => void }) {
+  const t = useT();
+  const [faces, setFaces] = useState<HarborRankExplanation[]>(() => {
+    const snap = peekRankSnapshot("harbor", "Acting", null);
+    return snap && snap.source === "harbor" ? snap.list.filter((p) => p.profilePath).slice(0, 4) : [];
+  });
+  useEffect(() => {
+    let alive = true;
+    fetchRankList("harbor", "Acting", null).then((r) => {
+      if (alive && r && r.source === "harbor") setFaces(r.list.filter((p) => p.profilePath).slice(0, 4));
+    });
+    return () => {
+      alive = false;
+    };
+  }, []);
+  return (
+    <section className="max-w-[770px]">
+      <button
+        type="button"
+        onClick={onClick}
+        className="flex min-h-[72px] w-full items-center gap-4 overflow-hidden rounded-xl bg-surface px-4 py-3 text-start ring-1 ring-edge-soft"
+      >
+        <span className="flex shrink-0 -space-x-3 rtl:space-x-reverse" aria-hidden>
+          {faces.length > 0
+            ? faces.map((p) => (
+                <img
+                  key={p.id}
+                  src={`https://image.tmdb.org/t/p/w185${p.profilePath}`}
+                  alt=""
+                  loading="lazy"
+                  className="h-11 w-11 rounded-full object-cover object-top ring-2 ring-surface"
+                />
+              ))
+            : Array.from({ length: 3 }).map((_, i) => (
+                <span key={i} className="h-11 w-11 rounded-full bg-elevated ring-2 ring-surface" />
+              ))}
+        </span>
+        <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+          <span className="font-display text-[18px] font-medium leading-tight tracking-tight text-ink">{t("Top People")}</span>
+          <span className="truncate text-[12.5px] text-ink-muted">{t("The all-time greats")}</span>
+        </span>
+        <ChevronRight size={19} strokeWidth={2.2} className="dir-icon shrink-0 text-ink-subtle" />
+      </button>
+    </section>
   );
 }
 
@@ -592,10 +652,10 @@ function CollectionBackdrop({ src, slideKey }: { src: string; slideKey: number }
 
 function CollectionStack() {
   return (
-    <span aria-hidden className="relative h-11 w-[52px]">
-      <span className="absolute bottom-0 start-0 h-10 w-[30px] -rotate-[13deg] rounded-[7px] bg-elevated ring-1 ring-edge-soft" />
-      <span className="absolute bottom-0 start-[11px] h-10 w-[30px] rotate-[4deg] rounded-[7px] bg-raised ring-1 ring-edge-soft" />
-      <span className="absolute bottom-0 start-[22px] h-10 w-[30px] rotate-[13deg] rounded-[7px] bg-accent/20 ring-1 ring-accent/25" />
+    // Before the collection posters load (or without a TMDB key) the card shows
+    // the desktop collections nav glyph instead of a drawn placeholder stack.
+    <span aria-hidden className="grid h-11 w-11 place-items-center rounded-xl bg-accent/15 text-accent ring-1 ring-accent/25">
+      <NavGlyph name="collections" className="h-6 w-6" />
     </span>
   );
 }
@@ -776,7 +836,7 @@ function Results({
   const t = useT();
   if (metas.length === 0) {
     if (status === "loading" || status === "typing") return <LoaderBlock />;
-    return <EmptyState Icon={SearchIcon} text={t("No matches yet. Try another title.")} />;
+    return <EmptyState icon={<SearchIcon size={24} strokeWidth={1.9} />} text={t("No matches yet. Try another title.")} />;
   }
   return <Grid metas={metas} onOpenDetail={onOpenDetail} />;
 }
@@ -798,7 +858,7 @@ function CatalogView({
         {catalog.metas === null ? (
           <LoaderBlock />
         ) : catalog.metas.length === 0 ? (
-          <EmptyState Icon={Trophy} text={catalog.empty ?? t("Nothing to show here right now.")} />
+          <EmptyState icon={<NavGlyph name="explore" className="h-6 w-6" />} text={catalog.empty ?? t("Nothing to show here right now.")} />
         ) : (
           <Grid metas={catalog.metas} onOpenDetail={onOpenDetail} />
         )}
@@ -880,7 +940,7 @@ function CollectionsBrowser({
           {members === null ? (
             <LoaderBlock />
           ) : members.length === 0 ? (
-            <EmptyState Icon={Layers} text={t("This collection has no titles to show yet.")} />
+            <EmptyState icon={<NavGlyph name="collections" className="h-6 w-6" />} text={t("This collection has no titles to show yet.")} />
           ) : (
             <Grid metas={members} onOpenDetail={onOpenDetail} />
           )}
@@ -897,7 +957,7 @@ function CollectionsBrowser({
           <LoaderBlock />
         ) : list.length === 0 ? (
           <EmptyState
-            Icon={Layers}
+            icon={<NavGlyph name="collections" className="h-6 w-6" />}
             text={t("No collections yet. Add a collections addon to browse curated sets.")}
             action={{ label: t("Add an addon"), onClick: () => requestMobileIntent("addons") }}
           />
@@ -983,7 +1043,7 @@ function CollectionTile({ meta, onOpen }: { meta: Meta; onOpen: (m: Meta) => voi
       <div className="relative overflow-hidden rounded-[12px] ring-1 ring-edge-soft">
         <Poster src={meta.poster} seed={meta.id} ratio="portrait" lazy />
         <span className="absolute end-1.5 top-1.5 grid h-6 w-6 place-items-center rounded-lg bg-canvas/80 text-ink ring-1 ring-edge-soft">
-          <Layers size={13} strokeWidth={2.2} />
+          <NavGlyph name="collections" className="h-3.5 w-3.5" />
         </span>
       </div>
       <p className="mt-1.5 line-clamp-2 min-h-[2.7em] text-[12px] font-medium leading-snug text-ink-muted">
@@ -1011,18 +1071,18 @@ function BackBar({ title, onBack }: { title: string; onBack: () => void }) {
 // the same thing and left the reader to find Addons on their own, four taps away
 // under the profile tab.
 function EmptyState({
-  Icon,
+  icon,
   text,
   action,
 }: {
-  Icon: typeof SearchIcon;
+  icon: React.ReactNode;
   text: string;
   action?: { label: string; onClick: () => void };
 }) {
   return (
     <div className="flex flex-col items-center gap-3 pt-20 text-center [@media(max-height:500px)]:pt-6">
       <span className="grid h-14 w-14 place-items-center rounded-2xl bg-surface text-ink-subtle ring-1 ring-edge-soft">
-        <Icon size={24} strokeWidth={1.9} />
+        {icon}
       </span>
       <p className="max-w-[250px] text-[14px] leading-relaxed text-ink-muted">{text}</p>
       {action && (

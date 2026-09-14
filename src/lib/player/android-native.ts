@@ -10,22 +10,97 @@ export function setNativeCanNext(value: boolean): void {
   canNextEpisode = value;
 }
 import type { SubCue } from "@/lib/subtitles/parser";
+import type { SubtitleLoadMetadata } from "@/lib/subtitles/types";
+import type { Settings } from "@/lib/settings/types";
+import { prepareSubtitle } from "@/lib/subtitles/prepare";
+import { takePreparedSubtitle } from "@/lib/subtitles/prepared-registry";
+import { isSafeProviderSubtitleUrl } from "@/lib/subtitles/provider-url";
+import { subtitleTrackDownloadHeaders } from "@/lib/subtitles/provider-auth";
+import { markLimitReached } from "@/lib/subtitles/limit-signal";
+import { toNativeFileUrl } from "./local-url";
 import {
   nativeCapabilities,
+  nativeEngine,
   nativeInvoke,
   nativeWebChrome,
   setNativeEngine,
+  setNativeSubFpsState,
   setNativeVideoBehind,
   type NativeEngine,
 } from "./native-host";
 import {
   emptySnapshot,
+  type Chapter,
   type PlayerBridge,
   type PlayerCapabilities,
   type PlayerSnapshot,
   type PlayerSource,
   type TrackInfo,
 } from "./bridge";
+
+// Subtitle appearance for the native mpv engine, the wire shape of the plugin's
+// set_sub_style. The desktop applies the same settings through applySubStyle;
+// the phone has no mpv_set_property command, so the plugin maps them instead.
+export type NativeSubStyle = {
+  fontSize: number;
+  color: string;
+  borderSize: number;
+  borderColor: string;
+  boxOpacity: number;
+  marginY: number;
+  alignX: string;
+  bold: boolean;
+  style: string;
+  boxColor: string;
+  opacity: number;
+};
+
+export function nativeSubStyleFromSettings(
+  s: Pick<
+    Settings,
+    | "subFontSize"
+    | "subFontColor"
+    | "subBorderSize"
+    | "subBorderColor"
+    | "subBoxOpacity"
+    | "subMarginY"
+    | "subAlignX"
+    | "subBold"
+    | "subStyle"
+    | "subBoxColor"
+    | "subOpacity"
+  >,
+): NativeSubStyle {
+  return {
+    fontSize: Number(s.subFontSize) || 32,
+    color: s.subFontColor,
+    borderSize: Number(s.subBorderSize) || 0,
+    borderColor: s.subBorderColor,
+    boxOpacity: Number(s.subBoxOpacity ?? 0.6),
+    marginY: Number(s.subMarginY) || 0,
+    alignX: s.subAlignX,
+    bold: !!s.subBold,
+    style: s.subStyle,
+    boxColor: s.subBoxColor || "#000000",
+    opacity: Number(s.subOpacity ?? 1),
+  };
+}
+
+// Remembered so a freshly created mpv core (first load, or an engine swap from
+// AVPlayer) gets the viewer's style without waiting for a settings change.
+let lastSubStyle: NativeSubStyle | null = null;
+
+export function setNativeSubStyle(style: NativeSubStyle): void {
+  lastSubStyle = style;
+  if (nativeEngine() === "mpv") nativeInvoke("set_sub_style", style);
+}
+
+/** 0 restores no correction; otherwise the source frame rate, 1..240. */
+export function setNativeSubFps(fps: number): void {
+  const value = fps === 0 || (fps >= 1 && fps <= 240) ? fps : 0;
+  setNativeSubFpsState({ subFps: value });
+  if (nativeEngine() === "mpv") nativeInvoke("set_sub_fps", { fps: value });
+}
 
 export { setOrientation, type OrientationLock } from "./native-orientation";
 
@@ -58,8 +133,33 @@ type NativeTrack = {
   lang?: string;
   selected: boolean;
   channelCount?: number;
+  // iOS only (mpv fills all of them, AVPlayer the flags); Android sends none, and
+  // an absent flag reads as false.
+  codec?: string;
+  title?: string;
+  forced?: boolean;
+  default?: boolean;
+  hearingImpaired?: boolean;
+  external?: boolean;
+  externalFilename?: string;
+  secondary?: boolean;
 };
-type TracksEvent = { audio: NativeTrack[]; subtitle: NativeTrack[] };
+type TracksEvent = {
+  audio: NativeTrack[];
+  subtitle: NativeTrack[];
+  chapters?: Array<{ title?: string; startSec: number }>;
+  videoFps?: number;
+};
+// What the JS side knows about a subtitle it handed to mpv, keyed by the path mpv
+// reports back as the track's external-filename. mpv only knows a file; the menu
+// needs the provider, the release match and the parsed cues for manual timing.
+type ExternalSubtitle = {
+  url: string;
+  lang?: string;
+  title?: string;
+  cues?: SubCue[];
+  metadata?: SubtitleLoadMetadata;
+};
 
 /**
  * PlayerBridge backed by the native mobile plugin (tauri-plugin-harbor-player):
@@ -85,6 +185,58 @@ export function createNativeBridge(): PlayerBridge {
   let volume = 1;
   let muted = false;
   let rate = 1;
+  // Bumped per load, so a subtitle still downloading for the previous title
+  // never lands on the next one.
+  let loadGeneration = 0;
+  const externalByPath = new Map<string, ExternalSubtitle>();
+  let subtitleCleanups: Array<() => void> = [];
+
+  const releaseSubtitles = () => {
+    for (const cleanup of subtitleCleanups) {
+      try {
+        cleanup();
+      } catch {
+        /* the temp file is already gone */
+      }
+    }
+    subtitleCleanups = [];
+    externalByPath.clear();
+  };
+
+  // Folds what the JS side knows about a subtitle it added back into the track
+  // mpv reports, the way the desktop bridge maps external-filename to metadata.
+  const withExternal = (info: TrackInfo): TrackInfo => {
+    const ext = info.externalFilename ? externalByPath.get(info.externalFilename) : undefined;
+    if (!ext) return info;
+    const m = ext.metadata;
+    return {
+      ...info,
+      lang: ext.lang || info.lang,
+      title: ext.title || info.title,
+      url: ext.url,
+      originalUrl: m?.originalUrl ?? ext.url,
+      forced: info.forced || m?.forced === true,
+      hearingImpaired: info.hearingImpaired || m?.hearingImpaired === true,
+      format: m?.format,
+      release: m?.release,
+      provider: m?.provider,
+      providerDerived: m?.providerDerived,
+      fps: m?.fps,
+      downloads: m?.downloads,
+      author: m?.author,
+      uploadedAt: m?.uploadedAt,
+      rating: m?.rating,
+      productionType: m?.productionType,
+      releaseType: m?.releaseType,
+      foreignOnly: m?.foreignOnly,
+      machineTranslated: m?.machineTranslated,
+      fromTrusted: m?.fromTrusted,
+      providerMatch: m?.providerMatch,
+      downloadAuth: m?.downloadAuth,
+      prepared: m?.prepared,
+      autoSelectionEligible: m?.autoSelectionEligible,
+    };
+  };
 
   const emit = () => {
     const s = snap;
@@ -136,7 +288,16 @@ export function createNativeBridge(): PlayerBridge {
         });
       }),
       await addPluginListener("harbor-player", "state", (st: State) => {
-        if (st.engine === "mpv" || st.engine === "av") setNativeEngine(st.engine);
+        if (st.engine === "mpv" || st.engine === "av") {
+          const previous = nativeEngine();
+          setNativeEngine(st.engine);
+          // A new mpv core starts with mpv's own subtitle look. Its sub-* options
+          // persist across files on the same core, so the style only has to follow
+          // the engine's arrival, not every load.
+          if (st.engine === "mpv" && previous !== "mpv" && lastSubStyle) {
+            nativeInvoke("set_sub_style", lastSubStyle);
+          }
+        }
         // Only once the engine reports a real decoded size. Absent on Android and
         // before the first frame, and the shell shows no quality badge until then
         // rather than guessing one from the stream title.
@@ -170,10 +331,21 @@ export function createNativeBridge(): PlayerBridge {
         });
       }),
       await addPluginListener("harbor-player", "tracks", (t: TracksEvent) => {
-        patch({
+        const next: Partial<PlayerSnapshot> = {
           audioTracks: (t.audio ?? []).map((a) => toTrackInfo(a, "audio")),
-          subtitleTracks: (t.subtitle ?? []).map((s) => toTrackInfo(s, "subtitle")),
-        });
+          subtitleTracks: (t.subtitle ?? []).map((s) => withExternal(toTrackInfo(s, "subtitle"))),
+        };
+        // Absent on Android and on the AV engine, where the snapshot keeps its
+        // empty list rather than being cleared by a payload that never had one.
+        if (Array.isArray(t.chapters)) {
+          next.chapters = t.chapters
+            .filter((c) => typeof c.startSec === "number" && Number.isFinite(c.startSec))
+            .map((c): Chapter => ({ title: c.title ?? "", startSec: c.startSec }));
+        }
+        patch(next);
+        if (typeof t.videoFps === "number" && t.videoFps > 0) {
+          setNativeSubFpsState({ videoFps: t.videoFps });
+        }
       }),
       // The overlay cannot resolve a stream itself, so it asks. Forwarded as a
       // window event because the player view owns the episode logic and this
@@ -193,6 +365,9 @@ export function createNativeBridge(): PlayerBridge {
     detach: noop,
     async load(src: PlayerSource) {
       await ensureListeners();
+      loadGeneration += 1;
+      releaseSubtitles();
+      setNativeSubFpsState({ subFps: 0, videoFps: 0 });
       snap = { ...emptySnapshot, status: "loading", volume, muted, rate };
       emit();
       const webChrome = nativeWebChrome();
@@ -201,7 +376,8 @@ export function createNativeBridge(): PlayerBridge {
       // LoadRequest treats a missing title as None.
       await invoke("plugin:harbor-player|load", {
         payload: {
-          url: src.url,
+          // A saved download is an absolute path; both native players want a URL.
+          url: toNativeFileUrl(src.url),
           headers: src.headers ?? {},
           subtitles: (src.subtitles ?? []).map((s) => ({
             url: s.url,
@@ -248,8 +424,16 @@ export function createNativeBridge(): PlayerBridge {
     setSubtitleTrack(id: string | null) {
       void invoke("plugin:harbor-player|set_subtitle_track", { payload: { trackId: id } }).catch(noop);
     },
-    setSecondarySubtitleTrack: noop,
-    setSubVisible: noop,
+    // mpv draws the second line itself (secondary-sid), so nothing reaches the
+    // web subtitle overlay. AVPlayer has no second subtitle slot.
+    setSecondarySubtitleTrack(id: string | null) {
+      if (nativeEngine() !== "mpv") return;
+      nativeInvoke("set_secondary_subtitle_track", { trackId: id });
+    },
+    setSubVisible(on: boolean) {
+      if (nativeEngine() !== "mpv") return;
+      nativeInvoke("set_sub_visible", { visible: on });
+    },
     setSubDelay(sec: number) {
       patch({ subDelaySec: sec });
       nativeInvoke("set_sub_delay", { seconds: sec });
@@ -264,14 +448,88 @@ export function createNativeBridge(): PlayerBridge {
     setStretch: noop,
     setVideoEq: noop,
     setAnime4kShaders: noop,
-    async addSubtitle() {
-      return false;
+    // The desktop mpv path, minus the desktop-only selection queue: provider and
+    // search results are downloaded and prepared in JS (encoding repair, zip
+    // extraction, auth headers) into a temp file mpv reads, and the metadata is
+    // kept against that path for the menu. AVPlayer cannot take a sidecar.
+    async addSubtitle(
+      url: string,
+      lang?: string,
+      title?: string,
+      select?: boolean,
+      metadata?: SubtitleLoadMetadata,
+    ): Promise<boolean> {
+      if (nativeEngine() !== "mpv") return false;
+      const generation = loadGeneration;
+      const providerDerived = metadata?.providerDerived ?? Boolean(metadata?.provider);
+      const transferred = takePreparedSubtitle(url);
+      if (!transferred && providerDerived && !isSafeProviderSubtitleUrl(url)) return false;
+      let target = url;
+      let cues = transferred?.cues;
+      let cleanup: (() => void) | null = transferred?.cleanup ?? null;
+      if (transferred) {
+        target = transferred.playableUrl;
+      } else if (/^https?:/i.test(url)) {
+        const requestHeaders = subtitleTrackDownloadHeaders(metadata?.downloadAuth, url, providerDerived);
+        try {
+          const prepared = await prepareSubtitle({
+            url,
+            language: lang,
+            format: metadata?.format,
+            encoding: metadata?.encoding,
+            release: metadata?.release,
+            filename: metadata?.rawFilename,
+            requestHeaders,
+          });
+          target = prepared.playableUrl;
+          cues = prepared.cues;
+          cleanup = prepared.cleanup;
+        } catch (e) {
+          const message = e instanceof Error ? e.message : String(e);
+          if (/status 429/.test(message)) {
+            markLimitReached(url);
+            return false;
+          }
+          // Preparation writes a temp file on device; if that step is what failed,
+          // a plain public URL can still go straight to mpv, which fetches it
+          // itself. Anything that needed provider auth headers cannot.
+          if (providerDerived || (requestHeaders && Object.keys(requestHeaders).length > 0)) {
+            return false;
+          }
+        }
+      } else if (/^file:\/\//i.test(url)) {
+        try {
+          target = decodeURIComponent(url.replace(/^file:\/\//i, ""));
+        } catch {
+          target = url.replace(/^file:\/\//i, "");
+        }
+      }
+      if (disposed || generation !== loadGeneration) {
+        cleanup?.();
+        return false;
+      }
+      externalByPath.set(target, { url, lang, title, cues, metadata });
+      try {
+        await invoke("plugin:harbor-player|add_subtitle", {
+          payload: { url: target, title: title ?? null, lang: lang ?? null, select: select ?? true },
+        });
+      } catch {
+        externalByPath.delete(target);
+        cleanup?.();
+        return false;
+      }
+      if (cleanup) subtitleCleanups.push(cleanup);
+      return true;
     },
     getSelectedTrackCues(): SubCue[] | null {
-      return null;
+      const selected = snap.subtitleTracks.find((t) => t.selected);
+      const ext = selected?.externalFilename ? externalByPath.get(selected.externalFilename) : undefined;
+      return ext?.cues && ext.cues.length > 0 ? ext.cues : null;
     },
     getSelectedTrackUrl(): string | null {
-      return null;
+      const selected = snap.subtitleTracks.find((t) => t.selected);
+      if (!selected?.external || !selected.externalFilename) return null;
+      return externalByPath.get(selected.externalFilename)?.url ?? selected.externalFilename;
     },
     setAudioNormalize: noop,
     setMediaInfo(info) {
@@ -297,6 +555,8 @@ export function createNativeBridge(): PlayerBridge {
     },
     destroy() {
       disposed = true;
+      releaseSubtitles();
+      setNativeSubFpsState({ subFps: 0, videoFps: 0 });
       setNativeVideoBehind(false);
       setNativeEngine(null);
       void invoke("plugin:harbor-player|stop").catch(noop);
@@ -315,6 +575,16 @@ function toTrackInfo(t: NativeTrack, kind: "audio" | "subtitle"): TrackInfo {
     kind,
     selected: !!t.selected,
     channelCount: t.channelCount,
+    // Uppercased like the desktop bridge, which is what the text-versus-image
+    // subtitle checks (isTextSubTrack) and the menu's codec label expect.
+    codec: t.codec ? t.codec.toUpperCase() : undefined,
+    title: t.title || undefined,
+    forced: t.forced === true,
+    default: t.default === true,
+    hearingImpaired: t.hearingImpaired === true,
+    external: t.external === true,
+    externalFilename: t.externalFilename || undefined,
+    secondary: t.secondary === true,
   };
 }
 

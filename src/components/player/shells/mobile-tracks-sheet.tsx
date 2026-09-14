@@ -37,6 +37,7 @@ export function MobileTracksSheet({
   metaReleaseDate,
   season,
   episode,
+  subtitleFooter,
 }: {
   open: boolean;
   onClose: () => void;
@@ -61,6 +62,8 @@ export function MobileTracksSheet({
   metaReleaseDate?: string | null;
   season?: number | null;
   episode?: number | null;
+  /** Rendered under the subtitle list; the shell passes the native FPS control. */
+  subtitleFooter?: React.ReactNode;
 }) {
   const t = useT();
   const { settings } = useSettings();
@@ -75,7 +78,7 @@ export function MobileTracksSheet({
   const nativeBody = !flags.addSubtitle && !flags.subSync && !flags.subStyle;
 
   return (
-    <MobileSheet open={open} onClose={onClose} heightClass="max-h-[68vh]">
+    <MobileSheet open={open} onClose={onClose} heightClass="h-[80vh]">
       {showAudioTab && (
         <div className="px-4 pb-3">
           <div className="flex rounded-full bg-raised p-1">
@@ -97,26 +100,33 @@ export function MobileTracksSheet({
               onClose={onClose}
             />
           ) : (
-            <SubtitleMenuBody
-              tracks={subtitleTracks}
-              selectedId={subtitleTracks.find((x) => x.selected)?.id ?? null}
-              delaySec={subDelaySec}
-              onSelect={(id) => {
-                haptics.select();
-                onSubtitle(id);
-              }}
-              onDelay={onSubDelay}
-              onEnterSync={flags.subSync ? onEnterSync : undefined}
-              onAddSubtitle={onAddSubtitle}
-              metaImdbId={metaImdbId}
-              metaTitle={metaTitle}
-              metaReleaseDate={metaReleaseDate}
-              season={season}
-              episode={episode}
-              preferredLanguages={preferredLanguages}
-              onOpenStyleBar={flags.subStyle ? onOpenSubStyle : undefined}
-              onClose={onClose}
-            />
+            // The desktop body, fitted to a phone: a narrower language rail so the
+            // variant list keeps its width at 393pt, no desktop drag-handle gutter
+            // in the header, and rail rows lifted to the 44pt touch floor.
+            <div className="flex min-h-0 flex-1 flex-col [&_aside]:w-[112px] [&_aside>button]:min-h-11 [&_header]:ps-4">
+              <SubtitleMenuBody
+                engine={engine}
+                tracks={subtitleTracks}
+                selectedId={subtitleTracks.find((x) => x.selected)?.id ?? null}
+                delaySec={subDelaySec}
+                onSelect={(id) => {
+                  haptics.select();
+                  onSubtitle(id);
+                }}
+                onDelay={onSubDelay}
+                onEnterSync={flags.subSync ? onEnterSync : undefined}
+                onAddSubtitle={onAddSubtitle}
+                metaImdbId={metaImdbId}
+                metaTitle={metaTitle}
+                metaReleaseDate={metaReleaseDate}
+                season={season}
+                episode={episode}
+                preferredLanguages={preferredLanguages}
+                onOpenStyleBar={flags.subStyle ? onOpenSubStyle : undefined}
+                onClose={onClose}
+              />
+              {subtitleFooter}
+            </div>
           )
         ) : nativeBody ? (
           <NativeTrackList

@@ -1,73 +1,102 @@
-import {
-  Bug,
-  ScrollText,
-  Check,
-  ChevronRight,
-  ClipboardPaste,
-  Download,
-  Eye,
-  EyeOff,
-  FileText,
-  HelpCircle,
-  Link2,
-  LogOut,
-  MonitorSmartphone,
-  Puzzle,
-  QrCode,
-  SlidersHorizontal,
-  Users,
-} from "lucide-react";
-import { useEffect, useState, type ReactNode } from "react";
+import { Check, Users } from "lucide-react";
+import { lazy, Suspense, useEffect, useState, type ComponentType } from "react";
 import rpdbLogo from "@/assets/addon-logos/rpdb.png";
 import tmdbLogo from "@/assets/addon-logos/tmdb.png";
 import tvdbLogo from "@/assets/addon-logos/tvdb.svg";
+import stremioMark from "@/assets/stremio.png";
+import { useAnilist } from "@/lib/anilist/provider";
 import { useAuth } from "@/lib/auth";
+import { loadInstalled } from "@/lib/addon-store";
+import { HARBOR_BUGS_BASE } from "@/lib/config/endpoints";
+import { useActiveDownloadCount } from "@/lib/download/downloads-store";
+import { useT } from "@/lib/i18n";
+import { useMal } from "@/lib/mal/provider";
 import { isMobileNative } from "@/lib/platform";
 import { useProfiles } from "@/lib/profiles";
 import { useSettings } from "@/lib/settings";
-import { loadInstalled } from "@/lib/addon-store";
-import { useActiveDownloadCount } from "@/lib/download/downloads-store";
-import { useT } from "@/lib/i18n";
-import { MobileAddons } from "./mobile-addons";
-import { consumeMobileIntent, MOBILE_INTENT_EVENT } from "./mobile-intent";
-import { MobileDownloads } from "./mobile-downloads";
-import { MobileSettings } from "./mobile-settings";
-import { MobileWhosWatching } from "./mobile-whos-watching";
-import { ExportSetupSheet } from "./mobile-setup-export";
-import { ImportSetupSheet } from "./mobile-setup-import";
-import { MobileReportSheet } from "./mobile-report-sheet";
-import { DiagnosticsSheet } from "./mobile-diagnostics";
+import { listPendingWatches } from "@/lib/simkl/pending-sync";
+import { useSimkl } from "@/lib/simkl/provider";
+import { currentAuthor, subscribeAuthor } from "@/lib/theme-auth";
+import { listPendingStops } from "@/lib/trakt/pending-sync";
+import { useTrakt } from "@/lib/trakt/provider";
+import { SetIcon } from "@/views/settings/set-icon";
+import { AnilistPage } from "./account/anilist-page";
+import { HarborAccountPage } from "./account/harbor-account-page";
+import { IdentityPage } from "./account/identity-page";
+import { LegalPage } from "./account/legal-page";
+import { LetterboxdPage } from "./account/letterboxd-page";
+import { MalPage } from "./account/mal-page";
+import { AvatarDisc, FOCUS, Group, InputSheet, LogoBadge, Row, Rows } from "./account/phone-kit";
+import { ProfilesPage } from "./account/profiles-page";
+import { RelayPage } from "./account/relay-page";
+import { SimklPage } from "./account/simkl-page";
+import { StremioAccountPage, StremioSignInSheet } from "./account/stremio";
+import { TRACKERS, type TrackerId } from "./account/tracker-shared";
+import { TraktPage } from "./account/trakt-page";
 import { DebridSheet, type DebridKey, type DebridProvider } from "./mobile-debrid-sheet";
 import { DEBRID_PROVIDERS } from "./debrid-providers";
+import { DiagnosticsSheet } from "./mobile-diagnostics";
+import { MobileAddons } from "./mobile-addons";
+import { MobileDownloads } from "./mobile-downloads";
+import { consumeMobileIntent, MOBILE_INTENT_EVENT } from "./mobile-intent";
 import { useMobileRemote } from "./mobile-remote";
-import { useRegisterSheet } from "./mobile-sheet-lock";
-import { useKeyboardInset } from "./use-keyboard-inset";
+import { MobileReportSheet } from "./mobile-report-sheet";
+import { MobileSettings } from "./mobile-settings";
+import { ExportSetupSheet } from "./mobile-setup-export";
+import { ImportSetupSheet } from "./mobile-setup-import";
+import { MobileThemeSheet } from "./mobile-theme-sheet";
+import { MobileWhosWatching } from "./mobile-whos-watching";
 import { setMobileRemoteStyle, useMobileRemoteStyle, type MobileRemoteStyle } from "./remote-style";
-import { HARBOR_BUGS_BASE } from "@/lib/config/endpoints";
-import { openUrl } from "@/lib/window";
 
-type EditField = {
-  key: "remoteHostAddress" | "tmdbKey" | "tvdbKey" | "rpdbKey";
-  label: string;
-  placeholder: string;
-  hint?: string;
-  logo?: string;
-};
+// The plugins sheet belongs to the addons area and may land after this file.
+// A glob resolves to an empty map while the module is absent, so the Plugins
+// row hides itself instead of breaking the build, and appears once it exists.
+const PLUGIN_MODULES = import.meta.glob<{ MobilePluginsSheet: ComponentType<{ onClose: () => void }> }>(
+  "./mobile-plugins.tsx",
+);
+const loadPlugins = PLUGIN_MODULES["./mobile-plugins.tsx"];
+const MobilePluginsSheet = loadPlugins
+  ? lazy(() => loadPlugins().then((m) => ({ default: m.MobilePluginsSheet })))
+  : null;
+
+type KeyField = "remoteHostAddress" | "tmdbKey" | "tvdbKey" | "rpdbKey";
+type EditField = { key: KeyField; label: string; placeholder: string; hint?: string; logo?: string };
+
+type Page =
+  | "identity"
+  | "profiles"
+  | "stremio"
+  | "harbor"
+  | "relay"
+  | "legal"
+  | TrackerId
+  | null;
+
+const ICON = 20;
 
 export function MobileProfile({ onOpenRemote }: { onOpenRemote: () => void }) {
   const t = useT();
-  const { user, signOut } = useAuth();
-  const { activeProfile } = useProfiles();
-  const { snapshot, connected } = useMobileRemote();
+  const { user } = useAuth();
+  const { activeProfile, profiles } = useProfiles();
+  const { snapshot, connected, sendCommand } = useMobileRemote();
   const { settings, update } = useSettings();
-  const remote = snapshot.profile;
-  const name = remote?.name || activeProfile?.name || user?.email?.split("@")[0] || t("Guest");
-  const avatar = remote?.avatar ?? activeProfile?.avatar ?? null;
-  const color = remote?.color ?? activeProfile?.color ?? "oklch(0.78 0.13 60)";
+  const trakt = useTrakt();
+  const simkl = useSimkl();
+  const anilist = useAnilist();
+  const mal = useMal();
+  const [author, setAuthor] = useState(currentAuthor);
+  useEffect(() => subscribeAuthor(() => setAuthor(currentAuthor())), []);
+
+  const name = activeProfile?.name || user?.email?.split("@")[0] || t("Guest");
+  const avatar = activeProfile?.avatar ?? settings.harborAvatar ?? user?.avatar ?? null;
+  const color = activeProfile?.color ?? settings.harborColor ?? "oklch(0.78 0.13 60)";
+
   const [switching, setSwitching] = useState(false);
+  const [page, setPage] = useState<Page>(null);
+  const [signInOpen, setSignInOpen] = useState(false);
   const [editing, setEditing] = useState<EditField | null>(null);
   const [debridEditing, setDebridEditing] = useState<DebridProvider | null>(null);
-  // Opened straight from a surface that has no addons screen of its own. The
+  // Opened straight from a surface that has no screen of its own. The
   // initializer covers the first visit (this tab is not mounted yet when the
   // request is made); the listener below covers every later visit, since the
   // shell keeps visited tabs mounted and the initializer would never run again.
@@ -75,6 +104,8 @@ export function MobileProfile({ onOpenRemote }: { onOpenRemote: () => void }) {
   useState(() => consumeMobileIntent("debrid"));
   const [settingsOpen, setSettingsOpen] = useState(() => consumeMobileIntent("settings"));
   const [downloadsOpen, setDownloadsOpen] = useState(false);
+  const [themeOpen, setThemeOpen] = useState(() => consumeMobileIntent("theme"));
+  const [pluginsOpen, setPluginsOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
@@ -88,6 +119,7 @@ export function MobileProfile({ onOpenRemote }: { onOpenRemote: () => void }) {
       const which = (e as CustomEvent<string>).detail;
       if (which === "addons" && consumeMobileIntent("addons")) setAddonsOpen(true);
       if (which === "settings" && consumeMobileIntent("settings")) setSettingsOpen(true);
+      if (which === "theme" && consumeMobileIntent("theme")) setThemeOpen(true);
       // This page IS the debrid destination, so arriving is the whole action.
       // Consume anyway or the flag lingers and fires on a later visit.
       if (which === "debrid") consumeMobileIntent("debrid");
@@ -104,6 +136,26 @@ export function MobileProfile({ onOpenRemote }: { onOpenRemote: () => void }) {
     ...DEBRID_PROVIDERS.filter((p) => keySet(settings[p.key])),
     ...DEBRID_PROVIDERS.filter((p) => !keySet(settings[p.key])),
   ];
+
+  const lb = settings.letterboxd;
+  const trackerState: Record<TrackerId, { connected: boolean; handle?: string | null; pending: number }> = {
+    trakt: { connected: trakt.isConnected, handle: trakt.username, pending: trakt.isConnected ? listPendingStops().length : 0 },
+    simkl: { connected: simkl.isConnected, handle: simkl.username, pending: simkl.isConnected ? listPendingWatches().length : 0 },
+    anilist: { connected: anilist.isConnected, handle: anilist.userName, pending: 0 },
+    mal: { connected: mal.isConnected, handle: mal.userName, pending: 0 },
+    letterboxd: { connected: !!lb?.enabled && !!lb?.username, handle: lb?.username, pending: 0 },
+  };
+
+  const remoteProfiles =
+    connected && snapshot.profiles.length
+      ? {
+          profiles: snapshot.profiles,
+          activeId: snapshot.profile?.id ?? null,
+          switchTo: (id: string) => sendCommand({ action: "setProfile", id }),
+        }
+      : undefined;
+
+  const closePage = () => setPage(null);
 
   return (
     <div
@@ -125,35 +177,93 @@ export function MobileProfile({ onOpenRemote }: { onOpenRemote: () => void }) {
       <header className="flex flex-col items-center gap-5">
         <button
           type="button"
-          onClick={() => setSwitching(true)}
-          className="flex flex-col items-center gap-4"
+          onClick={() => setPage("identity")}
+          aria-label={t("Your profile")}
+          className={`flex flex-col items-center gap-4 rounded-3xl ${FOCUS}`}
         >
           <span
-            className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-full text-[34px] font-semibold text-white ring-1 ring-white/15"
-            style={{
-              background: avatar ? undefined : color,
-              boxShadow: `0 18px 48px -14px color-mix(in oklab, ${color} 62%, transparent)`,
-            }}
+            className="block rounded-full"
+            style={{ boxShadow: `0 18px 48px -14px color-mix(in oklab, ${color} 62%, transparent)` }}
           >
-            {avatar ? (
-              <img src={avatar} alt="" className="h-full w-full object-cover" />
-            ) : (
-              name.slice(0, 1).toUpperCase()
-            )}
+            <AvatarDisc src={avatar} color={color} size={96} />
           </span>
-          <h1 className="font-display text-[29px] font-medium leading-none tracking-[-0.01em] text-ink">
+          <h1 className="max-w-full truncate font-display text-[29px] font-medium leading-none tracking-[-0.01em] text-ink">
             {name}
           </h1>
         </button>
         <button
           type="button"
           onClick={() => setSwitching(true)}
-          className="flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.05] px-4 py-2 text-[12.5px] font-semibold text-ink-muted backdrop-blur-sm transition-colors active:bg-white/[0.1]"
+          className={`flex min-h-11 items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.05] px-4 text-[12.5px] font-semibold text-ink-muted backdrop-blur-sm transition-colors active:bg-white/[0.1] ${FOCUS}`}
         >
           <Users size={13} strokeWidth={2.4} />
-          {t("Switch profile")}
+          {profiles.length > 1 ? t("Switch profile") : t("Who's watching")}
         </button>
       </header>
+
+      <Group title={t("Account")}>
+        <Rows>
+          <Row
+            icon={<SetIcon name="UserRound" size={ICON} />}
+            label={t("Your profile")}
+            value={author?.handle ? `@${author.handle}` : undefined}
+            onClick={() => setPage("identity")}
+          />
+          <Row
+            icon={<SetIcon name="Users" size={ICON} />}
+            label={t("Profiles")}
+            value={String(profiles.length)}
+            onClick={() => setPage("profiles")}
+          />
+          {user ? (
+            <Row
+              icon={<LogoBadge src={stremioMark} size={20} />}
+              label="Stremio"
+              value={user.fullname || user.email || undefined}
+              dot="ok"
+              onClick={() => setPage("stremio")}
+            />
+          ) : (
+            <Row
+              icon={<LogoBadge src={stremioMark} size={20} />}
+              label={t("Sign in to Stremio")}
+              pending
+              pendingLabel={t("Sign in")}
+              onClick={() => setSignInOpen(true)}
+            />
+          )}
+          <Row
+            icon={<SetIcon name="Sailboat" size={ICON} />}
+            label={t("Harbor account")}
+            value={author ? (author.handle ? `@${author.handle}` : author.username) : undefined}
+            dot={author ? "ok" : null}
+            pending={!author}
+            pendingLabel={t("Sign in")}
+            onClick={() => setPage("harbor")}
+          />
+        </Rows>
+      </Group>
+
+      <Group title={t("Trackers")}>
+        <Rows>
+          {TRACKERS.map((tr) => {
+            const s = trackerState[tr.id];
+            return (
+              <Row
+                key={tr.id}
+                icon={<LogoBadge src={tr.logo} size={20} />}
+                label={tr.name}
+                value={s.connected ? (s.handle ? `@${s.handle}` : t("Connected")) : undefined}
+                dot={s.connected ? "ok" : null}
+                badge={s.pending > 0 ? String(s.pending) : undefined}
+                pending={!s.connected}
+                pendingLabel={t("Connect")}
+                onClick={() => setPage(tr.id)}
+              />
+            );
+          })}
+        </Rows>
+      </Group>
 
       <section className="flex flex-col gap-4">
         <h2 className="px-1 text-[12px] font-bold uppercase tracking-[0.16em] text-ink-subtle">
@@ -165,208 +275,230 @@ export function MobileProfile({ onOpenRemote }: { onOpenRemote: () => void }) {
         </div>
       </section>
 
-      <section className="flex flex-col gap-4">
-        <div className="flex flex-col gap-2">
-          <h2 className="px-1 text-[12px] font-bold uppercase tracking-[0.16em] text-ink-subtle">
-            Streaming setup
-          </h2>
-          <p className="px-1 text-[12.5px] leading-relaxed text-ink-subtle">
-            A TMDB key unlocks the full catalog. RPDB bakes ratings into every poster.
-          </p>
-        </div>
-        <div className="overflow-hidden rounded-2xl border border-white/[0.06] bg-elevated/40">
+      <Group
+        title={t("Streaming setup")}
+        note={t("A TMDB key unlocks the full catalog. RPDB bakes ratings into every poster.")}
+      >
+        <Rows>
           {native && (
-            <>
-              <Row
-                icon={<Link2 size={20} strokeWidth={2} />}
-                label="Desktop connection"
-                value={connected ? settings.remoteHostAddress : settings.remoteHostAddress || undefined}
-                pending={!connected && !settings.remoteHostAddress}
-                pendingLabel="Connect"
-                dot={connected ? "ok" : null}
-                onClick={() =>
-                  setEditing({
-                    key: "remoteHostAddress",
-                    label: "Desktop connection",
-                    placeholder: "192.168.1.20",
-                    hint: "IP address of the computer running Harbor, shown in its Remote settings.",
-                  })
-                }
-              />
-              <Divider />
-            </>
+            <Row
+              icon={<SetIcon name="Monitor" size={ICON} />}
+              label={t("Desktop connection")}
+              value={settings.remoteHostAddress || undefined}
+              pending={!connected && !settings.remoteHostAddress}
+              pendingLabel={t("Connect")}
+              dot={connected ? "ok" : null}
+              onClick={() =>
+                setEditing({
+                  key: "remoteHostAddress",
+                  label: t("Desktop connection"),
+                  placeholder: "192.168.1.20",
+                  hint: t("IP address of the computer running Harbor, shown in its Remote settings."),
+                })
+              }
+            />
           )}
           <Row
-            icon={<LogoBadge src={tmdbLogo} />}
-            label="TMDB API key"
+            icon={<LogoBadge src={tmdbLogo} size={20} />}
+            label={t("TMDB API key")}
             value={keySet(settings.tmdbKey) ? "••••" : undefined}
             pending={!keySet(settings.tmdbKey)}
             dot={keySet(settings.tmdbKey) ? "ok" : null}
             onClick={() =>
               setEditing({
                 key: "tmdbKey",
-                label: "TMDB API key",
+                label: t("TMDB API key"),
                 logo: tmdbLogo,
-                placeholder: "Paste key",
-                hint: "Free at themoviedb.org. Powers rich detail pages and episode grids.",
+                placeholder: t("Paste key"),
+                hint: t("Free at themoviedb.org. Powers rich detail pages and episode grids."),
               })
             }
           />
-          <Divider />
           <Row
-            icon={<LogoBadge src={tvdbLogo} />}
-            label="TVDB API key"
+            icon={<LogoBadge src={tvdbLogo} size={20} />}
+            label={t("TVDB API key")}
             value={keySet(settings.tvdbKey) ? "••••" : undefined}
             pending={!keySet(settings.tvdbKey)}
             dot={keySet(settings.tvdbKey) ? "ok" : null}
             onClick={() =>
               setEditing({
                 key: "tvdbKey",
-                label: "TVDB API key",
+                label: t("TVDB API key"),
                 logo: tvdbLogo,
-                placeholder: "Paste key",
-                hint: "Optional. Episode orders work without one via Harbor's proxy.",
+                placeholder: t("Paste key"),
+                hint: t("Optional. Episode orders work without one via Harbor's proxy."),
               })
             }
           />
-          <Divider />
           <Row
-            icon={<LogoBadge src={rpdbLogo} />}
-            label="RPDB API key"
+            icon={<LogoBadge src={rpdbLogo} size={20} />}
+            label={t("RPDB API key")}
             value={keySet(settings.rpdbKey) ? "••••" : undefined}
             pending={!keySet(settings.rpdbKey)}
             dot={keySet(settings.rpdbKey) ? "ok" : null}
             onClick={() =>
               setEditing({
                 key: "rpdbKey",
-                label: "RPDB API key",
+                label: t("RPDB API key"),
                 logo: rpdbLogo,
-                placeholder: "Paste key",
-                hint: "Rated posters on every rail. Paid plan at ratingposterdb.com.",
+                placeholder: t("Paste key"),
+                hint: t("Rated posters on every rail. Paid plan at ratingposterdb.com."),
               })
             }
           />
-          <Divider />
           <Row
-            icon={<Puzzle size={20} strokeWidth={2} />}
-            label="Addons"
+            icon={<SetIcon name="Puzzle" size={ICON} />}
+            label={t("Addons")}
             value={installedAddonCount ? `${installedAddonCount}` : undefined}
             pending={!installedAddonCount}
-            pendingLabel="Add"
+            pendingLabel={t("Add")}
             onClick={() => setAddonsOpen(true)}
           />
-        </div>
-      </section>
-
-      <section className="flex flex-col gap-4">
-        <div className="flex flex-col gap-2">
-          <h2 className="px-1 text-[12px] font-bold uppercase tracking-[0.16em] text-ink-subtle">
-            Debrid
-          </h2>
-          <p className="px-1 text-[12.5px] leading-relaxed text-ink-subtle">
-            Connect a debrid service and cached streams play direct. Keys stay on this device.
-          </p>
-        </div>
-        <div className="overflow-hidden rounded-2xl border border-white/[0.06] bg-elevated/40">
-          {debridProviders.map((p, i) => (
-            <div key={p.key}>
-              {i > 0 && <Divider />}
-              <Row
-                icon={<LogoBadge src={p.logo} />}
-                label={p.label}
-                value={keySet(settings[p.key]) ? "••••" : undefined}
-                pending={!keySet(settings[p.key])}
-                pendingLabel="Connect"
-                dot={keySet(settings[p.key]) ? "ok" : null}
-                onClick={() => setDebridEditing(p)}
-              />
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <section className="overflow-hidden rounded-2xl border border-white/[0.06] bg-elevated/40">
-        {native && (
-          <>
+          {MobilePluginsSheet && (
             <Row
-              icon={<Download size={20} strokeWidth={2} />}
-              label="Downloads"
+              icon={<SetIcon name="Plug" size={ICON} />}
+              label={t("Plugins")}
+              onClick={() => setPluginsOpen(true)}
+            />
+          )}
+        </Rows>
+      </Group>
+
+      <Group
+        title={t("Debrid")}
+        note={t("Connect a debrid service and cached streams play direct. Keys stay on this device.")}
+      >
+        <Rows>
+          {debridProviders.map((p) => (
+            <Row
+              key={p.key}
+              icon={<LogoBadge src={p.logo} size={20} />}
+              label={p.label}
+              value={keySet(settings[p.key]) ? "••••" : undefined}
+              pending={!keySet(settings[p.key])}
+              pendingLabel={t("Connect")}
+              dot={keySet(settings[p.key]) ? "ok" : null}
+              onClick={() => setDebridEditing(p)}
+            />
+          ))}
+        </Rows>
+      </Group>
+
+      <Group>
+        <Rows>
+          {native && (
+            <Row
+              icon={<SetIcon name="Download" size={ICON} />}
+              label={t("Downloads")}
               badge={activeDownloads > 0 ? String(activeDownloads) : undefined}
               onClick={() => setDownloadsOpen(true)}
             />
-            <Divider />
-          </>
-        )}
-        <Row
-          icon={<SlidersHorizontal size={20} strokeWidth={2} />}
-          label="Settings"
-          onClick={() => setSettingsOpen(true)}
-        />
-        <Divider />
-        <Row
-          icon={<MonitorSmartphone size={20} strokeWidth={2} />}
-          label={t("Remote")}
-          onClick={onOpenRemote}
-        />
-        <Divider />
-        <Row
-          icon={<QrCode size={20} strokeWidth={2} />}
-          label="Export setup"
-          onClick={() => setExportOpen(true)}
-        />
-        <Divider />
-        <Row
-          icon={<ClipboardPaste size={20} strokeWidth={2} />}
-          label="Import setup"
-          onClick={() => setImportOpen(true)}
-        />
-        <Divider />
-        <Row
-          icon={<Bug size={20} strokeWidth={2} />}
-          label="Report a problem"
-          onClick={() => setReportOpen(true)}
-        />
-        <Divider />
-        <Row
-          icon={<ScrollText size={20} strokeWidth={2} />}
-          label="Diagnostics"
-          onClick={() => setDiagOpen(true)}
-        />
-        <Divider />
-        <Row
-          icon={<HelpCircle size={20} strokeWidth={2} />}
-          label={t("Help & feedback")}
-          href={HARBOR_BUGS_BASE}
-        />
-        <Divider />
-        <Row icon={<FileText size={20} strokeWidth={2} />} label={t("Legal")} onClick={() => {}} />
-        {user && (
-          <>
-            <Divider />
-            <Row
-              icon={<LogOut size={20} strokeWidth={2} />}
-              label={t("Sign out")}
-              danger
-              onClick={signOut}
-            />
-          </>
-        )}
-      </section>
+          )}
+          <Row
+            icon={<SetIcon name="SlidersHorizontal" size={ICON} />}
+            label={t("Settings")}
+            onClick={() => setSettingsOpen(true)}
+          />
+          <Row
+            icon={<SetIcon name="SmartphoneNfc" size={ICON} />}
+            label={t("Remote")}
+            onClick={onOpenRemote}
+          />
+          <Row
+            icon={<SetIcon name="RelaySettings" size={ICON} />}
+            label={t("Harbor Relay")}
+            value={settings.togetherRelayUrl ? t("Connected") : undefined}
+            onClick={() => setPage("relay")}
+          />
+          <Row
+            icon={<SetIcon name="Upload" size={ICON} />}
+            label={t("Export setup")}
+            onClick={() => setExportOpen(true)}
+          />
+          <Row
+            icon={<SetIcon name="FileDown" size={ICON} />}
+            label={t("Import setup")}
+            onClick={() => setImportOpen(true)}
+          />
+          <Row
+            icon={<SetIcon name="Bug" size={ICON} />}
+            label={t("Report a problem")}
+            onClick={() => setReportOpen(true)}
+          />
+          <Row
+            icon={<SetIcon name="Activity" size={ICON} />}
+            label={t("Diagnostics")}
+            onClick={() => setDiagOpen(true)}
+          />
+          <Row
+            icon={<SetIcon name="MessageSquare" size={ICON} />}
+            label={t("Help & feedback")}
+            href={HARBOR_BUGS_BASE}
+          />
+          <Row
+            icon={<SetIcon name="Scale" size={ICON} />}
+            label={t("Legal")}
+            onClick={() => setPage("legal")}
+          />
+        </Rows>
+      </Group>
 
-      {switching && <MobileWhosWatching onClose={() => setSwitching(false)} />}
+      {switching && (
+        <MobileWhosWatching onClose={() => setSwitching(false)} remote={remoteProfiles} />
+      )}
+      {signInOpen && <StremioSignInSheet onClose={() => setSignInOpen(false)} />}
+      {page === "identity" && <IdentityPage onClose={closePage} />}
+      {page === "profiles" && <ProfilesPage onClose={closePage} />}
+      {page === "stremio" && (
+        <StremioAccountPage
+          onClose={closePage}
+          onManageAddons={() => {
+            setPage(null);
+            setAddonsOpen(true);
+          }}
+        />
+      )}
+      {page === "harbor" && (
+        <HarborAccountPage
+          onClose={closePage}
+          onOpenStremio={() => {
+            setPage(null);
+            if (user) setPage("stremio");
+            else setSignInOpen(true);
+          }}
+        />
+      )}
+      {page === "relay" && <RelayPage onClose={closePage} />}
+      {page === "legal" && <LegalPage onClose={closePage} />}
+      {page === "trakt" && <TraktPage onClose={closePage} />}
+      {page === "simkl" && <SimklPage onClose={closePage} />}
+      {page === "anilist" && <AnilistPage onClose={closePage} />}
+      {page === "mal" && <MalPage onClose={closePage} />}
+      {page === "letterboxd" && <LetterboxdPage onClose={closePage} />}
       {addonsOpen && <MobileAddons onClose={() => setAddonsOpen(false)} />}
+      {pluginsOpen && MobilePluginsSheet && (
+        <Suspense fallback={null}>
+          <MobilePluginsSheet onClose={() => setPluginsOpen(false)} />
+        </Suspense>
+      )}
       {settingsOpen && <MobileSettings onClose={() => setSettingsOpen(false)} />}
+      {themeOpen && <MobileThemeSheet onClose={() => setThemeOpen(false)} />}
       {downloadsOpen && <MobileDownloads onClose={() => setDownloadsOpen(false)} />}
       {exportOpen && <ExportSetupSheet onClose={() => setExportOpen(false)} />}
       {importOpen && <ImportSetupSheet onClose={() => setImportOpen(false)} />}
       {reportOpen && <MobileReportSheet onClose={() => setReportOpen(false)} />}
-      {diagOpen && (
-        <DiagnosticsSheet onClose={() => setDiagOpen(false)} />
-      )}
+      {diagOpen && <DiagnosticsSheet onClose={() => setDiagOpen(false)} />}
       {editing && (
-        <EditSheet
-          field={editing}
+        <InputSheet
+          title={editing.label}
+          hint={editing.hint}
+          logo={editing.logo}
           initial={String(settings[editing.key] ?? "")}
+          placeholder={editing.placeholder}
+          // Every field here except the remote host holds a secret (API tokens);
+          // mask by default with a reveal toggle, matching desktop's KeyField.
+          secret={editing.key !== "remoteHostAddress"}
+          inputMode={editing.key === "remoteHostAddress" ? "decimal" : "text"}
           onSave={(next) => {
             const v = next.trim();
             if (editing.key === "remoteHostAddress") update({ remoteHostAddress: v });
@@ -401,119 +533,13 @@ export function MobileProfile({ onOpenRemote }: { onOpenRemote: () => void }) {
   );
 }
 
-function EditSheet({
-  field,
-  initial,
-  onSave,
-  onClose,
-}: {
-  field: EditField;
-  initial: string;
-  onSave: (next: string) => void;
-  onClose: () => void;
-}) {
-  const [value, setValue] = useState(initial);
-  const [reveal, setReveal] = useState(false);
-  const keyboardInset = useKeyboardInset();
-  useRegisterSheet(true);
-  // Every field here except the remote host holds a secret (API tokens); mask by
-  // default with a reveal toggle, matching desktop's KeyField.
-  const secret = field.key !== "remoteHostAddress";
-  return (
-    <div
-      className="fixed inset-0 z-[70] flex items-end justify-center transition-[padding] duration-150"
-      style={{ paddingBottom: keyboardInset }}
-    >
-      <button
-        type="button"
-        aria-label="Close"
-        onClick={onClose}
-        className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-fade-in"
-      />
-      {/* Same bound as DebridSheet: the container's content box is already short by
-          the keyboard inset, so the title and the Save row survive a focused field
-          on a 667px screen and the hint scrolls instead. */}
-      <div
-        className="relative z-10 flex min-h-0 w-full max-w-md flex-col rounded-t-[30px] border border-edge-soft/70 bg-elevated shadow-[0_-12px_40px_-12px_rgba(0,0,0,0.7)]"
-        style={{
-          maxHeight: "calc(100% - env(safe-area-inset-top, 0px) - 16px)",
-          paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 24px)",
-        }}
-      >
-        <h3 className="shrink-0 px-6 pt-6 text-[18px] font-semibold text-ink">
-          {field.label}
-        </h3>
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-6 pb-1">
-          {field.hint && (
-            <p className="mt-2 text-[13px] leading-relaxed text-ink-muted">{field.hint}</p>
-          )}
-          <div className="mt-5 flex min-h-[58px] items-center rounded-2xl border border-edge-soft/70 bg-canvas/70 p-1.5 transition-colors focus-within:border-accent">
-            {field.logo && (
-              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-raised/70 ring-1 ring-white/[0.06]">
-                <img
-                  src={field.logo}
-                  alt=""
-                  draggable={false}
-                  className="max-h-8 max-w-8 object-contain"
-                />
-              </span>
-            )}
-            <input
-              autoFocus
-              type={secret && !reveal ? "password" : "text"}
-              value={value}
-              onChange={(e) => setValue(e.target.value)}
-              placeholder={field.placeholder}
-              autoCapitalize="none"
-              autoCorrect="off"
-              autoComplete="off"
-              spellCheck={false}
-              inputMode={field.key === "remoteHostAddress" ? "decimal" : "text"}
-              className="min-w-0 flex-1 bg-transparent px-3 py-3 text-[16px] text-ink placeholder:text-ink-subtle focus:outline-none"
-              onKeyDown={(e) => {
-                if (e.key === "Enter") onSave(value);
-              }}
-            />
-            {secret && (
-              <button
-                type="button"
-                aria-label={reveal ? "Hide" : "Reveal"}
-                onClick={() => setReveal((r) => !r)}
-                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-ink-subtle transition-colors active:bg-raised/60 active:text-ink"
-              >
-                {reveal ? <EyeOff size={18} /> : <Eye size={18} />}
-              </button>
-            )}
-          </div>
-        </div>
-        <div className="flex shrink-0 gap-3 px-6 pt-5">
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex-1 rounded-full border border-edge-soft/70 py-3 text-[14.5px] font-semibold text-ink-muted transition-colors active:bg-raised/60"
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            onClick={() => onSave(value)}
-            className="flex-1 rounded-full bg-ink py-3 text-[14.5px] font-semibold text-canvas"
-          >
-            Save
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 function StylePreview({ kind, label }: { kind: MobileRemoteStyle; label: string }) {
   const active = useMobileRemoteStyle() === kind;
   return (
     <button
       type="button"
       onClick={() => setMobileRemoteStyle(kind)}
-      className={`relative flex flex-col items-center gap-3 rounded-2xl border bg-surface/50 p-4 transition-colors ${
+      className={`relative flex flex-col items-center gap-3 rounded-2xl border bg-surface/50 p-4 transition-colors ${FOCUS} ${
         active ? "border-accent ring-1 ring-accent" : "border-edge-soft/70"
       }`}
     >
@@ -551,106 +577,4 @@ function TouchpadGlyph() {
       <span className="absolute h-[3px] w-8 -rotate-[18deg] rounded-full bg-ink-subtle/50" />
     </span>
   );
-}
-
-/* `href` renders a real anchor rather than a button calling window.open. This
-   screen is where the setup flow lands people, and a programmatic open that a
-   mobile browser does not credit as a user gesture can navigate the current
-   tab instead, which is how a viewer ends up outside Harbor with no way back. */
-function Row({
-  icon,
-  label,
-  value,
-  dot,
-  pending,
-  pendingLabel = "Set up",
-  badge,
-  onClick,
-  href,
-  danger,
-}: {
-  icon: ReactNode;
-  label: string;
-  value?: string;
-  dot?: "ok" | null;
-  pending?: boolean;
-  pendingLabel?: string;
-  badge?: string;
-  onClick?: () => void;
-  href?: string;
-  danger?: boolean;
-}) {
-  const skin =
-    "flex w-full items-center gap-4 px-4 py-4 text-start transition-colors active:bg-raised/60";
-  const inner = (
-    <>
-      <span className={`shrink-0 ${danger ? "text-danger" : "text-ink-muted"}`}>{icon}</span>
-      {/* The label holds its width and the value absorbs the squeeze, matching
-          the settings rows. A truncated label reads as broken; a truncated
-          value (an IP, a masked key) still reads as a value. The spacer keeps
-          the trailing furniture right-aligned on rows that carry no value. */}
-      <span
-        className={`shrink-0 text-[15px] font-medium ${danger ? "text-danger" : "text-ink"}`}
-      >
-        {label}
-      </span>
-      {dot === "ok" && <span className="h-2 w-2 shrink-0 rounded-full bg-success" />}
-      {value ? (
-        <span className="min-w-0 flex-1 truncate text-end text-[13.5px] text-ink-subtle">
-          {value}
-        </span>
-      ) : (
-        <span aria-hidden className="min-w-0 flex-1" />
-      )}
-      {badge && (
-        <span className="flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-accent px-1.5 text-[11px] font-bold tabular-nums text-canvas">
-          {badge}
-        </span>
-      )}
-      {pending && (
-        <span className="shrink-0 rounded-full bg-accent/10 px-2.5 py-1 text-[11.5px] font-semibold text-accent">
-          {pendingLabel}
-        </span>
-      )}
-      {!danger && (
-        <ChevronRight size={18} strokeWidth={2.2} className="shrink-0 text-ink-subtle" />
-      )}
-    </>
-  );
-  if (href) {
-    return (
-      <a
-        href={href}
-        target="_blank"
-        rel="noopener noreferrer"
-        onClick={(e) => {
-          if (!("__TAURI_INTERNALS__" in window)) return;
-          e.preventDefault();
-          openUrl(href);
-        }}
-        className={skin}
-      >
-        {inner}
-      </a>
-    );
-  }
-  return (
-    <button type="button" onClick={onClick} className={skin}>
-      {inner}
-    </button>
-  );
-}
-
-// Brand logo badge shared by the Streaming setup (TMDB/TVDB/RPDB) and Debrid
-// rows so both sections read the same premium way instead of a generic icon.
-function LogoBadge({ src }: { src: string }) {
-  return (
-    <span className="flex h-5 w-5 items-center justify-center overflow-hidden rounded-[5px]">
-      <img src={src} alt="" draggable={false} className="h-full w-full object-contain" />
-    </span>
-  );
-}
-
-function Divider() {
-  return <span className="mx-4 block h-px bg-edge-soft/60" />;
 }

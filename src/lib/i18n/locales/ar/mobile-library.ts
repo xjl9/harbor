@@ -1,6 +1,37 @@
 // Phone shell strings for library surfaces; the i18n coverage test requires every
 // translated locale to carry every t() key used by the app.
 const mobileLibrary: Record<string, string> = {
+  "Filter by type": "تصفية حسب النوع",
+  "Name and description": "الاسم والوصف",
+  "Reorder items": "إعادة ترتيب العناصر",
+  "Nothing is streaming right now.": "لا يوجد بث الآن.",
+  "Simkl section": "قسم Simkl",
+  "Download paused": "التنزيل متوقف مؤقتًا",
+  "Download episode": "تنزيل الحلقة",
+  "Saved movies and episodes for offline use": "أفلام وحلقات محفوظة للاستخدام دون اتصال",
+  "Filter downloads": "تصفية التنزيلات",
+  "Stored on this device": "مخزن على هذا الجهاز",
+  "1 saved": "تم حفظ 1",
+  "{count} saved": "تم حفظ {count}",
+  "{size} in progress": "{size} قيد التنزيل",
+  "Open a movie or episode, tap Download, and pick a source. It saves here for offline watching.": "افتح فيلمًا أو حلقة، واضغط على تنزيل، واختر مصدرًا. سيُحفظ هنا للمشاهدة دون اتصال.",
+  "Your library is empty": "مكتبتك فارغة",
+  "Everything you save from Stremio, Trakt, and this device collects here.": "كل ما تحفظه من Stremio وTrakt وهذا الجهاز يجتمع هنا.",
+  "Save a movie or show from any detail page and it lines up here for later.": "احفظ فيلمًا أو مسلسلًا من أي صفحة تفاصيل وسيبقى هنا لوقت لاحق.",
+  "Press play on something. It shows up here once you start watching.": "شغّل شيئًا ما. سيظهر هنا بمجرد أن تبدأ المشاهدة.",
+  "Your local library is empty": "مكتبتك المحلية فارغة",
+  "Scan local folders in Harbor and your movies and shows will appear here.": "افحص المجلدات المحلية في Harbor وستظهر أفلامك ومسلسلاتك هنا.",
+  "No media-server titles": "لا توجد عناوين من خوادم الوسائط",
+  "Enable and sync Plex, Jellyfin, or Emby in Harbor to browse them here.": "فعّل Plex أو Jellyfin أو Emby وزامنه في Harbor لتصفحها هنا.",
+  "any quality": "أي جودة",
+  "up to 4K": "حتى 4K",
+  "up to 1080p": "حتى 1080p",
+  "up to 720p": "حتى 720p",
+  "cached only": "المخزنة مؤقتًا فقط",
+  "allow P2P downloads": "السماح بتنزيلات P2P",
+  "for 3 more episodes": "لـ 3 حلقات أخرى",
+  "for 5 more episodes": "لـ 5 حلقات أخرى",
+  "for 10 more episodes": "لـ 10 حلقات أخرى",
 };
 
 export default mobileLibrary;

@@ -295,6 +295,18 @@
       "type": "string",
       "oneOf": [
         {
+          "description": "Enables the add_subtitle command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-add-subtitle",
+          "markdownDescription": "Enables the add_subtitle command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the add_subtitle command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-add-subtitle",
+          "markdownDescription": "Denies the add_subtitle command without any pre-configured scope."
+        },
+        {
           "description": "Enables the enter_pip command without any pre-configured scope.",
           "type": "string",
           "const": "allow-enter-pip",
@@ -451,6 +463,18 @@
           "markdownDescription": "Denies the set_rate command without any pre-configured scope."
         },
         {
+          "description": "Enables the set_secondary_subtitle_track command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-set-secondary-subtitle-track",
+          "markdownDescription": "Enables the set_secondary_subtitle_track command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the set_secondary_subtitle_track command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-set-secondary-subtitle-track",
+          "markdownDescription": "Denies the set_secondary_subtitle_track command without any pre-configured scope."
+        },
+        {
           "description": "Enables the set_sub_delay command without any pre-configured scope.",
           "type": "string",
           "const": "allow-set-sub-delay",
@@ -461,6 +485,42 @@
           "type": "string",
           "const": "deny-set-sub-delay",
           "markdownDescription": "Denies the set_sub_delay command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the set_sub_fps command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-set-sub-fps",
+          "markdownDescription": "Enables the set_sub_fps command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the set_sub_fps command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-set-sub-fps",
+          "markdownDescription": "Denies the set_sub_fps command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the set_sub_style command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-set-sub-style",
+          "markdownDescription": "Enables the set_sub_style command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the set_sub_style command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-set-sub-style",
+          "markdownDescription": "Denies the set_sub_style command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the set_sub_visible command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-set-sub-visible",
+          "markdownDescription": "Enables the set_sub_visible command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the set_sub_visible command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-set-sub-visible",
+          "markdownDescription": "Denies the set_sub_visible command without any pre-configured scope."
         },
         {
           "description": "Enables the set_subtitle_track command without any pre-configured scope.",
@@ -523,10 +583,10 @@
           "markdownDescription": "Denies the stop command without any pre-configured scope."
         },
         {
-          "description": "Allows the Harbor native player commands.\n#### This default permission set includes:\n\n- `allow-load`\n- `allow-play`\n- `allow-pause`\n- `allow-seek`\n- `allow-stop`\n- `allow-set-audio-track`\n- `allow-set-subtitle-track`\n- `allow-enter-pip`\n- `allow-set-orientation`\n- `allow-set-zoom`\n- `allow-set-rate`\n- `allow-set-volume`\n- `allow-set-sub-delay`\n- `allow-set-audio-delay`\n- `allow-show-route-picker`\n- `allow-haptic`\n- `allow-registerListener`\n- `allow-removeListener`\n- `allow-remove-listener`",
+          "description": "Allows the Harbor native player commands.\n#### This default permission set includes:\n\n- `allow-load`\n- `allow-play`\n- `allow-pause`\n- `allow-seek`\n- `allow-stop`\n- `allow-set-audio-track`\n- `allow-set-subtitle-track`\n- `allow-enter-pip`\n- `allow-set-orientation`\n- `allow-set-zoom`\n- `allow-set-rate`\n- `allow-set-volume`\n- `allow-set-sub-delay`\n- `allow-set-audio-delay`\n- `allow-add-subtitle`\n- `allow-set-sub-visible`\n- `allow-set-secondary-subtitle-track`\n- `allow-set-sub-style`\n- `allow-set-sub-fps`\n- `allow-show-route-picker`\n- `allow-haptic`\n- `allow-registerListener`\n- `allow-removeListener`\n- `allow-remove-listener`",
           "type": "string",
           "const": "default",
-          "markdownDescription": "Allows the Harbor native player commands.\n#### This default permission set includes:\n\n- `allow-load`\n- `allow-play`\n- `allow-pause`\n- `allow-seek`\n- `allow-stop`\n- `allow-set-audio-track`\n- `allow-set-subtitle-track`\n- `allow-enter-pip`\n- `allow-set-orientation`\n- `allow-set-zoom`\n- `allow-set-rate`\n- `allow-set-volume`\n- `allow-set-sub-delay`\n- `allow-set-audio-delay`\n- `allow-show-route-picker`\n- `allow-haptic`\n- `allow-registerListener`\n- `allow-removeListener`\n- `allow-remove-listener`"
+          "markdownDescription": "Allows the Harbor native player commands.\n#### This default permission set includes:\n\n- `allow-load`\n- `allow-play`\n- `allow-pause`\n- `allow-seek`\n- `allow-stop`\n- `allow-set-audio-track`\n- `allow-set-subtitle-track`\n- `allow-enter-pip`\n- `allow-set-orientation`\n- `allow-set-zoom`\n- `allow-set-rate`\n- `allow-set-volume`\n- `allow-set-sub-delay`\n- `allow-set-audio-delay`\n- `allow-add-subtitle`\n- `allow-set-sub-visible`\n- `allow-set-secondary-subtitle-track`\n- `allow-set-sub-style`\n- `allow-set-sub-fps`\n- `allow-show-route-picker`\n- `allow-haptic`\n- `allow-registerListener`\n- `allow-removeListener`\n- `allow-remove-listener`"
         }
       ]
     }

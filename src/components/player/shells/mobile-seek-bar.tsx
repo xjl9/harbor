@@ -9,6 +9,7 @@ import {
 import { useT } from "@/lib/i18n";
 import { useTrickplayState } from "@/lib/trickplay";
 import type { SkipSegment } from "@/lib/skip-intro";
+import type { Chapter } from "@/lib/player/bridge";
 import { SAFE_BOTTOM, SAFE_INLINE_20, TIME_BEZEL, fmtTime } from "./mobile-chrome";
 
 const BUFFER_PAD_SEC = 4;
@@ -40,11 +41,16 @@ export function MobileSeekBar({
   active,
   onSeek,
   segments,
+  chapters,
+  loop,
 }: {
   durationSec: number;
   active: boolean;
   onSeek: (sec: number) => void;
   segments?: SkipSegment[];
+  chapters?: Chapter[];
+  /** A-B loop range, drawn so the loop reads as a region rather than a mystery jump. */
+  loop?: { a: number; b: number | null } | null;
 }) {
   const positionSec = usePlaybackPositionGated(active);
   const bufferedSec = usePlaybackBufferedGated(active);
@@ -158,7 +164,38 @@ export function MobileSeekBar({
             />
           );
         })}
+        {loop && loop.b != null && loop.b > loop.a && (
+          <div
+            aria-hidden
+            className="absolute inset-y-0 bg-accent/40"
+            style={{
+              left: `${clamp01(loop.a / duration) * 100}%`,
+              width: `${clamp01((loop.b - loop.a) / duration) * 100}%`,
+            }}
+          />
+        )}
         <div className="absolute inset-y-0 left-0 bg-accent" style={{ width: `${ratio * 100}%` }} />
+        {/* Chapter boundaries as notches cut across both the played and unplayed
+            track, so a chapter start reads the same on either side of the head.
+            The first chapter starts at zero and the last boundary can sit on the
+            end; neither is a place anyone aims for, so both are skipped. */}
+        {chapters?.map((c) =>
+          c.startSec > 1 && c.startSec < duration - 1 ? (
+            <div
+              key={`ch-${c.startSec}`}
+              aria-hidden
+              className="absolute inset-y-0 w-[2px] -translate-x-1/2 bg-black/65"
+              style={{ left: `${clamp01(c.startSec / duration) * 100}%` }}
+            />
+          ) : null,
+        )}
+        {loop && (loop.b == null || loop.b <= loop.a) && (
+          <div
+            aria-hidden
+            className="absolute inset-y-0 w-[3px] -translate-x-1/2 bg-white"
+            style={{ left: `${clamp01(loop.a / duration) * 100}%` }}
+          />
+        )}
       </div>
       {/* A white head on an amber track: it stays the brightest thing on the bar at
           any accent, reads at a glance against a bright frame, and does not turn the
