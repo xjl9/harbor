@@ -128,44 +128,42 @@ export function ObLanguage() {
 // Every greeting is stacked in one grid cell so the block keeps the width of the
 // longest one and nothing below it shifts as they cycle.
 //
-// They cross-fade in SEQUENCE, not together. Fading both at once means two
-// different words, left aligned and of different lengths, are painted over each
-// other for most of the transition - which does not read as a dissolve, it reads
-// as the text being broken. The outgoing one clears first, then the incoming one
-// arrives, so only one word is ever legible.
+// Only ONE greeting is ever painted. The earlier version kept all of them
+// mounted and cross-faded opacity, and WebKit on iOS left the tail of the
+// longer outgoing word behind once its transition ended: "Hello" -> "مرحبا"
+// rendered as "مرحباo", "Hello" -> "你好" as "你好o", on every first launch.
+// The outgoing word's pixels past the incoming one's width were simply never
+// invalidated. Remounting a single painted span (keyed on the language) drops
+// the old text node outright, and the block sits on its own compositing layer
+// so the swap repaints the whole line rather than a dirty rect.
 const GREETING_FADE_MS = 420;
+const GREETING_CLASS =
+  "col-start-1 row-start-1 justify-self-start text-[32px] font-medium leading-[1.2] tracking-tight";
 
 function Greeting({ index, fade }: { index: number; fade: boolean }) {
+  const active = LANGUAGES[index] ?? LANGUAGES[0];
   return (
-    <div aria-hidden className="grid">
-      {LANGUAGES.map((lang, i) => {
-        const active = i === index;
-        return (
-          <span
-            key={lang.code}
-            lang={lang.code}
-            dir={lang.rtl ? "rtl" : "ltr"}
-            className={`col-start-1 row-start-1 justify-self-start text-[32px] font-medium leading-[1.2] tracking-tight text-ink-muted ${
-              lang.rtl ? "font-arabic" : "font-display"
-            } ${active ? "visible opacity-100" : "invisible opacity-0"}`}
-            style={
-              fade
-                ? {
-                    // The incoming word waits for the outgoing one to finish.
-                    // visibility flips only once the fade has landed, so the
-                    // outgoing word stops being painted instead of sitting at
-                    // opacity 0 in the same cell: WebKit on iOS otherwise keeps
-                    // fragments of the old glyph run composited under the new one
-                    // (the "你好o" ghost on first launch).
-                    transition: `opacity ${GREETING_FADE_MS}ms ease-in-out ${active ? GREETING_FADE_MS : 0}ms, visibility 0s linear ${GREETING_FADE_MS}ms`,
-                  }
-                : undefined
-            }
-          >
-            {lang.greeting}
-          </span>
-        );
-      })}
+    <div aria-hidden className="grid will-change-transform">
+      {/* Sizers: never painted, they only hold the cell at the widest word. */}
+      {LANGUAGES.map((lang) => (
+        <span
+          key={lang.code}
+          lang={lang.code}
+          dir={lang.rtl ? "rtl" : "ltr"}
+          className={`invisible ${GREETING_CLASS} ${lang.rtl ? "font-arabic" : "font-display"}`}
+        >
+          {lang.greeting}
+        </span>
+      ))}
+      <span
+        key={active.code}
+        lang={active.code}
+        dir={active.rtl ? "rtl" : "ltr"}
+        className={`${GREETING_CLASS} text-ink-muted ${active.rtl ? "font-arabic" : "font-display"}`}
+        style={fade ? { animation: `harbor-fade-in ${GREETING_FADE_MS}ms ease-in-out both` } : undefined}
+      >
+        {active.greeting}
+      </span>
     </div>
   );
 }

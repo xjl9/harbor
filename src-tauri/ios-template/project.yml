@@ -111,8 +111,14 @@ targets:
       - sdk: UIKit.framework{{#if this.ios-frameworks}}{{~#each ios-frameworks}}
       - sdk: {{this}}.framework{{/each}}{{/if}}
       - sdk: WebKit.framework
+      # MPVKit 1.0.0 ships static xcframeworks: the code is linked into the app
+      # binary, so nothing needs copying into Frameworks/. Xcode still embeds
+      # static framework bundles by default, and a signed archive then dies
+      # trying to codesign the static archives inside them (nettle, gmp, ...).
+      # The unsigned CI lane used to strip the copies after the fact instead.
       - package: MPVKit
         product: MPVKit
+        embed: false
     preBuildScripts:
       {{~#each ios-pre-build-scripts}}{{#if this.path}}
       - path {{this.path}}{{/if}}{{#if this.script}}
