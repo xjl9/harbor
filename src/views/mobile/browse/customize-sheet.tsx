@@ -213,7 +213,7 @@ export function CustomizePill({ label, onClick }: { label: string; onClick: () =
       onClick={onClick}
       className="flex h-9 items-center gap-1.5 rounded-full bg-elevated/70 py-0 pe-3.5 ps-2.5 text-[12.5px] font-medium text-ink-muted ring-1 ring-edge-soft/70 backdrop-blur-md"
     >
-      <SetIcon name="pencil" size={14} />
+      <SetIcon name="Pencil" size={14} />
       {label}
     </button>
   );

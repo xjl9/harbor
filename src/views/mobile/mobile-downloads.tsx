@@ -80,7 +80,9 @@ export function MobileDownloads({ onClose }: { onClose: () => void }) {
 
   return (
     <PhonePage closing={closing} onBack={requestClose} z="z-[70]" title={t("Downloads")}>
-      <p className="-mt-3 text-[12.5px] tabular-nums text-ink-subtle">{subtitle}</p>
+      {/* -mt-1 exactly cancels the scroll area's pt-1; pulling any further put the
+          line above the overflow clip and cropped its top half. */}
+      <p className="-mt-1 text-[12.5px] tabular-nums text-ink-subtle">{subtitle}</p>
 
       <div className="-mx-5 flex gap-2 overflow-x-auto px-5 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {torrents.length > 0 && (
