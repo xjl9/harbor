@@ -1,13 +1,30 @@
-import { fillStyle } from "@/components/slider";
+import { fillStyle, SliderReset } from "@/components/slider";
+import { DEFAULT } from "@/lib/settings/defaults";
 import { Dropdown } from "@/components/dropdown";
-import { Hourglass, Moon, Play, Sparkles, Text, Type, Volume1, Volume2, Waves, ZoomIn } from "lucide-react";
+import {
+  Droplet,
+  Hourglass,
+  MousePointer2,
+  Moon,
+  Palette,
+  Sailboat,
+  Play,
+  Sparkles,
+  Text,
+  Tv,
+  Type,
+  Volume1,
+  Volume2,
+  Waves,
+  ZoomIn,
+} from "../icons";
 import type { ReactNode } from "react";
-import { useSampleArtwork } from "@/lib/sample-artwork";
 import { useSettings } from "@/lib/settings";
 import { useT } from "@/lib/i18n";
 import { Section, ToggleRow } from "../shared";
 import { SettingGroup, SettingRow, Nested } from "../kit";
 import { PosterCardSection } from "./display/poster-card-section";
+import { ScreensaverMediaManager } from "./screensaver-media";
 import { SFX } from "@/lib/sfx";
 
 export function AmbienceSection() {
@@ -16,9 +33,25 @@ export function AmbienceSection() {
   const soundEffectsEnabled = settings.soundTheme !== "none";
   return (
     <>
+      <Section title={t("Sidebar")} subtitle={t("How the navigation icons behave.")}>
+        <SettingGroup>
+          <ToggleRow
+            label={t("Animated sidebar icons")}
+            sub={t(
+              "Sidebar icons play a short animation when you hover them. Turn this off to keep them as plain static icons.",
+            )}
+            value={settings.navIconAnimations}
+            onChange={(v) => update({ navIconAnimations: v })}
+            leading={<MousePointer2 size={18} strokeWidth={2} />}
+          />
+        </SettingGroup>
+      </Section>
+
       <Section
         title={t("Screensaver")}
-        subtitle={t("When Harbor sits idle in the foreground, it drifts through cinematic backdrops with a clock and what's trending. Any movement or key brings you back. Off by default.")}
+        subtitle={t(
+          "When Harbor sits idle in the foreground, it drifts through cinematic backdrops with a clock and what's trending. Any movement or key brings you back. Off by default.",
+        )}
       >
         <SettingGroup>
           <ToggleRow
@@ -26,12 +59,34 @@ export function AmbienceSection() {
             sub={t("Drift through cinematic backdrops while Harbor sits idle.")}
             value={settings.screensaver}
             onChange={(v) => update({ screensaver: v })}
-            leading={<RowIcon on={settings.screensaver}><Moon size={16} strokeWidth={2.2} /></RowIcon>}
+            leading={<Moon size={18} strokeWidth={2} />}
           />
+          <SettingRow
+            label={t("Screensaver style")}
+            desc={t(
+              "Default drifts through backdrops from what's trending. Boat plays a hand drawn illustration. Custom plays your own videos, GIFs, or images.",
+            )}
+            icon={<Sailboat size={18} strokeWidth={2} />}
+          >
+            <Dropdown
+              value={settings.screensaverStyle}
+              onChange={(v) => update({ screensaverStyle: v as typeof settings.screensaverStyle })}
+              options={[
+                { value: "ambient", label: t("Default") },
+                { value: "catBoat", label: t("Boat") },
+                { value: "custom", label: t("Custom") },
+              ]}
+            />
+          </SettingRow>
+          {settings.screensaverStyle === "custom" && (
+            <Nested>
+              <ScreensaverMediaManager />
+            </Nested>
+          )}
           {settings.screensaver && (
             <Nested>
               <SettingRow
-                icon={<Hourglass size={16} strokeWidth={1.9} />}
+                icon={<Hourglass size={18} strokeWidth={2} />}
                 label={t("Start after")}
                 desc={t("How long Harbor waits before drifting off.")}
               >
@@ -54,11 +109,13 @@ export function AmbienceSection() {
 
       <Section
         title={t("Sound effects")}
-        subtitle={t("Subtle audio feedback as you navigate and click. Off by default; pick a style to turn it on.")}
+        subtitle={t(
+          "Subtle audio feedback as you navigate and click. Off by default; pick a style to turn it on.",
+        )}
       >
         <SettingGroup>
           <SettingRow
-            icon={<Volume2 size={16} strokeWidth={1.9} />}
+            icon={<Volume2 size={18} strokeWidth={2} />}
             label={t("Sound style")}
             desc={t("Pick a style to turn interface sounds on.")}
           >
@@ -71,7 +128,9 @@ export function AmbienceSection() {
                 { value: "retro", label: t("Retro") },
                 { value: "cinematic", label: t("Cinematic") },
               ]}
-              onChange={(v) => update({ soundTheme: v as "none" | "glass" | "modern" | "retro" | "cinematic" })}
+              onChange={(v) =>
+                update({ soundTheme: v as "none" | "glass" | "modern" | "retro" | "cinematic" })
+              }
             />
           </SettingRow>
 
@@ -80,12 +139,13 @@ export function AmbienceSection() {
               <SliderRow
                 label={t("Sound effects volume")}
                 desc={t("How loud the interface sounds are.")}
-                icon={<Volume1 size={16} strokeWidth={1.9} />}
+                icon={<Volume1 size={18} strokeWidth={2} />}
                 value={settings.sfxVolume ?? 50}
                 min={0}
                 max={100}
                 step={5}
                 readout={`${settings.sfxVolume ?? 50}%`}
+                resetTo={DEFAULT.sfxVolume}
                 onChange={(volume) => {
                   update({ sfxVolume: volume });
                   SFX.setVolume(volume / 100);
@@ -98,7 +158,7 @@ export function AmbienceSection() {
                 sub={t("Play a short sound when changing the player volume. Off by default.")}
                 value={settings.playerVolumeSfx}
                 onChange={(value) => update({ playerVolumeSfx: value })}
-                leading={<RowIcon on={settings.playerVolumeSfx}><Play size={16} strokeWidth={2.2} /></RowIcon>}
+                leading={<Play size={18} strokeWidth={2} />}
               />
             </Nested>
           )}
@@ -111,50 +171,64 @@ export function AmbienceSection() {
 export function DisplaySection() {
   const t = useT();
   const { settings, update } = useSettings();
-  const glassBlur = Number.isFinite(settings.defaultLiquidGlassBlur) ? settings.defaultLiquidGlassBlur : 2;
-  const glassTint = Number.isFinite(settings.defaultLiquidGlassTint) ? settings.defaultLiquidGlassTint : 40;
-  const { poster: previewPoster } = useSampleArtwork();
+  const glassBlur = Number.isFinite(settings.defaultLiquidGlassBlur)
+    ? settings.defaultLiquidGlassBlur
+    : 8;
+  const glassTint = Number.isFinite(settings.defaultLiquidGlassTint)
+    ? settings.defaultLiquidGlassTint
+    : 20;
+  const glassOpacity = Number.isFinite(settings.experimentalLiquidGlassOpacity)
+    ? settings.experimentalLiquidGlassOpacity
+    : 25;
   return (
     <>
-      <PosterCardSection previewPoster={previewPoster} />
+      <PosterCardSection />
       <Section
         title={t("Title text")}
-        subtitle={t("Resize the row titles on Home and the title shown in the player, without scaling the rest of the interface. You can also lead the player title with the series name instead of the episode.")}
+        subtitle={t(
+          "Resize the row titles on Home and the title shown in the player, without scaling the rest of the interface. You can also lead the player title with the series name instead of the episode.",
+        )}
       >
         <SettingGroup>
           <SizeSlider
             label={t("Row titles")}
             desc={t("Headings above every row on Home.")}
-            icon={<Type size={16} strokeWidth={1.9} />}
+            icon={<Type size={18} strokeWidth={2} />}
             value={settings.rowTitleScale}
             onChange={(v) => update({ rowTitleScale: v })}
           />
           <SizeSlider
             label={t("Player title")}
             desc={t("The title shown at the top of the player.")}
-            icon={<Text size={16} strokeWidth={1.9} />}
+            icon={<Text size={18} strokeWidth={2} />}
             value={settings.playerTitleScale}
             onChange={(v) => update({ playerTitleScale: v })}
           />
           <ToggleRow
             label={t("Show series name first in the player")}
-            sub={t("Lead with the show name instead of the episode title at the top of the player.")}
+            sub={t(
+              "Lead with the show name instead of the episode title at the top of the player.",
+            )}
             value={settings.playerTitleSeriesFirst}
             onChange={(v) => update({ playerTitleSeriesFirst: v })}
+            leading={<Tv size={18} strokeWidth={2} />}
           />
         </SettingGroup>
       </Section>
 
       <Section
         title={t("Accessibility")}
-        subtitle={t("Make everything bigger and easier to read: sidebar, menus, popups, every page.")}
+        subtitle={t(
+          "Make everything bigger and easier to read: sidebar, menus, popups, every page.",
+        )}
       >
         <SettingGroup>
           <SliderRow
             label={t("Interface scale")}
-            desc={t("Scales the whole interface live as you drag.")}
-            tip={t("Make everything bigger and easier to read: sidebar, menus, popups, every page. The whole interface scales live as you drag, so you can see the change right here. Great on 4K and ultrawide monitors, or whenever the text feels small.")}
-            icon={<ZoomIn size={16} strokeWidth={1.9} />}
+            tip={t(
+              "Make everything bigger and easier to read: sidebar, menus, popups, every page. The whole interface scales live as you drag, so you can see the change right here. Great on 4K and ultrawide monitors, or whenever the text feels small.",
+            )}
+            icon={<ZoomIn size={18} strokeWidth={2} />}
             value={settings.uiScale}
             min={0.8}
             max={1.6}
@@ -174,55 +248,63 @@ export function DisplaySection() {
           <ToggleRow
             label={t("Use liquid glass")}
             newId="theme:liquid-glass"
-            sub={t("Use liquid glass for the search pill and row scroll arrows. The appearance settings below are shared by glass surfaces across Harbor.")}
+            sub={t(
+              "Use liquid glass for the search pill and row scroll arrows. The appearance settings below are shared by glass surfaces across Harbor.",
+            )}
             value={settings.liquidGlass}
             onChange={(v) => update({ liquidGlass: v })}
-            leading={<RowIcon on={settings.liquidGlass}><Waves size={16} strokeWidth={2.2} /></RowIcon>}
+            leading={<Waves size={18} strokeWidth={2} />}
           />
           {settings.liquidGlass && (
             <Nested>
               <ToggleRow
                 label={t("Enhanced liquid glass")}
-                sub={t("A richer glass treatment. May look better while using more graphics resources.")}
+                sub={t(
+                  "A richer glass treatment. May look better while using more graphics resources.",
+                )}
                 value={settings.experimentalLiquidGlassEnabled}
                 onChange={(v) => update({ experimentalLiquidGlassEnabled: v })}
-                leading={
-                  <RowIcon on={settings.experimentalLiquidGlassEnabled}>
-                    <Sparkles size={16} strokeWidth={2.2} />
-                  </RowIcon>
-                }
+                leading={<Sparkles size={18} strokeWidth={2} />}
               />
               {settings.experimentalLiquidGlassEnabled ? (
                 <SliderRow
                   label={t("Glass opacity")}
                   desc={t("How solid the enhanced glass looks.")}
-                  value={settings.experimentalLiquidGlassOpacity}
+                  icon={<Droplet size={18} strokeWidth={2} />}
+                  value={glassOpacity}
                   min={5}
                   max={100}
                   step={5}
-                  readout={`${settings.experimentalLiquidGlassOpacity}%`}
-                  onChange={(experimentalLiquidGlassOpacity) => update({ experimentalLiquidGlassOpacity })}
+                  readout={`${glassOpacity}%`}
+                  resetTo={DEFAULT.experimentalLiquidGlassOpacity}
+                  onChange={(experimentalLiquidGlassOpacity) =>
+                    update({ experimentalLiquidGlassOpacity })
+                  }
                 />
               ) : (
                 <>
                   <SliderRow
                     label={t("Glass blur")}
                     desc={t("How much the surface blurs what is behind it.")}
+                    icon={<Droplet size={18} strokeWidth={2} />}
                     value={glassBlur}
                     min={0}
-                    max={8}
+                    max={20}
                     step={0.5}
                     readout={`${glassBlur}px`}
+                    resetTo={DEFAULT.defaultLiquidGlassBlur}
                     onChange={(defaultLiquidGlassBlur) => update({ defaultLiquidGlassBlur })}
                   />
                   <SliderRow
                     label={t("Glass tint")}
                     desc={t("How much theme color the surface carries.")}
+                    icon={<Palette size={18} strokeWidth={2} />}
                     value={glassTint}
                     min={0}
                     max={100}
                     step={5}
                     readout={`${glassTint}%`}
+                    resetTo={DEFAULT.defaultLiquidGlassTint}
                     onChange={(defaultLiquidGlassTint) => update({ defaultLiquidGlassTint })}
                   />
                 </>
@@ -231,25 +313,11 @@ export function DisplaySection() {
           )}
         </SettingGroup>
       </Section>
-
-
     </>
   );
 }
 
 export { Nested } from "../kit";
-
-export function RowIcon({ on, children }: { on?: boolean; children: ReactNode }) {
-  return (
-    <span
-      className={`flex h-9 w-9 items-center justify-center rounded-md ${
-        on ? "bg-accent text-canvas" : "bg-raised text-ink-subtle"
-      }`}
-    >
-      {children}
-    </span>
-  );
-}
 
 export function Picker<T extends string>({
   value,
@@ -261,13 +329,15 @@ export function Picker<T extends string>({
   onChange: (v: T) => void;
 }) {
   return (
-    <Dropdown
-      size="sm"
-      value={value}
-      onChange={(v) => onChange(v as T)}
-      options={options.map((o) => ({ value: o.value, label: o.label }))}
-      className="w-[200px] shrink-0"
-    />
+    <div className="w-[280px] max-w-full">
+      <Dropdown
+        size="md"
+        value={value}
+        onChange={(v) => onChange(v as T)}
+        options={options.map((o) => ({ value: o.value, label: o.label }))}
+        className="w-full"
+      />
+    </div>
   );
 }
 
@@ -296,31 +366,30 @@ export function SliderRow({
   resetTo?: number;
   onChange: (v: number) => void;
 }) {
-  const t = useT();
   return (
     <SettingRow wide label={label} desc={desc} tip={tip} icon={icon}>
-      <div className="flex w-full items-center gap-3">
+      <div className="flex w-full max-w-[520px] flex-wrap items-center gap-4">
         <input
           type="range"
+          aria-label={label}
+          aria-valuetext={readout}
           min={min}
           max={max}
           step={step}
           value={value}
           onChange={(e) => onChange(Number(e.target.value))}
-          className="harbor-slider min-w-0 flex-1"
-          style={fillStyle(value, min, max)}
+          className="harbor-slider h-11 min-w-0 flex-1"
+          style={fillStyle(value, min, max, step)}
         />
-        <span className="w-16 shrink-0 text-end text-[15px] font-semibold tabular-nums text-ink">
+        <span className="w-[64px] shrink-0 text-end text-[15.5px] font-semibold tabular-nums text-ink">
           {readout}
         </span>
-        {resetTo !== undefined && value !== resetTo && (
-          <button
-            type="button"
-            onClick={() => onChange(resetTo)}
-            className="harbor-press-pop h-8 shrink-0 rounded-md bg-canvas px-3 text-[12.5px] font-semibold text-ink-subtle transition-colors hover:text-ink"
-          >
-            {t("Reset")}
-          </button>
+        {resetTo !== undefined && (
+          <SliderReset
+            settingName={label}
+            show={value !== resetTo}
+            onReset={() => onChange(resetTo)}
+          />
         )}
       </div>
     </SettingRow>

@@ -112,7 +112,7 @@ const settings: Record<string, string> = {
   Account: "Hesap",
   "Accounts and TMDB": "Hesaplar ve TMDB",
   "Action failed": "İşlem başarısız oldu",
-  "Active torrents": "Etkin torrentler",
+  "Active transfers": "Etkin aktarımlar",
   "Ad, analytics, and tracking requests pass through untouched.":
     "Reklam, analiz ve izleme isteklerine müdahale edilmez.",
   Adaptive: "Uyarlamalı",
@@ -414,8 +414,8 @@ const settings: Record<string, string> = {
   "Build a new theme": "Yeni tema oluştur",
   "Build a pack in any of these, export the JSON, host it as a gist, and paste the raw link below.":
     "Bunlardan herhangi birinde bir paket oluşturun, JSON'u dışa aktarın, gist olarak barındırın ve ham bağlantıyı aşağıya yapıştırın.",
-  "Build identity. Useful when filing a bug report at bugs@harbor.site.":
-    "Derleme kimliği. bugs@harbor.site adresine hata bildirirken işinize yarar.",
+  "Build identity. Useful when filing a bug report.":
+    "Derleme kimliği. Hata bildirirken işinize yarar.",
   "Building your voyage": "Yolculuğunuz hazırlanıyor",
   "Built on Stremio": "Stremio üzerine kuruldu",
   "Built-in peer-to-peer streaming, served from your own machine.":
@@ -809,12 +809,11 @@ const settings: Record<string, string> = {
   Diary: "Günlük",
   "Different subtitle version": "Farklı altyazı sürümü",
   "Dim overlay": "Karartma katmanı",
-  "Direct torrent streaming": "Doğrudan torrent yayını",
+  "Direct P2P streaming": "Doğrudan P2P yayını",
   "Disable all": "Tümünü devre dışı bırak",
   "Disable rule": "Kuralı devre dışı bırak",
-  "Disable torrents entirely": "Torrentleri tamamen devre dışı bırak",
-  "Disabled because torrents are disabled above":
-    "Yukarıda torrentler devre dışı bırakıldığı için kullanılamıyor",
+  "Disable P2P entirely": "P2P'yi tamamen devre dışı bırak",
+  "Disabled because P2P is disabled above": "Yukarıda P2P devre dışı bırakıldığı için kullanılamıyor",
   "Disabled while strict remote streaming is on":
     "Yalnızca uzak sunucu kullanımı açıkken devre dışıdır",
   "Discard changes": "Değişiklikleri iptal et",
@@ -1001,8 +1000,7 @@ const settings: Record<string, string> = {
   "Fan-made avatars for personal use. Harbor claims no rights to these characters; they belong to their creators and studios, shown here under fair use. Every one is optimized down to a tiny WebP.":
     "Kişisel kullanım için hayran yapımı avatarlar. Harbor bu karakterler üzerinde herhangi bir hak iddia etmez; karakterler yaratıcılarına ve stüdyolarına aittir ve burada adil kullanım kapsamında gösterilir. Her biri çok küçük bir WebP dosyası olacak şekilde optimize edilmiştir.",
   "Fanart.tv · logos and backdrops": "Fanart.tv · logolar ve arka planlar",
-  "Faster and quieter than torrents if you already pay for Usenet. Configure on the addon page, paste the manifest URL it returns.":
-    "Usenet'e zaten aboneyseniz torrentlerden daha hızlıdır ve daha az dikkat çeker. Eklenti sayfasında yapılandırın ve döndürülen manifest URL'sini yapıştırın.",
+  "Faster and quieter than P2P if you already pay for Usenet. Configure on the addon page, paste the manifest URL it returns.": "Usenet'e zaten aboneyseniz P2P'den daha hızlıdır ve daha az dikkat çeker. Eklenti sayfasında yapılandırın ve döndürülen manifest URL'sini yapıştırın.",
   "Favorite Anime": "Favori Animeler",
   "Favorite Characters": "Favori Karakterler",
   "Favorite Manga": "Favori Mangalar",
@@ -1239,8 +1237,7 @@ const settings: Record<string, string> = {
     "Harbor, bu dilde bir altyazı parçası varsa onu otomatik olarak yükler. Oynatıcıdaki altyazı menüsünden tek bir video için ikinci altyazı parçasını ayarlayabilir veya kaldırabilirsiniz.",
   "Harbor needs a TMDB key for artwork, rows and collections. It is free.":
     "Harbor'ın görseller, satırlar ve koleksiyonlar için bir TMDB anahtarına ihtiyacı var. Anahtar ücretsizdir.",
-  "Harbor normally starts its torrent engine at launch so the first P2P stream connects faster. That keeps a DHT node running and talking to the network even when you are not watching anything. Turn this on if you are on a metered or limited connection: the engine then starts the first time you actually play a torrent. Takes effect next launch.":
-    "Harbor normalde ilk P2P yayınının daha hızlı bağlanması için torrent motorunu açılışta başlatır. Bu, hiçbir şey izlemiyor olsanız bile bir DHT düğümünün çalışmasını ve ağla iletişim kurmasını sağlar. Tarifeli veya sınırlı bir bağlantı kullanıyorsanız bunu açın. Böylece motor, ilk kez gerçekten bir torrent yayını oynattığınızda başlar. Bir sonraki açılışta geçerli olur.",
+  "Harbor normally starts its P2P engine at launch so the first P2P stream connects faster. That keeps a DHT node running and talking to the network even when you are not watching anything. Turn this on if you are on a metered or limited connection: the engine then starts the first time you actually play a P2P stream. Takes effect next launch.": "Harbor normalde ilk P2P yayınının daha hızlı bağlanması için P2P motorunu açılışta başlatır. Bu, hiçbir şey izlemiyor olsanız bile bir DHT düğümünün çalışmasını ve ağla iletişim kurmasını sağlar. Tarifeli veya sınırlı bir bağlantı kullanıyorsanız bunu açın. Böylece motor, ilk kez gerçekten bir P2P yayını oynattığınızda başlar. Bir sonraki açılışta geçerli olur.",
   "Harbor on other devices": "Diğer cihazlarda Harbor",
   "Harbor plays IPTV from your own provider. Add a playlist and the guide fills in.":
     "Harbor, kendi sağlayıcınızın IPTV yayınlarını oynatır. Bir oynatma listesi eklediğinizde rehber doldurulur.",
@@ -1277,8 +1274,7 @@ const settings: Record<string, string> = {
     "Harbor, güvenli olduğunda ekran kartını kullanır; olmadığında CPU'ya geri döner. Neredeyse herkes için doğru seçimdir.",
   "Harbor will mark what you finish as watched on Simkl and sync your plan-to-watch list.":
     "Harbor, tamamladığınız içerikleri Simkl'da izlendi olarak işaretler ve izlemeyi planladıklarınız listesini eşitler.",
-  "Harbor will not start the torrent engine, contact trackers, or run DHT. Use this if you only want debrid and direct links. Turn off to re-enable torrent streaming.":
-    "Harbor torrent motorunu başlatmaz, izleyicilerle iletişim kurmaz veya DHT'yi çalıştırmaz. Yalnızca debrid ve doğrudan bağlantıları kullanmak istiyorsanız bunu etkinleştirin. Torrent yayınını yeniden etkinleştirmek için kapatın.",
+  "Harbor will not start the P2P engine, contact trackers, or run DHT. Use this if you only want debrid and direct links. Turn off to re-enable P2P streaming.": "Harbor P2P motorunu başlatmaz, izleyicilerle iletişim kurmaz veya DHT'yi çalıştırmaz. Yalnızca debrid ve doğrudan bağlantıları kullanmak istiyorsanız bunu etkinleştirin. P2P yayınını yeniden etkinleştirmek için kapatın.",
   "Harbor will scrobble your playback to Trakt and sync your watchlist.":
     "Harbor, izleme etkinliğinizi Trakt'a aktarır ve izleme listenizi eşitler.",
   "Harbor would not be possible without Stremio. It is the foundation everything here is built on.":
@@ -1857,6 +1853,9 @@ const settings: Record<string, string> = {
     "Filtre yok. Tüm bit hızları eşit değerlendirilir.",
   "No filter. Home shows every language.": "Filtre yok. Ana sayfa tüm dilleri gösterir.",
   "No filtering": "Filtreleme yok",
+  "Cached source resolution and direct download links.": "Önbelleğe alınmış kaynak çözümleme ve doğrudan indirme bağlantıları.",
+  "Cached source resolution and cloud library access.": "Önbelleğe alınmış kaynak çözümleme ve bulut kitaplığı erişimi.",
+  "Both shows direct, debrid, and peer-to-peer results together. Direct/debrid keeps P2P results out of the way unless nothing else is available. P2P puts them first.": "Her ikisi, doğrudan, debrid ve eşler arası sonuçları birlikte gösterir. Doğrudan/debrid, başka bir şey yoksa P2P sonuçlarını geri planda tutar. P2P ise onları en öne koyar.",
 };
 
 export default settings;

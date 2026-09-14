@@ -63,7 +63,7 @@ test("chapter batches expose pause and resume controls", () => {
   const downloads = source("../src/lib/manga-downloads.ts");
   const chapters = source("../src/views/manga/manga-detail/chapter-list.tsx");
   assert.match(downloads, /export function pauseMangaDownloadBatch/);
-  assert.match(downloads, /await waitForBatch\(batchControl\)/);
+  assert.match(downloads, /await waitForBatch\(control\)/);
   assert.match(chapters, /t\("Pause downloads"\)/);
   assert.match(chapters, /t\("Resume downloads"\)/);
 });

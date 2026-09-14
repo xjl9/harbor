@@ -6,6 +6,12 @@ on:
     tags:
       - "v*"
 
+permissions:
+  contents: read
+
+env:
+  NODE_OPTIONS: --max-old-space-size=6144
+
 jobs:
   build:
     name: ${{ matrix.platform.name }} (${{ matrix.platform.target }})
@@ -84,6 +90,11 @@ jobs:
 
       - name: Install JS deps
         run: pnpm install --frozen-lockfile
+
+      - name: Verify HTTP redirect boundaries
+        env:
+          CARGO_BUILD_JOBS: 2
+        run: cargo test --manifest-path scripts/http-redirect-tests/Cargo.toml --locked --lib
 
       - name: Fetch libmpv (Windows)
         if: contains(matrix.platform.runner, 'windows')
@@ -175,6 +186,7 @@ jobs:
           echo "config=--config $CONFIG_PATH" >> "$GITHUB_OUTPUT"
 
       - name: Tauri build
+        if: "!contains(matrix.platform.runner, 'ubuntu')"
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -183,6 +195,37 @@ jobs:
         with:
           tauriScript: pnpm tauri
           args: --target ${{ matrix.platform.target }} ${{ steps.sign.outputs.config }} ${{ steps.macos-libraries.outputs.config }}
+
+      - name: Build Linux system packages
+        if: contains(matrix.platform.runner, 'ubuntu')
+        run: pnpm tauri:build:linux-system --target ${{ matrix.platform.target }} --bundles deb,appimage
+
+      - name: Build verified Windows managed installer
+        if: matrix.platform.target == 'x86_64-pc-windows-msvc'
+        shell: pwsh
+        env:
+          CARGO_BUILD_JOBS: 2
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $releaseVersion = (Get-Content src-tauri/tauri.conf.json -Raw | ConvertFrom-Json).version
+          $releaseRoot = 'src-tauri/target/x86_64-pc-windows-msvc/release'
+          New-Item -ItemType Directory -Force -Path 'src-tauri/target/release' | Out-Null
+          Copy-Item -LiteralPath "$releaseRoot/harbor.exe" -Destination 'src-tauri/target/release/harbor.exe'
+          cargo build --manifest-path installer/src-tauri/Cargo.toml --release --no-default-features --features tauri/custom-protocol --bin harbor-uninstall --locked
+          if ($LASTEXITCODE -ne 0) { throw 'Uninstaller build failed' }
+          node installer/scripts/make-payload.mjs
+          if ($LASTEXITCODE -ne 0) { throw 'Payload creation failed' }
+          node scripts/verify-managed-payload.mjs
+          if ($LASTEXITCODE -ne 0) { throw 'Payload verification failed' }
+          cargo build --manifest-path installer/src-tauri/Cargo.toml --release --features tauri/custom-protocol --bin harbor-setup --locked
+          if ($LASTEXITCODE -ne 0) { throw 'Managed installer build failed' }
+          node scripts/verify-managed-payload.mjs --embedded
+          if ($LASTEXITCODE -ne 0) { throw 'Embedded payload verification failed' }
+          foreach ($releaseExe in @('src-tauri/target/release/harbor.exe', 'installer/src-tauri/target/release/harbor-uninstall.exe', 'installer/src-tauri/target/release/harbor-setup.exe')) {
+            if ((Get-Item -LiteralPath $releaseExe).VersionInfo.FileVersion -ne $releaseVersion) { throw "Wrong version: $releaseExe" }
+          }
+          New-Item -ItemType Directory -Force -Path "$releaseRoot/bundle/managed" | Out-Null
+          Copy-Item -LiteralPath 'installer/src-tauri/target/release/harbor-setup.exe' -Destination "$releaseRoot/bundle/managed/Harbor_${releaseVersion}_x64-installer.exe"
 
       - name: Verify macOS app dependencies
         if: contains(matrix.platform.runner, 'macos')
@@ -194,6 +237,19 @@ jobs:
             exit 1
           fi
           python3 scripts/macos-bundle-libmpv.py verify-app --app "$APP_PATH"
+
+      - name: Archive verified macOS app for local updater signing
+        if: contains(matrix.platform.runner, 'macos')
+        shell: bash
+        run: |
+          set -euo pipefail
+          BUNDLE="src-tauri/target/${{ matrix.platform.target }}/release/bundle"
+          APP_PATH="$(find "$BUNDLE" -type d -name 'Harbor.app' -print -quit)"
+          test -n "$APP_PATH"
+          VERSION="$(node -p "JSON.parse(require('fs').readFileSync('src-tauri/tauri.conf.json')).version")"
+          ARCH="${{ matrix.platform.target }}"
+          ARCH="${ARCH%%-*}"
+          tar -czf "$BUNDLE/Harbor_${VERSION}_${ARCH}.app.tar.gz" -C "$(dirname "$APP_PATH")" Harbor.app
 
       - name: Upload artifacts
         if: success()

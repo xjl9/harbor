@@ -20,6 +20,7 @@ mod gamepad;
 #[path = "gamepad_ios.rs"]
 mod gamepad;
 mod http_fetch;
+mod http_redirect;
 mod local_lib;
 mod media_server;
 mod power;
@@ -49,6 +50,7 @@ mod app_icon;
 mod asr_model;
 #[cfg(desktop)]
 mod browser;
+mod browser_args;
 #[cfg(desktop)]
 mod captions;
 #[cfg(desktop)]
@@ -59,7 +61,8 @@ mod cast_server;
 mod cf_relay;
 #[cfg(desktop)]
 mod cf_solver;
-mod discord_auth;
+#[cfg(desktop)]
+mod desktop_notify;
 #[cfg(desktop)]
 mod discord_rp;
 #[cfg(desktop)]
@@ -115,6 +118,8 @@ mod trailer;
 mod tray;
 #[cfg(desktop)]
 mod webview_helpers;
+#[cfg(windows)]
+mod win_graphics;
 
 // http_fetch calls crate::cf_solver on the challenge path, and the real solver
 // needs a hidden webview window that Android does not have. Rather than edit
@@ -304,6 +309,9 @@ pub(crate) fn force_show_foreground(window: &tauri::WebviewWindow) {
 const HARBOR_MAXGUARD_SUBCLASS_ID: usize = 0x4842_4D47;
 
 #[cfg(windows)]
+static MAIN_IN_SIZE_MOVE: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
+#[cfg(windows)]
 unsafe extern "system" fn maxguard_subclass_proc(
     hwnd: windows::Win32::Foundation::HWND,
     msg: u32,
@@ -316,13 +324,19 @@ unsafe extern "system" fn maxguard_subclass_proc(
         GetMonitorInfoW, MonitorFromWindow, MONITORINFO, MONITOR_DEFAULTTONEAREST,
     };
     use windows::Win32::UI::Shell::DefSubclassProc;
-    use windows::Win32::UI::WindowsAndMessaging::{MINMAXINFO, WM_ERASEBKGND, WM_GETMINMAXINFO};
-    // Claim the erase. The WebView covers the whole client area, so nothing
-    // needs painting underneath it, but Windows still fills the frame with the
-    // class brush on every move and resize tick. The WebView and the mpv
-    // surface both repaint a beat later, and that gap is the black strobe over
-    // the video while the window is being dragged.
-    if msg == WM_ERASEBKGND {
+    use windows::Win32::UI::WindowsAndMessaging::{
+        MINMAXINFO, WM_ENTERSIZEMOVE, WM_ERASEBKGND, WM_EXITSIZEMOVE, WM_GETMINMAXINFO,
+        WM_NCDESTROY,
+    };
+    if msg == WM_ENTERSIZEMOVE {
+        MAIN_IN_SIZE_MOVE.store(true, std::sync::atomic::Ordering::Relaxed);
+    } else if msg == WM_EXITSIZEMOVE || msg == WM_NCDESTROY {
+        MAIN_IN_SIZE_MOVE.store(false, std::sync::atomic::Ordering::Relaxed);
+    }
+    // Suppress repeated erases only during an interactive move/resize, where
+    // the WebView and mpv repaint asynchronously. Outside that loop, let Tao
+    // paint the configured black background before transparent content appears.
+    if msg == WM_ERASEBKGND && MAIN_IN_SIZE_MOVE.load(std::sync::atomic::Ordering::Relaxed) {
         return windows::Win32::Foundation::LRESULT(1);
     }
     let res = DefSubclassProc(hwnd, msg, wparam, lparam);
@@ -618,6 +632,8 @@ pub fn run() {
     svp::prime_svp_env();
     #[cfg(target_os = "linux")]
     mpv_render_linux::configure_linux_graphics();
+    #[cfg(windows)]
+    win_graphics::configure_windows_graphics();
     let _ = rustls::crypto::ring::default_provider().install_default();
     trailer::sweep_cache();
     std::thread::spawn(temp_prune::sweep_temp);
@@ -628,7 +644,6 @@ pub fn run() {
             stream_proxy::ProxyState::placeholder()
         });
     let thumbs_state = thumbs::ThumbsState::new();
-    let discord_loopback_state = discord_auth::DiscordLoopbackState::new();
     let app_builder = tauri::Builder::default();
     #[cfg(desktop)]
     let app_builder = app_builder
@@ -661,7 +676,8 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_deep_link::init())
-        .plugin(tauri_plugin_process::init());
+        .plugin(tauri_plugin_process::init())
+        .plugin(tauri_plugin_notification::init());
     // Native player, mobile only: media3/ExoPlayer on Android, AVPlayer on iOS
     // (desktop uses libmpv, and the crate's desktop impl is a no-op). Handles
     // MKV/HEVC the webview can't decode.
@@ -693,7 +709,6 @@ pub fn run() {
     let app_builder = app_builder
         .manage(proxy_state)
         .manage(thumbs_state)
-        .manage(discord_loopback_state)
         .manage(download::DownloadState::new());
 
     #[cfg(target_os = "macos")]
@@ -872,9 +887,12 @@ pub fn run() {
             harbor_flush_done,
             harbor_startup_ready,
             close_aux_windows,
+            desktop_notify::send_clickable_notification,
             installer_handoff::handoff_probe,
             installer_handoff::handoff_stage,
             installer_handoff::handoff_launch,
+            installer_handoff::handoff_confirm,
+            installer_handoff::handoff_save_backup,
             power::power_inhibit,
             harbor_set_webview_memory_low,
             harbor_set_webview_visible,
@@ -975,7 +993,6 @@ pub fn run() {
             mpv::mpv_stop,
             mpv::mpv_release_media,
             mpv::mpv_restore_media_surface,
-            discord_auth::discord_auth_start,
             pip::pip_open,
             pip::pip_get_session,
             pip::pip_close,
@@ -1010,6 +1027,7 @@ pub fn run() {
             discord_rp::discord_set_presence,
             discord_rp::discord_clear,
             media_controls::media_controls_update,
+            media_controls::media_controls_seeked,
             media_controls::media_controls_clear,
             gamepad::gamepad_list,
             gamepad::gamepad_set_enabled,
@@ -1030,6 +1048,7 @@ pub fn run() {
             cast_server::cast_server_status,
             cast_server::cast_server_restart,
             torrent_engine::torrent_engine_status,
+            torrent_engine::torrent_engine_set_enabled,
             torrent_engine::torrent_engine_add,
             torrent_engine::torrent_engine_select,
             torrent_engine::torrent_engine_select_set,

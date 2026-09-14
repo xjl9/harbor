@@ -31,7 +31,12 @@ export function needsImageProxy(url: string): boolean {
   if (!url.startsWith("http://")) return false;
   try {
     const host = new URL(url).hostname.toLowerCase();
-    return !(host === "localhost" || host === "127.0.0.1" || host === "::1" || host.endsWith(".localhost"));
+    return !(
+      host === "localhost" ||
+      host === "127.0.0.1" ||
+      host === "::1" ||
+      host.endsWith(".localhost")
+    );
   } catch {
     return false;
   }
@@ -61,6 +66,7 @@ function proxyImage(url: string): Promise<string | null> {
           responseType: "base64",
           timeoutMs: 30000,
           headers: auth ? { authorization: auth } : undefined,
+          allowLocalNetwork: Boolean(auth),
         },
       });
       if (!resp.ok) throw new Error(`status ${resp.status}`);

@@ -26,7 +26,10 @@ const CREW_PRIORITY: Record<string, number> = {
 };
 
 function crewPeople(crew: CrewEntry[]): XrayPerson[] {
-  const byId = new Map<number, { name: string; jobs: string[]; profilePath: string | null; best: number }>();
+  const byId = new Map<
+    number,
+    { name: string; jobs: string[]; profilePath: string | null; best: number }
+  >();
   for (const c of crew) {
     const pr = CREW_PRIORITY[c.job];
     if (pr === undefined) continue;
@@ -37,13 +40,24 @@ function crewPeople(crew: CrewEntry[]): XrayPerson[] {
     byId.set(c.id, e);
   }
   return [...byId.entries()]
-    .map(([id, e]) => ({ id, name: e.name, sub: e.jobs.join(", "), profilePath: e.profilePath, best: e.best }))
+    .map(([id, e]) => ({
+      id,
+      name: e.name,
+      sub: e.jobs.join(", "),
+      profilePath: e.profilePath,
+      best: e.best,
+    }))
     .sort((a, b) => a.best - b.best || a.name.localeCompare(b.name))
-    .map(({ best, ...p }) => p);
+    .map(({ best: _best, ...p }) => p);
 }
 
 function castPeople(details: TmdbDetail | null): XrayPerson[] {
-  return (details?.cast ?? []).map((c) => ({ id: c.id, name: c.name, sub: c.character, profilePath: c.profilePath }));
+  return (details?.cast ?? []).map((c) => ({
+    id: c.id,
+    name: c.name,
+    sub: c.character,
+    profilePath: c.profilePath,
+  }));
 }
 
 export function XrayBrowser({
@@ -51,11 +65,13 @@ export function XrayBrowser({
   details,
   people,
   onPlayVideo,
+  onOpenPerson,
   onClose,
 }: {
   meta: Meta;
   details: TmdbDetail | null;
   people: XrayPerson[];
+  onOpenPerson: (person: XrayPerson) => void;
   onPlayVideo?: (ytId: string, name: string) => void;
   onClose: () => void;
 }) {
@@ -72,7 +88,9 @@ export function XrayBrowser({
     return list;
   }, [cast.length, crew.length, hasAbout, t]);
 
-  const [tab, setTab] = useState<TabId>(people.length ? "in-scene" : cast.length ? "cast" : "in-scene");
+  const [tab, setTab] = useState<TabId>(
+    people.length ? "in-scene" : cast.length ? "cast" : "in-scene",
+  );
 
   return (
     <div className="pointer-events-auto absolute inset-0 z-50 flex flex-col bg-black/85 backdrop-blur-2xl animate-xray-open motion-reduce:animate-none">
@@ -91,7 +109,9 @@ export function XrayBrowser({
               }`}
             >
               {tb.label}
-              {tab === tb.id && <span className="absolute inset-x-3 -bottom-0.5 h-0.5 rounded-full bg-accent" />}
+              {tab === tb.id && (
+                <span className="absolute inset-x-3 -bottom-0.5 h-0.5 rounded-full bg-accent" />
+              )}
             </button>
           ))}
         </nav>
@@ -106,7 +126,10 @@ export function XrayBrowser({
       </header>
 
       <div className="mt-5 min-h-0 flex-1 overflow-y-auto px-6 pb-12 sm:px-9">
-        <div key={tab} className="mx-auto w-full max-w-[1440px] animate-media-swap motion-reduce:animate-none">
+        <div
+          key={tab}
+          className="mx-auto w-full max-w-[1440px] animate-media-swap motion-reduce:animate-none"
+        >
           {!details && !people.length ? (
             <Empty label={t("Add a TMDB key in Settings to see the cast, crew, and details.")} />
           ) : tab === "about" ? (
@@ -114,12 +137,17 @@ export function XrayBrowser({
           ) : tab === "in-scene" ? (
             <XrayScene
               people={people}
+              onOpenPerson={onOpenPerson}
               poster={details?.poster || meta.poster}
               showName={details?.title || meta.name}
               onOpenAbout={hasAbout ? () => setTab("about") : undefined}
             />
           ) : (
-            <Grid people={tab === "crew" ? crew : cast} emptyLabel={emptyFor(t, tab)} />
+            <Grid
+              onOpenPerson={onOpenPerson}
+              people={tab === "crew" ? crew : cast}
+              emptyLabel={emptyFor(t, tab)}
+            />
           )}
         </div>
       </div>
@@ -133,12 +161,20 @@ function emptyFor(t: (s: string) => string, tab: TabId): string {
   return t("No cast information for this title.");
 }
 
-function Grid({ people, emptyLabel }: { people: XrayPerson[]; emptyLabel: string }) {
+function Grid({
+  people,
+  emptyLabel,
+  onOpenPerson,
+}: {
+  people: XrayPerson[];
+  emptyLabel: string;
+  onOpenPerson: (person: XrayPerson) => void;
+}) {
   if (people.length === 0) return <Empty label={emptyLabel} />;
   return (
     <div className="grid grid-cols-3 gap-x-5 gap-y-7 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7">
       {people.map((p) => (
-        <XrayTile key={`${p.id}:${p.sub ?? ""}`} person={p} />
+        <XrayTile key={`${p.id}:${p.sub ?? ""}`} person={p} onOpenPerson={onOpenPerson} />
       ))}
     </div>
   );

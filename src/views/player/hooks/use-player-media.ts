@@ -39,6 +39,8 @@ import { useAutoSync } from "./use-auto-sync";
 import { publishAutoSync } from "@/components/player/autosync/autosync-store";
 import { useVideoDownload } from "./use-video-download";
 import { useWebviewMemory } from "./use-webview-memory";
+import { useCaptionsPopoutOpen } from "@/lib/player/captions-popout-state";
+import { sdhSafeForLanguage } from "@/lib/subtitles/sdh-filter";
 
 const HDR_NATIVE_GAMMAS = new Set(["pq", "hlg"]);
 
@@ -226,6 +228,11 @@ export function usePlayerMedia(params: {
       snap.audioTracks.length > 0 ||
       snap.subtitleTracks.length > 0);
   const suppressHtmlSubs = subAssNative || (subEmbed && selectedImageSub) || hdrNativeSurface;
+  const sdhFilterAllowed =
+    !selectedSubTrack?.forced &&
+    !selectedSubTrack?.foreignOnly &&
+    sdhSafeForLanguage(selectedSubTrack?.lang);
+  const hideSdh = settings.subHideSdh && sdhFilterAllowed;
   useSubStyleApply({
     engine,
     settings,
@@ -238,12 +245,27 @@ export function usePlayerMedia(params: {
     svpActive,
     assScale: assNormalizeScale,
     subTrackId: selectedSubTrack?.id,
+    sdhFilterAllowed,
   });
+  const captionsPopout = useCaptionsPopoutOpen();
   useEffect(() => {
     if (!subEmbed && !hdrNativeSurface) return;
     if (!bridgeReady) return;
-    bridgeRef.current?.setSubVisible(subNativeRender);
-  }, [subEmbed, hdrNativeSurface, subNativeRender, selectedSubTrack?.id, bridgeReady, bridgeKey]);
+    bridgeRef.current?.setSubVisible(subNativeRender && !captionsPopout);
+  }, [
+    subEmbed,
+    hdrNativeSurface,
+    subNativeRender,
+    selectedSubTrack?.id,
+    bridgeReady,
+    bridgeKey,
+    captionsPopout,
+  ]);
+  useEffect(() => {
+    if (engine !== "html5") return;
+    if (!bridgeReady) return;
+    bridgeRef.current?.setSubHideSdh?.(hideSdh);
+  }, [engine, bridgeReady, bridgeKey, hideSdh]);
   useSecondarySub({
     bridgeRef,
     snap,
@@ -340,6 +362,7 @@ export function usePlayerMedia(params: {
 
   return {
     resolvedImdbId,
+    suspendAutoSyncForManualTiming: autoSync.suspendForManualTiming,
     subtitleSearchActive,
     subAssNative: suppressHtmlSubs,
     captureExitSnapshot,

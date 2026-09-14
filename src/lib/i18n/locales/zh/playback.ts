@@ -133,8 +133,7 @@ const playback: Record<string, string> = {
     "标记带英语配音的动漫，并在流媒体源上标注配音/字幕/双版本。",
   "Force player menus and panels to pure black, ignoring your theme tint.":
     "强制播放器菜单和面板使用纯黑色，忽略主题色调。",
-  "Harbor will not start the torrent engine, contact trackers, or run DHT. Use this if you only want debrid and direct links. Turn off to re-enable torrent streaming.":
-    "Harbor 不会启动种子引擎、连接 Tracker 或运行 DHT。如果你只想使用 debrid 和直链，请启用此项。关闭即可重新启用种子流式播放。",
+  "Harbor will not start the P2P engine, contact trackers, or run DHT. Use this if you only want debrid and direct links. Turn off to re-enable P2P streaming.": "Harbor 不会启动 P2P 引擎、连接 Tracker 或运行 DHT。如果你只想使用 debrid 和直链，请启用此项。关闭即可重新启用 P2P 流式播放。",
   "Home hero audio": "首页焦点推荐音频",
   "How sharp trailers play. Auto follows your connection speed, and the Watch Trailer button targets 1080p. Pick 1080p or Best (up to 4K when the source has it) to force higher. 1080p and Best merge separate video and audio with the bundled ffmpeg, so they take a beat longer to start.":
     "预告片播放的清晰度。“自动”会根据连接速度调整，“观看预告片”按钮默认选择 1080p。选择 1080p 或“最佳”（片源支持时最高 4K）可强制使用更高画质。1080p 和“最佳”会使用内置 ffmpeg 合并独立的视频与音频，因此启动会稍慢。",
@@ -157,13 +156,11 @@ const playback: Record<string, string> = {
     "剧集同步到你的追踪器时，播放器上显示的徽章。",
   "The little 4K, HDR, codec, and audio chips that ride along each stream in the play picker.":
     "播放源选择器中每个播放源旁显示的 4K、HDR、编解码器和音频小标签。",
-  "Torrents are disabled. Uncached streams will not play unless they come from a debrid service or a direct link. To use torrents, toggle this off.":
-    "种子功能已禁用。除非来自 debrid 服务或直接链接，否则未缓存的播放源将无法播放。要使用种子，请关闭此选项。",
+  "P2P is disabled. Uncached streams will not play unless they come from a debrid service or a direct link. To use P2P, toggle this off.": "P2P 已禁用。除非来自 debrid 服务或直接链接，否则未缓存的播放源将无法播放。要使用 P2P，请关闭此选项。",
   "Turn off to hide the sync badge during playback.": "关闭后，播放期间将隐藏同步徽章。",
   "Use arrows and Select/Space to move focus between player controls. Turn this off to keep arrows for seeking and Space for play/pause.":
     "使用方向键和 Select/Space 在播放器控件间移动焦点。关闭后，方向键仍用于跳转，Space 仍用于播放/暂停。",
-  "When off, a torrent stops the moment you close or switch the stream, so nothing keeps downloading in the background. Turn on to let it keep going after you leave; manage or pause those from the Downloads tab.":
-    "关闭后，一旦关闭或切换播放源，种子任务会立即停止，不会继续在后台下载。开启后，离开后仍会继续下载；可在“下载”标签页中管理或暂停这些任务。",
+  "When off, a P2P transfer stops the moment you close or switch the stream, so nothing keeps downloading in the background. Turn on to let it keep going after you leave; manage or pause those from the Downloads tab.": "关闭后，一旦关闭或切换播放源，P2P 传输会立即停止，不会继续在后台下载。开启后，离开后仍会继续下载；可在“下载”标签页中管理或暂停这些任务。",
   "Your own badges, matched against the stream's name with a pattern. Great for release groups, providers, or anything the built-in badges don't cover. Imported packs land here too.":
     "使用模式匹配播放源名称的自定义徽章。非常适合发布组、提供商或内置徽章未涵盖的任何内容。导入的包也会显示在这里。",
   "Full quality hero image": "全画质焦点横幅图片",
@@ -330,7 +327,7 @@ const playback: Record<string, string> = {
     "强制使用兼容性呈现模式，以消除某些显示器屏幕边缘出现的细亮线。副作用：4K 播放可能卡成幻灯片，HDR 内容也会变暗（此模式会绕过 HDR 显示路径）。除非看到该亮线，否则请保持关闭。重新开始播放后生效。",
   "Interpolates frames for smoother panning, best on anime. Needs a display refresh rate above the video's frame rate, and can stutter on weak GPUs. mpv only.":
     "通过插帧让平移画面更流畅，最适合动漫。显示器刷新率需高于视频帧率，性能较弱的 GPU 可能会卡顿。仅限 mpv。",
-  "Direct torrent streaming": "种子直接播放",
+  "Direct P2P streaming": "P2P 直接播放",
   "When you have no debrid set up, or a torrent isn't cached, stream it straight from the bundled engine on localhost:11470. This connects to peers over your own connection, the same way Stremio's built-in streaming does.":
     "未设置 debrid 或种子未缓存时，直接使用 localhost:11470 上的内置引擎播放。这会通过你的网络连接到其他对等节点，方式与 Stremio 的内置播放功能相同。",
   "Stream torrents through Harbor's own Rust peer-to-peer engine instead of the bundled Stremio Server. Falls back automatically if it can't connect. Status and a self-test live in the Local engine card below.":
@@ -342,10 +339,8 @@ const playback: Record<string, string> = {
   "Generates a frame on the fly as you scrub the seek bar. Works on debrid streams and local files.":
     "拖动进度条时即时生成预览画面。适用于 debrid 播放源和本地文件。",
   "Seek dot shape": "进度圆点形状",
-  "Self-test is disabled while strict remote streaming is on. It downloads a test torrent over peer-to-peer on this machine.":
-    "严格远程流式传输开启时无法自检。自检会在本机通过 P2P 下载测试种子。",
-  "Point Harbor at a streaming server on another machine, like the Stremio service on a home server. Torrents download and stream from that machine instead of this one.":
-    "让 Harbor 连接另一台设备上的流媒体服务器，例如家庭服务器上的 Stremio 服务。种子将由该设备下载并播放，而非本机。",
+  "Self-test is disabled while strict remote streaming is on. It downloads a small test file over peer-to-peer on this machine.": "严格远程流式传输开启时无法自检。自检会在本机通过 P2P 下载一个小型测试文件。",
+  "Point Harbor at a streaming server on another machine, like the Stremio service on a home server. P2P streams download and play from that machine instead of this one.": "让 Harbor 连接另一台设备上的流媒体服务器，例如家庭服务器上的 Stremio 服务。P2P 流将由该设备下载并播放，而非本机。",
   "If the server is unreachable, playback fails instead of streaming locally. Use this when your VPN runs on the server machine and torrent traffic must never leave this one.":
     "如果服务器无法访问，播放将失败，而不会改由本机进行流式传输。如果 VPN 运行在服务器设备上，并且种子流量绝不能经过本机，请使用此选项。",
   "Server reachable in {ms}ms. Harbor will use it for torrent streaming.":
@@ -490,9 +485,8 @@ const playback: Record<string, string> = {
     "Harbor 排序会将评分最高的播放源排在前面。插件顺序会保留每个插件返回结果的原始顺序，与 Stremio 和 Vidi 应用一致。在两种模式下，下方的播放源优先级都会决定哪个插件排在最前。",
   "If a stream hasn't started playing in time (a dead source or an addon that's down), automatically try the next available stream. Off by default.":
     "如果播放源未能在规定时间内开始播放（播放源失效或插件宕机），则自动尝试下一个可用播放源。默认关闭。",
-  "Only start the torrent engine when needed": "仅在需要时启动种子引擎",
-  "Harbor normally starts its torrent engine at launch so the first P2P stream connects faster. That keeps a DHT node running and talking to the network even when you are not watching anything. Turn this on if you are on a metered or limited connection: the engine then starts the first time you actually play a torrent. Takes effect next launch.":
-    "Harbor 通常会在启动时开启种子引擎，以便更快连接第一个 P2P 播放源。即使你未观看任何内容，这也会让 DHT 节点持续运行并与网络通信。如果你使用按流量计费或流量受限的网络，请开启此项：引擎将在首次实际播放种子时才启动。下次启动时生效。",
+  "Only start the P2P engine when needed": "仅在需要时启动 P2P 引擎",
+  "Harbor normally starts its P2P engine at launch so the first P2P stream connects faster. That keeps a DHT node running and talking to the network even when you are not watching anything. Turn this on if you are on a metered or limited connection: the engine then starts the first time you actually play a P2P stream. Takes effect next launch.": "Harbor 通常会在启动时开启 P2P 引擎，以便更快连接第一个 P2P 播放源。即使你未观看任何内容，这也会让 DHT 节点持续运行并与网络通信。如果你使用按流量计费或流量受限的网络，请开启此项：引擎将在首次实际播放 P2P 流时才启动。下次启动时生效。",
   "Show a second subtitle in another language at the same time. Handy when you are learning a language: keep the one you are learning as your main subtitle, and put your own language here.":
     "同时显示另一种语言的第二字幕。学习语言时很方便：将正在学习的语言设为主字幕，并在此处设置你的母语。",
   "Second subtitle language": "第二字幕语言",
@@ -647,8 +641,7 @@ const playback: Record<string, string> = {
     "选择按键盘方向键和播放器快进快退按钮时的跳转时长。",
   "Connect a debrid service (Real-Debrid, TorBox, AllDebrid) for instant HD without the wait.":
     "连接云解服务（Real-Debrid、TorBox、AllDebrid），无需等待即可立即观看高清内容。",
-  "Copy diagnostics grabs the engine status and your P2P settings as JSON, handy to paste into a bug report. The engine folder holds the DHT cache (dht.json) and active torrent data.":
-    "复制诊断信息会获取引擎状态和你的 P2P 设置并生成 JSON，方便粘贴到错误报告中。引擎文件夹中存有 DHT 缓存（dht.json）和活跃 Torrent 数据。",
+  "Copy diagnostics grabs the engine status and your P2P settings as JSON, handy to paste into a bug report. The engine folder holds the DHT cache (dht.json) and active transfer data.": "复制诊断信息会获取引擎状态和你的 P2P 设置并生成 JSON，方便粘贴到错误报告中。引擎文件夹中存有 DHT 缓存（dht.json）和活跃传输数据。",
   "Displays the resolution, HDR format and audio (e.g. 4K · Dolby Vision · TrueHD 7.1) under the movie or episode title while playing. Off by default.":
     "播放时在电影或单集标题下方显示分辨率、HDR 格式和音频信息（例如 4K · Dolby Vision · TrueHD 7.1）。默认关闭。",
   "Downloaded peer-to-peer stream files are kept on disk so reopening a title resumes instantly instead of starting over. Control how long they stay and where they live.":
@@ -693,9 +686,8 @@ const playback: Record<string, string> = {
   "Show a quick volume overlay when you change volume with the player controls hidden, so keyboard and scroll wheel changes are always visible.":
     "播放器控件隐藏时，更改音量会显示简洁的音量浮层，确保键盘和滚轮操作始终可见。",
   "Show stream quality under the title": "在标题下显示播放画质",
-  "Show the report button on every torrent stream, not just likely new releases.":
-    "在每个种子播放源上显示举报按钮，而不只是可能的新发布内容。",
-  "Show torrent name": "显示种子名称",
+  "Show the report button on every P2P stream, not just likely new releases.": "在每个 P2P 播放源上显示举报按钮，而不只是可能的新发布内容。",
+  "Show release name": "显示发布名称",
   "Show what you're actually watching, under the title in the player.":
     "在播放器标题下方显示你实际正在观看的内容。",
   "Show your operating system's own title bar with its minimize, maximize, and close buttons. They stay reachable everywhere, including while a video is playing. Turn this off to use Harbor's built-in window buttons.":
@@ -757,8 +749,7 @@ const playback: Record<string, string> = {
   "Your debrid service is not responding. Try a different source.":
     "您的 Debrid 服务未响应。请尝试其他来源。",
   "Autoplay profile songs": "自动播放个人主页歌曲",
-  "Buffers the whole file in the background as you watch, even while paused, so big remuxes pre-load and you can scrub a cached file with no re-buffering. Works for debrid and torrent streams. Uses more disk and bandwidth; cleared when you switch or close.":
-    "观看时会在后台缓冲整个文件，即使暂停也会继续，让大型重封装文件提前加载，并可在已缓存的文件中拖动进度而无需重新缓冲。支持 debrid 和种子流。会占用更多磁盘空间和带宽；切换或关闭时将清除缓存。",
+  "Buffers the whole file in the background as you watch, even while paused, so big remuxes pre-load and you can scrub a cached file with no re-buffering. Works for debrid and P2P streams. Uses more disk and bandwidth; cleared when you switch or close.": "观看时会在后台缓冲整个文件，即使暂停也会继续，让大型重封装文件提前加载，并可在已缓存的文件中拖动进度而无需重新缓冲。支持 debrid 和 P2P 流。会占用更多磁盘空间和带宽；切换或关闭时将清除缓存。",
   "Harbor loads the native svpflow filter through VapourSynth and starts SVP Manager when available. Restart playback to apply.":
     "Harbor 会通过 VapourSynth 加载原生 svpflow 滤镜，并在可用时启动 SVP Manager。重启播放后生效。",
   "Harbor's own menus and labels. Subtitle languages come later, and you can change both in Settings.":
@@ -804,11 +795,10 @@ const playback: Record<string, string> = {
   "Each shader is hosted by its author, not bundled with Harbor. Download the ones you want; Harbor chains them in the right order and applies them in the player.":
     "每个着色器均由其作者托管，并未内置于 Harbor。下载所需着色器后，Harbor 会按正确顺序串联，并在播放器中应用。",
   "Embed a YouTube video": "嵌入 YouTube 视频",
-  "Fetches a small public test torrent, then reports UDP and HTTPS egress, DHT bootstrap and tracker reachability step by step.":
-    "获取一个小型公开测试种子，然后逐步报告 UDP 和 HTTPS 出站连接、DHT 引导及 Tracker 可达性。",
+  "Fetches a small public test file over P2P, then reports UDP and HTTPS egress, DHT bootstrap and tracker reachability step by step.": "通过 P2P 获取一个小型公开测试文件，然后逐步报告 UDP 和 HTTPS 出站连接、DHT 引导及 Tracker 可达性。",
   "Filmed in a theater with a handheld camera. Picture is shaky, faces look soft, you'll hear the crowd. Watch only if you can't wait. Quality is rough.":
     "手持摄像机在影院内拍摄。画面抖动，人脸模糊，还会听到观众的声音。实在等不及再看，画质很差。",
-  "Handles torrent playback and transcoding for this machine.": "负责此设备的种子播放和转码。",
+  "Handles P2P playback and transcoding for this machine.": "负责此设备的 P2P 播放和转码。",
   "Harbor needs at least one streaming source before it can play {title}. Install a stream addon or add a debrid key in settings.":
     "Harbor 至少需要一个流媒体源才能播放 {title}。请安装流媒体插件或在设置中添加 debrid 密钥。",
   "Harbor reads the speech in the audio, then slides the subtitle track until the two line up.":
@@ -827,9 +817,8 @@ const playback: Record<string, string> = {
     "按“行为”中设置的较短“短距离跳转”步长前进。",
   "Layout, time format and volume style apply when you save.":
     "保存后，布局、时间格式和音量样式将生效。",
-  "Live state of Harbor's own torrent engine on this machine.":
-    "此设备上 Harbor 自有种子引擎的实时状态。",
-  "Local torrent engine": "本地种子引擎",
+  "Live state of Harbor's own P2P engine on this machine.": "此设备上 Harbor 自有 P2P 引擎的实时状态。",
+  "Local P2P engine": "本地 P2P 引擎",
   "Lock player controls": "锁定播放器控件",
   "Main subtitle line": "主字幕行",
   "Name it, tick the resolutions, sources, codecs and audio you want, and leave the rest blank.":
@@ -838,12 +827,10 @@ const playback: Record<string, string> = {
   "No subtitle languages set": "未设置字幕语言",
   "Nothing selected. Harbor will not load a subtitle on its own.":
     "未选择任何内容。Harbor 不会自动加载字幕。",
-  "Opens the folder holding the DHT cache and active torrent data.":
-    "打开存放 DHT 缓存和活跃种子数据的文件夹。",
+  "Opens the folder holding the DHT cache and active transfer data.": "打开存放 DHT 缓存和活跃传输数据的文件夹。",
   "Optional. Add one to turn on automatic subtitle sync.": "可选。添加密钥即可启用字幕自动同步。",
   "Paste a direct video file link.": "粘贴视频文件直链。",
-  "Peers, speed and progress on the player while a torrent streams. Sits top left, clear of the exit button.":
-    "种子流式播放期间，在播放器上显示对等节点数、速度和进度。位于左上角，避开退出按钮。",
+  "Peers, speed and progress on the player while a P2P stream plays. Sits top left, clear of the exit button.": "P2P 流播放期间，在播放器上显示对等节点数、速度和进度。位于左上角，避开退出按钮。",
   "Pick a source to swap in place. Playback keeps running.": "选择要替换的来源。播放会继续进行。",
   "Pick what to save, then everything you choose lands in one file: theme, home layout, settings, addons, profiles, watchlist, player layouts, watch progress, and more. Your Stremio sign-in is left out on purpose.":
     "选择要保存的内容，随后所有选中内容都会存入一个文件，包括主题、首页布局、设置、插件、个人资料、片单、播放器布局、观看进度等。你的 Stremio 登录信息会特意排除在外。",
@@ -925,7 +912,7 @@ const playback: Record<string, string> = {
     "在 mpv 播放期间切换 RTX Video HDR。启用 HDR 转 SDR 色调映射或 SVP 时不可用。",
   "Toggle RTX Video Super Resolution during mpv playback. Unavailable while SVP is active.":
     "在 mpv 播放期间切换 RTX Video Super Resolution。启用 SVP 时不可用。",
-  "Torrent streaming": "种子流媒体播放",
+  "P2P streaming": "P2P 流媒体播放",
   "Unsaved changes to your layout, time format and volume style.":
     "布局、时间格式和音量样式有未保存的更改。",
   "Video files": "视频文件",
@@ -1042,8 +1029,7 @@ const playback: Record<string, string> = {
     "播放内容时应用。仅当视频被缩放时，画面才会出现明显变化。",
   "We originally built this as our own personal client. We love {service} so much and wanted to put our own spin on a protocol we use almost daily. It started as a simple, clean player, and as our friends started using it too, it grew into something bigger: watch together, instant play, and a lot more.":
     "我们最初将它作为自用客户端。我们非常喜爱 {service}，希望用自己的方式诠释这个几乎每天都在使用的协议。它起初只是一个简洁易用的播放器，随着朋友们也开始使用，逐渐发展出更多功能：一起观看、即点即播等等。",
-  "Same read-only usage as Real-Debrid. Also lets you queue uncached torrents from the play picker.":
-    "与 Real-Debrid 相同，仅进行只读操作。还可让您从播放选择器中将未缓存的种子加入队列。",
+  "Same read-only usage as Real-Debrid. Also lets you queue uncached sources from the play picker.": "与 Real-Debrid 相同，仅进行只读操作。还可让您从播放选择器中将未缓存的来源加入队列。",
   Recovery: "故障恢复",
   "Reload source": "重新加载片源",
   "Re-open the stream you are watching and pick it back up where you left off.":

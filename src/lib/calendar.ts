@@ -1,5 +1,16 @@
-import { safeFetch as fetch } from "@/lib/safe-fetch";
+import { invoke } from "@tauri-apps/api/core";
+import { safeFetch as fetch, safeFetchBytes } from "@/lib/safe-fetch";
+import { formatAirDate } from "@/lib/dates";
+import {
+  isPermissionGranted as tauriNotifyGranted,
+  requestPermission as tauriNotifyRequest,
+  sendNotification as tauriSendNotification,
+} from "@tauri-apps/plugin-notification";
+import { emitDeepLinkOpen, parseHarborOpen } from "@/lib/deep-link";
+import { isLinuxDesktop, isMacDesktop, isWeb, isWindowsDesktop } from "@/lib/platform";
+import { ensureNotifyPermission } from "@/lib/reminders";
 import { setItemWithRecovery } from "@/lib/storage-recovery";
+import { focusWindow } from "@/lib/window";
 import { tmdbImdbId } from "./providers/tmdb";
 
 const TMDB = "https://api.themoviedb.org/3";
@@ -481,13 +492,146 @@ export type WebhookPayload = {
   items: CalendarItem[];
 };
 
-export type WebhookKind = "discord" | "telegram";
+export type WebhookKind = "discord" | "telegram" | "desktop";
+
+const DESKTOP_NOTIFY_CAP = 10;
+const POSTER_FETCH_TIMEOUT_MS = 8000;
+const POSTER_MAX_BYTES = 2 * 1024 * 1024;
+const HARBOR_ICON_PATH = "/favicon.png";
+
+function desktopNotifyBody(item: CalendarItem): string {
+  const date = formatAirDate(item.releaseDate) || item.releaseDate;
+  return item.releaseTime ? `${date} · ${item.releaseTime}` : date;
+}
+
+async function fetchPosterBytes(url: string): Promise<number[] | undefined> {
+  try {
+    // A same-origin app asset (e.g. the Harbor icon) lives inside the webview's
+    // own bundle — safeFetchBytes's native-fetch routing is for external CDNs
+    // and can't reach it, so read it with a plain same-origin fetch instead.
+    const res = url.startsWith("/")
+      ? await window.fetch(url)
+      : await safeFetchBytes(url, undefined, POSTER_FETCH_TIMEOUT_MS, POSTER_MAX_BYTES);
+    if (!res.ok) return undefined;
+    const bytes = new Uint8Array(await res.arrayBuffer());
+    return bytes.length > 0 ? Array.from(bytes) : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function isDesktopTauri(): boolean {
+  return isWindowsDesktop() || isMacDesktop() || isLinuxDesktop();
+}
+
+export async function ensureDesktopNotifyPermission(): Promise<boolean> {
+  if (isWeb()) return ensureNotifyPermission();
+  try {
+    if (await tauriNotifyGranted()) return true;
+    return (await tauriNotifyRequest()) === "granted";
+  } catch {
+    return false;
+  }
+}
+
+function detailDeepLink(item: CalendarItem): string | undefined {
+  if (!item.imdbId) return undefined;
+  const metaType = item.type === "tv" ? "series" : "movie";
+  return `harbor://detail/${metaType}/${encodeURIComponent(item.imdbId)}`;
+}
+
+async function sendDesktopNotification(
+  title: string,
+  body: string,
+  deepLink?: string,
+  posterUrl?: string,
+): Promise<boolean> {
+  if (isWeb()) {
+    try {
+      if (!("Notification" in window) || Notification.permission !== "granted") return false;
+      const n = new Notification(title, { body, icon: posterUrl || undefined });
+      n.onclick = () => {
+        if (deepLink) {
+          const open = parseHarborOpen(deepLink);
+          if (open) emitDeepLinkOpen(open);
+        }
+        void focusWindow();
+        n.close();
+      };
+      return true;
+    } catch {
+      return false;
+    }
+  }
+  if (isDesktopTauri()) {
+    try {
+      const imageBytes = posterUrl ? await fetchPosterBytes(posterUrl) : undefined;
+      await invoke("send_clickable_notification", {
+        title,
+        body,
+        deepLink: deepLink ?? null,
+        imageBytes: imageBytes ?? null,
+      });
+      return true;
+    } catch {
+      return false;
+    }
+  }
+  try {
+    tauriSendNotification({ title, body });
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 export async function fireWebhook(
   kind: WebhookKind,
   url: string,
   payload: WebhookPayload,
 ): Promise<{ ok: boolean; status: number; error: string | null }> {
+  if (kind === "desktop") {
+    const granted = await ensureDesktopNotifyPermission();
+    if (!granted) {
+      return { ok: false, status: 0, error: "Notifications permission not granted" };
+    }
+    let delivered = 0;
+    let attempted = 0;
+    if (payload.items.length === 0) {
+      attempted = 1;
+      if (await sendDesktopNotification("Harbor", payload.text, undefined, HARBOR_ICON_PATH)) {
+        delivered = 1;
+      }
+    } else {
+      for (const i of payload.items.slice(0, DESKTOP_NOTIFY_CAP)) {
+        attempted++;
+        const tag = i.isAnime ? "🍙" : i.type === "movie" ? "🎬" : "📺";
+        if (
+          await sendDesktopNotification(
+            `${tag} ${i.name}`,
+            desktopNotifyBody(i),
+            detailDeepLink(i),
+            i.poster ?? undefined,
+          )
+        ) {
+          delivered++;
+        }
+      }
+      if (payload.items.length > DESKTOP_NOTIFY_CAP) {
+        attempted++;
+        if (await sendDesktopNotification("Harbor", payload.text)) delivered++;
+      }
+    }
+    if (delivered === 0) {
+      return { ok: false, status: 0, error: "Failed to show notification" };
+    }
+    return {
+      ok: true,
+      status: 0,
+      error:
+        delivered < attempted ? `${attempted - delivered} notification(s) failed to show` : null,
+    };
+  }
   if (!url) return { ok: false, status: 0, error: "No URL configured" };
   try {
     if (kind === "discord") {

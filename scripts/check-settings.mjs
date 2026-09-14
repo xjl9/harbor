@@ -1,5 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
+import { settingsSearchEntries } from "./settings-search-entries.mjs";
+import { createSettingsAnchorAudit } from "./settings-anchors.mjs";
 
 const ROOT = path.resolve(process.argv[2] ?? ".");
 const SRC = path.join(ROOT, "src");
@@ -13,8 +15,9 @@ function tree(dir, ext = ".tsx") {
   if (!fs.existsSync(dir)) return out;
   for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
     const p = path.join(dir, e.name);
-    if (e.isDirectory()) { if (e.name !== "node_modules") out.push(...tree(p, ext)); }
-    else if (e.name.endsWith(ext)) out.push(p);
+    if (e.isDirectory()) {
+      if (e.name !== "node_modules") out.push(...tree(p, ext));
+    } else if (e.name.endsWith(ext)) out.push(p);
   }
   return out;
 }
@@ -71,7 +74,9 @@ report(
         !/onboarding|remote-app|together-deploy/.test(d.rel),
     )
     .map((d) => d.rel + ":" + d.line + " (z-" + d.z + ")"),
-  "the hybrid title bar is z-[" + CHROME_TOP + "] and 36px tall, so it clips the top of anything at or below it",
+  "the hybrid title bar is z-[" +
+    CHROME_TOP +
+    "] and 36px tall, so it clips the top of anything at or below it",
 );
 
 report(
@@ -93,7 +98,8 @@ function keyframes() {
   const re = /@keyframes\s+([A-Za-z0-9_-]+)\s*\{/g;
   let m;
   while ((m = re.exec(css))) {
-    let depth = 1, i = re.lastIndex;
+    let depth = 1,
+      i = re.lastIndex;
     while (i < css.length && depth > 0) {
       if (css[i] === "{") depth++;
       else if (css[i] === "}") depth--;
@@ -112,16 +118,22 @@ report(
   "the later definition silently wins, so the animation is not the one the source appears to describe",
 );
 
-const IDENTITY = /^(translate[XYZ]?\((?:0|0px|0%)(?:,\s*(?:0|0px|0%))*\)|translate3d\(\s*0[a-z%]*\s*,\s*0[a-z%]*\s*,\s*0[a-z%]*\s*\)|scale[XY]?\(\s*1(?:\s*,\s*1)?\s*\)|rotate\(\s*(?:0|360)deg\s*\))$/;
+const IDENTITY =
+  /^(translate[XYZ]?\((?:0|0px|0%)(?:,\s*(?:0|0px|0%))*\)|translate3d\(\s*0[a-z%]*\s*,\s*0[a-z%]*\s*,\s*0[a-z%]*\s*\)|scale[XY]?\(\s*1(?:\s*,\s*1)?\s*\)|rotate\(\s*(?:0|360)deg\s*\))$/;
 const isIdentity = (v) => {
-  const parts = v.trim().split(/\s+(?=[a-z])/).filter(Boolean);
+  const parts = v
+    .trim()
+    .split(/\s+(?=[a-z])/)
+    .filter(Boolean);
   return parts.length > 0 && parts.every((p) => IDENTITY.test(p.trim()));
 };
 
 const held = new Set();
-for (const m of css.matchAll(/animation:[^;]*?([A-Za-z0-9_-]+)\s+[^;]*?\b(both|forwards)\b/g)) held.add(m[1]);
+for (const m of css.matchAll(/animation:[^;]*?([A-Za-z0-9_-]+)\s+[^;]*?\b(both|forwards)\b/g))
+  held.add(m[1]);
 for (const f of allSrc) {
-  for (const m of read(f).matchAll(/animation: "([A-Za-z0-9_-]+)[^"]*\b(both|forwards)\b/g)) held.add(m[1]);
+  for (const m of read(f).matchAll(/animation: "([A-Za-z0-9_-]+)[^"]*\b(both|forwards)\b/g))
+    held.add(m[1]);
 }
 
 const pinned = [];
@@ -151,14 +163,25 @@ report(
 const typesFile = path.join(SRC, "lib", "settings", "types.ts");
 const types = read(typesFile);
 const tStart = types.indexOf("export type Settings");
-let d = 0, tEnd = tStart;
+let d = 0,
+  tEnd = tStart;
 for (let k = types.indexOf("{", tStart); k < types.length; k++) {
   if (types[k] === "{") d++;
-  else if (types[k] === "}") { d--; if (!d) { tEnd = k; break; } }
+  else if (types[k] === "}") {
+    d--;
+    if (!d) {
+      tEnd = k;
+      break;
+    }
+  }
 }
-const keys = [...types.slice(tStart, tEnd).matchAll(/^\s{2}([a-zA-Z][a-zA-Z0-9_]*)\??:/gm)].map((m) => m[1]);
+const keys = [...types.slice(tStart, tEnd).matchAll(/^\s{2}([a-zA-Z][a-zA-Z0-9_]*)\??:/gm)].map(
+  (m) => m[1],
+);
 const defaults = read(path.join(SRC, "lib", "settings", "defaults.ts"));
-const hasDefault = new Set([...defaults.matchAll(/^\s{2}([a-zA-Z][a-zA-Z0-9_]*):/gm)].map((m) => m[1]));
+const hasDefault = new Set(
+  [...defaults.matchAll(/^\s{2}([a-zA-Z][a-zA-Z0-9_]*):/gm)].map((m) => m[1]),
+);
 
 report(
   "settings keys with no default",
@@ -167,18 +190,27 @@ report(
 );
 
 const uiSrc = settingsTsx.map(read).join("\n");
-const consumerSrc = allSrc
-  .filter((f) => !rel(f).startsWith("views/settings") && !rel(f).startsWith("views/account") && !rel(f).startsWith("lib/settings/"))
-  .map(read)
-  .join("\n")
-  + tree(path.join(ROOT, "src-tauri", "src"), ".rs").map(read).join("\n");
+const consumerSrc =
+  allSrc
+    .filter(
+      (f) =>
+        !rel(f).startsWith("views/settings") &&
+        !rel(f).startsWith("views/account") &&
+        !rel(f).startsWith("lib/settings/"),
+    )
+    .map(read)
+    .join("\n") +
+  tree(path.join(ROOT, "src-tauri", "src"), ".rs")
+    .map(read)
+    .join("\n");
 
 const writes = (k) =>
-  new RegExp("[{,]\\s*" + k + "\\s*[:,}]").test(uiSrc) || new RegExp('["\'`]' + k + '["\'`]').test(uiSrc);
+  new RegExp("[{,]\\s*" + k + "\\s*[:,}]").test(uiSrc) ||
+  new RegExp("[\"'`]" + k + "[\"'`]").test(uiSrc);
 const reads = (k) =>
   new RegExp("\\.\\s*" + k + "\\b").test(consumerSrc) ||
   new RegExp("[{,]\\s*" + k + "\\s*[,}=:]").test(consumerSrc) ||
-  new RegExp('["\'`]' + k + '["\'`]').test(consumerSrc);
+  new RegExp("[\"'`]" + k + "[\"'`]").test(consumerSrc);
 
 report(
   "controls that change nothing",
@@ -197,14 +229,39 @@ for (const f of settingsSrc) {
   for (const m of s.matchAll(/(?:TITLE|LABEL)\s*=\s*"([^"]+)"/g)) headings.add(m[1]);
   for (const m of s.matchAll(/settingsAnchor\("([^"]+)"\)/g)) headings.add(m[1]);
 }
-const entries = [...nav.matchAll(/\{\s*label:\s*"([^"]+)",\s*section:\s*"([a-zA-Z]+)"(?:,\s*anchorTitle:\s*"([^"]+)")?/g)]
-  .map((m) => ({ label: m[1], section: m[2], anchor: m[3] }));
+const entries = settingsSearchEntries(nav);
 
 report(
-  "search entries pointing at a heading that does not exist",
-  entries.filter((e) => e.anchor && !headings.has(e.anchor)).map((e) => e.label + " -> " + e.anchor),
+  "search entries pointing at a heading that does not exist anywhere",
+  entries
+    .filter((e) => e.anchor && !headings.has(e.anchor))
+    .map((e) => e.label + " -> " + e.anchor),
   "the search result opens the page and then scrolls nowhere",
 );
+
+const anchorAudit = createSettingsAnchorAudit(ROOT);
+const ANCHOR_CHECKS = [
+  [
+    "heading missing",
+    "the heading is not rendered on that page, so the jump lands at the top of it",
+  ],
+  ["heading wrong", "the jump highlights a different heading from the one the control sits under"],
+  ["page wrong", "the control lives on another page, so the jump opens the wrong one"],
+  ["tab unknown", "the tab id is not in tab-registry.ts for that page"],
+  ["tab wrong", "the jump opens a tab that does not hold the control"],
+  [
+    "tab missing",
+    "the jump has to cycle every tab looking for the heading instead of opening the right one",
+  ],
+  ["unknown section", "the section id is not a settings page"],
+];
+for (const [kind, why] of ANCHOR_CHECKS) {
+  report(
+    "search entries: " + kind,
+    anchorAudit.problems.filter((p) => p.kind === kind).map((p) => p.detail),
+    why,
+  );
+}
 
 const seen = new Map();
 for (const e of entries) {
@@ -218,7 +275,9 @@ report(
 );
 
 const shell = read(path.join(SRC, "views", "settings.tsx"));
-const pages = [...shell.matchAll(/^\s*([a-zA-Z]+):\s*\(\)\s*=>\s*import\("\.\/settings\//gm)].map((m) => m[1]);
+const pages = [...shell.matchAll(/^\s*([a-zA-Z]+):\s*\(\)\s*=>\s*import\("\.\/settings\//gm)].map(
+  (m) => m[1],
+);
 const covered = new Set(entries.map((e) => e.section));
 report(
   "settings pages no search entry reaches",
@@ -253,7 +312,9 @@ for (const f of settingsTsx) {
 }
 report(
   "one label naming two different settings",
-  [...labelKeys].filter(([, v]) => v.size > 1).map(([l, v]) => '"' + l + '" -> ' + [...v].join(", ")),
+  [...labelKeys]
+    .filter(([, v]) => v.size > 1)
+    .map(([l, v]) => '"' + l + '" -> ' + [...v].join(", ")),
   "two unrelated controls share a name, so search shows them identically",
 );
 

@@ -14,8 +14,9 @@ import { sizeImageUrl, qualityMultiplier } from "@/lib/img-size";
 import { shouldLocalizePosters } from "@/lib/providers/tmdb/tmdb-image-lang";
 import { useProxiedImageSrc } from "@/lib/remote-image-proxy";
 import { isMobileNative } from "@/lib/platform";
+import { observeResize, observeWithin } from "@/lib/visibility";
 
-type Ratio = "portrait" | "landscape" | "wide";
+type Ratio = "portrait" | "landscape" | "wide" | "square";
 
 // Phone tiles never need more than w500: the "high"/"max" quality multipliers were
 // tuned for desktop DPR 1 and on a DPR-3 phone they push 124px rail tiles to w780+
@@ -201,12 +202,14 @@ const ASPECT_PAD: Record<Ratio, string> = {
   portrait: "150%", // 3 / 2
   landscape: "56.25%", // 9 / 16
   wide: "43.75%", // 7 / 16
+  square: "100%",
 };
 
 const RATIO_AR: Record<Ratio, number> = {
   portrait: 2 / 3,
   landscape: 16 / 9,
   wide: 16 / 7,
+  square: 1,
 };
 
 function PosterBody({
@@ -241,43 +244,28 @@ function PosterBody({
     if (inView) return;
     const el = rootRef.current;
     if (!el) return;
-    const obs = new IntersectionObserver(
-      (entries) => {
-        const e = entries.find((x) => x.isIntersecting);
-        if (!e) return;
-        const r = e.boundingClientRect;
-        if (r.top < (window.innerHeight || 0) && r.bottom > 0) setEager(true);
-        setInView(true);
-        obs.disconnect();
-      },
-      // 1200px is ~3 viewports of lookahead on a phone; 600px keeps the same
-      // smooth-scroll headroom without prefetching two extra screens of tiles.
-      { rootMargin: mobileNative ? "600px" : "1200px" },
-    );
-    obs.observe(el);
-    return () => obs.disconnect();
+    // 1200px is ~3 viewports of lookahead on a phone; 600px keeps the same
+    // smooth-scroll headroom without prefetching two extra screens of tiles.
+    return observeWithin(el, mobileNative ? "600px" : "1200px", (e) => {
+      if (!e.isIntersecting) return;
+      const r = e.boundingClientRect;
+      if (r.top < (window.innerHeight || 0) && r.bottom > 0) setEager(true);
+      setInView(true);
+    });
   }, [inView, mobileNative]);
   useEffect(() => {
     if (!lazy || eager || !inView) return;
     const el = rootRef.current;
     if (!el) return;
-    const obs = new IntersectionObserver(
-      (entries) => {
-        if (entries.some((x) => x.isIntersecting)) {
-          setEager(true);
-          obs.disconnect();
-        }
-      },
-      { rootMargin: "150px" },
-    );
-    obs.observe(el);
-    return () => obs.disconnect();
+    return observeWithin(el, "150px", (e) => {
+      if (e.isIntersecting) setEager(true);
+    });
   }, [lazy, eager, inView]);
   useEffect(() => {
     if (!inView || qMult === 0) return;
     const el = rootRef.current;
     if (!el) return;
-    const measure = () => {
+    return observeResize(el, () => {
       const box = el.getBoundingClientRect();
       if (box.width <= 0) return;
       const need = Math.max(box.width, box.height * RATIO_AR[ratio]);
@@ -287,11 +275,7 @@ function PosterBody({
       let t = Math.ceil(need * Math.min(2, window.devicePixelRatio || 1) * qMult);
       if (mobileNative) t = Math.min(t, MOBILE_TILE_MAX_PX);
       setTargetPx((prev) => (t > prev ? t : prev));
-    };
-    measure();
-    const ro = new ResizeObserver(measure);
-    ro.observe(el);
-    return () => ro.disconnect();
+    });
   }, [inView, qMult, ratio, mobileNative]);
   const rawCandidates = [src, ...(fallbacks ?? [])].filter((u): u is string => !!u);
   const candidates =
@@ -321,31 +305,26 @@ function PosterBody({
     const el = rootRef.current;
     if (!el) return;
     let timer = 0;
-    const obs = new IntersectionObserver(
-      (entries) => {
-        const inside = entries.some((x) => x.isIntersecting);
-        if (inside) {
-          if (timer) {
-            window.clearTimeout(timer);
-            timer = 0;
-          }
-          return;
-        }
-        if (timer) return;
-        timer = window.setTimeout(() => {
+    const stop = observeWithin(el, "2400px", (e) => {
+      if (e.isIntersecting) {
+        if (timer) {
+          window.clearTimeout(timer);
           timer = 0;
-          if (el.closest("a,button,[tabindex]") === document.activeElement) return;
-          setInView(false);
-          setEager(false);
-          setLoaded(false);
-          setDisplayed(undefined);
-        }, 1500);
-      },
-      { rootMargin: "2400px" },
-    );
-    obs.observe(el);
+        }
+        return;
+      }
+      if (timer) return;
+      timer = window.setTimeout(() => {
+        timer = 0;
+        if (el.closest("a,button,[tabindex]") === document.activeElement) return;
+        setInView(false);
+        setEager(false);
+        setLoaded(false);
+        setDisplayed(undefined);
+      }, 1500);
+    });
     return () => {
-      obs.disconnect();
+      stop();
       if (timer) window.clearTimeout(timer);
     };
   }, [lazy]);
@@ -442,7 +421,13 @@ function PosterBody({
       style={showPlate ? { background: gradient(hue) } : undefined}
     >
       <div aria-hidden style={{ paddingTop: ASPECT_PAD[ratio] }} />
-      {showShimmer && <span aria-hidden className="harbor-shimmer absolute inset-0" />}
+      {showShimmer && (
+        <span
+          aria-hidden
+          className="harbor-shimmer absolute inset-0"
+          data-idle={inView ? undefined : ""}
+        />
+      )}
       {displayed && displayed !== current && displayedSrc && (
         <img
           src={displayedSrc}

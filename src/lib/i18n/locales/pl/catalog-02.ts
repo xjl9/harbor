@@ -550,8 +550,7 @@ const catalog02: Record<string, string> = {
   "Buffer fill brightness": "Jasność wypełnienia bufora",
   "Buffer size": "Rozmiar bufora",
   Buffering: "Buforowanie",
-  "Buffers the whole file in the background as you watch, even while paused, so big remuxes pre-load and you can scrub a cached file with no re-buffering. Works for debrid and torrent streams. Uses more disk and bandwidth; cleared when you switch or close.":
-    "Buforuje cały plik w tle podczas oglądania, nawet po wstrzymaniu, dzięki czemu duże remuksy są wstępnie wczytywane, a przewijanie zbuforowanego pliku nie powoduje ponownego buforowania. Działa ze strumieniami debrid i torrent. Zużywa więcej miejsca na dysku i transferu, dane są usuwane po zmianie lub zamknięciu.",
+  "Buffers the whole file in the background as you watch, even while paused, so big remuxes pre-load and you can scrub a cached file with no re-buffering. Works for debrid and P2P streams. Uses more disk and bandwidth; cleared when you switch or close.": "Buforuje cały plik w tle podczas oglądania, nawet po wstrzymaniu, dzięki czemu duże remuksy są wstępnie wczytywane, a przewijanie zbuforowanego pliku nie powoduje ponownego buforowania. Działa ze strumieniami debrid i P2P. Zużywa więcej miejsca na dysku i transferu, dane są usuwane po zmianie lub zamknięciu.",
   "Bug reporters get listed in the release notes when their report leads to a shipped fix. Leave blank to stay anonymous.":
     "Osoby zgłaszające błędy są wymieniane w informacjach o wydaniu, jeśli ich zgłoszenie doprowadzi do opublikowania poprawki. Pozostaw puste, aby zachować anonimowość.",
   "Bug reports": "Zgłoszenia błędów",
@@ -568,8 +567,8 @@ const catalog02: Record<string, string> = {
   "Build a source plugin": "Utwórz wtyczkę źródła",
   "Build a theme": "Utwórz motyw",
   "Build from source": "Skompiluj z kodu źródłowego",
-  "Build identity. Useful when filing a bug report at bugs@harbor.site.":
-    "Identyfikator kompilacji. Przydaje się podczas zgłaszania błędu na adres bugs@harbor.site.",
+  "Build identity. Useful when filing a bug report.":
+    "Identyfikator kompilacji. Przydaje się podczas zgłaszania błędu.",
   "Build one in the studio or import a theme file first, then come back to share it.":
     "Najpierw utwórz motyw w edytorze lub zaimportuj plik motywu, a potem wróć tutaj, aby go udostępnić.",
   "Build or import the updated theme first, then come back to push it as a new version.":

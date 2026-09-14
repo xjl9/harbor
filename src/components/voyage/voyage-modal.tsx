@@ -31,12 +31,17 @@ export function VoyageModal() {
   return createPortal(
     <div
       className="fixed inset-0 z-[200] flex items-center justify-center bg-canvas/80 p-4 sm:p-6"
-      style={{ animation: closing ? `voyage-scrim-out ${CLOSE_MS}ms ease forwards` : "voyage-scrim-in 200ms ease both" }}
+      style={{
+        animation: closing
+          ? `voyage-scrim-out ${CLOSE_MS}ms ease forwards`
+          : "voyage-scrim-in 200ms ease both",
+      }}
       onClick={requestClose}
     >
       <div
         role="dialog"
         aria-modal="true"
+        data-voyage-panel
         onClick={(e) => e.stopPropagation()}
         className="relative flex max-h-[88vh] w-full max-w-[720px] flex-col overflow-hidden rounded-lg bg-elevated shadow-[0_40px_120px_-24px_rgba(0,0,0,0.85)]"
         style={{
@@ -49,7 +54,9 @@ export function VoyageModal() {
           <div
             aria-hidden
             className="pointer-events-none absolute inset-x-0 top-0 z-0 h-24"
-            style={{ background: `linear-gradient(to bottom, color-mix(in oklch, ${active.accent}, transparent 90%), transparent)` }}
+            style={{
+              background: `linear-gradient(to bottom, color-mix(in oklch, ${active.accent}, transparent 90%), transparent)`,
+            }}
           />
         )}
 

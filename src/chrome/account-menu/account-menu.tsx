@@ -32,11 +32,28 @@ export function AccountMenu({
   const t = useT();
   const { settings } = useSettings();
   const ctrl = useAccountMenu();
-  const { ref, user, activeProfile, author, status, menuOpen, setMenuOpen, statusOpen, toggleStatus, pickStatus, pendingSwitch, setPendingSwitch, selectProfile } = ctrl;
+  const {
+    ref,
+    user,
+    activeProfile,
+    author,
+    status,
+    menuOpen,
+    setMenuOpen,
+    statusOpen,
+    toggleStatus,
+    pickStatus,
+    pendingSwitch,
+    setPendingSwitch,
+    selectProfile,
+  } = ctrl;
 
   const kid = !!activeProfile?.kid;
-  const harborAvatar = settings.harborAvatar?.startsWith("/kids/avatars/") ? null : settings.harborAvatar;
-  const name = activeProfile?.name ?? user?.fullname ?? user?.email?.split("@")[0] ?? t("profile.fallback");
+  const harborAvatar = settings.harborAvatar?.startsWith("/kids/avatars/")
+    ? null
+    : settings.harborAvatar;
+  const name =
+    activeProfile?.name ?? user?.fullname ?? user?.email?.split("@")[0] ?? t("profile.fallback");
   const showStatus = !!author && !kid;
 
   const vpos = placement === "up" ? "bottom-full mb-1.5" : "top-full mt-2";
@@ -54,7 +71,12 @@ export function AccountMenu({
 
   const avatar = (size: "md" | "lg") => (
     <span className="relative inline-flex shrink-0">
-      <ProfileAvatar profile={activeProfile} user={user} fallbackAvatar={harborAvatar} size={size} />
+      <ProfileAvatar
+        profile={activeProfile}
+        user={user}
+        fallbackAvatar={harborAvatar}
+        size={size}
+      />
       {showStatus && (
         <StatusDot
           status={status}
@@ -79,7 +101,11 @@ export function AccountMenu({
           }
         >
           {avatar("lg")}
-          <div className={`hidden min-w-0 flex-1 ${collapsed ? "" : "lg:block"}`}>
+          <div
+            data-harbor-sidebar-label
+            aria-hidden={collapsed || undefined}
+            className={`hidden min-w-0 flex-1 ${collapsed ? "" : "lg:block"}`}
+          >
             <div className="truncate text-[14.5px] font-medium tracking-tight text-ink">{name}</div>
             <div className="truncate text-[12px] text-ink-subtle">
               <SubtitleText active={activeProfile} profiles={ctrl.profiles} user={user} />
@@ -92,7 +118,10 @@ export function AccountMenu({
           aria-haspopup="menu"
           aria-expanded={menuOpen}
           aria-label={name}
-          className={triggerClassName ?? "flex items-center rounded-full transition-transform active:scale-95"}
+          className={
+            triggerClassName ??
+            "flex items-center rounded-full transition-transform active:scale-95"
+          }
         >
           {avatar("md")}
         </button>

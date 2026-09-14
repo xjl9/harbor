@@ -2,6 +2,7 @@ import { readPlayerVolume } from "@/lib/player-volume";
 import type { SubCue } from "@/lib/subtitles/parser";
 import type { SubtitleLoadMetadata } from "@/lib/subtitles/types";
 import type { SubtitleMatchConfidence } from "@/lib/subtitles/release-match";
+import type { SubtitleSelectionOrigin } from "./subtitle-selection";
 
 export type TrackInfo = {
   id: string;
@@ -119,9 +120,11 @@ export type PlayerBridge = {
   setMuted: (m: boolean) => void;
   setRate: (r: number) => void;
   setAudioTrack: (id: string) => void;
-  setSubtitleTrack: (id: string | null) => void;
+  setSubtitleTrack: (id: string | null, origin?: SubtitleSelectionOrigin) => void;
+  canAutoSelectSubtitle?: () => boolean;
   setSecondarySubtitleTrack: (id: string | null) => void;
   setSubVisible: (on: boolean) => void;
+  setSubHideSdh?: (on: boolean) => void;
   setSubDelay: (sec: number) => void;
   setAudioDelay: (sec: number) => void;
   setPanscan: (value: number) => void;
@@ -137,6 +140,7 @@ export type PlayerBridge = {
     title?: string,
     select?: boolean,
     metadata?: SubtitleLoadMetadata,
+    origin?: SubtitleSelectionOrigin,
   ) => Promise<boolean>;
   getSelectedTrackCues: () => SubCue[] | null;
   getSelectedTrackUrl: () => string | null;

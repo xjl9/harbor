@@ -24,7 +24,7 @@ const used: Record<string, string> = {
   "Blended from": "مزيج من",
   "Blur up looks smoothest. Fade is lighter on older devices. Instant turns it off.": "التمويه التدريجي هو الأنعم. التلاشي أخف على الأجهزة القديمة. الفوري يعطّل التأثير.",
   "Browse public groups": "تصفّح المجموعات العامة",
-  "Buffers the whole file in the background as you watch, even while paused, so big remuxes pre-load and you can scrub a cached file with no re-buffering. Works for debrid and torrent streams. Uses more disk and bandwidth; cleared when you switch or close.": "يخزّن الملف كاملًا مؤقتًا في الخلفية أثناء المشاهدة، حتى عند الإيقاف المؤقت، فتُحمَّل ملفات remux الكبيرة مسبقًا ويمكنك التنقّل عبر ملف مخزَّن دون إعادة تخزين مؤقت. يعمل مع بثوث debrid والتورنت. يستهلك المزيد من مساحة القرص والبيانات؛ ويُمسح عند التبديل أو الإغلاق.",
+  "Buffers the whole file in the background as you watch, even while paused, so big remuxes pre-load and you can scrub a cached file with no re-buffering. Works for debrid and P2P streams. Uses more disk and bandwidth; cleared when you switch or close.": "يخزّن الملف كاملًا مؤقتًا في الخلفية أثناء المشاهدة، حتى عند الإيقاف المؤقت، فتُحمَّل ملفات remux الكبيرة مسبقًا ويمكنك التنقّل عبر ملف مخزَّن دون إعادة تخزين مؤقت. يعمل مع بثوث debrid وP2P. يستهلك المزيد من مساحة القرص والبيانات؛ ويُمسح عند التبديل أو الإغلاق.",
   "Bulk upload is not live yet, sending one rating per second.": "الرفع الجماعي غير متاح بعد، يُرسَل تقييم واحد كل ثانية.",
   "Cancel import": "إلغاء الاستيراد",
   "Cancelling": "جارٍ الإلغاء",

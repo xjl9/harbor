@@ -312,17 +312,16 @@ const catalog04: Record<string, string> = {
   "Direct stream": "Strumień bezpośredni",
   "Direct torrent play needs the Harbor desktop app.":
     "Bezpośrednie odtwarzanie torrentów wymaga aplikacji Harbor na komputer.",
-  "Direct torrent streaming": "Bezpośrednie strumieniowanie torrentów",
+  "Direct P2P streaming": "Bezpośrednie strumieniowanie P2P",
   "Directed by": "Reżyseria",
   Directing: "Reżyseria",
   Direction: "Kierunek",
   "Director's Cut": "Wersja reżyserska",
   "Disable all": "Wyłącz wszystko",
   "Disable rule": "Wyłącz regułę",
-  "Disable torrents entirely": "Całkowicie wyłącz torrenty",
+  "Disable P2P entirely": "Całkowicie wyłącz P2P",
   Disabled: "Wyłączone",
-  "Disabled because torrents are disabled above":
-    "Wyłączone, ponieważ torrenty są wyłączone powyżej",
+  "Disabled because P2P is disabled above": "Wyłączone, ponieważ P2P jest wyłączone powyżej",
   "Disabled while strict remote streaming is on":
     "Niedostępne przy włączonym rygorystycznym zdalnym przesyłaniu strumieniowym",
   "Disc Source": "Źródło płytowe",
@@ -715,6 +714,9 @@ const catalog04: Record<string, string> = {
   "Episode 4": "Odcinek 4",
   "Episode card size": "Rozmiar karty odcinka",
   "Episode cards": "Karty odcinków",
+  "Cached source resolution and direct download links.": "Rozpoznawanie źródeł z pamięci podręcznej i bezpośrednie linki do pobierania.",
+  "Cached source resolution and cloud library access.": "Rozpoznawanie źródeł z pamięci podręcznej i dostęp do biblioteki w chmurze.",
+  "Both shows direct, debrid, and peer-to-peer results together. Direct/debrid keeps P2P results out of the way unless nothing else is available. P2P puts them first.": "Oba pokazuje razem wyniki bezpośrednie, debrid i peer-to-peer. Bezpośrednie/debrid odsuwa wyniki P2P na bok, chyba że nie ma nic innego. P2P stawia je na pierwszym miejscu.",
 };
 
 export default catalog04;

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { useAuth } from "@/lib/auth";
+import { anyProfileSharesStremioWith, useProfiles } from "@/lib/profiles";
 import type { AddonRow } from "@/lib/addons";
 import { loadAnimeAddonRows } from "@/lib/addons-anime-filter";
 import { absorbCloudAnimeCw } from "@/lib/anime-cw-absorb";
@@ -17,7 +18,13 @@ import {
 import { useSettings } from "@/lib/settings";
 import { fetchSimklPlaybackItems } from "@/lib/simkl/playback";
 import { useSimkl } from "@/lib/simkl/provider";
-import { ANIME_CLOUD_ID, isAnimeCwItem, isCwMember, library, type LibraryItem } from "@/lib/stremio";
+import {
+  ANIME_CLOUD_ID,
+  isAnimeCwItem,
+  isCwMember,
+  library,
+  type LibraryItem,
+} from "@/lib/stremio";
 
 const CW_CAP = 20;
 // Each root is a walk of up to eight sequential kitsu calls, and the pool this
@@ -65,6 +72,9 @@ function localItems(): LibraryItem[] {
 export function useBpAnimeCwBase(): BpAnimeCwBase {
   const { authKey } = useAuth();
   const { settings } = useSettings();
+  const { activeProfile, profiles } = useProfiles();
+  const hideSharedCw =
+    settings.cwPerProfile && anyProfileSharesStremioWith(activeProfile, profiles);
   const { isConnected: simklConnected } = useSimkl();
   const cwVersion = useCwDismissVersion();
   const animeDetectVer = useDetectedAnimeVersion();
@@ -84,7 +94,7 @@ export function useBpAnimeCwBase(): BpAnimeCwBase {
       library(authKey)
         .then((li) => {
           setLibItems(li);
-          if (!settings.cwPerProfile) absorbCloudAnimeCw(li);
+          if (!hideSharedCw) absorbCloudAnimeCw(li);
         })
         .catch(() => setLibItems([]));
     };
@@ -94,7 +104,7 @@ export function useBpAnimeCwBase(): BpAnimeCwBase {
     };
     window.addEventListener("focus", refresh);
     return () => window.removeEventListener("focus", refresh);
-  }, [authKey, settings.cwPerProfile]);
+  }, [authKey, hideSharedCw]);
 
   // Catalogs do not depend on cwPerProfile, so this used to re-sweep every installed
   // addon whenever that toggle moved. Keyed on authKey alone, and the returned canceller
@@ -144,7 +154,7 @@ export function useBpAnimeCwBase(): BpAnimeCwBase {
         if (!isCwMember(i)) return false;
         if (!i.local && !isAnimeCwItem(i)) return false;
         if (isCwDismissed(i)) return false;
-        if (settings.cwPerProfile && localCwEntry(i._id) === null && !i.local) return false;
+        if (hideSharedCw && localCwEntry(i._id) === null && !i.local) return false;
         if (seen.has(i._id)) return false;
         seen.add(i._id);
         return true;
@@ -162,7 +172,7 @@ export function useBpAnimeCwBase(): BpAnimeCwBase {
         return true;
       })
       .slice(0, CW_CAP);
-  }, [pool, cwVersion, animeDetectVer, rootVersion, settings.cwPerProfile]);
+  }, [pool, cwVersion, animeDetectVer, rootVersion, hideSharedCw]);
 
   // franchiseRootSync only answers once the walk is warm, so the collapse runs in
   // two phases or three seasons of one show sit in the row.
@@ -200,7 +210,9 @@ export function useBpAnimeCwBase(): BpAnimeCwBase {
     return [...libItems.filter((i) => !overrideIds.has(i._id)), ...usable];
   }, [libItems, manualWatchedVer]);
 
-  const sig = raw.map((i) => `${i._id}:${i.state?.season ?? ""}:${i.state?.episode ?? ""}`).join("|");
+  const sig = raw
+    .map((i) => `${i._id}:${i.state?.season ?? ""}:${i.state?.episode ?? ""}`)
+    .join("|");
   const [ready, setReady] = useState(false);
   useEffect(() => {
     if (ready) return;

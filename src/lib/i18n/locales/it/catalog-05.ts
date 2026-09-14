@@ -47,7 +47,7 @@ const catalog05: Record<string, string> = {
     "Lo spazio di archiviazione locale è pieno. Queste valutazioni restano solo nel tuo account.",
   "Local subtitle": "Sottotitolo locale",
   "Local time": "Ora locale",
-  "Local torrent engine": "Motore torrent locale",
+  "Local P2P engine": "Motore P2P locale",
   Location: "Posizione",
   "Lock controls · {binding}": "Blocca controlli · {binding}",
   "Lock player controls": "Blocca i comandi del player",
@@ -983,8 +983,7 @@ const catalog05: Record<string, string> = {
   "Nothing is uploaded and nothing ships with Harbor. Everything stays on this device and you are responsible for the images you add.":
     "Non viene caricato nulla e Harbor non include alcun contenuto. Tutto resta su questo dispositivo e sei responsabile delle immagini che aggiungi.",
   "Nothing left in today's picks": "Hai esaurito i consigli di oggi",
-  "Nothing left to confirm while torrents are disabled.":
-    "Non resta nulla da confermare finché i torrent sono disattivati.",
+  "Nothing left to confirm while P2P is disabled.": "Non resta nulla da confermare finché il P2P è disattivato.",
   "Nothing left to post after removing links.":
     "Dopo la rimozione dei link non resta nulla da pubblicare.",
   "Nothing matched this filter. Try another category or change your region in Settings.":
@@ -1187,7 +1186,7 @@ const catalog05: Record<string, string> = {
   "Only show titles in these original languages on the Home rows. Leave all off to show everything.":
     "Mostra nelle righe della Home solo i titoli la cui lingua originale è tra queste. Lascia tutte le opzioni disattivate per mostrare tutto.",
   "Only sites you have the right to read.": "Solo siti che hai il diritto di leggere.",
-  "Only start the torrent engine when needed": "Avvia il motore torrent solo quando serve",
+  "Only start the P2P engine when needed": "Avvia il motore P2P solo quando serve",
   "Only streams already in your debrid library.":
     "Solo gli stream già presenti nella tua libreria debrid.",
   "Only the cash you withdrew": "Il solo denaro che hai prelevato",

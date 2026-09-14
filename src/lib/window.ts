@@ -33,6 +33,20 @@ export const toggleMaximize = async () => {
 
 export const close = () => win?.close();
 
+export async function focusWindow(): Promise<void> {
+  if (!win) {
+    try {
+      window.focus();
+    } catch {
+      /* no window to focus (e.g. non-browser context) */
+    }
+    return;
+  }
+  await win.show().catch(() => {});
+  await win.unminimize().catch(() => {});
+  await win.setFocus().catch(() => {});
+}
+
 export const setWindowFullscreen = async (fs: boolean) => {
   await win?.setFullscreen(fs).catch(() => {});
 };

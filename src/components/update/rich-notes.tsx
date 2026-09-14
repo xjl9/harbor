@@ -24,7 +24,10 @@ export function RichNote({ note }: { note: ReleaseNote }) {
           <ul className="flex flex-col gap-1.5">
             {section.items.map((item, j) => (
               <li key={j} className="flex gap-2.5 text-[13px] leading-relaxed text-ink">
-                <span aria-hidden className="mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full bg-accent" />
+                <span
+                  aria-hidden
+                  className="mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full bg-accent"
+                />
                 <span>{item}</span>
               </li>
             ))}

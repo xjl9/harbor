@@ -1,4 +1,17 @@
 const settings: Record<string, string> = {
+  "Could not sync your display name. Check your connection and try again.":
+    "تعذّرت مزامنة اسم العرض. تحقّق من اتصالك وحاول مرة أخرى.",
+  "Syncing display name…": "جارٍ مزامنة اسم العرض…",
+  "Display name saved to your Harbor account.": "تم حفظ اسم العرض في حسابك في هاربور.",
+  "Content advisory theme": "سمة التنبيه بالمحتوى",
+  "Choose whether the content advisory appears in full color or a restrained monochrome tone.":
+    "اختر ما إذا كان التنبيه بالمحتوى سيظهر بألوان كاملة أو بنمط أحادي اللون هادئ.",
+  Monochrome: "أحادي اللون",
+  "Press Enter or Space to type": "اضغط Enter أو Space للكتابة",
+  "Text mode — Esc to exit": "وضع الكتابة — Esc للخروج",
+  "Show ignore title button": "إظهار زر تجاهل العمل",
+  "Display a button on the content advisory card to permanently ignore the title.":
+    "عرض زر في بطاقة التوجيه لتجاهل العمل وعدم إظهار البطاقة له مجدداً.",
   "Smooth scrolling": "تمرير سلس",
   "Eases mouse-wheel scrolling instead of jumping line by line. Turn off if you prefer an instant response or notice any lag.":
     "تمرير سلس بعجلة الفأرة بدلا من القفز سطرا بسطر. عطله إذا كنت تفضل استجابة فورية أو لاحظت بطئا.",
@@ -231,8 +244,8 @@ const settings: Record<string, string> = {
   "Content advisory on start": "تنبيه المحتوى عند البدء",
   "Control bar": "شريط التحكم",
   "Copy diagnostics": "نسخ التشخيصات",
-  "Copy diagnostics grabs the engine status and your P2P settings as JSON, handy to paste into a bug report. The engine folder holds the DHT cache (dht.json) and active torrent data.":
-    'ينسخ خيار "نسخ التشخيصات" حالة المحرك وإعدادات P2P بصيغة JSON، وهو مفيد للصقها في تقرير خطأ. يحتوي مجلد المحرك على ذاكرة DHT المؤقتة (dht.json) وبيانات التورنت النشطة.',
+  "Copy diagnostics grabs the engine status and your P2P settings as JSON, handy to paste into a bug report. The engine folder holds the DHT cache (dht.json) and active transfer data.":
+    "يجمع «نسخ التشخيص» حالة المحرك وإعدادات P2P الخاصة بك بصيغة JSON، وهو مفيد للصقه في تقرير خطأ. يحتوي مجلد المحرك على ذاكرة DHT المؤقتة (dht.json) وبيانات النقل النشطة.",
   "Copy filename": "نسخ اسم الملف",
   "Copy your Harbor watchlist over to Trakt, or pull your Trakt watchlist into Harbor. Safe to run again, Trakt skips anything it already has.":
     "انسخ قائمة مشاهدتك في Harbor إلى Trakt، أو اسحب قائمة مشاهدتك من Trakt إلى Harbor. آمن للتشغيل مرة أخرى، إذ يتخطّى Trakt أي شيء موجود لديه بالفعل.",
@@ -267,8 +280,8 @@ const settings: Record<string, string> = {
   Dim: "تعتيم",
   "Disable all": "تعطيل الكل",
   "Disable rule": "تعطيل القاعدة",
-  "Disable torrents entirely": "تعطيل التورنت بالكامل",
-  "Disabled because torrents are disabled above": "معطّل لأن التورنت معطّل أعلاه",
+  "Disable P2P entirely": "تعطيل P2P بالكامل",
+  "Disabled because P2P is disabled above": "معطّل لأن P2P معطّل أعلاه",
   "Disconnect MyAnimeList? Your progress will stop syncing until you reconnect.":
     "فصل MyAnimeList؟ سيتوقف تقدّمك عن المزامنة حتى تعيد الربط.",
   "Disconnect from MyAnimeList": "الفصل عن MyAnimeList",
@@ -365,8 +378,8 @@ const settings: Record<string, string> = {
     "يبقي Harbor تقدّم مشاهدتك في MyAnimeList متزامنًا.",
   "Harbor ranking puts the best-scoring sources first. Addon order follows your addon priority (organize it in Addons, Installed tab, Reorder) and keeps each addon's results in the order it returned them, like the Stremio and Vidi apps.":
     "يضع ترتيب Harbor المصادر الأعلى تقييمًا أولًا. يتبع ترتيب الإضافات أولوية إضافاتك (نظّمها في الإضافات، علامة تبويب المثبّتة، إعادة الترتيب) ويحافظ على نتائج كل إضافة بالترتيب الذي أعادتها به، مثل تطبيقَي Stremio وVidi.",
-  "Harbor will not start the torrent engine, contact trackers, or run DHT. Use this if you only want debrid and direct links. Turn off to re-enable torrent streaming.":
-    "لن يشغّل Harbor محرك التورنت، أو يتصل بالمتعقّبات، أو يشغّل DHT. استخدم هذا إن كنت تريد روابط debrid والروابط المباشرة فقط. عطّله لإعادة تفعيل بث التورنت.",
+  "Harbor will not start the P2P engine, contact trackers, or run DHT. Use this if you only want debrid and direct links. Turn off to re-enable P2P streaming.":
+    "لن يشغّل Harbor محرك P2P، أو يتصل بالمتعقّبات، أو يشغّل DHT. استخدم هذا إن كنت تريد روابط debrid والروابط المباشرة فقط. عطّله لإعادة تفعيل بث P2P.",
   "Health for {n} service": "حالة {n} خدمة",
   "Health for {n} services": "حالة {n} خدمات",
   "Hide badge": "إخفاء الشارة",
@@ -665,10 +678,10 @@ const settings: Record<string, string> = {
   "Show the full notes for this build": "إظهار الملاحظات الكاملة لهذا الإصدار",
   "Show the player controls when you pause or resume using the keyboard. Turn off to keep them hidden so they don't cover subtitles.":
     "إظهار عناصر تحكّم المشغّل عند الإيقاف المؤقت أو الاستئناف باستخدام لوحة المفاتيح. عطّله لإبقائها مخفيّة حتى لا تغطّي الترجمة.",
-  "Show the report button on every torrent stream, not just likely new releases.":
-    "إظهار زر الإبلاغ على كل بث تورنت، وليس فقط على الإصدارات الجديدة المحتملة.",
+  "Show the report button on every P2P stream, not just likely new releases.":
+    "إظهار زر الإبلاغ على كل بث P2P، وليس فقط على الإصدارات الجديدة المحتملة.",
   "Show title": "إظهار العنوان",
-  "Show torrent name": "إظهار اسم التورنت",
+  "Show release name": "إظهار اسم الإصدار",
   "Show what you're actually watching, under the title in the player.":
     "إظهار ما تشاهده فعلياً، أسفل العنوان في المشغّل.",
   "Show your operating system's own title bar with its minimize, maximize, and close buttons. They stay reachable everywhere, including while a video is playing. Turn this off to use Harbor's built-in window buttons.":
@@ -761,8 +774,8 @@ const settings: Record<string, string> = {
   "Top left": "أعلى اليسار",
   "Top right": "أعلى اليمين",
   "Torrent name": "اسم التورنت",
-  "Torrents are disabled. Uncached streams will not play unless they come from a debrid service or a direct link. To use torrents, toggle this off.":
-    "التورنت معطّل. لن يُشغَّل البث غير المخزّن مؤقتًا إلا إذا كان من خدمة debrid أو رابط مباشر. لاستخدام التورنت، عطّل هذا الخيار.",
+  "P2P is disabled. Uncached streams will not play unless they come from a debrid service or a direct link. To use P2P, toggle this off.":
+    "P2P معطّل. لن يُشغَّل البث غير المخزّن مؤقتًا إلا إذا كان من خدمة debrid أو رابط مباشر. لاستخدام P2P، عطّل هذا الخيار.",
   "Track everything you watch, see your watchlist, and get personalized recommendations on Harbor's home page. Free at trakt.tv.":
     "تتبّع كل ما تشاهده، واطّلع على قائمة المشاهدة، واحصل على توصيات مخصصة في الصفحة الرئيسية لـ Harbor. مجانًا على trakt.tv.",
   "Trakt account limit reached. Upgrade to Trakt VIP or trim your watchlist.":
@@ -829,8 +842,8 @@ const settings: Record<string, string> = {
     "عند التشغيل التلقائي للحلقة التالية، أبقِ على نفس النسخة/المصدر الذي كنت تشاهده بدلًا من البث الأعلى تصنيفًا في Harbor. يعود إلى أفضل بث إذا لم يكن ذلك المصدر متاحًا.",
   "When in fullscreen, Esc leaves fullscreen instead of closing the player. Press Esc again to close. Turn off to make Esc always close.":
     "في وضع ملء الشاشة، يخرج مفتاح Esc من ملء الشاشة بدلًا من إغلاق المشغل. اضغط Esc مجددًا للإغلاق. عطّل الخيار لجعل Esc يُغلق دائمًا.",
-  "When off, a torrent stops the moment you close or switch the stream, so nothing keeps downloading in the background. Turn on to let it keep going after you leave; manage or pause those from the Downloads tab.":
-    "عند إيقافه، يتوقّف التورنت لحظة إغلاقك للبث أو تبديله، فلا يستمر أي تنزيل في الخلفية. فعّله للسماح باستمراره بعد مغادرتك؛ يمكنك إدارة تلك التنزيلات أو إيقافها مؤقتًا من علامة تبويب التنزيلات.",
+  "When off, a P2P transfer stops the moment you close or switch the stream, so nothing keeps downloading in the background. Turn on to let it keep going after you leave; manage or pause those from the Downloads tab.":
+    "عند إيقافه، يتوقّف نقل P2P لحظة إغلاقك للبث أو تبديله، فلا يستمر أي تنزيل في الخلفية. فعّله للسماح باستمراره بعد مغادرتك؛ يمكنك إدارة تلك التنزيلات أو إيقافها مؤقتًا من علامة تبويب التنزيلات.",
   "When you exit fullscreen, return the window to exactly where it was. Turn off to center it on screen instead.":
     "عند خروجك من ملء الشاشة، أعِد النافذة إلى مكانها السابق تمامًا. عطّل الخيار لتوسيطها على الشاشة بدلًا من ذلك.",
   "When you exit playback, keep the window fullscreen instead of dropping back to a window. Turn off to leave fullscreen automatically whenever the player closes.":
@@ -1124,8 +1137,7 @@ const settings: Record<string, string> = {
   "Scans your Stremio library and rewrites any item whose shape doesn't match Stremio's exact schema.":
     "يفحص مكتبة Stremio ويُعيد كتابة أي عنصر لا يطابق مخطط Stremio الدقيق.",
   About: "حول",
-  "Build identity. Useful when filing a bug report at bugs@harbor.site.":
-    "معلومات البناء. مفيدة عند تقديم تقرير خطأ على bugs@harbor.site.",
+  "Build identity. Useful when filing a bug report.": "معلومات البناء. مفيدة عند تقديم تقرير خطأ.",
   "Reveal the show or movie artwork.": "إظهار صورة العرض أو الفيلم.",
   Legal: "إشعار قانوني",
   "Made with": "صُنع بـ",
@@ -1175,8 +1187,8 @@ const settings: Record<string, string> = {
   "Real-Debrid API token": "رمز API لـ Real-Debrid",
   "API token": "رمز API",
   "API key": "مفتاح API",
-  "Faster and quieter than torrents if you already pay for Usenet. Configure on the addon page, paste the manifest URL it returns.":
-    "أسرع وأكثر هدوءًا من التورنت إذا كنت تدفع مقابل Usenet. قم بتكوينه على صفحة الإضافة والصق رابط manifest.",
+  "Faster and quieter than P2P if you already pay for Usenet. Configure on the addon page, paste the manifest URL it returns.":
+    "أسرع وأكثر هدوءًا من P2P إذا كنت تدفع مقابل Usenet. قم بتكوينه على صفحة الإضافة والصق رابط manifest.",
   "Searches and streams directly off Easynews. No debrid needed. Just your Easynews login.":
     "يبحث ويبث مباشرة من Easynews. لا حاجة لـ debrid. فقط تسجيل دخولك إلى Easynews.",
   Expired: "منتهي",
@@ -2084,7 +2096,7 @@ const settings: Record<string, string> = {
   "Motion smoothing": "تنعيم الحركة",
   "Interpolates frames for smoother panning, best on anime. Needs a display refresh rate above the video's frame rate, and can stutter on weak GPUs. mpv only.":
     "يستوفي الإطارات لتحريك أنعم، أفضل في الأنمي. يتطلب معدّل تحديث شاشة أعلى من معدّل إطارات الفيديو، وقد يتقطّع على بطاقات الرسوم الضعيفة. mpv فقط.",
-  "Direct torrent streaming": "بثّ التورنت المباشر",
+  "Direct P2P streaming": "بثّ P2P المباشر",
   "When you have no debrid set up, or a torrent isn't cached, stream it straight from the bundled engine on localhost:11470. This connects to peers over your own connection, the same way Stremio's built-in streaming does.":
     "عندما لا يكون لديك Debrid معدّ، أو لا يكون التورنت مخزّنًا، ابثّه مباشرةً من المحرك المضمّن على localhost:11470. يتصل هذا بالأقران عبر اتصالك الخاص، تمامًا كما يفعل بثّ Stremio المدمج.",
   "Use Harbor's built-in engine (beta)": "استخدام محرك Harbor المدمج (تجريبي)",
@@ -2172,16 +2184,16 @@ const settings: Record<string, string> = {
   "Local engine": "المحرك المحلي",
   "Built-in peer-to-peer streaming, served from your own machine.":
     "بثّ مدمج من النظير إلى النظير، يُقدَّم من جهازك الخاص.",
-  "Active torrents": "التورنتات النشطة",
+  "Active transfers": "عمليات النقل النشطة",
   "Run self-test": "تشغيل الاختبار الذاتي",
   "Running self-test": "جارٍ الاختبار الذاتي",
   "Restart engine": "إعادة تشغيل المحرك",
-  "Self-test is disabled while strict remote streaming is on. It downloads a test torrent over peer-to-peer on this machine.":
-    "الاختبار الذاتي معطّل أثناء تفعيل البثّ البعيد الصارم. فهو ينزّل تورنت اختبار عبر النظير إلى النظير على هذا الجهاز.",
+  "Self-test is disabled while strict remote streaming is on. It downloads a small test file over peer-to-peer on this machine.":
+    "الاختبار الذاتي معطّل أثناء تفعيل البثّ البعيد الصارم. فهو ينزّل ملف اختبار صغيرًا عبر النظير إلى النظير على هذا الجهاز.",
   "Self-test": "اختبار ذاتي",
   "Remote streaming server": "خادم بثّ بعيد",
-  "Point Harbor at a streaming server on another machine, like the Stremio service on a home server. Torrents download and stream from that machine instead of this one.":
-    "وجّه Harbor إلى خادم بثّ على جهاز آخر، مثل خدمة Stremio على خادم منزلي. تُنزّل التورنتات وتُبثّ من ذلك الجهاز بدلًا من هذا.",
+  "Point Harbor at a streaming server on another machine, like the Stremio service on a home server. P2P streams download and play from that machine instead of this one.":
+    "وجّه Harbor إلى خادم بثّ على جهاز آخر، مثل خدمة Stremio على خادم منزلي. تُنزّل بثوث P2P وتُشغَّل من ذلك الجهاز بدلًا من هذا.",
   "Use exclusively (never fall back to local)": "الاستخدام حصريًا (عدم الرجوع إلى المحلي أبدًا)",
   "If the server is unreachable, playback fails instead of streaming locally. Use this when your VPN runs on the server machine and torrent traffic must never leave this one.":
     "إن كان الخادم غير قابل للوصول، يفشل التشغيل بدلًا من البثّ محليًا. استخدم هذا عندما تعمل VPN على جهاز الخادم ويجب ألّا تغادر حركة التورنت هذا الجهاز أبدًا.",
@@ -2810,6 +2822,12 @@ const settings: Record<string, string> = {
   "Paste your TheIntroDB API key": "الصق مفتاح API الخاص بـ TheIntroDB",
   "Optional. TheIntroDB answers without a key, but a key raises your rate limit so timing keeps arriving when you binge. Get one at":
     "اختياري. يستجيب TheIntroDB بدون مفتاح، لكن المفتاح يرفع حدّ الطلبات ليستمر وصول التوقيتات أثناء المشاهدة المتواصلة. احصل على مفتاح من",
+  "Cached source resolution and direct download links.":
+    "تحويل المصادر المخزّنة مؤقتًا وروابط تنزيل مباشرة.",
+  "Cached source resolution and cloud library access.":
+    "تحويل المصادر المخزّنة مؤقتًا والوصول إلى مكتبة سحابية.",
+  "Both shows direct, debrid, and peer-to-peer results together. Direct/debrid keeps P2P results out of the way unless nothing else is available. P2P puts them first.":
+    "يعرض خيار «كلاهما» نتائج الروابط المباشرة وdebrid والنظير إلى النظير معًا. يُبقي خيار «مباشر/debrid» نتائج P2P بعيدًا ما لم يتوفر غيرها. أما خيار «P2P» فيقدّمها أولًا.",
 };
 
 export default settings;

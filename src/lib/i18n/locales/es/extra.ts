@@ -238,8 +238,7 @@ const extra: Record<string, string> = {
   "Continue from last watched": "Continuar desde lo último visto",
   "Continue in your browser...": "Continuar en tu navegador...",
   "Copy diagnostics": "Copiar diagnóstico",
-  "Copy diagnostics grabs the engine status and your P2P settings as JSON, handy to paste into a bug report. The engine folder holds the DHT cache (dht.json) and active torrent data.":
-    "Copiar el diagnóstico obtiene el estado del motor y tus ajustes de P2P en formato JSON, lo que resulta útil para pegarlo en un informe de errores. La carpeta del motor contiene la caché DHT (dht.json) y los datos de torrents activos.",
+  "Copy diagnostics grabs the engine status and your P2P settings as JSON, handy to paste into a bug report. The engine folder holds the DHT cache (dht.json) and active transfer data.": "Copiar el diagnóstico obtiene el estado del motor y tus ajustes de P2P en formato JSON, lo que resulta útil para pegarlo en un informe de errores. La carpeta del motor contiene la caché DHT (dht.json) y los datos de transferencias activas.",
   "Copy your Harbor watchlist over to Trakt, or pull your Trakt watchlist into Harbor. Safe to run again, Trakt skips anything it already has.":
     "Copia tu lista de seguimiento de Harbor a Trakt o importa tu lista de seguimiento de Trakt a Harbor. Puedes volver a hacerlo sin problemas: Trakt omite lo que ya contiene.",
   "Corner radius": "Radio de las esquinas",
@@ -772,12 +771,11 @@ const extra: Record<string, string> = {
   "Show the full notes for this build": "Mostrar las notas completas de esta versión",
   "Show the IMDb rating and synopsis on episodes across the list, grid, and panel layouts.":
     "Mostrar la calificación de IMDb y la sinopsis de los episodios en los diseños de lista, cuadrícula y panel.",
-  "Show the report button on every torrent stream, not just likely new releases.":
-    "Mostrar el botón para reportar en cada fuente torrent, no solo en los estrenos probablemente recientes.",
+  "Show the report button on every P2P stream, not just likely new releases.": "Mostrar el botón para reportar en cada fuente P2P, no solo en los estrenos probablemente recientes.",
   "Show the Skip button": "Mostrar el botón Omitir",
   "Show title": "Mostrar título",
   "Show TMDB score on cards": "Mostrar la puntuación de TMDB en las tarjetas",
-  "Show torrent name": "Mostrar el nombre del torrent",
+  "Show release name": "Mostrar el nombre del release",
   "Show Trakt score on cards": "Mostrar la puntuación de Trakt en las tarjetas",
   "Show Up Next on Simkl rail": "Mostrar A continuación en la fila de Simkl",
   "Show what you're actually watching, under the title in the player.":

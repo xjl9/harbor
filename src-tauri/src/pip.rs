@@ -92,7 +92,7 @@ pub async fn pip_open(
     app.run_on_main_thread(move || {
         eprintln!("[pip] >>> building window on main thread");
         let url = WebviewUrl::App("index.html".into());
-        let result = WebviewWindowBuilder::new(&app_for_main, PIP_LABEL, url)
+        let builder = WebviewWindowBuilder::new(&app_for_main, PIP_LABEL, url)
             .title("Harbor PiP")
             .inner_size(560.0, 360.0)
             .position(200.0, 200.0)
@@ -101,8 +101,8 @@ pub async fn pip_open(
             .decorations(true)
             .skip_taskbar(false)
             .visible(true)
-            .focused(true)
-            .build();
+            .focused(true);
+        let result = crate::browser_args::match_main(&app_for_main, builder).build();
         match result {
             Ok(window) => {
                 eprintln!(

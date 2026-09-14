@@ -2,6 +2,12 @@ import { useEffect, useRef } from "react";
 import { markAnimeWatching, syncAnimeProgress } from "@/lib/anilist/sync";
 import { markMalWatching, syncMalProgress } from "@/lib/mal/sync";
 import { animeIdentityEligible, resolveAnimeIdentity } from "@/lib/streams/anime-identity";
+import {
+  isForeignSplitSeason,
+  splitFranchiseDisplaySeason,
+} from "@/lib/streams/anime-identity-core";
+import { isSplitFranchiseKitsu } from "@/lib/providers/anime-franchise-root";
+import { parseKitsuId } from "@/lib/providers/kitsu";
 import { profileFromMeta } from "@/lib/discover/profile";
 import { trackEvent } from "@/lib/discover/store";
 import { isExternalPlaylistId } from "@/lib/iptv/vod";
@@ -17,7 +23,7 @@ import { setViewedSeason } from "@/lib/season-view-pref";
 import type { PlayerSnapshot } from "@/lib/player/bridge";
 import { getPlaybackPosition, subscribePlaybackClock } from "@/lib/player/playback-clock";
 import { useSettings } from "@/lib/settings";
-import type { PlayerSrc } from "@/lib/view";
+import type { PlayerSrc, PlayEpisode } from "@/lib/view";
 import { ANIME_CLOUD_ID, CLOUD_OK } from "@/lib/stremio";
 import { syncSeriesWatchedToStremio } from "@/lib/stremio-episode-watched";
 import { isNaturalEnd } from "@/lib/player/playback-end";
@@ -27,6 +33,7 @@ const MIN_POSITION_SEC = 5;
 const TASTE_MIN_SEC = 90;
 const WATCHED_RATIO = 0.85;
 const REWATCH_RESUME_SEC = 45;
+const SYNC_RATIO = 0.7;
 const STUB_MAX_SEC = 150;
 
 const isAnimeId = (id: string) =>
@@ -37,6 +44,20 @@ const animeTrackId = (s: PlayerSrc): string | null => {
   const ks = s.episode?.kitsuStreamId;
   if (ks?.startsWith("kitsu:")) return ks.split(":").slice(0, 2).join(":");
   return null;
+};
+
+// Per-season sync resolution that also applies when a kitsu stream id is set.
+// Off the split-franchise allowlist this defers to stock eligibility.
+const animeIdentityEligibleForSync = (
+  metaId: string,
+  episode: PlayEpisode | undefined | null,
+): boolean => {
+  if (typeof episode?.imdbSeason !== "number" || episode.imdbSeason < 1) return false;
+  if (!(isAnimeId(metaId) || metaId.startsWith("tt") || metaId.startsWith("tmdb:tv:")))
+    return false;
+  const kid = parseKitsuId(metaId) ?? parseKitsuId(episode?.kitsuStreamId ?? "");
+  if (!isSplitFranchiseKitsu(kid)) return animeIdentityEligible(metaId, episode);
+  return true;
 };
 
 export function useResumeAutosave(params: {
@@ -75,13 +96,29 @@ export function useResumeAutosave(params: {
   const canonSeason = (s: PlayerSrc, se?: number): number | undefined =>
     s.episode?.imdbSeason != null && s.episode.imdbSeason >= 1 ? s.episode.imdbSeason : se;
 
+  const splitKitsuId = (s: PlayerSrc): number | null =>
+    parseKitsuId(s.meta.id) ?? parseKitsuId(s.episode?.kitsuStreamId ?? "");
+
+  const displaySeasonFor = (
+    s: PlayerSrc,
+    se: number | undefined,
+    cs: number | undefined,
+    foreign: boolean,
+  ): number | undefined => splitFranchiseDisplaySeason(splitKitsuId(s)) ?? (foreign ? se : cs);
+
+  const splitSeasonForeign = (s: PlayerSrc, se?: number): boolean => {
+    if (!isSplitFranchiseKitsu(splitKitsuId(s))) return false;
+    return isForeignSplitSeason(true, se, s.episode?.imdbSeason);
+  };
+
   const record = (s: PlayerSrc, sn: PlayerSnapshot, se?: number, ep?: number): void => {
     const id = s.meta.id;
     if (!id || id.startsWith("iptv:")) return;
     if (sn.durationSec > 0 && sn.durationSec < STUB_MAX_SEC) return;
     const pos = getPlaybackPosition() || lastGoodPosRef.current;
     if (pos < MIN_POSITION_SEC) return;
-    const cs = canonSeason(s, se);
+    const seasonForeign = splitSeasonForeign(s, se);
+    const cs = seasonForeign ? se : canonSeason(s, se);
     const finished =
       (sn.durationSec > 0 && pos / sn.durationSec >= WATCHED_RATIO) || isNaturalEnd(sn, pos);
     lastSavedRef.current = pos * 1000;
@@ -98,8 +135,15 @@ export function useResumeAutosave(params: {
       if (covered.length) for (const coveredEpisode of covered) clearResume(id, se, coveredEpisode);
       else clearResume(id, se, ep);
     } else if (covered.length) {
-      for (const coveredEpisode of covered) saveResumeMs(id, pos * 1000, se, coveredEpisode, cs);
-    } else saveResumeMs(id, pos * 1000, se, ep, cs);
+      for (const coveredEpisode of covered)
+        saveResumeMs(
+          id,
+          pos * 1000,
+          se,
+          coveredEpisode,
+          displaySeasonFor(s, se, cs, seasonForeign),
+        );
+    } else saveResumeMs(id, pos * 1000, se, ep, displaySeasonFor(s, se, cs, seasonForeign));
     if (typeof cs === "number") setViewedSeason(id, cs);
     if (isExternalPlaylistId(id)) return;
     if (s.streamRef) {
@@ -189,20 +233,26 @@ export function useResumeAutosave(params: {
     if (pos < TASTE_MIN_SEC) return;
     const trackId = s.episode?.sourceMetaId ?? animeTrackId(s);
     const absEp = s.episode?.absoluteNumber;
-    const trackEp = s.episode?.sourceMetaId ? ep : (s.episode?.imdbEpisode ?? ep);
+    const trackEp =
+      seasonForeign && typeof ep === "number"
+        ? ep
+        : s.episode?.sourceMetaId
+          ? ep
+          : (s.episode?.imdbEpisode ?? ep);
+    const syncReady = finished || (sn.durationSec > 0 && pos / sn.durationSec >= SYNC_RATIO);
     const fireTrackers = (tid: string, tep: number | undefined): void => {
       if (anilistAutoSyncRef.current) void markAnimeWatching(tid, s.meta.name);
       if (malAutoSyncRef.current) void markMalWatching(tid, s.meta.name);
-      if (!finished) return;
-      if (anilistAutoSyncRef.current) void syncAnimeProgress(tid, tep, s.meta.name, absEp);
-      if (malAutoSyncRef.current) void syncMalProgress(tid, tep, s.meta.name, absEp);
+      if (!syncReady) return;
+      if (anilistAutoSyncRef.current) void syncAnimeProgress(tid, tep, s.meta.name, absEp, cs);
+      if (malAutoSyncRef.current) void syncMalProgress(tid, tep, s.meta.name, absEp, cs);
     };
-    if (trackId) {
-      fireTrackers(trackId, trackEp);
-    } else if (
+    const useIdentity =
       (anilistAutoSyncRef.current || malAutoSyncRef.current) &&
-      animeIdentityEligible(id, s.episode)
-    ) {
+      animeIdentityEligibleForSync(id, s.episode);
+    if (trackId && !useIdentity) {
+      fireTrackers(trackId, trackEp);
+    } else if (useIdentity) {
       void resolveAnimeIdentity(id, latestRef.current.resolvedImdbId, {
         season: cs,
         episode: ep,
@@ -210,9 +260,14 @@ export function useResumeAutosave(params: {
         imdbEpisode: s.episode?.imdbEpisode,
       })
         .then((identity) => {
+          // Prefer the season-scoped entry so multi-season franchises sync to
+          // the correct per-season AniList/MAL media, not the season-1 entry.
           if (identity) fireTrackers(`kitsu:${identity.kitsuId}`, identity.number);
+          else if (trackId) fireTrackers(trackId, trackEp);
         })
-        .catch(() => {});
+        .catch(() => {
+          if (trackId) fireTrackers(trackId, trackEp);
+        });
     }
     const kind = finished ? "watched" : "play";
     const key = `${id}|${kind}`;

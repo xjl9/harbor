@@ -883,8 +883,7 @@ const catalogMO: Record<string, string> = {
   "Nothing is uploaded and nothing ships with Harbor. Everything stays on this device and you are responsible for the images you add.":
     "न कुछ अपलोड होता है, न Harbor के साथ कोई सामग्री मिलती है। सब कुछ इसी डिवाइस पर रहता है और आपके जोड़े गए चित्रों की ज़िम्मेदारी आपकी है।",
   "Nothing left in today's picks": "आज की पसंद में कुछ नहीं बचा",
-  "Nothing left to confirm while torrents are disabled.":
-    "टोरेंट बंद होने पर पुष्टि करने के लिए कुछ नहीं बचा।",
+  "Nothing left to confirm while P2P is disabled.": "P2P बंद होने पर पुष्टि करने के लिए कुछ नहीं बचा।",
   "Nothing left to post after removing links.": "लिंक हटाने के बाद पोस्ट करने के लिए कुछ नहीं बचा।",
   "Nothing matched this filter. Try another category or change your region in Settings.":
     "इस फ़िल्टर से कुछ भी मेल नहीं खाया। कोई दूसरी कैटेगरी आज़माएँ या सेटिंग्स में अपना क्षेत्र बदलें।",
@@ -1098,7 +1097,7 @@ const catalogMO: Record<string, string> = {
   "Only show titles in these original languages on the Home rows. Leave all off to show everything.":
     "होम की पंक्तियों में केवल इन्हीं मूल भाषाओं के शीर्षक दिखाएँ। सब कुछ दिखाने के लिए सभी विकल्प बंद रखें।",
   "Only sites you have the right to read.": "केवल वे साइटें जिन्हें पढ़ने का आपको अधिकार है।",
-  "Only start the torrent engine when needed": "टोरेंट इंजन केवल ज़रूरत पड़ने पर शुरू करें",
+  "Only start the P2P engine when needed": "P2P इंजन केवल ज़रूरत पड़ने पर शुरू करें",
   "Only streams already in your debrid library.": "केवल वे स्ट्रीम जो आपकी debrid लाइब्रेरी में पहले से हैं।",
   "Only the cash you withdrew": "केवल वह नकद राशि जो आपने निकाली",
   "Only the first {max} people you mention get notified.":
@@ -1246,8 +1245,7 @@ const catalogMO: Record<string, string> = {
     "Stremio को आपके ब्राउज़र में खोलता है। ईमेल, Facebook और Apple अकाउंट के साथ काम करता है।",
   "Opens Stremio in your browser. Works with email, Facebook, and Apple. Harbor never sees your password.":
     "Stremio को आपके ब्राउज़र में खोलता है। ईमेल, Facebook और Apple के साथ काम करता है। Harbor को आपका पासवर्ड कभी दिखाई नहीं देता।",
-  "Opens the folder holding the DHT cache and active torrent data.":
-    "DHT कैश और सक्रिय टोरेंट डेटा वाला फ़ोल्डर खोलता है।",
+  "Opens the folder holding the DHT cache and active transfer data.": "DHT कैश और सक्रिय ट्रांसफ़र डेटा वाला फ़ोल्डर खोलता है।",
   "Opens the free signup page": "मुफ़्त साइनअप पेज खोलता है",
   "Opens your API settings page": "आपकी API सेटिंग्स का पेज खोलता है",
   Optional: "वैकल्पिक",

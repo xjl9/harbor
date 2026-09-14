@@ -6,7 +6,12 @@ import type { Meta } from "@/lib/cinemeta";
 import { peekCachedLogo, resolveLogo } from "@/lib/logo";
 import { extendPool, getPool, type FeedItem } from "@/lib/feed";
 import { rankByAffinity } from "@/lib/feed/rank";
-import { blockQueueItem, filterQueuePool, shuffleQueuePool, snoozeQueueItem } from "@/lib/feed/skipped";
+import {
+  blockQueueItem,
+  filterQueuePool,
+  shuffleQueuePool,
+  snoozeQueueItem,
+} from "@/lib/feed/skipped";
 import { getDownvotedIds, getUpvotedIds } from "@/lib/feed/preferences";
 import { useSettings } from "@/lib/settings";
 import { useT } from "@/lib/i18n";
@@ -161,7 +166,11 @@ export function QueueView() {
           ? "scale-[0.98] opacity-0 blur-sm transition-[transform,opacity,filter] duration-[240ms] ease-out"
           : "";
   const enterClass =
-    enterDir === "fromRight" ? "queue-in-right" : enterDir === "fromLeft" ? "queue-in-left" : "queue-in-pop";
+    enterDir === "fromRight"
+      ? "queue-in-right"
+      : enterDir === "fromLeft"
+        ? "queue-in-left"
+        : "queue-in-pop";
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -187,11 +196,11 @@ export function QueueView() {
           <h1 className="font-display text-[20px] font-medium tracking-tight text-ink">
             {t("Discovery Queue")}
           </h1>
-          <span className="text-[12px] uppercase tracking-[0.2em] text-ink-subtle">
-            {loading
-              ? t("Loading…")
-              : `${String(Math.min(activeIndex + 1, pool.length)).padStart(2, "0")} / ${String(pool.length).padStart(2, "0")}`}
-          </span>
+          {loading && (
+            <span className="text-[12px] uppercase tracking-[0.2em] text-ink-subtle">
+              {t("Loading…")}
+            </span>
+          )}
         </header>
 
         {item ? (
@@ -277,12 +286,16 @@ function Strip({
     const child = el.querySelector<HTMLButtonElement>(`[data-active="true"]`);
     if (child) {
       const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-      child.scrollIntoView({ behavior: prefersReduced ? "auto" : "smooth", block: "nearest", inline: "center" });
+      child.scrollIntoView({
+        behavior: prefersReduced ? "auto" : "smooth",
+        block: "nearest",
+        inline: "center",
+      });
     }
   }, [active]);
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex shrink-0 flex-col gap-3">
       <span className="harbor-queue-striplabel text-[11px] font-semibold uppercase tracking-[0.24em] text-ink-subtle">
         {t("Queue")}
       </span>
@@ -299,7 +312,7 @@ function Strip({
               type="button"
               data-active={isActive}
               onClick={() => onJump(i)}
-              className={`harbor-queue-tile group relative h-[112px] w-[200px] shrink-0 rounded-md transition-all duration-200 hover:z-10 hover:scale-[1.02] ${
+              className={`harbor-queue-tile group relative aspect-video w-[200px] shrink-0 overflow-hidden rounded-md transition-all duration-200 hover:z-10 hover:scale-[1.02] ${
                 isPast ? "opacity-50" : ""
               }`}
             >
@@ -328,7 +341,7 @@ function Strip({
               )}
               <span
                 aria-hidden
-                className="pointer-events-none absolute inset-x-0 bottom-0 h-2/3 rounded-b-md"
+                className="pointer-events-none absolute inset-x-0 -bottom-px h-2/3"
                 style={{
                   background:
                     "linear-gradient(to top, color-mix(in oklch, var(--color-canvas), transparent 8%) 0%, color-mix(in oklch, var(--color-canvas), transparent 55%) 46%, transparent 100%)",
@@ -345,7 +358,9 @@ function Strip({
 
 function useQueueLogo(meta: Meta): string | undefined {
   const { settings } = useSettings();
-  const [logo, setLogo] = useState<string | undefined>(() => peekCachedLogo(settings.tmdbKey, meta));
+  const [logo, setLogo] = useState<string | undefined>(() =>
+    peekCachedLogo(settings.tmdbKey, meta),
+  );
   useEffect(() => {
     let cancelled = false;
     const cached = peekCachedLogo(settings.tmdbKey, meta);
@@ -411,7 +426,9 @@ function QueueSkeleton({ loading, hasKey }: { loading: boolean; hasKey: boolean 
           {t("Add a TMDB key in Settings to unlock the full discovery feed.")}
         </p>
       ) : (
-        <p className="text-[15px] text-ink-muted">{t("No picks loaded. TMDB might be unreachable.")}</p>
+        <p className="text-[15px] text-ink-muted">
+          {t("No picks loaded. TMDB might be unreachable.")}
+        </p>
       )}
     </div>
   );

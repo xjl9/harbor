@@ -133,7 +133,8 @@ const sweep: Record<string, string> = {
   "All times": "全期間",
   "All video": "すべての動画",
   "All-time bests": "歴代ベスト",
-  "Also joins Harbor's Discord server.": "HarborのDiscordサーバーにも参加します。",
+  "Linking your Discord account also joins you to Harbor's Discord server, so the bot can send your Backup keys privately.":
+    "Linking your Discord account also joins you to Harbor's Discord server, so the bot can send your Backup keys privately.",
   "Always re-encode when casting": "キャスト時は常に再エンコード",
   "Always stream P2P": "常にP2Pでストリーミング",
   Amber: "アンバー",
@@ -584,8 +585,8 @@ const sweep: Record<string, string> = {
   "Favour titles from where you are": "現在地の地域のタイトルを優先",
   "Favour titles from your region on Home": "ホームで現在地の地域のタイトルを優先",
   Feishin: "Feishin",
-  "Fetches a small public test torrent, then reports UDP and HTTPS egress, DHT bootstrap and tracker reachability step by step.":
-    "小さな公開テスト用Torrentを取得し、UDPとHTTPSの外向き通信、DHTブートストラップ、トラッカーへの接続可否を順に報告します。",
+  "Fetches a small public test file over P2P, then reports UDP and HTTPS egress, DHT bootstrap and tracker reachability step by step.":
+    "小さな公開テスト用ファイルをP2Pで取得し、UDPとHTTPSの外向き通信、DHTブートストラップ、トラッカーへの接続可否を順に報告します。",
   "Filename hidden": "ファイル名を非表示",
   "Filename shown": "ファイル名を表示",
   "Files smaller than this are skipped when scanning a folder.":
@@ -679,8 +680,8 @@ const sweep: Record<string, string> = {
   HELP: "ヘルプ",
   HIDIVE: "HIDIVE",
   HTML5: "HTML5",
-  "Handles torrent playback and transcoding for this machine.":
-    "このデバイスでのTorrent再生とトランスコードを処理します。",
+  "Handles P2P playback and transcoding for this machine.":
+    "このデバイスでのP2P再生とトランスコードを処理します。",
   "Harbor accepted that but returned no session. Try again.":
     "Harborは受け付けましたが、セッションが返されませんでした。もう一度お試しください。",
   "Harbor account linked as {name}": "Harborアカウントを{name}として連携しました",
@@ -888,14 +889,14 @@ const sweep: Record<string, string> = {
   "Live TV source": "ライブTVのソース",
   "Live TV sources": "ライブTVのソース",
   "Live action": "実写",
-  "Live state of Harbor's own torrent engine on this machine.":
-    "このデバイス上で動作するHarbor独自のTorrentエンジンの現在の状態。",
+  "Live state of Harbor's own P2P engine on this machine.":
+    "このデバイス上で動作するHarbor独自のP2Pエンジンの現在の状態。",
   "Loading more collections...": "さらにコレクションを読み込んでいます...",
   "Loads a backup file and restores exactly what it contains, without touching the rest of your setup. Your Stremio sign-in on this device stays as is.":
     "バックアップファイルを読み込み、その内容だけを正確に復元します。その他の設定には影響しません。このデバイスのStremioへのログイン状態はそのまま維持されます。",
   "Local folder": "ローカルフォルダー",
   "Local time": "現地時刻",
-  "Local torrent engine": "ローカルTorrentエンジン",
+  "Local P2P engine": "ローカルP2Pエンジン",
   "Lock player controls": "プレイヤー操作をロック",
   Logo: "ロゴ",
   "Logo & icon": "ロゴとアイコン",
@@ -1039,8 +1040,7 @@ const sweep: Record<string, string> = {
     "まだ何も接続されていません。スマートフォンがゲストネットワークに接続されているか、TVとスマートフォンが別のネットワークに接続されている可能性があります。",
   "Nothing here yet.": "まだ何もありません。",
   "Nothing in {genre} right now.": "現在、{genre}には何もありません。",
-  "Nothing left to confirm while torrents are disabled.":
-    "Torrentが無効のため、確認する項目はありません。",
+  "Nothing left to confirm while P2P is disabled.": "P2Pが無効のため、確認する項目はありません。",
   "Nothing on your TV changes until you confirm you have saved this.":
     "保存したことを確認するまで、TVの設定は変更されません。",
   "Nothing selected. Harbor will not load a subtitle on its own.":
@@ -1095,8 +1095,8 @@ const sweep: Record<string, string> = {
   "Open this page by scanning the code on your TV's setup screen.":
     "TVのセットアップ画面に表示されたコードをスキャンして、このページを開いてください。",
   "OpenSubtitles API key": "OpenSubtitles APIキー",
-  "Opens the folder holding the DHT cache and active torrent data.":
-    "DHTキャッシュと実行中のTorrentデータが保存されているフォルダーを開きます。",
+  "Opens the folder holding the DHT cache and active transfer data.":
+    "DHTキャッシュと実行中の転送データが保存されているフォルダーを開きます。",
   "Opens the free signup page": "無料登録ページを開きます",
   "Opens your API settings page": "API設定ページを開きます",
   "Optional. Add one to turn on automatic subtitle sync.":
@@ -1141,8 +1141,8 @@ const sweep: Record<string, string> = {
   "Paste your key": "キーを貼り付けてください",
   "Paste your v3 API key": "v3 API キーを貼り付けてください",
   Peacock: "Peacock",
-  "Peers, speed and progress on the player while a torrent streams. Sits top left, clear of the exit button.":
-    "Torrent のストリーミング中、ピア数、速度、進行状況をプレイヤーに表示します。終了ボタンを避けて左上に配置されます。",
+  "Peers, speed and progress on the player while a P2P stream plays. Sits top left, clear of the exit button.":
+    "P2Pストリームの再生中、ピア数、速度、進行状況をプレイヤーに表示します。終了ボタンを避けて左上に配置されます。",
   "People from the week's hottest titles, weighted by what is being talked about.":
     "今週話題の人気作品から、注目度に応じて選ばれた人物です。",
   Philo: "Philo",
@@ -1639,8 +1639,8 @@ const sweep: Record<string, string> = {
     "点線は、全レンジを均一に圧縮した場合を示します。高めを維持するカーブは中間調のメリハリを保ち、ハイライトを遅めに圧縮します。低めのカーブは早めにロールオフし、より穏やかな見た目になります。",
   "The editor is a working copy of the player. Click any control on it to move, resize, restyle or hide that control.":
     "エディターには、実際に操作できるプレーヤーのコピーが表示されます。コントロールをクリックすると、移動、サイズ変更、スタイル変更、非表示の設定ができます。",
-  "The engine listens on a local port and joins the DHT to find peers. Active torrents are the streams it currently has open.":
-    "エンジンはローカルポートで待ち受け、DHTに参加してピアを検索します。アクティブなTorrentは、現在開いているストリームです。",
+  "The engine listens on a local port and joins the DHT to find peers. Active transfers are the streams it currently has open.":
+    "エンジンはローカルポートで待ち受け、DHTに参加してピアを検索します。アクティブな転送は、現在開いているストリームです。",
   "The key is saved on this device only.": "キーはこの端末にのみ保存されます。",
   "The label looks high (1080p / 4K) but doesn't match expected file size or release window. Often a CAM or TS rebadged. Try a Theater Capture stream or check the source list before committing.":
     "表示上は高画質（1080p / 4K）ですが、想定されるファイルサイズや公開時期と一致しません。CAMやTSの偽装であることがよくあります。Theater Captureストリームを試すか、選択する前にソース一覧を確認してください。",
@@ -1744,7 +1744,7 @@ const sweep: Record<string, string> = {
   "Top 100 Producer": "プロデューサートップ100",
   "Top 100 Writer": "脚本家トップ100",
   "Top {n}, ranked by the work they left behind": "残した作品で選ぶトップ{n}",
-  "Torrent streaming": "torrentストリーミング",
+  "P2P streaming": "P2Pストリーミング",
   Trackers: "トラッカー",
   "Tracking what you watch": "視聴履歴の記録",
   Tracks: "トラック",

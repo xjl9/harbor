@@ -1,5 +1,6 @@
 import { useEffect, type RefObject } from "react";
 import type { PlayerBridge } from "@/lib/player/bridge";
+import { notifyMediaSeeked } from "@/lib/media-session";
 
 export function usePendingSeekApply(params: {
   pendingSeekSec: number | null;
@@ -18,6 +19,7 @@ export function usePendingSeekApply(params: {
     clearPendingSeek();
     const t = target <= 5 || target >= durationSec - 20 ? 0 : Math.min(target, durationSec - 1);
     b.seek(t);
+    notifyMediaSeeked(t);
     if (!inRoomRef.current) b.play().catch(() => {});
   }, [pendingSeekSec, durationSec, clearPendingSeek]);
 }

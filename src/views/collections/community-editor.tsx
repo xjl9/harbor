@@ -1,4 +1,15 @@
-import { ArrowLeft, Check, Eye, GripVertical, ImagePlus, ListOrdered, Loader2, Plus, Trash2, X } from "lucide-react";
+import {
+  ArrowLeft,
+  Check,
+  Eye,
+  GripVertical,
+  ImagePlus,
+  ListOrdered,
+  Loader2,
+  Plus,
+  Trash2,
+  X,
+} from "lucide-react";
 import { Search } from "@/components/icons/search-icon";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { flushSync } from "react-dom";
@@ -8,6 +19,9 @@ import { ResultPoster } from "@/components/search/result-poster";
 import { BackToTop } from "@/components/back-to-top";
 import { searchAll } from "@/lib/search";
 import { searchManga } from "@/lib/manga/api";
+import { searchAnilistMangaEntries } from "@/lib/manga/tracking-anilist";
+import { searchMalMangaEntries } from "@/lib/manga/tracking-mal";
+import type { MangaCandidate } from "@/lib/manga/sync";
 import type { MangaSummary } from "@/lib/manga/model";
 import {
   MAX_COLLECTION_DESCRIPTION,
@@ -97,19 +111,49 @@ export function CommunityCollectionEditor({
     let alive = true;
     setSearching(true);
     const timer = window.setTimeout(async () => {
-      const [av, manga] = await Promise.all([
+      // Source-backed manga search needs a configured Suwayomi/Mangayomi/local/plugin
+      // source; the tracker searches below are source-free metadata databases, so
+      // manga hits appear either way. AniList is primary (richer synonyms + malId
+      // cross-ref), MAL fills gaps, deduped by malId then title.
+      const [av, manga, aniList, mal] = await Promise.all([
         searchAll(settings.tmdbKey, q).catch(() => null),
         Promise.resolve(searchManga(q)).catch(() => [] as MangaSummary[]),
+        searchAnilistMangaEntries(q).catch(() => [] as MangaCandidate[]),
+        searchMalMangaEntries(q).catch(() => [] as MangaCandidate[]),
       ]);
       if (!alive) return;
       const out: Hit[] = [];
       if (av) {
-        for (const m of av.movies) out.push({ id: m.id, type: "movie", name: m.name, poster: m.poster });
-        for (const s of av.series) out.push({ id: s.id, type: "series", name: s.name, poster: s.poster });
+        for (const m of av.movies)
+          out.push({ id: m.id, type: "movie", name: m.name, poster: m.poster });
+        for (const s of av.series)
+          out.push({ id: s.id, type: "series", name: s.name, poster: s.poster });
       }
+      const mangaHits: Hit[] = [];
+      const seenMangaTitle = new Set<string>();
       for (const mg of (manga ?? []).slice(0, 8)) {
-        out.push({ id: mg.id, type: "manga", name: mg.title, poster: mg.cover });
+        mangaHits.push({ id: mg.id, type: "manga", name: mg.title, poster: mg.cover });
+        seenMangaTitle.add(mg.title.trim().toLowerCase());
       }
+      const seenMalId = new Set<number>();
+      for (const c of aniList) if (c.malId != null) seenMalId.add(c.malId);
+      const meta: Hit[] = [];
+      for (const c of aniList) {
+        meta.push({ id: `anilist:${c.id}`, type: "manga", name: c.title, poster: c.cover });
+      }
+      for (const c of mal) {
+        const malId = Number(c.id);
+        if (Number.isFinite(malId) && seenMalId.has(malId)) continue;
+        meta.push({ id: `mal:${c.id}`, type: "manga", name: c.title, poster: c.cover });
+      }
+      for (const h of meta) {
+        if (mangaHits.length >= 8) break;
+        const key = h.name.trim().toLowerCase();
+        if (seenMangaTitle.has(key)) continue;
+        seenMangaTitle.add(key);
+        mangaHits.push(h);
+      }
+      out.push(...mangaHits);
       const seen = new Set<string>();
       const dedup: Hit[] = [];
       for (const h of out) {
@@ -235,7 +279,13 @@ export function CommunityCollectionEditor({
     if (els.some((el) => !el)) return;
     const slots = els.map((el) => {
       const r = el!.getBoundingClientRect();
-      return { x: r.left, y: r.top, cx: r.left + r.width / 2, cy: r.top + r.height / 2, h: r.height };
+      return {
+        x: r.left,
+        y: r.top,
+        cx: r.left + r.width / 2,
+        cy: r.top + r.height / 2,
+        h: r.height,
+      };
     });
     const startX = e.clientX;
     const startY = e.clientY;
@@ -384,7 +434,9 @@ export function CommunityCollectionEditor({
                 if (url) setCollectionCover(id, url);
               } catch {
                 throw new Error(
-                  t("Saved on your device, but it couldn't be uploaded for others to see. Try again."),
+                  t(
+                    "Saved on your device, but it couldn't be uploaded for others to see. Try again.",
+                  ),
                 );
               }
               syncSoon();
@@ -409,7 +461,9 @@ export function CommunityCollectionEditor({
                 if (url) setCollectionBackground(id, url);
               } catch {
                 throw new Error(
-                  t("Saved on your device, but it couldn't be uploaded for others to see. Try again."),
+                  t(
+                    "Saved on your device, but it couldn't be uploaded for others to see. Try again.",
+                  ),
                 );
               }
               syncSoon();
@@ -440,7 +494,9 @@ export function CommunityCollectionEditor({
         <section className="flex flex-col gap-2.5">
           <label className="text-[13px] font-semibold text-ink">{t("Tags")}</label>
           <p className="text-[12px] text-ink-subtle">
-            {t("Add up to {max} tags so people can find this in the community.", { max: MAX_COLLECTION_TAGS })}
+            {t("Add up to {max} tags so people can find this in the community.", {
+              max: MAX_COLLECTION_TAGS,
+            })}
           </p>
           {tags.length > 0 && (
             <div className="flex flex-wrap gap-2 pt-1">
@@ -712,7 +768,9 @@ export function CommunityCollectionEditor({
                     </div>
                     <span className="flex items-center gap-1.5 text-[12px] text-ink-muted">
                       {collection.numbered && (
-                        <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${TYPE_DOT[item.type]}`} />
+                        <span
+                          className={`h-1.5 w-1.5 shrink-0 rounded-full ${TYPE_DOT[item.type]}`}
+                        />
                       )}
                       <span className="line-clamp-1">{item.name}</span>
                     </span>
@@ -787,7 +845,12 @@ function ImageField({
       >
         {url ? (
           <>
-            <img src={url} alt="" draggable={false} className="absolute inset-0 h-full w-full object-cover" />
+            <img
+              src={url}
+              alt=""
+              draggable={false}
+              className="absolute inset-0 h-full w-full object-cover"
+            />
             {canUpload && (
               <span className="absolute inset-0 flex items-center justify-center bg-black/0 text-[13px] font-semibold text-white opacity-0 transition-all duration-200 group-hover/img:bg-black/45 group-hover/img:opacity-100">
                 <ImagePlus size={16} strokeWidth={2} className="me-2" />
@@ -798,7 +861,9 @@ function ImageField({
         ) : (
           <span className="flex flex-col items-center gap-2 px-6 text-ink-muted">
             <ImagePlus size={26} strokeWidth={1.6} />
-            <span className="text-[13.5px] font-medium">{t("Add {label}", { label: label.toLowerCase() })}</span>
+            <span className="text-[13.5px] font-medium">
+              {t("Add {label}", { label: label.toLowerCase() })}
+            </span>
             <span className="text-[12px] text-ink-subtle">{hint}</span>
           </span>
         )}

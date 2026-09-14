@@ -501,8 +501,7 @@ const catalog: Record<string, string> = {
   "Buffer fill brightness": "Kecerahan isi buffer",
   "Buffer size": "Ukuran buffer",
   Buffering: "Buffering",
-  "Buffers the whole file in the background as you watch, even while paused, so big remuxes pre-load and you can scrub a cached file with no re-buffering. Works for debrid and torrent streams. Uses more disk and bandwidth; cleared when you switch or close.":
-    "Menyimpan seluruh file ke buffer di latar belakang saat Anda menonton, bahkan ketika dijeda, sehingga remux besar dimuat lebih awal dan Anda dapat menggeser posisi pada file yang sudah tersimpan di cache tanpa buffering ulang. Berfungsi untuk stream debrid dan torrent. Menggunakan lebih banyak ruang disk dan bandwidth; dihapus saat Anda beralih atau menutupnya.",
+  "Buffers the whole file in the background as you watch, even while paused, so big remuxes pre-load and you can scrub a cached file with no re-buffering. Works for debrid and P2P streams. Uses more disk and bandwidth; cleared when you switch or close.": "Menyimpan seluruh file ke buffer di latar belakang saat Anda menonton, bahkan ketika dijeda, sehingga remux besar dimuat lebih awal dan Anda dapat menggeser posisi pada file yang sudah tersimpan di cache tanpa buffering ulang. Berfungsi untuk stream debrid dan P2P. Menggunakan lebih banyak ruang disk dan bandwidth; dihapus saat Anda beralih atau menutupnya.",
   "Bug reporters get listed in the release notes when their report leads to a shipped fix. Leave blank to stay anonymous.":
     "Pelapor bug akan dicantumkan dalam catatan rilis jika laporannya menghasilkan perbaikan yang dirilis. Kosongkan agar tetap anonim.",
   "Bug reports": "Laporan bug",
@@ -518,8 +517,8 @@ const catalog: Record<string, string> = {
     "Buat paket dengan salah satu alat ini, ekspor JSON, host sebagai gist, lalu tempel tautan mentahnya di bawah.",
   "Build a source plugin": "Buat plugin sumber",
   "Build from source": "Build dari kode sumber",
-  "Build identity. Useful when filing a bug report at bugs@harbor.site.":
-    "Identitas build. Berguna saat melaporkan bug ke bugs@harbor.site.",
+  "Build identity. Useful when filing a bug report.":
+    "Identitas build. Berguna saat melaporkan bug.",
   "Build your own feed from actors, directors, and Trakt lists":
     "Buat feed Anda sendiri dari aktor, sutradara, dan daftar Trakt",
   "Build your own palette": "Buat palet Anda sendiri",

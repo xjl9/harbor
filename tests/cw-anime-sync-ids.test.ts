@@ -10,7 +10,7 @@ import {
   applyAniZipEpisode,
   needsAniZipSyncIds,
 } from "../src/lib/cw-anime-episode.ts";
-import { stripFranchiseSuffix } from "../src/lib/providers/jikan.ts";
+import { stripFranchiseSuffix, franchiseDedupKey } from "../src/lib/providers/jikan.ts";
 import { buildBody } from "../src/lib/simkl/scrobble-body.ts";
 import {
   animeCoordPairs,
@@ -83,7 +83,9 @@ test("Trakt silently dropped the anime scrobble before enrichment and accepts it
 
 test("Simkl gets the imdb id as a second way to match a brand new season", () => {
   const enriched = applyAniZipEpisode({ season: 1, episode: 6 }, MUSHOKU);
-  const body = buildBody("kitsu:49002", enriched, 100) as { anime: { ids: Record<string, unknown> } };
+  const body = buildBody("kitsu:49002", enriched, 100) as {
+    anime: { ids: Record<string, unknown> };
+  };
   assert.equal(body.anime.ids.kitsu, 49002);
   assert.equal(body.anime.ids.imdb, "tt13293588");
 });
@@ -115,8 +117,52 @@ test("the season is not printed twice in the Continue Watching title", () => {
   assert.equal(stripFranchiseSuffix("Silo"), "Silo");
 });
 
+test("parenthesised and year suffixed titles are stripped too", () => {
+  assert.equal(
+    stripFranchiseSuffix("Mushoku Tensei: Jobless Reincarnation (Season 3)"),
+    "Mushoku Tensei: Jobless Reincarnation",
+  );
+  assert.equal(
+    stripFranchiseSuffix("Skeleton Knight in Another World (II)"),
+    "Skeleton Knight in Another World",
+  );
+  assert.equal(stripFranchiseSuffix("Re:Zero 2026"), "Re:Zero");
+  assert.equal(stripFranchiseSuffix("Re:Zero (2026)"), "Re:Zero");
+  assert.equal(
+    stripFranchiseSuffix("Demon Slayer: Kimetsu no Yaiba S3"),
+    "Demon Slayer: Kimetsu no Yaiba",
+  );
+  assert.equal(stripFranchiseSuffix("Sword Art Online 2nd Season"), "Sword Art Online");
+  assert.equal(stripFranchiseSuffix("86"), "86", "numeric titles must not be stripped");
+});
+
+test("the Continue Watching dedup key collapses suffix variants of one show", () => {
+  assert.equal(
+    franchiseDedupKey("Mushoku Tensei: Jobless Reincarnation Season 3"),
+    franchiseDedupKey("Mushoku Tensei: Jobless Reincarnation"),
+  );
+  assert.equal(
+    franchiseDedupKey("Skeleton Knight in Another World II"),
+    franchiseDedupKey("Skeleton Knight in Another World"),
+  );
+  assert.equal(franchiseDedupKey("Re:Zero 2026"), franchiseDedupKey("Re:Zero"));
+  assert.equal(
+    franchiseDedupKey("Silo Season 9"),
+    franchiseDedupKey("Silo"),
+    "a later season is the same franchise and must share a key",
+  );
+  assert.notEqual(
+    franchiseDedupKey("Mushoku Tensei: Jobless Reincarnation"),
+    franchiseDedupKey("Re:Zero - Starting Life in Another World"),
+    "distinct shows must keep separate keys",
+  );
+});
+
 test("an imdb id resolves to the same franchise root as its Kitsu id", () => {
-  const src = readFileSync(new URL("../src/lib/providers/anime-franchise-root.ts", import.meta.url), "utf8");
+  const src = readFileSync(
+    new URL("../src/lib/providers/anime-franchise-root.ts", import.meta.url),
+    "utf8",
+  );
   assert.match(src, /if \(id\.startsWith\("tt"\)\) \{/);
   assert.match(src, /parseKitsuId\(getAnimeCwId\(id\) \?\? ""\)/);
   assert.match(src, /return imdbToKitsu\(id\)\.catch\(\(\) => null\);/);
@@ -173,13 +219,30 @@ test("an imdb keyed Continue Watching play no longer drops the AniList and MAL s
     new URL("../src/views/player/hooks/use-resume-autosave.ts", import.meta.url),
     "utf8",
   );
-  assert.match(src, /animeIdentityEligible\(id, s\.episode\)/);
+  assert.match(src, /animeIdentityEligibleForSync\(id, s\.episode\)/);
   assert.match(src, /resolveAnimeIdentity\(id, latestRef\.current\.resolvedImdbId, \{/);
   assert.match(src, /fireTrackers\(`kitsu:\$\{identity\.kitsuId\}`, identity\.number\)/);
   assert.doesNotMatch(
     src,
     /anilistAutoSyncRef\.current && trackId/,
     "a null anime track id must resolve through the identity chain, not silently skip",
+  );
+});
+
+test("multi-season sync prefers the season-scoped identity over the base track id", () => {
+  const src = readFileSync(
+    new URL("../src/views/player/hooks/use-resume-autosave.ts", import.meta.url),
+    "utf8",
+  );
+  assert.match(
+    src,
+    /const useIdentity =\s*\n\s*\(anilistAutoSyncRef\.current \|\| malAutoSyncRef\.current\)/,
+  );
+  assert.match(src, /if \(trackId && !useIdentity\)/);
+  assert.match(
+    src,
+    /else if \(useIdentity\)/,
+    "a base track id alone must not block per-season identity resolution",
   );
 });
 

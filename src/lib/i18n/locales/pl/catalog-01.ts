@@ -355,7 +355,7 @@ const catalog01: Record<string, string> = {
   Actions: "Działania",
   Active: "Aktywne",
   "Active and reachable": "Aktywne i dostępne",
-  "Active torrents": "Aktywne torrenty",
+  "Active transfers": "Aktywne transfery",
   Activity: "Aktywność",
   "Actor, title, genre": "Aktor, tytuł, gatunek",
   "Actual size on screen": "Rzeczywisty rozmiar na ekranie",

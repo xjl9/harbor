@@ -10,6 +10,7 @@ import {
 } from "../bridge";
 import { fetchAndParse, findActiveCue } from "@/lib/subtitles/parser";
 import { prepareSubtitle } from "@/lib/subtitles/prepare";
+import { stripSdhText } from "@/lib/subtitles/sdh-filter";
 import { subtitleTrackDownloadHeaders } from "@/lib/subtitles/provider-auth";
 import { takePreparedSubtitle } from "@/lib/subtitles/prepared-registry";
 import type { SubTrack } from "./types";
@@ -66,8 +67,11 @@ export function createHtml5Bridge(): PlayerBridge {
   let activeSubId: string | null = null;
   let secondarySubId: string | null = null;
   let subDelaySec = 0;
+  let hideSdh = false;
   let cueTickerRaf: number | null = null;
   let lastCueId = "";
+  let lastSecondRaw: string | null = null;
+  let lastSecondText = "";
   let activeTraceId: string | null = null;
   let mediaRevision = 0;
   const mainSubtitleSelection = new SubtitleSelectionCoordinator();
@@ -213,16 +217,21 @@ export function createHtml5Bridge(): PlayerBridge {
       const cueId = cue ? `${cue.start}|${cue.text}` : "";
       if (cueId !== lastCueId) {
         lastCueId = cueId;
-        snap.subText = cue?.text ?? "";
+        const raw = cue?.text ?? "";
+        snap.subText = hideSdh ? stripSdhText(raw) : raw;
         snap.subStartSec = cue?.start ?? 0;
         changed = true;
       }
     }
     const second = secondarySubId ? subTracks.find((s) => s.id === secondarySubId) : null;
     const secondCue = second?.cues ? findActiveCue(second.cues, t) : null;
-    const secondText = secondCue?.text ?? "";
-    if (secondText !== snap.secondarySubText) {
-      snap.secondarySubText = secondText;
+    const secondRaw = secondCue?.text ?? "";
+    if (secondRaw !== lastSecondRaw) {
+      lastSecondRaw = secondRaw;
+      lastSecondText = hideSdh ? stripSdhText(secondRaw) : secondRaw;
+    }
+    if (lastSecondText !== snap.secondarySubText) {
+      snap.secondarySubText = lastSecondText;
       changed = true;
     }
     if (changed) emit();
@@ -733,7 +742,9 @@ export function createHtml5Bridge(): PlayerBridge {
       }
       refreshSnapshot();
     },
-    setSubtitleTrack(id) {
+    canAutoSelectSubtitle: () => mainSubtitleSelection.canAutoSelect(mediaRevision),
+    setSubtitleTrack(id, origin = "manual") {
+      if (!mainSubtitleSelection.claim(mediaRevision, origin)) return;
       if (id == null) {
         mainSubtitleSelection.invalidate();
         activeSubId = null;
@@ -789,6 +800,13 @@ export function createHtml5Bridge(): PlayerBridge {
       tickCues();
     },
     setSubVisible() {},
+    setSubHideSdh(on) {
+      if (hideSdh === on) return;
+      hideSdh = on;
+      lastCueId = "";
+      lastSecondRaw = null;
+      tickCues();
+    },
     setSubDelay(sec) {
       subDelaySec = sec;
       lastCueId = "";
@@ -807,11 +825,13 @@ export function createHtml5Bridge(): PlayerBridge {
     },
     setVideoEq() {},
     setAnime4kShaders() {},
-    async addSubtitle(url, lang, title, select, metadata): Promise<boolean> {
+    async addSubtitle(url, lang, title, select, metadata, origin = "manual"): Promise<boolean> {
       const requestMediaRevision = mediaRevision;
       const id = `ext-${subTracks.length}-${Date.now()}`;
       const selectionRequest =
-        select === true ? mainSubtitleSelection.begin(mediaRevision, id, activeSubId) : null;
+        select === true && mainSubtitleSelection.claim(mediaRevision, origin)
+          ? mainSubtitleSelection.begin(mediaRevision, id, activeSubId)
+          : null;
       const prepared = takePreparedSubtitle(url);
       const providerDerived = metadata?.providerDerived ?? Boolean(metadata?.provider);
       if (!prepared && providerDerived && !isSafeProviderSubtitleUrl(url)) return false;
@@ -1086,7 +1106,7 @@ export function createHtml5Bridge(): PlayerBridge {
     },
     subscribe(l) {
       listeners.add(l);
-      l(snap);
+      l({ ...snap });
       return () => {
         listeners.delete(l);
       };

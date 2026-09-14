@@ -498,8 +498,7 @@ const catalog03: Record<string, string> = {
   "Copy Webhook URL": "Kopiuj adres URL webhooka",
   "Copy code": "Skopiuj kod",
   "Copy diagnostics": "Kopiuj dane diagnostyczne",
-  "Copy diagnostics grabs the engine status and your P2P settings as JSON, handy to paste into a bug report. The engine folder holds the DHT cache (dht.json) and active torrent data.":
-    "Funkcja kopiowania danych diagnostycznych pobiera stan silnika i ustawienia P2P w formacie JSON, co ułatwia wklejenie ich do zgłoszenia błędu. Folder silnika zawiera pamięć podręczną DHT (dht.json) oraz dane aktywnych torrentów.",
+  "Copy diagnostics grabs the engine status and your P2P settings as JSON, handy to paste into a bug report. The engine folder holds the DHT cache (dht.json) and active transfer data.": "Funkcja kopiowania danych diagnostycznych pobiera stan silnika i ustawienia P2P w formacie JSON, co ułatwia wklejenie ich do zgłoszenia błędu. Folder silnika zawiera pamięć podręczną DHT (dht.json) oraz dane aktywnych transferów.",
   "Copy error": "Skopiuj błąd",
   "Copy example": "Kopiuj przykład",
   "Copy filename": "Kopiuj nazwę pliku",

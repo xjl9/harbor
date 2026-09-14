@@ -67,9 +67,13 @@ test("the Simkl exit send does not queue behind the POST throttle", () => {
 });
 
 test("Simkl and Trakt agree on when a session is finished", () => {
-  const pct = (s: string) => s.match(/WATCHED_MARK_PCT\s*=\s*([\d.]+)/)?.[1];
-  assert.ok(trakt.includes("const WATCHED_MARK_PCT = 70;"));
-  assert.ok(pct(simkl) || simkl.includes("SIMKL_WATCHED_RATIO"));
+  const traktPct = Number(trakt.match(/WATCHED_MARK_PCT\s*=\s*([\d.]+)/)?.[1]);
+  const simklRatio = Number(
+    read("src/lib/simkl/config.ts").match(/SIMKL_WATCHED_RATIO\s*=\s*([\d.]+)/)?.[1],
+  );
+  assert.equal(traktPct, 90);
+  assert.equal(simklRatio * 100, traktPct);
+  assert.match(simkl, /WATCHED_MARK_PCT = SIMKL_WATCHED_RATIO \* 100;/);
 });
 
 test("Simkl does not write an early EOF directly to watched history", () => {

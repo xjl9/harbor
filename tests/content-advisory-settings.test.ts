@@ -15,15 +15,17 @@ const hook = read("src/views/player/hooks/use-content-advisory.ts");
 const overlays = read("src/views/player/stage-overlays.tsx");
 const overlayLayers = read("src/views/player/player-overlay-layers.tsx");
 
-test("content advisory uses the original Harbor presentation", () => {
+test("content advisory uses the revised PR 1376 presentation", () => {
   assert.match(toast, /start-6 top-20/);
-  assert.match(toast, /w-\[266px\] overflow-hidden rounded-2xl/);
-  assert.match(toast, /border-edge-soft\/70 bg-canvas\/85/);
+  assert.match(toast, /w-\[238px\]/);
+  assert.match(toast, /bg-black\/70/);
   assert.match(toast, /uppercase tracking-\[0\.16em\]/);
   assert.match(toast, /h-2\.5 w-1 rounded-full/);
-  assert.match(toast, /const HOLD_MS = 10_000/);
+  assert.match(toast, /const HOLD_MS = 28_000/);
   assert.match(toast, /const HOVER_TAIL_MS = 2_500/);
-  assert.doesNotMatch(toast, /start-4 top-44|w-\[286px\]|bg-black\/80|ring-white/);
+  assert.match(toast, /harbor-content-advisory-row/);
+  assert.doesNotMatch(toast, /h-\[2px\] bg-white\/10/);
+  assert.doesNotMatch(toast, /start-4 top-44|w-\[286px\]|bg-black\/80/);
 });
 
 test("content advisory waits for playback and fully unmounts after dismissal", () => {
@@ -84,4 +86,26 @@ test("content advisory keeps IMDb fetching and PiP suppression", () => {
   assert.match(hook, /if \(!enabled \|\| !playing\) return/);
   assert.match(hook, /setPlayKey\(srcKey\)/);
   assert.match(overlays, /!pipMode && \(\s*<ContentAdvisoryToast/);
+});
+
+test("approved advisory update preserves saved opt-out and decreasing countdown", () => {
+  assert.doesNotMatch(
+    read("src/lib/settings/load.ts"),
+    /if \(!parsed\._contentAdvisoryOnByDefaultV1\)/,
+  );
+  assert.match(toast, /category\.severity !== "None"/);
+  assert.match(toast, /const remaining = Math\.max\(0, 1 - elapsed \/ durationRef\.current\)/);
+  assert.match(toast, /Math\.min\(100, progress \* 100\)/);
+});
+
+test("profile background adapts slider units and reloads when the picker opens", () => {
+  const picker = read("src/views/settings/account/picker-background.tsx");
+  const modal = read("src/components/profile-picker/picker-modal.tsx");
+  assert.match(picker, /dim=\{dim \/ 100\}/);
+  assert.match(picker, /const pct = Math\.round\(next \* 100\);/);
+  assert.match(picker, /setDim\(pct\);\s*void savePickerBgDim\(pct\);/);
+  assert.match(
+    modal,
+    /if \(!pickerOpen\) return;\s*let alive = true;[\s\S]*loadPickerBg\(\)[\s\S]*\}, \[pickerOpen\]\)/,
+  );
 });

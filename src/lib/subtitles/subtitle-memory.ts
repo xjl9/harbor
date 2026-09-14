@@ -13,6 +13,7 @@ export type RememberedSub = {
   source?: string;
   lang?: string;
   title?: string;
+  trackId?: string;
   subId?: string;
   provider?: string;
   release?: string;
@@ -124,11 +125,16 @@ export function readRememberedSub(key: string): RememberedSub | null {
   return loadStore()[key] ?? null;
 }
 
-export function writeRememberedSub(key: string, sub: Omit<RememberedSub, "updatedAt">): void {
-  if (!key) return;
+export function writeRememberedSub(
+  key: string,
+  sub: Omit<RememberedSub, "updatedAt">,
+): RememberedSub | null {
+  if (!key) return null;
   const store = loadStore();
-  store[key] = { ...sub, updatedAt: Date.now() };
+  const remembered = { ...sub, updatedAt: Date.now() };
+  store[key] = remembered;
   persistStore();
+  return remembered;
 }
 
 export function clearRememberedSub(key: string): void {
@@ -151,6 +157,7 @@ export function rememberedFromChoice(choice: SubChoiceInput): Omit<RememberedSub
     source,
     lang: choice.lang ?? undefined,
     title: choice.title,
+    trackId: choice.external || choice.imported ? undefined : choice.id,
     subId: choice.subId,
     provider: choice.provider,
     release: choice.release,

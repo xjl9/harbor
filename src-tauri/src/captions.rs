@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use tauri::{AppHandle, Emitter, Manager, WebviewUrl, WebviewWindowBuilder};
+use tauri::{AppHandle, Emitter, Manager, WebviewUrl, WebviewWindow, WebviewWindowBuilder};
 
 const CAPTIONS_LABEL: &str = "harbor-captions";
 
@@ -20,31 +20,58 @@ pub async fn captions_window_is_open(app: AppHandle) -> Result<bool, String> {
     Ok(captions_is_open(&app))
 }
 
+fn captions_placement(anchor: &WebviewWindow, width: f64, height: f64) -> Result<(f64, f64), String> {
+    let gap = 12.0_f64;
+    let scale = anchor.scale_factor().unwrap_or(1.0);
+    let size = anchor
+        .outer_size()
+        .map_err(|e| format!("outer_size: {}", e))?
+        .to_logical::<f64>(scale);
+    let pos = anchor
+        .outer_position()
+        .map_err(|e| format!("outer_position: {}", e))?
+        .to_logical::<f64>(scale);
+    let mut x = pos.x + (size.width - width) / 2.0;
+    let mut y = pos.y + size.height + gap;
+    if let Ok(Some(monitor)) = anchor.current_monitor() {
+        let mscale = monitor.scale_factor();
+        let area = monitor.work_area();
+        let ax = area.position.x as f64 / mscale;
+        let ay = area.position.y as f64 / mscale;
+        let aw = area.size.width as f64 / mscale;
+        let ah = area.size.height as f64 / mscale;
+        if y + height > ay + ah {
+            let above = pos.y - height - gap;
+            y = if above >= ay {
+                above
+            } else {
+                (pos.y + size.height - height - gap).max(ay)
+            };
+        }
+        x = x.max(ax).min((ax + aw - width).max(ax));
+        y = y.max(ay).min((ay + ah - height).max(ay));
+    }
+    Ok((x, y))
+}
+
 #[tauri::command]
-pub async fn captions_open(app: AppHandle) -> Result<(), String> {
+pub async fn captions_open(app: AppHandle, window: WebviewWindow) -> Result<(), String> {
     if let Some(w) = app.get_webview_window(CAPTIONS_LABEL) {
         let _ = w.show();
         let _ = w.set_focus();
         return Ok(());
     }
 
-    let main = app
-        .get_webview_window("main")
-        .ok_or_else(|| "main missing".to_string())?;
-    let scale = main.scale_factor().unwrap_or(1.0);
-    let size = main
-        .outer_size()
-        .map_err(|e| format!("outer_size: {}", e))?
-        .to_logical::<f64>(scale);
-    let pos = main
-        .outer_position()
-        .map_err(|e| format!("outer_position: {}", e))?
-        .to_logical::<f64>(scale);
+    let anchor = if window.label() == CAPTIONS_LABEL {
+        app.get_webview_window("main")
+    } else {
+        Some(window)
+    }
+    .ok_or_else(|| "anchor window missing".to_string())?;
 
     let width = 468.0_f64;
     let height = 168.0_f64;
-    let x = pos.x + (size.width - width) / 2.0;
-    let y = pos.y + size.height + 12.0;
+    let (x, y) = captions_placement(&anchor, width, height)?;
 
     let app_clone = app.clone();
     let (tx, rx) = std::sync::mpsc::channel::<Result<(), String>>();
@@ -64,6 +91,7 @@ pub async fn captions_open(app: AppHandle) -> Result<(), String> {
             .focused(false);
         #[cfg(windows)]
         let builder = builder.transparent(true);
+        let builder = crate::browser_args::match_main(&app_clone, builder);
         match builder.build() {
             Ok(_) => {
                 let _ = tx.send(Ok(()));
@@ -87,7 +115,7 @@ pub async fn captions_close(app: AppHandle) -> Result<(), String> {
     if let Some(w) = app.get_webview_window(CAPTIONS_LABEL) {
         let _ = w.close();
     }
-    let _ = app.emit_to("main", "captions://closed", ());
+    let _ = app.emit("captions://closed", ());
     Ok(())
 }
 
@@ -102,6 +130,6 @@ pub async fn captions_push(app: AppHandle, cue: CaptionsCue) -> Result<(), Strin
 
 #[tauri::command]
 pub async fn captions_request_state(app: AppHandle) -> Result<(), String> {
-    let _ = app.emit_to("main", "captions://ready", ());
+    let _ = app.emit("captions://ready", ());
     Ok(())
 }

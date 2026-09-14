@@ -333,7 +333,8 @@ const miscA: Record<string, string> = {
   Allowed: "İzin verilenler",
   "Already have a TMDB login? Sign in and skip ahead. Otherwise press Register and fill in a username, password and email.":
     "Zaten bir TMDB hesabınız var mı? Oturum açıp sonraki adımlara geçin. Yoksa Kaydol'a basıp kullanıcı adı, parola ve e-posta adresi girin.",
-  "Also joins Harbor's Discord server.": "Harbor'ın Discord sunucusuna da katılır.",
+  "Linking your Discord account also joins you to Harbor's Discord server, so the bot can send your Backup keys privately.":
+    "Linking your Discord account also joins you to Harbor's Discord server, so the bot can send your Backup keys privately.",
   Alternate: "Alternatif",
   "Always re-encode when casting": "Yayınlarken her zaman yeniden kodla",
   "Always show the report button": "Bildir düğmesini her zaman göster",
@@ -618,8 +619,8 @@ const miscA: Record<string, string> = {
   "Browsing {section}. Change section": "{section} bölümüne göz atılıyor. Bölümü değiştir",
   "Buffer fill": "Arabellek doluluğu",
   "Buffer fill brightness": "Arabellek doluluk parlaklığı",
-  "Buffers the whole file in the background as you watch, even while paused, so big remuxes pre-load and you can scrub a cached file with no re-buffering. Works for debrid and torrent streams. Uses more disk and bandwidth; cleared when you switch or close.":
-    "Siz izlerken, duraklatılmış olsa bile dosyanın tamamını arka planda arabelleğe alır. Böylece büyük remux dosyaları önceden yüklenir ve önbelleğe alınmış dosyada yeniden arabelleğe alma olmadan ileri geri sarabilirsiniz. Debrid ve torrent yayınlarında çalışır. Daha fazla disk alanı ve bant genişliği kullanır; kaynak değiştirdiğinizde veya kapattığınızda temizlenir.",
+  "Buffers the whole file in the background as you watch, even while paused, so big remuxes pre-load and you can scrub a cached file with no re-buffering. Works for debrid and P2P streams. Uses more disk and bandwidth; cleared when you switch or close.":
+    "Siz izlerken, duraklatılmış olsa bile dosyanın tamamını arka planda arabelleğe alır. Böylece büyük remux dosyaları önceden yüklenir ve önbelleğe alınmış dosyada yeniden arabelleğe alma olmadan ileri geri sarabilirsiniz. Debrid ve P2P yayınlarında çalışır. Daha fazla disk alanı ve bant genişliği kullanır; kaynak değiştirdiğinizde veya kapattığınızda temizlenir.",
   Build: "Derleme",
   "Build a named filter once, then apply it in the source picker to hide everything that doesn't match. Each filter ANDs its dimensions and ignores any you leave blank.":
     "Adlandırılmış bir filtreyi bir kez oluşturun, ardından eşleşmeyen her şeyi gizlemek için kaynak seçicide uygulayın. Her filtre, ölçütlerini VE ile birleştirir ve boş bıraktıklarınızı yok sayar.",
@@ -890,8 +891,8 @@ const miscA: Record<string, string> = {
   "Copied!": "Kopyalandı!",
   "Copy code": "Kodu kopyala",
   "Copy diagnostics": "Tanı bilgilerini kopyala",
-  "Copy diagnostics grabs the engine status and your P2P settings as JSON, handy to paste into a bug report. The engine folder holds the DHT cache (dht.json) and active torrent data.":
-    "Tanı bilgilerini kopyalama işlemi, motor durumunu ve P2P ayarlarınızı hata raporuna yapıştırmaya uygun JSON biçiminde alır. Motor klasörü DHT önbelleğini (dht.json) ve etkin torrent verilerini içerir.",
+  "Copy diagnostics grabs the engine status and your P2P settings as JSON, handy to paste into a bug report. The engine folder holds the DHT cache (dht.json) and active transfer data.":
+    "Tanı bilgilerini kopyalama işlemi, motor durumunu ve P2P ayarlarınızı hata raporuna yapıştırmaya uygun JSON biçiminde alır. Motor klasörü DHT önbelleğini (dht.json) ve etkin aktarım verilerini içerir.",
   "Copy from this computer": "Bu bilgisayardan kopyala",
   "Copy my settings to the TV": "Ayarlarımı TV'ye kopyala",
   "Copy the settings you already tuned here onto the TV in one go. It overwrites the matching TV rows and leaves everything else alone.":
@@ -1352,8 +1353,8 @@ const miscA: Record<string, string> = {
   "Featured {n}": "Öne çıkanlar {n}",
   "Fee to the listing agent": "İlanı veren emlakçıya ödenen ücret",
   Feishin: "Feishin",
-  "Fetches a small public test torrent, then reports UDP and HTTPS egress, DHT bootstrap and tracker reachability step by step.":
-    "Küçük ve herkese açık bir test torrentini indirir, ardından UDP ve HTTPS çıkışını, DHT önyüklemesini ve izleyici erişimini adım adım raporlar.",
+  "Fetches a small public test file over P2P, then reports UDP and HTTPS egress, DHT bootstrap and tracker reachability step by step.":
+    "P2P üzerinden küçük ve herkese açık bir test dosyası indirir, ardından UDP ve HTTPS çıkışını, DHT önyüklemesini ve izleyici erişimini adım adım raporlar.",
   Fiction: "Kurgu",
   Fight: "Dövüş",
   "File is not a Harbor layout profile.": "Dosya bir Harbor düzen profili değil.",
@@ -1561,8 +1562,8 @@ const miscA: Record<string, string> = {
   "HTML and CSS are each capped at 16,384 characters.":
     "HTML ve CSS'nin her biri en fazla 16.384 karakter olabilir.",
   "Hall of Fame": "Onur Listesi",
-  "Handles torrent playback and transcoding for this machine.":
-    "Bu makinede torrent oynatmayı ve kod dönüştürmeyi yönetir.",
+  "Handles P2P playback and transcoding for this machine.":
+    "Bu makinede P2P oynatmayı ve kod dönüştürmeyi yönetir.",
   "Harbor Rank": "Harbor Sıralaması",
   "Harbor Rank scores a whole career, not a single hit. Four things move a rank: how good the work is on average, how much of it earned wide acclaim, the major awards it won, and how often the person carried the work as a lead. Each pillar is weighted, added up, then adjusted for the breadth and recency of the body of work. Every number that feeds a score is shown on the card, so you can always see why.":
     "Harbor Rank tek bir başarıyı değil, tüm kariyeri puanlar. Sıralamayı dört unsur belirler: çalışmaların ortalama kalitesi, ne kadarının geniş çapta beğeni topladığı, kazanılan önemli ödüller ve kişinin çalışmalarda ne sıklıkla başrolü üstlendiği. Her ölçüt ağırlıklandırılıp toplanır, ardından çalışmaların çeşitliliğine ve güncelliğine göre ayarlanır. Puana etki eden her sayı kartta gösterilir, böylece nedenini her zaman görebilirsiniz.",

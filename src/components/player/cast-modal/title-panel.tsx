@@ -48,7 +48,7 @@ export function TitlePanel({
   onBackdrop?: (url: string | null) => void;
   onOpenPerson: (id: number, name: string) => void;
   onOpenTitle: (m: Meta) => void;
-  onOpenDetail: (m: Meta) => void;
+  onOpenDetail?: (m: Meta) => void;
   onPlay?: (m: Meta) => void;
   onOpenEpisodes?: (m: Meta, imdbId: string | null) => void;
   onOpenGenre?: (name: string, genreId: number, mediaType: "movie" | "tv") => void;
@@ -166,86 +166,93 @@ export function TitlePanel({
           </div>
           <div className="flex items-start gap-4">
             <div className="flex min-w-0 flex-1 flex-col gap-2.5">
-            <HeroRatings
-              bare
-              compact
-              rating={primaryRating}
-              tmdbRating={tmdbRating}
-              isAnime={anime}
-              scores={scores}
-              mdblist={mdblist}
-              imdbId={imdbId}
-              mediaType={mediaType}
-              ratingSource={ratingSource}
-              onOpenUrl={(url) =>
-                url.includes("simkl.com") ? openInAppBrowser(url, title) : openUrl(url)
-              }
-            />
-          {genrePills.length > 0 && (
-            <div className="flex flex-wrap gap-1.5">
-              {genrePills.slice(0, 5).map((g) => (
-                <button
-                  key={g.name}
-                  type="button"
-                  onClick={() =>
-                    g.id > 0 && onOpenGenre?.(g.name, g.id, mediaType === "show" ? "tv" : "movie")
-                  }
-                  disabled={!onOpenGenre || !tmdbKey || g.id <= 0}
-                  className="rounded-full bg-white/[0.08] px-3 py-1.5 text-[13px] font-medium text-white/75 ring-1 ring-white/10 transition-colors enabled:hover:bg-white/[0.16] enabled:hover:text-white disabled:cursor-default"
-                >
-                  {g.name}
-                </button>
-              ))}
-            </div>
-          )}
-          <div className="mt-1.5 flex flex-wrap items-center gap-2.5">
-            {isSeries
-              ? onOpenEpisodes && (
+              <HeroRatings
+                bare
+                compact
+                rating={primaryRating}
+                tmdbRating={tmdbRating}
+                isAnime={anime}
+                scores={scores}
+                mdblist={mdblist}
+                imdbId={imdbId}
+                mediaType={mediaType}
+                ratingSource={ratingSource}
+                onOpenUrl={(url) =>
+                  url.includes("simkl.com") ? openInAppBrowser(url, title) : openUrl(url)
+                }
+              />
+              {genrePills.length > 0 && (
+                <div className="flex flex-wrap gap-1.5">
+                  {genrePills.slice(0, 5).map((g) => (
+                    <button
+                      key={g.name}
+                      type="button"
+                      onClick={() =>
+                        g.id > 0 &&
+                        onOpenGenre?.(g.name, g.id, mediaType === "show" ? "tv" : "movie")
+                      }
+                      disabled={!onOpenGenre || !tmdbKey || g.id <= 0}
+                      className="rounded-full bg-white/[0.08] px-3 py-1.5 text-[13px] font-medium text-white/75 ring-1 ring-white/10 transition-colors enabled:hover:bg-white/[0.16] enabled:hover:text-white disabled:cursor-default"
+                    >
+                      {g.name}
+                    </button>
+                  ))}
+                </div>
+              )}
+              <div className="mt-1.5 flex flex-wrap items-center gap-2.5">
+                {isSeries
+                  ? onOpenEpisodes && (
+                      <button
+                        type="button"
+                        onClick={() => onOpenEpisodes(meta, imdbId)}
+                        className="inline-flex items-center gap-2 rounded-full bg-white px-5 py-2.5 text-[15px] font-semibold text-black transition-transform hover:scale-[1.03]"
+                      >
+                        <Play size={17} strokeWidth={2.4} fill="currentColor" />
+                        {t("Episodes")}
+                      </button>
+                    )
+                  : onPlay &&
+                    (upcoming ? (
+                      <UpcomingCta detail={detail} onTry={() => onPlay(meta)} />
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => onPlay(meta)}
+                        className="inline-flex items-center gap-2 rounded-full bg-white px-5 py-2.5 text-[15px] font-semibold text-black transition-transform hover:scale-[1.03]"
+                      >
+                        <Play size={17} strokeWidth={2.4} fill="currentColor" />
+                        {t("Play")}
+                      </button>
+                    ))}
+                {onOpenDetail && (
                   <button
                     type="button"
-                    onClick={() => onOpenEpisodes(meta, imdbId)}
-                    className="inline-flex items-center gap-2 rounded-full bg-white px-5 py-2.5 text-[15px] font-semibold text-black transition-transform hover:scale-[1.03]"
+                    onClick={() => onOpenDetail(meta)}
+                    className="inline-flex w-fit items-center gap-2 rounded-full bg-white/[0.12] px-5 py-2.5 text-[15px] font-semibold text-white ring-1 ring-white/15 transition-colors hover:bg-white/20"
                   >
-                    <Play size={17} strokeWidth={2.4} fill="currentColor" />
-                    {t("Episodes")}
+                    {isSeries ? t("All episodes & details") : t("Full details")}
+                    <ArrowRight size={17} strokeWidth={2.4} />
                   </button>
-                )
-              : onPlay &&
-                (upcoming ? (
-                  <UpcomingCta detail={detail} onTry={() => onPlay(meta)} />
-                ) : (
+                )}
+                {showQueue && (
                   <button
                     type="button"
-                    onClick={() => onPlay(meta)}
-                    className="inline-flex items-center gap-2 rounded-full bg-white px-5 py-2.5 text-[15px] font-semibold text-black transition-transform hover:scale-[1.03]"
+                    onClick={() => queueToggle(meta)}
+                    className={`inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-[15px] font-semibold ring-1 transition-colors ${
+                      queued
+                        ? "bg-emerald-400/15 text-emerald-200 ring-emerald-400/30"
+                        : "bg-white/[0.12] text-white ring-white/15 hover:bg-white/20"
+                    }`}
                   >
-                    <Play size={17} strokeWidth={2.4} fill="currentColor" />
-                    {t("Play")}
+                    {queued ? (
+                      <Check size={17} strokeWidth={2.6} />
+                    ) : (
+                      <Plus size={17} strokeWidth={2.4} />
+                    )}
+                    {queued ? t("Queued") : t("Queue")}
                   </button>
-                ))}
-            <button
-              type="button"
-              onClick={() => onOpenDetail(meta)}
-              className="inline-flex w-fit items-center gap-2 rounded-full bg-white/[0.12] px-5 py-2.5 text-[15px] font-semibold text-white ring-1 ring-white/15 transition-colors hover:bg-white/20"
-            >
-              {isSeries ? t("All episodes & details") : t("Full details")}
-              <ArrowRight size={17} strokeWidth={2.4} />
-            </button>
-            {showQueue && (
-            <button
-              type="button"
-              onClick={() => queueToggle(meta)}
-              className={`inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-[15px] font-semibold ring-1 transition-colors ${
-                queued
-                  ? "bg-emerald-400/15 text-emerald-200 ring-emerald-400/30"
-                  : "bg-white/[0.12] text-white ring-white/15 hover:bg-white/20"
-              }`}
-            >
-              {queued ? <Check size={17} strokeWidth={2.6} /> : <Plus size={17} strokeWidth={2.4} />}
-              {queued ? t("Queued") : t("Queue")}
-            </button>
-            )}
-          </div>
+                )}
+              </div>
             </div>
             {awardSummaryItems.length > 0 && (
               <HeroAwardsCorner
@@ -319,7 +326,9 @@ export function TitlePanel({
         </RailSection>
       ) : needsKey ? (
         <p className="px-1 text-[13.5px] leading-relaxed text-white/55">
-          {t("Add a TMDB key in Settings to see the cast, crew and recommendations for every title.")}
+          {t(
+            "Add a TMDB key in Settings to see the cast, crew and recommendations for every title.",
+          )}
         </p>
       ) : null}
 

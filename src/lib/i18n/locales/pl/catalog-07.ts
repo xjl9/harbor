@@ -315,8 +315,7 @@ const catalog07: Record<string, string> = {
   "Live preview": "Podgląd na żywo",
   "Live preview is on. Done and Save both keep what you've picked as your Custom theme. Reset reverts the editor to the saved palette.":
     "Podgląd na żywo jest włączony. Zarówno Gotowe, jak i Zapisz zachowują wybrane ustawienia jako motyw niestandardowy. Resetuj przywraca w edytorze zapisaną paletę.",
-  "Live state of Harbor's own torrent engine on this machine.":
-    "Bieżący stan własnego silnika torrentów Harbor na tym urządzeniu.",
+  "Live state of Harbor's own P2P engine on this machine.": "Bieżący stan własnego silnika P2P Harbor na tym urządzeniu.",
   "Live streams that actually work.": "Transmisje na żywo, które naprawdę działają.",
   "Live sync": "Synchronizacja na żywo",
   "Live web": "Internet na żywo",
@@ -404,7 +403,7 @@ const catalog07: Record<string, string> = {
     "Pamięć lokalna jest pełna, te oceny są zapisane tylko na Twoim koncie.",
   "Local subtitle": "Lokalne napisy",
   "Local time": "Czas lokalny",
-  "Local torrent engine": "Lokalny silnik torrentów",
+  "Local P2P engine": "Lokalny silnik P2P",
   Locale: "Ustawienia regionalne",
   Location: "Lokalizacja",
   "Lock controls · {binding}": "Zablokuj sterowanie · {binding}",

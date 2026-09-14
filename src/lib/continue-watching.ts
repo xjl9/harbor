@@ -1,19 +1,24 @@
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { useAuth } from "@/lib/auth";
+import { anyProfileSharesStremioWith, useProfiles } from "@/lib/profiles";
 import { useSettings } from "@/lib/settings";
 import { isCorruptAnimeEntry } from "@/lib/anime-cw-repair";
 import { dismissCw, isCwDismissed } from "@/lib/cw-dismiss";
-import { useExternalCw } from "@/lib/feed/external-cw";
+import { setExternalCwSources, useExternalCw } from "@/lib/feed/external-cw";
 import { clearLocalCw, listLocalCw, localCwVersion, subscribeLocalCw } from "@/lib/local-cw";
 import { dismissManualWatched, manualWatchedLibraryItems } from "@/lib/manual-watched";
 import { franchiseRoot, franchiseRootSync } from "@/lib/providers/anime-franchise-root";
+import { franchiseDedupKey } from "@/lib/providers/jikan";
 import {
   ANIME_CLOUD_ID,
+  cwMemberViaResume,
   cwSortKey,
   episodeFromVideoId,
   isAnimeCwItem,
   isCwMember,
   library,
+  resumeSourceForItem,
+  type ExternalCwSource,
   type LibraryItem,
 } from "@/lib/stremio";
 
@@ -140,7 +145,7 @@ export function mergeContinueWatching(
     .map((i) => ({ i, k: cwSortKey(i) }))
     .sort((a, b) => b.k - a.k)
     .map((e) => e.i);
-  const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, "").trim();
+  const norm = (s: string) => franchiseDedupKey(s);
   const lastWatchedOf = (i: LibraryItem) => {
     const lw = Date.parse(i.state?.lastWatched ?? "");
     if (Number.isFinite(lw) && lw > 0) return lw;
@@ -280,8 +285,15 @@ let cwCacheItems: LibraryItem[] = [];
 export function useContinueWatching(excludeId?: string, limit = 12): CwCard[] {
   const { authKey } = useAuth();
   const { settings } = useSettings();
+  const { activeProfile, profiles } = useProfiles();
+  const hideSharedCw =
+    settings.cwPerProfile && anyProfileSharesStremioWith(activeProfile, profiles);
   const cwPerProfile = settings.cwPerProfile;
-  const externalCw = useExternalCw(!cwPerProfile && settings.externalContinueWatching);
+  const cwSources = settings.cwSources;
+  useEffect(() => {
+    setExternalCwSources({ trakt: cwSources.trakt, simkl: cwSources.simkl });
+  }, [cwSources.trakt, cwSources.simkl]);
+  const externalCw = useExternalCw(!cwPerProfile && (cwSources.trakt || cwSources.simkl));
   const [items, setItems] = useState<LibraryItem[]>([]);
   const [localVersion, setLocalVersion] = useState(0);
 
@@ -336,11 +348,26 @@ export function useContinueWatching(excludeId?: string, limit = 12): CwCard[] {
 
   return useMemo(() => {
     void localVersion;
-    const base = cwPerProfile
+    const disabledSources = new Set<ExternalCwSource>();
+    if (!cwSources.simkl) disabledSources.add("simkl");
+    if (!cwSources.trakt) disabledSources.add("trakt");
+    const base = hideSharedCw
       ? []
-      : [...items.filter((i) => !ANIME_CLOUD_ID.test(i._id)), ...externalCw];
-    const merged = [...base, ...listLocalCw().map(localToLibraryItem)]
-      .filter((i) => (i.type as string) !== "other" && !i._id.startsWith("iptv:") && isCwMember(i))
+      : [
+          ...(cwSources.library ? items.filter((i) => !ANIME_CLOUD_ID.test(i._id)) : []),
+          ...externalCw.filter((i) => !(i.external && disabledSources.has(i.external))),
+        ];
+    const merged = [...base, ...(cwSources.local ? listLocalCw().map(localToLibraryItem) : [])]
+      .filter((i) => {
+        if ((i.type as string) === "other" || i._id.startsWith("iptv:")) return false;
+        if (!isCwMember(i)) return false;
+        // A disabled source's backfilled resume entry must not resurrect library cards.
+        if (disabledSources.size > 0 && cwMemberViaResume(i)) {
+          const src = resumeSourceForItem(i);
+          if (src && disabledSources.has(src)) return false;
+        }
+        return true;
+      })
       .map((i) => ({ i, k: cwSortKey(i) }))
       .sort((a, b) => b.k - a.k)
       .map((e) => e.i);
@@ -353,5 +380,5 @@ export function useContinueWatching(excludeId?: string, limit = 12): CwCard[] {
       if (out.length >= limit) break;
     }
     return out;
-  }, [items, externalCw, localVersion, excludeId, limit, cwPerProfile]);
+  }, [items, externalCw, localVersion, excludeId, limit, hideSharedCw, cwSources]);
 }

@@ -1,4 +1,8 @@
 const coverage: Record<string, string> = {
+  "Sound descriptions": "Opisy dźwięków",
+  "Hide sound effects and speaker names": "Ukryj efekty dźwiękowe i imiona mówiących",
+  "Removes bracketed descriptions like [door creaks] and shouted speaker labels like JOHN: while subtitles play, so a release that only ships an SDH track still reads as plain dialogue. Song lyrics, ordinary parentheses and non-Latin scripts are left alone. Skipped on forced and picture-based tracks.":
+    "Usuwa opisy w nawiasach kwadratowych, takie jak [drzwi skrzypią], oraz pisane wielkimi literami imiona mówiących, takie jak JOHN:, w trakcie odtwarzania napisów, dzięki czemu wydanie z samą ścieżką SDH nadal czyta się jak zwykły dialog. Teksty piosenek, zwykłe nawiasy okrągłe i pisma niełacińskie pozostają nietknięte. Pomijane na ścieżkach wymuszonych i obrazkowych.",
   "nav.home": "Strona główna",
   "nav.discover": "Odkrywaj",
   "nav.catalogs": "Katalogi",
@@ -273,7 +277,8 @@ const coverage: Record<string, string> = {
   "6-digit code": "6-cyfrowy kod",
   "Addons ({n})": "Dodatki ({n})",
   "All selected": "Wybrano wszystkie",
-  "Also joins Harbor's Discord server.": "Dołącza też do serwera Harbor na Discordzie.",
+  "Linking your Discord account also joins you to Harbor's Discord server, so the bot can send your Backup keys privately.":
+    "Linking your Discord account also joins you to Harbor's Discord server, so the bot can send your Backup keys privately.",
   "Apply and reload": "Zastosuj i wczytaj ponownie",
   "Changing the metadata language reloads Harbor so the new language takes effect. Apply when you're done with the options above.":
     "Zmiana języka metadanych powoduje ponowne wczytanie Harbor, aby nowy język zaczął obowiązywać. Po skonfigurowaniu powyższych opcji wybierz Zastosuj.",

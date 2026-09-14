@@ -18,6 +18,7 @@ import { mangaBackdrop } from "@/lib/manga/backdrop";
 import { collectionsForTitle } from "@/lib/manga/collections";
 import { useIsMangaFavorite, useMangaFavorites } from "@/lib/manga-favorites";
 import { useMangaProgressEntry, type MangaProgressEntry } from "@/lib/manga-progress";
+import { setMangaDetails } from "@/lib/manga-downloads";
 import {
   chapterLanguages,
   mangaDetail,
@@ -273,6 +274,11 @@ export function MangaDetail({
     });
   }, [detail?.title, detail?.cover]);
 
+  useEffect(() => {
+    if (!detail?.title) return;
+    void setMangaDetails(mangaId, detail.title, detail.cover);
+  }, [mangaId, detail?.title, detail?.cover]);
+
   const langs = useMemo(() => chapterLanguages(chapters), [chapters]);
   const langFiltered = useMemo(
     () => chapters.filter((c) => c.language === selectedLang),
@@ -395,8 +401,16 @@ export function MangaDetail({
                 {pills.map((p) => (
                   <span
                     key={p}
-                    className="rounded-full bg-elevated/60 px-3 py-1 text-[13px] text-ink-muted ring-1 ring-edge-soft backdrop-blur-sm"
+                    className="inline-flex items-center gap-1.5 rounded-full bg-elevated/60 px-3 py-1 text-[13px] text-ink-muted ring-1 ring-edge-soft backdrop-blur-sm"
                   >
+                    {p === enriched.statusLabel && (
+                      <span
+                        aria-hidden
+                        className={`h-2 w-2 rounded-full ${
+                          /ongoing/i.test(p) ? "bg-success" : "bg-ink-subtle/60"
+                        }`}
+                      />
+                    )}
                     {p}
                   </span>
                 ))}

@@ -452,16 +452,16 @@ const catalog03: Record<string, string> = {
   "Direct stream": "직접 스트리밍",
   "Direct torrent play needs the Harbor desktop app.":
     "토렌트를 직접 재생하려면 Harbor 데스크톱 앱이 필요합니다.",
-  "Direct torrent streaming": "토렌트 직접 스트리밍",
+  "Direct P2P streaming": "P2P 직접 스트리밍",
   "Directed by": "감독",
   Directing: "연출",
   Direction: "방향",
   "Director's Cut": "디렉터스 컷",
   "Disable all": "모두 비활성화",
   "Disable rule": "규칙 비활성화",
-  "Disable torrents entirely": "토렌트 완전히 비활성화",
+  "Disable P2P entirely": "P2P 완전히 비활성화",
   Disabled: "사용 안 함",
-  "Disabled because torrents are disabled above": "위에서 토렌트를 비활성화하여 사용할 수 없음",
+  "Disabled because P2P is disabled above": "위에서 P2P를 비활성화하여 사용할 수 없음",
   "Disabled while strict remote streaming is on":
     "엄격한 원격 스트리밍이 켜져 있는 동안에는 사용할 수 없음",
   Discard: "취소",
@@ -972,6 +972,9 @@ const catalog03: Record<string, string> = {
   "Expand poster cards during keyboard or remote navigation across poster rows, using preloaded wide artwork.":
     "키보드나 리모컨으로 포스터 행을 탐색할 때 미리 불러온 와이드 아트워크를 사용해 포스터 카드를 확장합니다.",
   "Expand sidebar": "사이드바 펼치기",
+  "Cached source resolution and direct download links.": "캐시된 소스 확인과 직접 다운로드 링크.",
+  "Cached source resolution and cloud library access.": "캐시된 소스 확인과 클라우드 라이브러리 접근.",
+  "Both shows direct, debrid, and peer-to-peer results together. Direct/debrid keeps P2P results out of the way unless nothing else is available. P2P puts them first.": "둘 다는 직접, 디브리드, P2P 결과를 함께 표시합니다. 직접/디브리드는 다른 결과가 없을 때만 P2P 결과를 보여 줍니다. P2P는 P2P 결과를 맨 앞에 둡니다.",
 };
 
 export default catalog03;

@@ -1,4 +1,12 @@
-import { startTransition, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import {
+  startTransition,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import { BackToTop } from "@/components/back-to-top";
 import { HeroCarousel, type Slide } from "@/components/hero-carousel";
 import { CollectionsRow } from "@/components/collections-row";
@@ -31,6 +39,7 @@ import { isAnimeRow } from "@/views/anime";
 import { buildArabicHomeRows } from "@/lib/arabic/home-rows";
 import { buildRussianHomeRows } from "@/lib/russian/home-rows";
 import { useAuth } from "@/lib/auth";
+import { anyProfileSharesStremioWith, useProfiles } from "@/lib/profiles";
 import { type Meta } from "@/lib/cinemeta";
 import { t, useT, useUiLanguage } from "@/lib/i18n";
 import { useSettings, type StreamingService } from "@/lib/settings";
@@ -58,7 +67,11 @@ import { fetchWatchedKeySet } from "@/lib/trakt/history";
 import { recentlyPlayed, subscribePlayback, type WatchedSet } from "@/lib/playback-history";
 import { detectAnimeForCw, useDetectedAnimeVersion } from "@/lib/anime-detect";
 import { buildSimklHomeRows } from "@/lib/simkl/home-rails";
-import { loadSimklWatchedMap, loadSimklStatusMap, type WatchlistStatus } from "@/lib/simkl/list-status";
+import {
+  loadSimklWatchedMap,
+  loadSimklStatusMap,
+  type WatchlistStatus,
+} from "@/lib/simkl/list-status";
 import { useExternalCw } from "@/lib/feed/external-cw";
 import { useSimkl } from "@/lib/simkl/provider";
 import { useAnilist } from "@/lib/anilist/provider";
@@ -90,7 +103,10 @@ import type { SourceRow } from "@/lib/custom-sources";
 
 export function Home({ active = true, onReady }: { active?: boolean; onReady?: () => void }) {
   const { authKey, user } = useAuth();
+  const { activeProfile, profiles } = useProfiles();
   const { settings, update } = useSettings();
+  const hideSharedCw =
+    settings.cwPerProfile && anyProfileSharesStremioWith(activeProfile, profiles);
   const heroFull = settings.heroFull;
   const contentDrag = useContentDrag();
   const t = useT();
@@ -104,11 +120,17 @@ export function Home({ active = true, onReady }: { active?: boolean; onReady?: (
   const [traktRows, setTraktRows] = useState<HomeRow[]>([]);
   const [simklRows, setSimklRows] = useState<HomeRow[]>([]);
   const [letterboxdRows, setLetterboxdRows] = useState<HomeRow[]>([]);
-  const externalCw = useExternalCw(!settings.cwPerProfile && settings.externalContinueWatching);
+  const externalCw = useExternalCw(
+    !hideSharedCw && (settings.cwSources.trakt || settings.cwSources.simkl),
+  );
   const [traktWatched, setTraktWatched] = useState<Set<string>>(() => new Set());
   const [simklWatchedMap, setSimklWatchedMap] = useState<Map<string, Set<string>>>(() => new Map());
-  const [simklStatusMap, setSimklStatusMap] = useState<Map<string, WatchlistStatus>>(() => new Map());
-  const [anilistWatchedMap, setAnilistWatchedMap] = useState<Map<string, Set<string>>>(() => new Map());
+  const [simklStatusMap, setSimklStatusMap] = useState<Map<string, WatchlistStatus>>(
+    () => new Map(),
+  );
+  const [anilistWatchedMap, setAnilistWatchedMap] = useState<Map<string, Set<string>>>(
+    () => new Map(),
+  );
   const [localWatched, setLocalWatched] = useState<WatchedSet>(() => recentlyPlayed());
   useEffect(() => subscribePlayback(() => setLocalWatched(recentlyPlayed())), []);
   const [heroPool, setHeroPool] = useState<Meta[]>([]);
@@ -184,10 +206,22 @@ export function Home({ active = true, onReady }: { active?: boolean; onReady?: (
       let built: { rows: HomeRow[]; hero: Meta[]; failed?: number } = { rows: [], hero: [] };
       if (!isClassic) {
         built = settings.tmdbKey
-          ? await buildTmdbRows(settings).catch(() => ({ rows: [] as HomeRow[], hero: [] as Meta[], failed: 1 }))
-          : await buildCinemetaRows().catch(() => ({ rows: [] as HomeRow[], hero: [] as Meta[], failed: 1 }));
+          ? await buildTmdbRows(settings).catch(() => ({
+              rows: [] as HomeRow[],
+              hero: [] as Meta[],
+              failed: 1,
+            }))
+          : await buildCinemetaRows().catch(() => ({
+              rows: [] as HomeRow[],
+              hero: [] as Meta[],
+              failed: 1,
+            }));
         if (built.rows.length === 0) {
-          built = await buildCinemetaRows().catch(() => ({ rows: [] as HomeRow[], hero: [] as Meta[], failed: 1 }));
+          built = await buildCinemetaRows().catch(() => ({
+            rows: [] as HomeRow[],
+            hero: [] as Meta[],
+            failed: 1,
+          }));
         }
       }
       if (cancelled) return;
@@ -234,7 +268,17 @@ export function Home({ active = true, onReady }: { active?: boolean; onReady?: (
       cancelled = true;
       if (retryTimer != null) window.clearTimeout(retryTimer);
     };
-  }, [authKey, settings.tmdbKey, settings.tmdbLanguage, settings.region, settings.homeMode, settings.homeShowAllAddonRows, settings.heroFeed, addonsTick, buildTick]);
+  }, [
+    authKey,
+    settings.tmdbKey,
+    settings.tmdbLanguage,
+    settings.region,
+    settings.homeMode,
+    settings.homeShowAllAddonRows,
+    settings.heroFeed,
+    addonsTick,
+    buildTick,
+  ]);
 
   useEffect(() => {
     if (!active) return;
@@ -424,14 +468,20 @@ export function Home({ active = true, onReady }: { active?: boolean; onReady?: (
             ? libItems.filter((i) => !isCorruptAnimeEntry(i))
             : libItems;
           setItems(view);
-          if (!settings.cwPerProfile) absorbCloudAnimeCw(view);
+          if (!hideSharedCw) absorbCloudAnimeCw(view);
           reconcileRemoteWatched(view);
           const importKey = `harbor.discover.libImported.${user?._id ?? "anon"}`;
           let importedSince = 0;
           try {
             importedSince = Number(localStorage.getItem(importKey) ?? 0) || 0;
           } catch {}
-          const resumeEntries: { id: string; ms: number; season?: number; episode?: number; t?: number }[] = [];
+          const resumeEntries: {
+            id: string;
+            ms: number;
+            season?: number;
+            episode?: number;
+            t?: number;
+          }[] = [];
           for (const i of libItems) {
             const rawMt = i._mtime as unknown;
             const mt = typeof rawMt === "number" ? rawMt : Date.parse(String(rawMt ?? ""));
@@ -441,7 +491,8 @@ export function Home({ active = true, onReady }: { active?: boolean; onReady?: (
                 /^(kitsu|mal|anilist|anidb):/.test(i._id) && vid.split(":").length === 3;
               const se = kitsuThreeSeg ? null : episodeFromVideoId(i.state.video_id);
               const s = i.state.season ?? (kitsuThreeSeg ? 1 : se?.season);
-              const e = i.state.episode ?? (kitsuThreeSeg ? Number(vid.split(":")[2]) : se?.episode);
+              const e =
+                i.state.episode ?? (kitsuThreeSeg ? Number(vid.split(":")[2]) : se?.episode);
               const local = readResumeEntry(i._id, s, e);
               if (!local || (Number.isFinite(mt) && mt > local.t)) {
                 resumeEntries.push({
@@ -497,7 +548,7 @@ export function Home({ active = true, onReady }: { active?: boolean; onReady?: (
     return () => {
       cancelled = true;
     };
-  }, [authKey, active, settings.cwPerProfile]);
+  }, [authKey, active, hideSharedCw]);
 
   const manualWatchedVer = useSyncExternalStore(subscribeManualWatched, manualWatchedVersion);
   const animeDetectVer = useDetectedAnimeVersion();
@@ -512,10 +563,20 @@ export function Home({ active = true, onReady }: { active?: boolean; onReady?: (
   const continueWatching = useMemo(
     () =>
       mergeContinueWatching(items, externalCw, localCwItems, {
-        cwPerProfile: settings.cwPerProfile,
+        cwPerProfile: hideSharedCw,
         hideAnime: settings.animeOnlyInAnimeRoom || settings.hideContent.anime,
       }),
-    [items, externalCw, localCwItems, cwVersion, cwRootVersion, settings.animeOnlyInAnimeRoom, settings.hideContent.anime, settings.cwPerProfile, animeDetectVer],
+    [
+      items,
+      externalCw,
+      localCwItems,
+      cwVersion,
+      cwRootVersion,
+      settings.animeOnlyInAnimeRoom,
+      settings.hideContent.anime,
+      hideSharedCw,
+      animeDetectVer,
+    ],
   );
   const resurfaceLibrary = useMemo(
     () => buildCwResurfaceLibrary(items, localCwItems),
@@ -527,7 +588,9 @@ export function Home({ active = true, onReady }: { active?: boolean; onReady?: (
       return;
     }
     let cancelled = false;
-    const ids = continueWatching.filter((i) => /^(kitsu|mal|anilist):/.test(i._id)).map((i) => i._id);
+    const ids = continueWatching
+      .filter((i) => /^(kitsu|mal|anilist):/.test(i._id))
+      .map((i) => i._id);
     loadAnilistWatchedMap(ids)
       .then((m) => {
         if (!cancelled) setAnilistWatchedMap(m);
@@ -562,7 +625,6 @@ export function Home({ active = true, onReady }: { active?: boolean; onReady?: (
     publishResumeStates(cwItems);
   }, [cwItems]);
 
-
   const onDismissCw = useCallback(
     (item: LibraryItem) => dismissCwItem(item, authKey),
     [authKey],
@@ -584,10 +646,26 @@ export function Home({ active = true, onReady }: { active?: boolean; onReady?: (
         }));
     const out: HomeRow[] = [];
     if (favItems.size > 0) {
-      out.push({ key: "harbor-favorites", type: "movie", name: "Favorites", metas: toMetas(favItems), page: 1, hasMore: false, noDedup: true });
+      out.push({
+        key: "harbor-favorites",
+        type: "movie",
+        name: "Favorites",
+        metas: toMetas(favItems),
+        page: 1,
+        hasMore: false,
+        noDedup: true,
+      });
     }
     if (localItems.size > 0) {
-      out.push({ key: "harbor-watchlist", type: "movie", name: "My Watchlist", metas: toMetas(localItems), page: 1, hasMore: false, noDedup: true });
+      out.push({
+        key: "harbor-watchlist",
+        type: "movie",
+        name: "My Watchlist",
+        metas: toMetas(localItems),
+        page: 1,
+        hasMore: false,
+        noDedup: true,
+      });
     }
     return out;
   }, [favItems, localItems]);
@@ -595,10 +673,25 @@ export function Home({ active = true, onReady }: { active?: boolean; onReady?: (
   const heroSourceRow = useMemo<HomeRow | null>(() => {
     const key = settings.homeRows.heroSource;
     if (!key) return null;
-    const all = [...personalRows, ...traktRows, ...simklRows, ...letterboxdRows, ...rows, ...animeRows];
+    const all = [
+      ...personalRows,
+      ...traktRows,
+      ...simklRows,
+      ...letterboxdRows,
+      ...rows,
+      ...animeRows,
+    ];
     const hit = all.find((r) => r.key === key);
     return hit && hit.metas.some((m) => m.background || m.poster) ? hit : null;
-  }, [settings.homeRows.heroSource, personalRows, traktRows, simklRows, letterboxdRows, rows, animeRows]);
+  }, [
+    settings.homeRows.heroSource,
+    personalRows,
+    traktRows,
+    simklRows,
+    letterboxdRows,
+    rows,
+    animeRows,
+  ]);
 
   const heroSlides = useMemo<Slide[]>(() => {
     const pool = (
@@ -662,7 +755,9 @@ export function Home({ active = true, onReady }: { active?: boolean; onReady?: (
     }
     const firstRow = shownRows[0];
     const firstRowHead = (firstRow?.metas ?? []).slice(0, FIRST_PAGE);
-    const top10 = firstRowHead.filter((m) => typeof m.id === "string" && !seen.has(m.id)).slice(0, 10);
+    const top10 = firstRowHead
+      .filter((m) => typeof m.id === "string" && !seen.has(m.id))
+      .slice(0, 10);
     for (const m of top10) seen.add(m.id);
     const rest: HomeRow[] = [];
     for (const row of shownRows.slice(1)) {
@@ -720,7 +815,12 @@ export function Home({ active = true, onReady }: { active?: boolean; onReady?: (
         key: `list-${l.id}`,
         type: "movie",
         name: l.name,
-        metas: l.items.map((it) => ({ id: it.id, type: it.type, name: it.name, poster: it.poster })),
+        metas: l.items.map((it) => ({
+          id: it.id,
+          type: it.type,
+          name: it.name,
+          poster: it.poster,
+        })),
         page: 1,
         hasMore: false,
         noDedup: true,
@@ -760,8 +860,32 @@ export function Home({ active = true, onReady }: { active?: boolean; onReady?: (
 
   const pinnedRows = usePinnedRows();
   const filterableRows = useMemo(
-    () => [...listHomeRows, ...collectionHomeRows, ...pinnedRows, ...arabicRows, ...russianRows, ...personalRows, ...traktRows, ...simklRows, ...letterboxdRows, ...restRows, ...animeRows],
-    [listHomeRows, collectionHomeRows, pinnedRows, arabicRows, russianRows, personalRows, traktRows, simklRows, letterboxdRows, restRows, animeRows],
+    () => [
+      ...listHomeRows,
+      ...collectionHomeRows,
+      ...pinnedRows,
+      ...arabicRows,
+      ...russianRows,
+      ...personalRows,
+      ...traktRows,
+      ...simklRows,
+      ...letterboxdRows,
+      ...restRows,
+      ...animeRows,
+    ],
+    [
+      listHomeRows,
+      collectionHomeRows,
+      pinnedRows,
+      arabicRows,
+      russianRows,
+      personalRows,
+      traktRows,
+      simklRows,
+      letterboxdRows,
+      restRows,
+      animeRows,
+    ],
   );
   const shownFilterableRows = useHideAnimeRows(filterableRows);
   const allCustomizableRows = useMemo(
@@ -786,8 +910,7 @@ export function Home({ active = true, onReady }: { active?: boolean; onReady?: (
     [update],
   );
   const handleMove = useCallback(
-    (key: string, delta: -1 | 1) =>
-      mutateHomeRows(moveRow(homeRowsCustom, editRows, key, delta)),
+    (key: string, delta: -1 | 1) => mutateHomeRows(moveRow(homeRowsCustom, editRows, key, delta)),
     [homeRowsCustom, editRows, mutateHomeRows],
   );
   const handleToggleHidden = useCallback(
@@ -823,43 +946,56 @@ export function Home({ active = true, onReady }: { active?: boolean; onReady?: (
     [homeRowsCustom, mutateHomeRows],
   );
 
-  const handleSaveCustomSources = useCallback((newSources: SourceRow[]) => {
-    const existing = homeRowsCustom.customSources || [];
-    const next = [...existing];
-    for (const ns of newSources) {
-      const idx = next.findIndex((s) => s.id === ns.id);
-      if (idx >= 0) {
-        next[idx] = ns;
-      } else {
-        next.push(ns);
+  const handleSaveCustomSources = useCallback(
+    (newSources: SourceRow[]) => {
+      const existing = homeRowsCustom.customSources || [];
+      const next = [...existing];
+      for (const ns of newSources) {
+        const idx = next.findIndex((s) => s.id === ns.id);
+        if (idx >= 0) {
+          next[idx] = ns;
+        } else {
+          next.push(ns);
+        }
       }
-    }
-    mutateHomeRows({ ...homeRowsCustom, customSources: next });
-  }, [homeRowsCustom, mutateHomeRows]);
+      mutateHomeRows({ ...homeRowsCustom, customSources: next });
+    },
+    [homeRowsCustom, mutateHomeRows],
+  );
 
-  const handleDeleteCustomSource = useCallback((key: string) => {
-    const id = key.replace(/^source-/, "");
-    mutateHomeRows({
-      ...homeRowsCustom,
-      customSources: (homeRowsCustom.customSources || []).filter((sr) => sr.id !== id),
-    });
-  }, [homeRowsCustom, mutateHomeRows]);
+  const handleDeleteCustomSource = useCallback(
+    (key: string) => {
+      const id = key.replace(/^source-/, "");
+      mutateHomeRows({
+        ...homeRowsCustom,
+        customSources: (homeRowsCustom.customSources || []).filter((sr) => sr.id !== id),
+      });
+    },
+    [homeRowsCustom, mutateHomeRows],
+  );
 
-  const handleEditFolderImages = useCallback((sourceId: string, folderId: string, coverImageUrl: string, focusGifUrl: string) => {
-    mutateHomeRows({
-      ...homeRowsCustom,
-      customSources: (homeRowsCustom.customSources || []).map((sr) => {
-        if (sr.id !== sourceId) return sr;
-        return {
-          ...sr,
-          folders: sr.folders.map((f) => {
-            if (f.id !== folderId) return f;
-            return { ...f, coverImageUrl: coverImageUrl || null, focusGifUrl: focusGifUrl || null };
-          }),
-        };
-      }),
-    });
-  }, [homeRowsCustom, mutateHomeRows]);
+  const handleEditFolderImages = useCallback(
+    (sourceId: string, folderId: string, coverImageUrl: string, focusGifUrl: string) => {
+      mutateHomeRows({
+        ...homeRowsCustom,
+        customSources: (homeRowsCustom.customSources || []).map((sr) => {
+          if (sr.id !== sourceId) return sr;
+          return {
+            ...sr,
+            folders: sr.folders.map((f) => {
+              if (f.id !== folderId) return f;
+              return {
+                ...f,
+                coverImageUrl: coverImageUrl || null,
+                focusGifUrl: focusGifUrl || null,
+              };
+            }),
+          };
+        }),
+      });
+    },
+    [homeRowsCustom, mutateHomeRows],
+  );
 
   const enabledServices = useMemo(
     () =>
@@ -907,10 +1043,7 @@ export function Home({ active = true, onReady }: { active?: boolean; onReady?: (
       className="flex-1 overflow-y-auto overflow-x-hidden px-5 pt-24 pb-14 sm:px-8 lg:px-12 lg:pt-28"
     >
       <ScrollRootContext.Provider value={scrollEl}>
-        <div
-          {...contentDrag}
-          className="relative flex flex-col gap-12"
-        >
+        <div {...contentDrag} className="relative flex flex-col gap-12">
           <div className={tmdbNudgePosition}>
             <div className="pointer-events-auto">
               <TmdbNudge suppress={tmdbProvidedByAddon || settings.homeMode === "classic"} />
@@ -935,39 +1068,42 @@ export function Home({ active = true, onReady }: { active?: boolean; onReady?: (
             </div>
           )}
           {cwTop && cwBlock}
-          {settings.homeMode !== "classic" && !homeRowsCustom.hidden.includes("hero") && showHero && (
-            <div
-              data-scroll-anchor="hero"
-              className={`relative ${heroFull ? `${cwTop ? "" : "-mt-24 lg:-mt-28"} -mb-12 harbor-hero-full` : ""}`}
-            >
-              {editMode && (
-                <PinnedRowControls
-                  label={t("Featured hero")}
-                  hidden={false}
-                  onToggleHidden={() => handleToggleHidden("hero")}
-                />
-              )}
-              <HeroCarousel
-                slides={shownHeroSlides}
-                full={heroFull}
-                fullQuality={settings.heroFullQuality}
-                playTrailers={settings.heroTrailers}
-                bottomAlign
-                playSquare={!!homeRowsCustom.playButtonSquare}
-                moreInfo={!!homeRowsCustom.secondaryMoreInfo}
-              />
-              {!editMode && (
-                <div className="pointer-events-none absolute -bottom-3 end-5 z-20 flex justify-end [&>*]:pointer-events-auto">
-                  <CustomizeBar
-                    editMode={editMode}
-                    customization={homeRowsCustom}
-                    onToggleEdit={() => setEditMode((v) => !v)}
-                    onReset={() => mutateHomeRows(resetHomeRows())}
+          {settings.homeMode !== "classic" &&
+            !homeRowsCustom.hidden.includes("hero") &&
+            showHero && (
+              <div
+                data-scroll-anchor="hero"
+                data-tv-hero-zone
+                className={`relative ${heroFull ? `${cwTop ? "" : "-mt-24 lg:-mt-28"} -mb-12 harbor-hero-full` : ""}`}
+              >
+                {editMode && (
+                  <PinnedRowControls
+                    label={t("Featured hero")}
+                    hidden={false}
+                    onToggleHidden={() => handleToggleHidden("hero")}
                   />
-                </div>
-              )}
-            </div>
-          )}
+                )}
+                <HeroCarousel
+                  slides={shownHeroSlides}
+                  full={heroFull}
+                  fullQuality={settings.heroFullQuality}
+                  playTrailers={settings.heroTrailers}
+                  bottomAlign
+                  playSquare={!!homeRowsCustom.playButtonSquare}
+                  moreInfo={!!homeRowsCustom.secondaryMoreInfo}
+                />
+                {!editMode && (
+                  <div className="pointer-events-none absolute -bottom-3 end-5 z-20 flex justify-end [&>*]:pointer-events-auto">
+                    <CustomizeBar
+                      editMode={editMode}
+                      customization={homeRowsCustom}
+                      onToggleEdit={() => setEditMode((v) => !v)}
+                      onReset={() => mutateHomeRows(resetHomeRows())}
+                    />
+                  </div>
+                )}
+              </div>
+            )}
           {editMode && homeRowsCustom.hidden.includes("hero") && (
             <PinnedRowControls
               label={t("Featured hero")}
@@ -975,69 +1111,90 @@ export function Home({ active = true, onReady }: { active?: boolean; onReady?: (
               onToggleHidden={() => handleToggleHidden("hero")}
             />
           )}
-          {!editMode && settings.homeMode !== "classic" && homeRowsCustom.hidden.includes("hero") && (
-            <div className="pointer-events-none absolute end-5 top-0 z-20 [&>*]:pointer-events-auto">
-              <CustomizeBar
-                editMode={editMode}
-                customization={homeRowsCustom}
-                onToggleEdit={() => setEditMode((v) => !v)}
-                onReset={() => mutateHomeRows(resetHomeRows())}
-              />
-            </div>
-          )}
+          {!editMode &&
+            settings.homeMode !== "classic" &&
+            homeRowsCustom.hidden.includes("hero") && (
+              <div className="pointer-events-none absolute end-5 top-0 z-20 [&>*]:pointer-events-auto">
+                <CustomizeBar
+                  editMode={editMode}
+                  customization={homeRowsCustom}
+                  onToggleEdit={() => setEditMode((v) => !v)}
+                  onReset={() => mutateHomeRows(resetHomeRows())}
+                />
+              </div>
+            )}
           {!cwTop && cwBlock}
           {settings.homeMode !== "classic" && (
             <div data-scroll-anchor="streaming">
               <StreamingRail services={enabledServices} />
             </div>
           )}
-          {settings.homeMode !== "classic" && top10.length >= 10 && !homeRowsCustom.hidden.includes("top10") && (
-            <div data-scroll-anchor="top10">
-              {editMode && (
-                <PinnedRowControls
-                  label={t("Top 10 Trending This Week")}
-                  hidden={false}
-                  onToggleHidden={() => handleToggleHidden("top10")}
-                />
-              )}
-              <Row
-                title={(shownRows[0]?.name ?? "").toLowerCase().includes("top") ? t(shownRows[0]?.name ?? "") : t("Top 10 {name}", { name: t(shownRows[0]?.name ?? "") })}
-                min={180}
-                shape="rank"
-              >
-                {top10.map((m, i) => (
-                  <TopRankCard key={m.id} meta={m} rank={i + 1} />
-                ))}
-              </Row>
-            </div>
-          )}
-          {editMode && settings.homeMode !== "classic" && top10.length >= 10 && homeRowsCustom.hidden.includes("top10") && (
-            <PinnedRowControls
-              label={t("Top 10 Trending This Week")}
-              hidden
-              onToggleHidden={() => handleToggleHidden("top10")}
-            />
-          )}
-          {settings.homeMode !== "classic" && settings.tmdbKey && !homeRowsCustom.hidden.includes("collections") && (
-            <div data-scroll-anchor="collections">
-              {editMode && (
-                <PinnedRowControls
-                  label={t("Collections")}
-                  hidden={false}
-                  onToggleHidden={() => handleToggleHidden("collections")}
-                />
-              )}
-              <CollectionsRow />
-            </div>
-          )}
-          {editMode && settings.homeMode !== "classic" && settings.tmdbKey && homeRowsCustom.hidden.includes("collections") && (
-            <PinnedRowControls
-              label={t("Collections")}
-              hidden
-              onToggleHidden={() => handleToggleHidden("collections")}
-            />
-          )}
-          {rows.length === 0 && traktRows.length === 0 && simklRows.length === 0 && animeRows.length === 0 && arabicRows.length === 0 && russianRows.length === 0 ? (
+          {settings.homeMode !== "classic" &&
+            top10.length >= 10 &&
+            !homeRowsCustom.hidden.includes("top10") && (
+              <div data-scroll-anchor="top10">
+                {editMode && (
+                  <PinnedRowControls
+                    label={t("Top 10 Trending This Week")}
+                    hidden={false}
+                    onToggleHidden={() => handleToggleHidden("top10")}
+                  />
+                )}
+                <Row
+                  title={
+                    (shownRows[0]?.name ?? "").toLowerCase().includes("top")
+                      ? t(shownRows[0]?.name ?? "")
+                      : t("Top 10 {name}", { name: t(shownRows[0]?.name ?? "") })
+                  }
+                  min={180}
+                  shape="rank"
+                >
+                  {top10.map((m, i) => (
+                    <TopRankCard key={m.id} meta={m} rank={i + 1} />
+                  ))}
+                </Row>
+              </div>
+            )}
+          {editMode &&
+            settings.homeMode !== "classic" &&
+            top10.length >= 10 &&
+            homeRowsCustom.hidden.includes("top10") && (
+              <PinnedRowControls
+                label={t("Top 10 Trending This Week")}
+                hidden
+                onToggleHidden={() => handleToggleHidden("top10")}
+              />
+            )}
+          {settings.homeMode !== "classic" &&
+            settings.tmdbKey &&
+            !homeRowsCustom.hidden.includes("collections") && (
+              <div data-scroll-anchor="collections">
+                {editMode && (
+                  <PinnedRowControls
+                    label={t("Collections")}
+                    hidden={false}
+                    onToggleHidden={() => handleToggleHidden("collections")}
+                  />
+                )}
+                <CollectionsRow />
+              </div>
+            )}
+          {editMode &&
+            settings.homeMode !== "classic" &&
+            settings.tmdbKey &&
+            homeRowsCustom.hidden.includes("collections") && (
+              <PinnedRowControls
+                label={t("Collections")}
+                hidden
+                onToggleHidden={() => handleToggleHidden("collections")}
+              />
+            )}
+          {rows.length === 0 &&
+          traktRows.length === 0 &&
+          simklRows.length === 0 &&
+          animeRows.length === 0 &&
+          arabicRows.length === 0 &&
+          russianRows.length === 0 ? (
             Array.from({ length: 4 }).map((_, i) => <RowSkeleton key={`skel-${i}`} />)
           ) : (
             <CustomizableRows
@@ -1089,7 +1246,11 @@ function PinnedRowControls({
           {t("Pinned")}
         </span>
         {label}
-        {hidden && <span className="text-[11.5px] font-normal text-ink-subtle">{t("· currently hidden")}</span>}
+        {hidden && (
+          <span className="text-[11.5px] font-normal text-ink-subtle">
+            {t("· currently hidden")}
+          </span>
+        )}
       </span>
       <button
         type="button"

@@ -1,5 +1,5 @@
 import { safeFetch as fetch } from "@/lib/safe-fetch";
-import { readResumeEntry } from "@/lib/resume";
+import { readResumeEntry, readResumeSource } from "@/lib/resume";
 import { isDetectedAnime } from "./anime-detect";
 
 const API = "https://api.strem.io/api";
@@ -77,13 +77,43 @@ function resumeForItem(i: LibraryItem): { ms: number; t: number } | null {
   return readResumeEntry(i._id, season, episode);
 }
 
+export function resumeSourceForItem(i: LibraryItem): ExternalCwSource | undefined {
+  const vid = i.state?.video_id ?? "";
+  const kitsuThreeSeg = /^(kitsu|mal|anilist|anidb):/.test(i._id) && vid.split(":").length === 3;
+  const se = kitsuThreeSeg ? null : episodeFromVideoId(i.state?.video_id);
+  const season = i.state?.season ?? (kitsuThreeSeg ? 1 : se?.season);
+  const episode = i.state?.episode ?? (kitsuThreeSeg ? Number(vid.split(":")[2]) : se?.episode);
+  return readResumeSource(i._id, season, episode);
+}
+
+// True only when CW eligibility comes from the harbor.resume fallback (no cloud
+// progress of its own), so a disabled source's backfill cannot resurrect library cards.
+export function cwMemberViaResume(i: LibraryItem): boolean {
+  if (i.removed && !i.temp) return false;
+  if (!i.state) return (resumeForItem(i)?.ms ?? 0) > 0;
+  const duration = i.state.duration ?? 0;
+  const finishedByRatio = duration > 0 && i.state.timeOffset / duration >= CW_FINISHED_RATIO;
+  if (i.type === "movie" && ((i.state.flaggedWatched ?? 0) > 0 || finishedByRatio)) return false;
+  if (i.state.timeOffset > 0) return false;
+  if ((i.state.flaggedWatched ?? 0) > 0) return false;
+  const local = resumeForItem(i)?.ms ?? 0;
+  if (local <= 0) return false;
+  if (duration > 0 && local / duration >= CW_FINISHED_RATIO) return false;
+  return true;
+}
+
 export function cwSortKey(i: LibraryItem): number {
   const lastWatched = Date.parse(i.state?.lastWatched ?? "");
-  if (Number.isFinite(lastWatched)) return lastWatched;
   const m = i._mtime as unknown;
   const mtime = typeof m === "number" ? m : Date.parse(String(m ?? ""));
-  if (Number.isFinite(mtime)) return mtime;
-  return resumeForItem(i)?.t ?? 0;
+  // Recency must agree with the dismiss check's itemActivity: Harbor and external
+  // playback imports record freshness in `harbor.resume` without touching the cloud
+  // _mtime/lastWatched. Otherwise an item un-dismissed by fresh resume keeps sorting
+  // by its stale cloud timestamp and sinks to the end of Continue Watching.
+  let best = resumeForItem(i)?.t ?? 0;
+  if (Number.isFinite(lastWatched)) best = Math.max(best, lastWatched);
+  if (Number.isFinite(mtime)) best = Math.max(best, mtime);
+  return best;
 }
 
 export function isCwMember(i: LibraryItem): boolean {
@@ -197,7 +227,10 @@ export async function libraryGetOne(authKey: string, id: string): Promise<Librar
   return items?.find((it) => it._id === id) ?? null;
 }
 
-export async function libraryGetOneStrict(authKey: string, id: string): Promise<LibraryItem | null> {
+export async function libraryGetOneStrict(
+  authKey: string,
+  id: string,
+): Promise<LibraryItem | null> {
   const items = await call<LibraryItem[]>("datastoreGet", {
     authKey,
     collection: "libraryItem",
@@ -236,7 +269,11 @@ export async function removeStremioLibraryItem(authKey: string, id: string): Pro
 export const CLOUD_OK = /^(tt\d|kitsu:|mal:|anilist:|anidb:|tmdb:)/;
 
 export const ANIME_CLOUD_ID = /^(kitsu|mal|anilist|anidb):/;
-export function cloudWriteId(metaId: string, resolved: string | null, verified: boolean): string | null {
+export function cloudWriteId(
+  metaId: string,
+  resolved: string | null,
+  verified: boolean,
+): string | null {
   if (metaId.startsWith("tt")) return metaId;
   if (ANIME_CLOUD_ID.test(metaId)) return null;
   if (verified && resolved && resolved.startsWith("tt")) return resolved;

@@ -1,4 +1,4 @@
-import { useRef, useState, type RefObject } from "react";
+import { useEffect, useRef, useState, type RefObject } from "react";
 import { UiIcon } from "@/components/ui-icon";
 import type { Meta } from "@/lib/cinemeta";
 import type { PlayerBridge } from "@/lib/player/bridge";
@@ -10,6 +10,7 @@ import { useFaceId } from "@/lib/face/use-face-id";
 import { useXrayCast } from "@/lib/xray/use-xray-cast";
 import { usePageVisible } from "@/lib/visibility";
 import { TrailerOverlay } from "@/views/detail/trailer-overlay";
+import { CastModal } from "../cast-modal";
 import { XrayRail } from "./xray-rail";
 import { XrayBrowser } from "./xray-browser";
 import type { XrayPerson } from "./xray-actor-card";
@@ -42,6 +43,10 @@ export function XrayOverlay({
   const pageVisible = usePageVisible();
   const [view, setView] = useState<View>("closed");
   const [trailer, setTrailer] = useState<{ ytId: string; name: string } | null>(null);
+  const [person, setPerson] = useState<XrayPerson | null>(null);
+  useEffect(() => {
+    setPerson(null);
+  }, [meta.id]);
   const resumeRef = useRef(false);
   const active = settings.xrayEnabled && view !== "closed";
   const { cast, details } = useXrayCast(meta, active);
@@ -94,6 +99,7 @@ export function XrayOverlay({
       {view === "rail" && (
         <XrayRail
           people={scenePeople}
+          onOpenPerson={setPerson}
           castPeople={castFallback}
           ready={ready}
           galleryReady={galleryReady}
@@ -110,7 +116,18 @@ export function XrayOverlay({
           details={details}
           people={scenePeople}
           onPlayVideo={playVideo}
+          onOpenPerson={setPerson}
           onClose={() => setView("rail")}
+        />
+      )}
+      {person && (
+        <CastModal
+          key={`${meta.id}:${person.id}`}
+          open
+          meta={meta}
+          tmdbKey={settings.tmdbKey || null}
+          initialPerson={person}
+          onClose={() => setPerson(null)}
         />
       )}
       {trailer && (

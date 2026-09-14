@@ -130,10 +130,9 @@ const catalog14: Record<string, string> = {
   "TorBox API key": "Klucz API TorBox",
   "Torrent link": "Link do torrenta",
   "Torrent name": "Nazwa torrenta",
-  "Torrent streaming": "Strumieniowanie torrentów",
+  "P2P streaming": "Strumieniowanie P2P",
   Torrents: "Torrenty",
-  "Torrents are disabled. Uncached streams will not play unless they come from a debrid service or a direct link. To use torrents, toggle this off.":
-    "Torrenty są wyłączone. Strumienie, których nie ma w pamięci podręcznej, nie będą odtwarzane, chyba że pochodzą z usługi debrid lub bezpośredniego linku. Aby używać torrentów, wyłącz tę opcję.",
+  "P2P is disabled. Uncached streams will not play unless they come from a debrid service or a direct link. To use P2P, toggle this off.": "P2P jest wyłączone. Strumienie, których nie ma w pamięci podręcznej, nie będą odtwarzane, chyba że pochodzą z usługi debrid lub bezpośredniego linku. Aby używać P2P, wyłącz tę opcję.",
   "Total Shots": "Łączna liczba strzałów",
   "Total Technical Fouls": "Łączna liczba fauli technicznych",
   "Total Turnovers": "Łączna liczba strat",
@@ -559,8 +558,7 @@ const catalog14: Record<string, string> = {
     "Używany do określania dostępności transmisji i przedziału premier „Teraz w kinach”. Wybierz kraj, a Harbor może dopasować do niego języki interfejsu, metadanych i napisów.",
   "Used for your cursor in Watch Together, your draw color, and your name pill in chat.":
     "Służy do określania koloru kursora podczas wspólnego oglądania, koloru rysowania i plakietki z imieniem na czacie.",
-  "Used to check cache and unrestrict links. Harbor never adds or removes torrents on its own.":
-    "Służy do sprawdzania pamięci podręcznej i odblokowywania linków. Harbor nigdy samodzielnie nie dodaje ani nie usuwa torrentów.",
+  "Used to check cache and unrestrict links. Harbor never adds or removes anything on your account on its own.": "Służy do sprawdzania pamięci podręcznej i odblokowywania linków. Harbor nigdy samodzielnie niczego nie dodaje ani nie usuwa z Twojego konta.",
   "Used to lift Time's Up and to leave the kids space.":
     "Służy do wyłączenia blokady po upływie czasu i opuszczenia przestrzeni dziecięcej.",
   Usenet: "Usenet",

@@ -1,6 +1,7 @@
 import { simklRequest, SimklApiError } from "./client";
 import { getSession } from "./session";
-import { readResumeMs, saveResumeMs } from "@/lib/resume";
+import { isCwDismissed } from "@/lib/cw-dismiss";
+import { readResumeEntry, saveResumeMs } from "@/lib/resume";
 import type { LibraryItem } from "@/lib/stremio";
 
 type Ids = {
@@ -52,6 +53,8 @@ function buildItem(
   episode?: number,
   isAnime?: boolean,
 ): LibraryItem {
+  const hasEpisode =
+    type === "series" && season != null && season > 0 && episode != null && episode > 0;
   return {
     _id: id,
     type,
@@ -59,8 +62,10 @@ function buildItem(
     state: {
       timeOffset: Math.round((pct / 100) * durMs),
       duration: durMs,
-      season: season && season > 0 ? season : undefined,
-      episode: episode && episode > 0 ? episode : undefined,
+      season: hasEpisode ? season : undefined,
+      episode: hasEpisode ? episode : undefined,
+      video_id: hasEpisode ? `${id}:${season}:${episode}` : undefined,
+      lastWatched: when,
     },
     removed: false,
     temp: false,
@@ -73,7 +78,7 @@ function buildItem(
 
 function toLibraryItem(raw: RawSession): LibraryItem | null {
   const pct = Math.min(100, Math.max(0, raw.progress ?? 0));
-  if (pct < 2 || pct > 98) return null;
+  if (pct < 1 || pct > 98) return null;
   const when = raw.watched_at ?? new Date(0).toISOString();
 
   if (raw.movie) {
@@ -84,7 +89,17 @@ function toLibraryItem(raw: RawSession): LibraryItem | null {
   if (!raw.show && !raw.episode && raw.anime) {
     const movieId = movieMetaId(raw.anime.ids);
     if (movieId) {
-      return buildItem(movieId, "movie", raw.anime, pct, DURATION_MS.movie, when, undefined, undefined, true);
+      return buildItem(
+        movieId,
+        "movie",
+        raw.anime,
+        pct,
+        DURATION_MS.movie,
+        when,
+        undefined,
+        undefined,
+        true,
+      );
     }
   }
 
@@ -114,7 +129,7 @@ export async function fetchSimklPlaybackItems(): Promise<LibraryItem[]> {
     raw = await simklRequest<RawSession[]>("/sync/playback?hide_watched=true&limit=40");
   } catch (e) {
     if (e instanceof SimklApiError && e.status === 404) return [];
-    return [];
+    throw e;
   }
   if (!Array.isArray(raw)) return [];
 
@@ -127,9 +142,33 @@ export async function fetchSimklPlaybackItems(): Promise<LibraryItem[]> {
     if (seen.has(key)) continue;
     seen.add(key);
     items.push(item);
-    const existing = readResumeMs(item._id, item.state.season, item.state.episode);
-    if (existing <= 0) {
-      saveResumeMs(item._id, item.state.timeOffset, item.state.season, item.state.episode);
+    // A dismissed card must not be resurrected by this backfill: dismiss clears the
+    // resume entry, and rewriting it with t=now would manufacture fresh activity that
+    // beats the dismissal. Genuine new progress still surfaces via watched_at/ratio.
+    if (isCwDismissed(item)) continue;
+    // Newer-wins backfill: overwrite a stale entry when the remote pause is newer
+    // (watched_at) or, when the stored entry has no usable timestamp, further ahead.
+    const existing = readResumeEntry(item._id, item.state.season, item.state.episode);
+    const remoteT = Date.parse(item.state.lastWatched ?? "");
+    const remoteValid = Number.isFinite(remoteT) && remoteT > 0;
+    const shouldWrite =
+      !existing ||
+      (remoteValid && remoteT >= existing.t) ||
+      (!existing.t && item.state.timeOffset > existing.ms);
+    if (shouldWrite) {
+      // Persist the true remote percent alongside the synthetic ms so consumers
+      // can prefer pct x real runtime once migrated; pct rides along with the
+      // winning write and is never mixed with another entry's ms.
+      const pct01 = Math.min(100, Math.max(0, r.progress ?? 0)) / 100;
+      saveResumeMs(
+        item._id,
+        item.state.timeOffset,
+        item.state.season,
+        item.state.episode,
+        undefined,
+        pct01,
+        "simkl",
+      );
     }
   }
   return items;

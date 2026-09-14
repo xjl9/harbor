@@ -150,9 +150,8 @@ const settings: Record<string, string> = {
   "Delete rule": "ルールを削除",
   "Disable all": "すべて無効化",
   "Disable rule": "ルールを無効化",
-  "Disable torrents entirely": "トレントを完全に無効化",
-  "Disabled because torrents are disabled above":
-    "上でトレントが無効になっているため使用できません",
+  "Disable P2P entirely": "P2Pを完全に無効化",
+  "Disabled because P2P is disabled above": "上でP2Pが無効になっているため使用できません",
   "Edit layout": "レイアウトを編集",
   "Enable TV navigation above to use focus navigation in the player.":
     "プレーヤーでフォーカス移動を使用するには、上でテレビナビゲーションを有効にしてください。",
@@ -186,8 +185,7 @@ const settings: Record<string, string> = {
   "Groq API key (gsk-...)": "Groq APIキー（gsk-...）",
   "Group Refresh on the left beside Back instead of the far right of the header.":
     "「更新」をヘッダー右端ではなく、左側の「戻る」の横に配置します。",
-  "Harbor will not start the torrent engine, contact trackers, or run DHT. Use this if you only want debrid and direct links. Turn off to re-enable torrent streaming.":
-    "Harborはトレントエンジンを起動せず、トラッカーへの接続やDHTの実行も行いません。デブリッドと直接リンクだけを使う場合に有効にしてください。オフにするとトレントストリーミングが再び有効になります。",
+  "Harbor will not start the P2P engine, contact trackers, or run DHT. Use this if you only want debrid and direct links. Turn off to re-enable P2P streaming.": "HarborはP2Pエンジンを起動せず、トラッカーへの接続やDHTの実行も行いません。デブリッドと直接リンクだけを使う場合に有効にしてください。オフにするとP2Pストリーミングが再び有効になります。",
   "Hide badge": "バッジを非表示",
   "Hide manga": "マンガを非表示",
   "Hide pack instructions": "パックの説明を隠す",
@@ -331,8 +329,7 @@ const settings: Record<string, string> = {
     "閲覧中、これらのバッジがポスター上に表示されます。上のキーにあるRPDBは別のオプションで、スコアをポスター画像自体に埋め込みます。",
   "This score only appears on cards.": "このスコアはカードにのみ表示されます。",
   "Top 10 ribbon": "トップ10リボン",
-  "Torrents are disabled. Uncached streams will not play unless they come from a debrid service or a direct link. To use torrents, toggle this off.":
-    "Torrentは無効です。キャッシュされていないストリームは、debridサービスまたは直接リンク経由でない限り再生できません。Torrentを使用するにはオフにしてください。",
+  "P2P is disabled. Uncached streams will not play unless they come from a debrid service or a direct link. To use P2P, toggle this off.": "P2Pは無効です。キャッシュされていないストリームは、debridサービスまたは直接リンク経由でない限り再生できません。P2Pを使用するにはオフにしてください。",
   "True black menus": "完全な黒のメニュー",
   "Try it": "試す",
   "Turn off to hide the sync badge during playback.":
@@ -352,8 +349,7 @@ const settings: Record<string, string> = {
     "矢印キーとEnterでHarbor内のフォーカスを移動します。オフにすると矢印キーが解放され、すべてのフォーカスナビゲーションが無効になります。",
   "Use your own image as the app icon": "自分の画像をアプリアイコンに使用",
   "Watchlist bookmark": "ウォッチリストのブックマーク",
-  "When off, a torrent stops the moment you close or switch the stream, so nothing keeps downloading in the background. Turn on to let it keep going after you leave; manage or pause those from the Downloads tab.":
-    "オフの場合、ストリームを閉じるか切り替えるとTorrentはすぐに停止し、バックグラウンドでのダウンロードは続きません。オンにすると離れた後も続行できます。管理や一時停止は「ダウンロード」タブで行えます。",
+  "When off, a P2P transfer stops the moment you close or switch the stream, so nothing keeps downloading in the background. Turn on to let it keep going after you leave; manage or pause those from the Downloads tab.": "オフの場合、ストリームを閉じるか切り替えるとP2P転送はすぐに停止し、バックグラウンドでのダウンロードは続きません。オンにすると離れた後も続行できます。管理や一時停止は「ダウンロード」タブで行えます。",
   "Where scores appear": "スコアの表示場所",
   "Where the Refresh button sits in the picker header. Default keeps it on the right, across from Back.":
     "選択画面のヘッダーで更新ボタンを表示する位置です。デフォルトでは「戻る」の反対側にあたる右側に表示されます。",
@@ -606,8 +602,8 @@ const settings: Record<string, string> = {
   "Scans your Stremio library and rewrites any item whose shape doesn't match Stremio's exact schema.":
     "Stremioライブラリをスキャンし、Stremioの正確なスキーマに一致しない項目を書き換えます。",
   About: "Harborについて",
-  "Build identity. Useful when filing a bug report at bugs@harbor.site.":
-    "ビルド情報です。bugs@harbor.siteへの不具合報告時に役立ちます。",
+  "Build identity. Useful when filing a bug report.":
+    "ビルド情報です。不具合報告時に役立ちます。",
   "Reveal the show or movie artwork.": "番組または映画のアートワークを表示します。",
   Legal: "法的情報",
   "Made with": "制作:",
@@ -657,8 +653,7 @@ const settings: Record<string, string> = {
   "Real-Debrid API token": "Real-Debrid APIトークン",
   "API token": "APIトークン",
   "API key": "APIキー",
-  "Faster and quieter than torrents if you already pay for Usenet. Configure on the addon page, paste the manifest URL it returns.":
-    "すでにUsenetを契約している場合は、Torrentより高速で静かです。アドオンのページで設定し、返されたマニフェストURLを貼り付けてください。",
+  "Faster and quieter than P2P if you already pay for Usenet. Configure on the addon page, paste the manifest URL it returns.": "すでにUsenetを契約している場合は、P2Pより高速で静かです。アドオンのページで設定し、返されたマニフェストURLを貼り付けてください。",
   "Searches and streams directly off Easynews. No debrid needed. Just your Easynews login.":
     "Easynewsから直接検索してストリーミングします。Debridは不要です。Easynewsのログイン情報だけで利用できます。",
   Expired: "期限切れ",
@@ -1580,7 +1575,7 @@ const settings: Record<string, string> = {
   "Motion smoothing": "モーションスムージング",
   "Interpolates frames for smoother panning, best on anime. Needs a display refresh rate above the video's frame rate, and can stutter on weak GPUs. mpv only.":
     "フレームを補間してパン映像を滑らかにします。特にアニメに適しています。ディスプレイのリフレッシュレートが動画のフレームレートを上回っている必要があり、性能の低いGPUではカクつくことがあります。mpv専用です。",
-  "Direct torrent streaming": "Torrentを直接ストリーミング",
+  "Direct P2P streaming": "P2Pを直接ストリーミング",
   "When you have no debrid set up, or a torrent isn't cached, stream it straight from the bundled engine on localhost:11470. This connects to peers over your own connection, the same way Stremio's built-in streaming does.":
     "デブリッドが未設定の場合やTorrentがキャッシュされていない場合、localhost:11470の同梱エンジンから直接ストリーミングします。Stremioの内蔵ストリーミングと同様に、ご自身の回線を介してピアに接続します。",
   "Use Harbor's built-in engine (beta)": "Harborの内蔵エンジンを使用（ベータ）",
@@ -1673,16 +1668,14 @@ const settings: Record<string, string> = {
   "Local engine": "ローカルエンジン",
   "Built-in peer-to-peer streaming, served from your own machine.":
     "このデバイスから配信する、内蔵P2Pストリーミングです。",
-  "Active torrents": "アクティブなトレント",
+  "Active transfers": "アクティブな転送",
   "Run self-test": "セルフテストを実行",
   "Running self-test": "セルフテストを実行中",
   "Restart engine": "エンジンを再起動",
-  "Self-test is disabled while strict remote streaming is on. It downloads a test torrent over peer-to-peer on this machine.":
-    "厳格なリモートストリーミングがオンの間、セルフテストは無効です。このデバイスでテスト用トレントをP2Pダウンロードします。",
+  "Self-test is disabled while strict remote streaming is on. It downloads a small test file over peer-to-peer on this machine.": "厳格なリモートストリーミングがオンの間、セルフテストは無効です。このデバイスで小さなテスト用ファイルをP2Pでダウンロードします。",
   "Self-test": "セルフテスト",
   "Remote streaming server": "リモートストリーミングサーバー",
-  "Point Harbor at a streaming server on another machine, like the Stremio service on a home server. Torrents download and stream from that machine instead of this one.":
-    "Harbor を、ホームサーバー上の Stremio サービスなど、別のマシンにあるストリーミングサーバーへ接続します。トレントはこのマシンではなく、そのマシンでダウンロード、ストリーミングされます。",
+  "Point Harbor at a streaming server on another machine, like the Stremio service on a home server. P2P streams download and play from that machine instead of this one.": "Harbor を、ホームサーバー上の Stremio サービスなど、別のマシンにあるストリーミングサーバーへ接続します。P2Pストリームはこのマシンではなく、そのマシンでダウンロード、再生されます。",
   "Use exclusively (never fall back to local)": "排他的に使用（ローカルに切り替えない）",
   "If the server is unreachable, playback fails instead of streaming locally. Use this when your VPN runs on the server machine and torrent traffic must never leave this one.":
     "サーバーに接続できない場合、ローカルストリーミングへ切り替えず、再生に失敗します。VPN がサーバーマシンで動作し、トレント通信をそのマシンの外へ一切出せない場合に使用してください。",
@@ -2308,6 +2301,9 @@ const settings: Record<string, string> = {
     "{count}件の作品では、今後コンテンツに関する注意が表示されません。",
   "{count} titles will never show the content advisory again.#few":
     "{count}件の作品では、今後コンテンツに関する注意が表示されません。",
+  "Cached source resolution and direct download links.": "キャッシュ済みソースの解決と直接ダウンロードリンク。",
+  "Cached source resolution and cloud library access.": "キャッシュ済みソースの解決とクラウドライブラリへのアクセス。",
+  "Both shows direct, debrid, and peer-to-peer results together. Direct/debrid keeps P2P results out of the way unless nothing else is available. P2P puts them first.": "「両方」は直接リンク、debrid、P2Pの結果をまとめて表示します。「直接/debrid」は他に候補がない場合を除きP2Pの結果を後回しにします。「P2P」はそれらを先頭に表示します。",
 };
 
 export default settings;

@@ -163,11 +163,10 @@ const miscC: Record<string, string> = {
     "Oynatıcıdaki Şarkıyı Tanımla düğmesini ve Şimdi Çalıyor kartını göster.",
   "Show the player controls when you pause or resume using the keyboard. Turn off to keep them hidden so they do not cover subtitles.":
     "Klavye ile duraklattığınızda veya devam ettirdiğinizde oynatıcı kontrollerini gösterir. Altyazıların üzerini kaplamamaları için kontrolleri gizli tutmak üzere kapatın.",
-  "Show the report button on every torrent stream, not just likely new releases.":
-    "Bildirme düğmesini yalnızca yeni çıkmış olması muhtemel içeriklerde değil, tüm torrent yayınlarında gösterir.",
+  "Show the report button on every P2P stream, not just likely new releases.": "Bildirme düğmesini yalnızca yeni çıkmış olması muhtemel içeriklerde değil, tüm P2P yayınlarında gösterir.",
   "Show them anyway": "Yine de göster",
   "Show title": "Başlığı göster",
-  "Show torrent name": "Torrent adını göster",
+  "Show release name": "Sürüm adını göster",
   "Show track details": "Parça ayrıntılarını göster",
   "Show translation": "Çeviriyi göster",
   "Show up to 6 of your lists on your profile":
@@ -597,8 +596,7 @@ const miscC: Record<string, string> = {
   "The editor is a working copy of the player. Click any control on it to move, resize, restyle or hide that control.":
     "Düzenleyici, oynatıcının işlevsel bir kopyasıdır. Bir denetimi taşımak, yeniden boyutlandırmak, stilini değiştirmek veya gizlemek için üzerine tıklayın.",
   "The end time has to be after the start.": "Bitiş zamanı başlangıçtan sonra olmalıdır.",
-  "The engine listens on a local port and joins the DHT to find peers. Active torrents are the streams it currently has open.":
-    "Motor yerel bir bağlantı noktasını dinler ve eşleri bulmak için DHT'ye katılır. Etkin torrentler, şu anda açık tuttuğu yayınlardır.",
+  "The engine listens on a local port and joins the DHT to find peers. Active transfers are the streams it currently has open.": "Motor yerel bir bağlantı noktasını dinler ve eşleri bulmak için DHT'ye katılır. Etkin aktarımlar, şu anda açık tuttuğu yayınlardır.",
   "The full annual amount upfront": "Yıllık tutarın tamamını peşin olarak",
   "The generated audio could not be played": "Oluşturulan ses oynatılamadı",
   "The hourly rate": "Saatlik ücret",
@@ -816,7 +814,7 @@ const miscC: Record<string, string> = {
   "Top · left": "Üst · sol",
   "Top · right": "Üst · sağ",
   "Torrent name": "Torrent adı",
-  "Torrent streaming": "Torrent yayını",
+  "P2P streaming": "P2P yayını",
   Torrents: "Torrentler",
   "Total fees in fixed dollars": "Sabit para tutarı cinsinden toplam ücretleri",
   Touchpad: "Dokunmatik yüzey",

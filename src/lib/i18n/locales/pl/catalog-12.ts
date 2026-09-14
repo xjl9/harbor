@@ -113,15 +113,14 @@ const catalog12: Record<string, string> = {
     "Pokazuj elementy sterujące odtwarzacza po wstrzymaniu lub wznowieniu za pomocą klawiatury. Wyłącz tę opcję, aby pozostały ukryte i nie zasłaniały napisów.",
   "Show the player controls when you pause or resume using the keyboard. Turn off to keep them hidden so they don't cover subtitles.":
     "Pokazuj elementy sterujące odtwarzaczem, gdy wstrzymujesz lub wznawiasz odtwarzanie za pomocą klawiatury. Wyłącz tę opcję, aby pozostały ukryte i nie zasłaniały napisów.",
-  "Show the report button on every torrent stream, not just likely new releases.":
-    "Pokazuj przycisk zgłaszania przy każdym strumieniu torrentowym, a nie tylko przy prawdopodobnych nowościach.",
+  "Show the report button on every P2P stream, not just likely new releases.": "Pokazuj przycisk zgłaszania przy każdym strumieniu P2P, a nie tylko przy prawdopodobnych nowościach.",
   "Show them anyway": "Pokaż je mimo to",
   "Show this catalog": "Pokaż ten katalog",
   "Show this control": "Pokaż ten element sterujący",
   "Show this panel": "Pokaż ten panel",
   "Show thumbnail preview on hover": "Pokaż podgląd miniatury po wskazaniu",
   "Show title": "Pokaż tytuł",
-  "Show torrent name": "Pokaż nazwę torrenta",
+  "Show release name": "Pokaż nazwę wydania",
   "Show track details": "Pokaż szczegóły ścieżki",
   "Show translation": "Pokaż tłumaczenie",
   "Show up to 6 of your lists on your profile": "Pokaż w profilu maksymalnie 6 swoich list",

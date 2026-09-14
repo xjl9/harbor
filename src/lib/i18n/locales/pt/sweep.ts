@@ -136,7 +136,8 @@ const sweep: Record<string, string> = {
   "All times": "Todos os horários",
   "All video": "Todos os vídeos",
   "All-time bests": "Melhores de todos os tempos",
-  "Also joins Harbor's Discord server.": "Também entra no servidor do Harbor no Discord.",
+  "Linking your Discord account also joins you to Harbor's Discord server, so the bot can send your Backup keys privately.":
+    "Linking your Discord account also joins you to Harbor's Discord server, so the bot can send your Backup keys privately.",
   "Always re-encode when casting": "Sempre recodificar ao transmitir",
   "Always stream P2P": "Sempre transmitir via P2P",
   Amber: "Âmbar",
@@ -595,8 +596,8 @@ const sweep: Record<string, string> = {
   "Favour titles from where you are": "Priorizar títulos da sua região",
   "Favour titles from your region on Home": "Priorizar títulos da sua região no Início",
   Feishin: "Feishin",
-  "Fetches a small public test torrent, then reports UDP and HTTPS egress, DHT bootstrap and tracker reachability step by step.":
-    "Baixa um pequeno torrent público de teste e informa, passo a passo, a saída UDP e HTTPS, o bootstrap do DHT e o alcance dos trackers.",
+  "Fetches a small public test file over P2P, then reports UDP and HTTPS egress, DHT bootstrap and tracker reachability step by step.":
+    "Baixa um pequeno arquivo público de teste via P2P e informa, passo a passo, a saída UDP e HTTPS, o bootstrap do DHT e o alcance dos trackers.",
   "Filename hidden": "Nome do arquivo oculto",
   "Filename shown": "Nome do arquivo visível",
   "Files smaller than this are skipped when scanning a folder.":
@@ -692,8 +693,8 @@ const sweep: Record<string, string> = {
   HIDIVE: "HIDIVE",
   HTML5: "HTML5",
   "Hall of Fame": "Hall da fama",
-  "Handles torrent playback and transcoding for this machine.":
-    "Cuida da reprodução de torrents e da transcodificação nesta máquina.",
+  "Handles P2P playback and transcoding for this machine.":
+    "Cuida da reprodução P2P e da transcodificação nesta máquina.",
   "Harbor Rank": "Ranking do Harbor",
   "Harbor accepted that but returned no session. Try again.":
     "O Harbor aceitou, mas não retornou uma sessão. Tente de novo.",
@@ -904,14 +905,14 @@ const sweep: Record<string, string> = {
   "Live TV source": "Fonte de TV ao vivo",
   "Live TV sources": "Fontes de TV ao vivo",
   "Live action": "Live action",
-  "Live state of Harbor's own torrent engine on this machine.":
-    "Estado atual do mecanismo de torrent do próprio Harbor nesta máquina.",
+  "Live state of Harbor's own P2P engine on this machine.":
+    "Estado atual do mecanismo P2P do próprio Harbor nesta máquina.",
   "Loading more collections...": "Carregando mais coleções...",
   "Loads a backup file and restores exactly what it contains, without touching the rest of your setup. Your Stremio sign-in on this device stays as is.":
     "Carrega um arquivo de backup e restaura exatamente o que ele contém, sem mexer no resto da sua configuração. Seu login do Stremio neste dispositivo permanece como está.",
   "Local folder": "Pasta local",
   "Local time": "Hora local",
-  "Local torrent engine": "Mecanismo de torrent local",
+  "Local P2P engine": "Mecanismo P2P local",
   "Lock player controls": "Bloquear controles do player",
   Logo: "Logo",
   "Logo & icon": "Logo e ícone",
@@ -1056,8 +1057,8 @@ const sweep: Record<string, string> = {
     "Nada se conectou ainda. Seu celular pode estar em uma rede de convidados, ou esta TV pode estar em uma rede diferente da do celular.",
   "Nothing here yet.": "Ainda não há nada aqui.",
   "Nothing in {genre} right now.": "Nada em {genre} no momento.",
-  "Nothing left to confirm while torrents are disabled.":
-    "Nada a confirmar enquanto os torrents estiverem desativados.",
+  "Nothing left to confirm while P2P is disabled.":
+    "Nada a confirmar enquanto o P2P estiver desativado.",
   "Nothing on your TV changes until you confirm you have saved this.":
     "Nada muda na sua TV até você confirmar que salvou isto.",
   "Nothing selected. Harbor will not load a subtitle on its own.":
@@ -1110,8 +1111,8 @@ const sweep: Record<string, string> = {
   "Open this page by scanning the code on your TV's setup screen.":
     "Abra esta página escaneando o código na tela de configuração da sua TV.",
   "OpenSubtitles API key": "Chave de API do OpenSubtitles",
-  "Opens the folder holding the DHT cache and active torrent data.":
-    "Abre a pasta com o cache DHT e os dados de torrents ativos.",
+  "Opens the folder holding the DHT cache and active transfer data.":
+    "Abre a pasta com o cache DHT e os dados de transferências ativas.",
   "Opens the free signup page": "Abre a página de cadastro gratuito",
   "Opens your API settings page": "Abre a página de configurações de API",
   "Optional. Add one to turn on automatic subtitle sync.":
@@ -1158,8 +1159,8 @@ const sweep: Record<string, string> = {
   "Paste your key": "Cole sua chave",
   "Paste your v3 API key": "Cole sua chave de API v3",
   Peacock: "Peacock",
-  "Peers, speed and progress on the player while a torrent streams. Sits top left, clear of the exit button.":
-    "Peers, velocidade e progresso no player enquanto o torrent transmite. Fica no canto superior esquerdo, longe do botão de sair.",
+  "Peers, speed and progress on the player while a P2P stream plays. Sits top left, clear of the exit button.":
+    "Peers, velocidade e progresso no player enquanto um stream P2P toca. Fica no canto superior esquerdo, longe do botão de sair.",
   "People from the week's hottest titles, weighted by what is being talked about.":
     "Pessoas dos títulos mais quentes da semana, ponderadas pelo que está sendo comentado.",
   Philo: "Philo",
@@ -1667,8 +1668,8 @@ const sweep: Record<string, string> = {
     "A linha pontilhada é uma compressão uniforme de toda a faixa. Uma curva que se mantém alta deixa os meios-tons vivos e comprime as altas luzes no fim; uma curva mais baixa cai antes e fica mais suave.",
   "The editor is a working copy of the player. Click any control on it to move, resize, restyle or hide that control.":
     "O editor é uma cópia de trabalho do player. Clique em qualquer controle para mover, redimensionar, restilizar ou ocultar esse controle.",
-  "The engine listens on a local port and joins the DHT to find peers. Active torrents are the streams it currently has open.":
-    "O motor escuta em uma porta local e entra na DHT para encontrar peers. Torrents ativos são os streams abertos no momento.",
+  "The engine listens on a local port and joins the DHT to find peers. Active transfers are the streams it currently has open.":
+    "O motor escuta em uma porta local e entra na DHT para encontrar peers. Transferências ativas são os streams abertos no momento.",
   "The key is saved on this device only.": "A chave é salva apenas neste dispositivo.",
   "The label looks high (1080p / 4K) but doesn't match expected file size or release window. Often a CAM or TS rebadged. Try a Theater Capture stream or check the source list before committing.":
     "O rótulo parece alto (1080p / 4K), mas não bate com o tamanho de arquivo nem com a janela de lançamento esperados. Costuma ser um CAM ou TS reetiquetado. Tente um stream Theater Capture ou confira a lista de fontes antes de decidir.",
@@ -1775,7 +1776,7 @@ const sweep: Record<string, string> = {
   "Top on TMDB": "Melhores no TMDB",
   "Top {n}, ranked by the work they left behind":
     "Top {n}, classificados pelo trabalho que deixaram",
-  "Torrent streaming": "Streaming de torrent",
+  "P2P streaming": "Streaming P2P",
   Trackers: "Trackers",
   "Tracking what you watch": "Acompanhar o que você assiste",
   Tracks: "Faixas",

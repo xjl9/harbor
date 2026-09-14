@@ -28,19 +28,27 @@ export function PersonPanel({
   onOpenTitle: (m: Meta) => void;
 }) {
   const t = useT();
-  const [person, setPerson] = useState<PersonDetail | null>(() => tmdbPersonCached(personId) ?? null);
+  const [person, setPerson] = useState<PersonDetail | null>(
+    () => tmdbPersonCached(personId) ?? null,
+  );
   const [loading, setLoading] = useState(!person);
   const [expanded, setExpanded] = useState(false);
   const bioRef = useRef<HTMLParagraphElement>(null);
   const [bioClamped, setBioClamped] = useState(false);
 
   useEffect(() => {
-    if (!tmdbKey || person) return;
+    if (!tmdbKey || person) {
+      setLoading(false);
+      return;
+    }
     let cancelled = false;
     setLoading(true);
     tmdbPerson(tmdbKey, personId)
       .then((p) => {
         if (!cancelled) setPerson(p);
+      })
+      .catch(() => {
+        // Keep the person browser usable when TMDB is unavailable.
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -158,11 +166,15 @@ export function PersonPanel({
               <PosterRail items={shows} onOpen={onOpenTitle} />
             </RailSection>
           )}
-          {!loading && knownFor.length === 0 && movies.length === 0 && shows.length === 0 && !bio && (
-            <p className="px-1 text-[13.5px] text-white/55">
-              {t("No details available for this person.")}
-            </p>
-          )}
+          {!loading &&
+            knownFor.length === 0 &&
+            movies.length === 0 &&
+            shows.length === 0 &&
+            !bio && (
+              <p className="px-1 text-[13.5px] text-white/55">
+                {t("No details available for this person.")}
+              </p>
+            )}
         </>
       )}
 

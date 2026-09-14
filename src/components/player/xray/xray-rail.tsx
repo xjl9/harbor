@@ -10,6 +10,7 @@ type Props = {
   progress: { done: number; total: number };
   error: string | null;
   needsTmdbKey?: boolean;
+  onOpenPerson: (person: XrayPerson) => void;
   onViewAll: () => void;
   onClose: () => void;
 };
@@ -23,6 +24,7 @@ export function XrayRail({
   error,
   needsTmdbKey,
   onViewAll,
+  onOpenPerson,
   onClose,
 }: Props) {
   const t = useT();
@@ -50,7 +52,10 @@ export function XrayRail({
   return (
     <div className="pointer-events-auto absolute left-0 top-24 z-40 max-h-[68%] w-[300px] animate-xray-rail-in motion-reduce:animate-none">
       <div className="relative flex max-h-[68vh] flex-col overflow-hidden pe-3">
-        <div aria-hidden className="pointer-events-none absolute inset-0 bg-gradient-to-r from-black/80 via-black/45 to-transparent" />
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 bg-gradient-to-r from-black/80 via-black/45 to-transparent"
+        />
         <div className="relative flex min-h-0 flex-col px-4 pb-5 pt-3">
           <header className="mb-2.5 flex items-center gap-2">
             <span className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.22em] text-white">
@@ -87,7 +92,11 @@ export function XrayRail({
           {list.length > 0 && (
             <div className="flex min-h-0 flex-col gap-0.5 overflow-y-auto pe-0.5 [scrollbar-width:thin]">
               {list.map((p) => (
-                <XrayRailCard key={`${p.id}:${p.sub ?? ""}`} person={p} />
+                <XrayRailCard
+                  key={`${p.id}:${p.sub ?? ""}`}
+                  person={p}
+                  onOpenPerson={onOpenPerson}
+                />
               ))}
             </div>
           )}

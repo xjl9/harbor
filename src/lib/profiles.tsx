@@ -53,6 +53,8 @@ const PROFILE_KEY_PREFIXES = [
   "harbor.charfavorites.v1.",
   "harbor.mangafav.v1.",
   "harbor.mangaread.v1.",
+  "harbor.manga.match.mal.v1.",
+  "harbor.manga.match.anilist.v1.",
   "harbor.localwatchlist.v1.",
   "harbor.settings.",
   "harbor.trakt.session.v1.",
@@ -163,7 +165,10 @@ type ProfilesValue = {
     color: ProfileColor;
     kid?: KidConfig | null;
   }) => Profile;
-  updateProfile: (id: string, patch: Partial<Omit<Profile, "id" | "createdAt" | "isPrimary">>) => void;
+  updateProfile: (
+    id: string,
+    patch: Partial<Omit<Profile, "id" | "createdAt" | "isPrimary">>,
+  ) => void;
   deleteProfile: (id: string) => void;
   setPrimary: (id: string) => void;
 };
@@ -246,7 +251,10 @@ function readProfilePromptInterval(): ProfilePromptInterval {
   try {
     const raw = readLaunchSettingsRaw();
     if (!raw) return "launch";
-    const parsed = JSON.parse(raw) as { profilePromptInterval?: unknown; skipProfileScreen?: unknown };
+    const parsed = JSON.parse(raw) as {
+      profilePromptInterval?: unknown;
+      skipProfileScreen?: unknown;
+    };
     const v = parsed.profilePromptInterval;
     if (v === "launch" || v === "15m" || v === "30m" || v === "never") return v;
     return parsed.skipProfileScreen === true ? "never" : "launch";
@@ -368,11 +376,19 @@ function readState(): ProfilesState {
       if (p.isPrimary) {
         if (isPlaceholderName(p.name)) next.name = fallbackName;
         if (identity.color) next.color = identity.color;
-        if (p.avatar == null && identity.avatar != null && !identity.avatar.startsWith("/kids/avatars/")) {
+        if (
+          p.avatar == null &&
+          identity.avatar != null &&
+          !identity.avatar.startsWith("/kids/avatars/")
+        ) {
           next.avatar = identity.avatar;
         }
       }
-      if (next.kid == null && typeof next.avatar === "string" && next.avatar.startsWith("/kids/avatars/")) {
+      if (
+        next.kid == null &&
+        typeof next.avatar === "string" &&
+        next.avatar.startsWith("/kids/avatars/")
+      ) {
         next.avatar = null;
       }
       if (isRemovedBuiltinAvatar(next.avatar)) {
@@ -710,4 +726,11 @@ export function sharesStremioStorage(
 ): boolean {
   if (!a || !b) return false;
   return stremioSourceProfileId(a, profiles) === stremioSourceProfileId(b, profiles);
+}
+
+export function anyProfileSharesStremioWith(active: Profile | null, profiles: Profile[]): boolean {
+  if (!active) return false;
+  const source = stremioSourceProfileId(active, profiles);
+  if (!source) return false;
+  return profiles.some((p) => p.id !== active.id && stremioSourceProfileId(p, profiles) === source);
 }

@@ -1,4 +1,5 @@
 import { ArrowLeft } from "lucide-react";
+import { WindowControlButton as Control, WindowControlGlyph } from "./window-control-button";
 import { Search } from "@/components/icons/search-icon";
 import { UiIcon } from "@/components/ui-icon";
 import { isDesktopTauri } from "@/lib/platform";
@@ -11,7 +12,6 @@ import { DownloadsButton } from "@/components/downloads-popover";
 import { BookmarksButton } from "@/components/bookmarks-popover";
 import { NotificationCenter } from "@/components/notification-center/notification-center";
 import { ThreeLiquidGlassSurface } from "@/components/ThreeLiquidGlassSurface";
-import { ProfileButton } from "@/chrome/profile-button";
 import { RecordingPill } from "@/chrome/recording-pill";
 import { SleepTimerButton } from "@/chrome/sleep-timer-button";
 import {
@@ -42,6 +42,42 @@ import { close, minimize, toggleMaximize, useMaximized } from "@/lib/window";
 // Tauri's internals attach would cache "web" and hide these on the desktop.
 const isDesktopChrome = () => isDesktopTauri();
 
+function PresenceAvatar({ name, src, color }: { name: string; src: string | null; color: string }) {
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    setFailed(false);
+  }, [src]);
+
+  if (src && !failed) {
+    return (
+      <span
+        title={name}
+        className="flex h-6 w-6 items-center justify-center overflow-hidden rounded-full ring-2 ring-elevated"
+        style={{ boxShadow: `inset 0 0 0 1.5px ${color}` }}
+      >
+        <img
+          src={src}
+          alt=""
+          draggable={false}
+          className="h-full w-full object-cover"
+          onError={() => setFailed(true)}
+        />
+      </span>
+    );
+  }
+
+  return (
+    <span
+      title={name}
+      className="flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-semibold text-canvas ring-2 ring-elevated"
+      style={{ backgroundColor: color }}
+    >
+      {(name.trim()[0] || "?").toUpperCase()}
+    </span>
+  );
+}
+
 export function Topbar({ connecting = false }: { connecting?: boolean } = {}) {
   const { chromeHidden, canGoBack, view, setView, topKind } = useView();
   const { settings } = useSettings();
@@ -70,7 +106,8 @@ export function Topbar({ connecting = false }: { connecting?: boolean } = {}) {
   const layout = kid ? "sidebar" : preview ? preview.layout : activeLayout(settings.theme);
   const onLiveRoot = topKind === "live";
   const sidebarHidden = connecting || view === "settings" || onLiveRoot || topKind === "picker";
-  const hideSearch = view === "addons" || connecting || topKind === "picker";
+  const inSettings = view === "settings";
+  const hideSearch = view === "addons" || connecting || topKind === "picker" || inSettings;
   const sidebarOffset =
     layout === "stremio"
       ? "ps-[80px]"
@@ -88,7 +125,7 @@ export function Topbar({ connecting = false }: { connecting?: boolean } = {}) {
       data-cleannav={settings.topbarAppearance === "transparent" ? "on" : undefined}
       className={`pointer-events-none fixed inset-x-0 top-0 ${topKind === "picker" || connecting ? "z-[130]" : "z-[55]"} h-20`}
     >
-      {settings.topbarScrollBlur && settings.topbarAppearance !== "transparent" && (
+      {!inSettings && settings.topbarScrollBlur && settings.topbarAppearance !== "transparent" && (
         <div
           aria-hidden
           className="pointer-events-none absolute inset-0 transition-opacity duration-[350ms] ease-out"
@@ -103,19 +140,21 @@ export function Topbar({ connecting = false }: { connecting?: boolean } = {}) {
         />
       )}
       <div
+        {...dragProps}
+        data-harbor-topbar-content
+        className={`relative z-10 grid h-full grid-cols-[1fr_auto_1fr] items-center gap-3 px-4 sm:px-8 ${
+          hybridBar ? "pt-11" : ""
+        }`}
+      >
+        <div
           {...dragProps}
-          className={`relative z-10 grid h-full grid-cols-[1fr_auto_1fr] items-center gap-3 px-4 sm:px-8 ${
-            hybridBar ? "pt-11" : ""
-          }`}
+          data-harbor-topbar-leading
+          className={
+            sidebarHidden
+              ? "pointer-events-auto flex h-full min-w-0 items-center justify-start gap-3"
+              : `pointer-events-auto flex h-full min-w-0 items-center justify-start ${sidebarOffset}`
+          }
         >
-          <div
-            {...dragProps}
-            className={
-              sidebarHidden
-                ? "pointer-events-auto flex h-full min-w-0 items-center justify-start gap-3"
-                : `pointer-events-auto flex h-full min-w-0 items-center justify-start ${sidebarOffset}`
-            }
-          >
           {onLiveRoot && (
             <button
               onClick={() => setView("home")}
@@ -134,54 +173,50 @@ export function Topbar({ connecting = false }: { connecting?: boolean } = {}) {
               </span>
             </div>
           )}
-            {!onLiveRoot && !connecting && <BackChrome />}
-          </div>
-          <div
-            {...dragProps}
-            className={`pointer-events-auto min-w-0 max-w-full transition-[width] duration-200 ease-out ${searchWidth}`}
-          >
-            {!hideSearch && !kid && !hybridBar && <SearchPill />}
-          </div>
-          <div
-            {...dragProps}
-            className="pointer-events-auto flex h-full items-center justify-end gap-2"
-          >
-          <div className="hidden items-center gap-2 min-[900px]:flex">
-          <RecordingPill />
-          {settings.navbarSleepTimer && <SleepTimerButton />}
-          <DownloadsButton />
-          {!kid && <NotificationCenter />}
-          {!kid && <BookmarksButton />}
-          {!onLiveRoot && !kid && <TogetherButton />}
-          {!kid && <ProfileButton />}
-          </div>
-            {isDesktopChrome() && !settings.useNativeTitleBar && !settings.hybridTitleBar && (
+          {!onLiveRoot && !connecting && <BackChrome />}
+        </div>
+        <div
+          {...dragProps}
+          className={`pointer-events-auto min-w-0 max-w-full transition-[width] duration-200 ease-out ${searchWidth}`}
+        >
+          {!hideSearch && !kid && !hybridBar && <SearchPill />}
+        </div>
+        <div
+          {...dragProps}
+          data-harbor-topbar-actions
+          className="pointer-events-auto flex h-full items-center justify-end gap-2"
+        >
+          {!inSettings && (
+            <div className="hidden items-center gap-2 min-[900px]:flex">
+              <RecordingPill />
+              {settings.navbarSleepTimer && <SleepTimerButton />}
+              <DownloadsButton />
+              {!kid && <NotificationCenter />}
+              {!kid && <BookmarksButton />}
+              {!onLiveRoot && !kid && <TogetherButton />}
+            </div>
+          )}
+          {isDesktopChrome() && !settings.useNativeTitleBar && !settings.hybridTitleBar && (
             <div className="ms-1 flex shrink-0 items-center gap-2">
               <Control label={t("chrome.minimize")} onClick={minimize}>
-                <svg width="18" height="18" viewBox="0 0 13 13" fill="none">
-                  <path d="M3 6.5h7" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-                </svg>
+                <WindowControlGlyph kind="minimize" />
               </Control>
-              <Control label={maxed ? t("chrome.restore") : t("chrome.maximize")} onClick={() => void toggleMaximize()}>
-                <svg width="18" height="18" viewBox="0 0 13 13" fill="none">
-                  {maxed ? (
-                    <>
-                      <rect x="2.5" y="4.5" width="6" height="6" stroke="currentColor" strokeWidth="1.4" rx="1" />
-                      <path d="M5 4.5V3a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 .5.5v5a.5.5 0 0 1-.5.5H9" stroke="currentColor" strokeWidth="1.4" fill="none" />
-                    </>
-                  ) : (
-                    <rect x="3" y="3" width="7" height="7" stroke="currentColor" strokeWidth="1.4" rx="1.2" />
-                  )}
-                </svg>
+              <Control
+                label={maxed ? t("chrome.restore") : t("chrome.maximize")}
+                onClick={() => void toggleMaximize()}
+              >
+                <WindowControlGlyph kind="maximize" maximized={maxed} />
               </Control>
-              <Control label={t("common.close")} onClick={kid ? () => setCloseConfirm(true) : close} danger>
-                <svg width="18" height="18" viewBox="0 0 13 13" fill="none">
-                  <path d="M3.5 3.5l6 6M9.5 3.5l-6 6" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-                </svg>
+              <Control
+                label={t("common.close")}
+                onClick={kid ? () => setCloseConfirm(true) : close}
+                danger
+              >
+                <WindowControlGlyph kind="close" />
               </Control>
             </div>
-            )}
-          </div>
+          )}
+        </div>
       </div>
       {closeConfirm && (
         <CloseConfirmKids onConfirm={close} onCancel={() => setCloseConfirm(false)} />
@@ -190,7 +225,13 @@ export function Topbar({ connecting = false }: { connecting?: boolean } = {}) {
   );
 }
 
-function CloseConfirmKids({ onConfirm, onCancel }: { onConfirm: () => void; onCancel: () => void }) {
+function CloseConfirmKids({
+  onConfirm,
+  onCancel,
+}: {
+  onConfirm: () => void;
+  onCancel: () => void;
+}) {
   const t = useT();
   return createPortal(
     <div
@@ -291,10 +332,14 @@ export function TogetherButton({
     live
       ? variant === "ghost"
         ? "text-ink hover:bg-white/12"
-        : glassControls ? "text-ink hover:text-ink" : "bg-elevated/70 text-ink hover:bg-elevated"
+        : glassControls
+          ? "text-ink hover:text-ink"
+          : "bg-elevated/70 text-ink hover:bg-elevated"
       : variant === "ghost"
         ? "text-ink-muted hover:bg-white/12 hover:text-ink"
-        : glassControls ? "text-ink-muted hover:text-ink" : "bg-elevated/70 text-ink-muted hover:bg-elevated hover:text-ink"
+        : glassControls
+          ? "text-ink-muted hover:text-ink"
+          : "bg-elevated/70 text-ink-muted hover:bg-elevated hover:text-ink"
   }`;
   const chrome = tabOpen
     ? `z-[51] harbor-together-surface border border-edge text-ink ${
@@ -321,29 +366,13 @@ export function TogetherButton({
             {visible.map((p) => {
               const self = p.id === clientId;
               const fallbackColor = `oklch(0.78 0.13 ${nameHue(p.name)})`;
-              const avatarSrc = self ? selfAvatar : p.avatar ?? null;
-              const color = self ? selfColor ?? fallbackColor : p.color ?? fallbackColor;
-              if (avatarSrc) {
-                return (
-                  <span
-                    key={p.id}
-                    title={p.name}
-                    className="flex h-6 w-6 items-center justify-center overflow-hidden rounded-full ring-2 ring-elevated"
-                    style={{ boxShadow: `inset 0 0 0 1.5px ${color}` }}
-                  >
-                    <img src={avatarSrc} alt="" draggable={false} className="h-full w-full object-cover" />
-                  </span>
-                );
-              }
               return (
-                <span
+                <PresenceAvatar
                   key={p.id}
-                  title={p.name}
-                  className="flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-semibold text-canvas ring-2 ring-elevated"
-                  style={{ backgroundColor: color }}
-                >
-                  {(p.name.trim()[0] || "?").toUpperCase()}
-                </span>
+                  name={p.name}
+                  src={self ? selfAvatar : (p.avatar ?? null)}
+                  color={self ? (selfColor ?? fallbackColor) : (p.color ?? fallbackColor)}
+                />
               );
             })}
             {overflow > 0 && (
@@ -363,7 +392,15 @@ export function TogetherButton({
     <div ref={wrapRef} className="relative">
       {glassControls ? (
         <ThreeLiquidGlassSurface
-          radius={tabOpen ? (above ? "0 0 8px 8px" : "8px 8px 0 0") : variant === "ghost" ? "9999px" : "12px"}
+          radius={
+            tabOpen
+              ? above
+                ? "0 0 8px 8px"
+                : "8px 8px 0 0"
+              : variant === "ghost"
+                ? "9999px"
+                : "12px"
+          }
           shaderRadius={variant === "ghost" ? 1 : tabOpen ? 0.3 : 0.48}
           intensity={0.9}
           className={`relative inline-flex transition-colors duration-150 ${chrome} ${tabOpen ? "harbor-wt-tab" : ""}`}
@@ -415,6 +452,7 @@ function SearchPill() {
     <button
       type="button"
       data-tauri-drag-region="false"
+      data-harbor-search
       onClick={() => setOpen(true)}
       className={
         settings.liquidGlass
@@ -449,61 +487,5 @@ function SearchPill() {
     >
       {pill}
     </ThreeLiquidGlassSurface>
-  );
-}
-
-function Control({
-  label,
-  onClick,
-  danger = false,
-  children,
-}: {
-  label: string;
-  onClick: () => void;
-  danger?: boolean;
-  children: React.ReactNode;
-}) {
-  const { settings } = useSettings();
-  const glassControls = settings.topbarAppearance === "glass";
-  const button = (
-    <button
-      type="button"
-      data-tauri-drag-region="false"
-      aria-label={label}
-      onClick={onClick}
-      className={`harbor-win-control ${danger ? "harbor-win-close" : ""} flex h-full w-full items-center justify-center rounded-[inherit] bg-transparent text-ink-muted outline-none transition-colors duration-150 ${
-        danger ? "hover:bg-[#e5484d] hover:text-white" : "hover:bg-white/[0.06] hover:text-ink"
-      }`}
-    >
-      {children}
-    </button>
-  );
-
-  if (glassControls) {
-    return (
-      <ThreeLiquidGlassSurface
-        radius="12px"
-        shaderRadius={0.48}
-        intensity={0.9}
-        className="h-11 w-12 shrink-0 border border-white/[0.10]"
-        contentClassName="h-full w-full"
-      >
-        {button}
-      </ThreeLiquidGlassSurface>
-    );
-  }
-
-  return (
-    <button
-      type="button"
-      data-tauri-drag-region="false"
-      aria-label={label}
-      onClick={onClick}
-      className={`harbor-win-control ${danger ? "harbor-win-close" : ""} flex h-11 w-12 items-center justify-center rounded-xl bg-elevated/70 text-ink-muted transition-colors duration-150 ${
-        danger ? "hover:bg-[#e5484d] hover:text-white" : "hover:bg-elevated hover:text-ink"
-      }`}
-    >
-      {children}
-    </button>
   );
 }

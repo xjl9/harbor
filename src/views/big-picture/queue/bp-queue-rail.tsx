@@ -27,13 +27,13 @@ const SIZE = "clamp(58px,6.6vh,80px)";
 // region once bpOverscan is non-zero.
 const ROW_STYLE: CSSProperties = { contentVisibility: "visible", marginInline: 0 };
 
-const ACTIVE_CHIP =
-  "border-transparent bg-[var(--bp-on)] text-ink";
+const ACTIVE_CHIP = "border-transparent bg-[var(--bp-on)] text-ink";
 const REST_CHIP = "border-[var(--bp-edge-2)] bg-[var(--bp-glass)] text-ink";
 
 export type BpQueueAction = {
   key: string;
   label: string;
+  hint?: string;
   icon: LucideIcon;
   active?: boolean;
   filled?: boolean;
@@ -96,12 +96,14 @@ export function useBpQueueActions(p: {
     {
       key: "skip",
       label: t("Skip"),
+      hint: t("Back in two weeks"),
       icon: Clock,
       onPress: p.onSkip,
     },
     {
       key: "block",
       label: t("Not interested"),
+      hint: t("Never shown again"),
       icon: Ban,
       onPress: p.onBlock,
     },
@@ -122,7 +124,7 @@ function BpQueueRound({
       data-bp-focusable
       data-bp-restore-key={`bp-queue-rail:${action.key}`}
       aria-label={action.label}
-      onFocus={() => onHint(action.label)}
+      onFocus={() => onHint(action.hint ? `${action.label} · ${action.hint}` : action.label)}
       onClick={() => {
         SFX.click();
         action.onPress();
@@ -238,7 +240,7 @@ export function BpQueueRail({
             className={`flex shrink-0 items-center gap-[clamp(10px,0.9vw,16px)] px-[clamp(30px,2.6vw,52px)] text-[clamp(16px,2.2vh,26px)] ${BP_ACTION_SOLID} ${FOCUS_RING}`}
           >
             <Play size={24} className="fill-current" strokeWidth={0} />
-            {t("Play tonight")}
+            {t("Play now")}
           </button>
 
           <div className="flex shrink-0 items-center gap-[clamp(9px,0.8vw,16px)]">

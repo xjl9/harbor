@@ -5,11 +5,15 @@ export type FullscreenMode = "fullscreen" | "borderless" | "maximized";
 
 type Geometry = { x: number; y: number; w: number; h: number };
 
+// When the window is maximized before borderless, the OS owns the pre-maximize
+// (restored) bounds, so only the maximized flag is stored and exit re-maximizes.
+type BorderlessSaved = { maximized: boolean } & Partial<Geometry>;
+
 let windowFullscreen = false;
 let suppressNextExit = false;
 let marathonReenter = false;
 let borderlessActive = false;
-let borderlessSaved: Geometry | null = null;
+let borderlessSaved: BorderlessSaved | null = null;
 const subs = new Set<() => void>();
 
 export function suppressFullscreenExitOnce(): void {
@@ -38,7 +42,9 @@ export function consumeMarathonReenter(): boolean {
 
 function isTauri(): boolean {
   if (isMobileNative()) return false;
-  return typeof window !== "undefined" && ("__TAURI__" in window || "__TAURI_INTERNALS__" in window);
+  return (
+    typeof window !== "undefined" && ("__TAURI__" in window || "__TAURI_INTERNALS__" in window)
+  );
 }
 
 function emit(): void {
@@ -92,20 +98,28 @@ async function enterBorderless(): Promise<boolean> {
     return true;
   }
   try {
-    const { currentMonitor, getCurrentWindow, PhysicalPosition, PhysicalSize } = await import(
-      "@tauri-apps/api/window"
-    );
+    const { currentMonitor, getCurrentWindow, PhysicalPosition, PhysicalSize } =
+      await import("@tauri-apps/api/window");
     const win = getCurrentWindow();
     const monitor = await currentMonitor().catch(() => null);
     if (!monitor) return false;
     if (await win.isFullscreen().catch(() => false)) await win.setFullscreen(false).catch(() => {});
-    if (await win.isMaximized().catch(() => false)) await win.toggleMaximize().catch(() => {});
-    const [pos, size] = await Promise.all([
-      win.outerPosition().catch(() => null),
-      win.innerSize().catch(() => null),
-    ]);
-    borderlessSaved =
-      pos && size ? { x: pos.x, y: pos.y, w: size.width, h: size.height } : borderlessSaved;
+    // Read maximized before unmaximizing: toggleMaximize is async, so reading
+    // geometry right after would capture the (unsafe-to-restore) maximized bounds.
+    const maximized = await win.isMaximized().catch(() => false);
+    if (maximized) await win.toggleMaximize().catch(() => {});
+    if (maximized) {
+      borderlessSaved = { maximized: true };
+    } else {
+      const [pos, size] = await Promise.all([
+        win.outerPosition().catch(() => null),
+        win.innerSize().catch(() => null),
+      ]);
+      borderlessSaved =
+        pos && size
+          ? { maximized: false, x: pos.x, y: pos.y, w: size.width, h: size.height }
+          : borderlessSaved;
+    }
     await win.setDecorations(false).catch(() => {});
     await win
       .setPosition(new PhysicalPosition(monitor.position.x, monitor.position.y))
@@ -121,9 +135,8 @@ async function enterBorderless(): Promise<boolean> {
 async function reassertBorderless(): Promise<void> {
   if (!borderlessActive) return;
   try {
-    const { currentMonitor, getCurrentWindow, PhysicalPosition, PhysicalSize } = await import(
-      "@tauri-apps/api/window"
-    );
+    const { currentMonitor, getCurrentWindow, PhysicalPosition, PhysicalSize } =
+      await import("@tauri-apps/api/window");
     const win = getCurrentWindow();
     const monitor = await currentMonitor().catch(() => null);
     if (!monitor) return;
@@ -155,12 +168,22 @@ async function exitBorderless(): Promise<boolean> {
   borderlessSaved = null;
   borderlessActive = false;
   try {
-    const { currentMonitor, getCurrentWindow, PhysicalPosition, PhysicalSize } = await import(
-      "@tauri-apps/api/window"
-    );
+    const { currentMonitor, getCurrentWindow, PhysicalPosition, PhysicalSize } =
+      await import("@tauri-apps/api/window");
     const win = getCurrentWindow();
     await win.setDecorations(loadStoredSettings().useNativeTitleBar === true).catch(() => {});
     if (!saved) return true;
+    if (saved.maximized) {
+      return setMaximized(true);
+    }
+    if (
+      saved.w === undefined ||
+      saved.h === undefined ||
+      saved.x === undefined ||
+      saved.y === undefined
+    ) {
+      return true;
+    }
     await win.setSize(new PhysicalSize(saved.w, saved.h)).catch(() => {});
     let { x, y } = saved;
     if (loadStoredSettings().fullscreenRestorePosition === false) {
@@ -255,7 +278,9 @@ async function osWindowFullscreen(): Promise<boolean> {
   if (!isTauri()) return false;
   try {
     const { getCurrentWindow } = await import("@tauri-apps/api/window");
-    return await getCurrentWindow().isFullscreen().catch(() => false);
+    return await getCurrentWindow()
+      .isFullscreen()
+      .catch(() => false);
   } catch {
     return false;
   }
@@ -271,6 +296,10 @@ export async function exitAnyFullscreen(): Promise<void> {
   if (typeof document !== "undefined" && document.fullscreenElement) {
     await document.exitFullscreen().catch(() => {});
   }
+  if (windowFullscreen || borderlessActive) {
+    await exitWindowFullscreen();
+    return;
+  }
   if (isTauri()) {
     try {
       const { getCurrentWindow } = await import("@tauri-apps/api/window");
@@ -280,7 +309,6 @@ export async function exitAnyFullscreen(): Promise<void> {
       /* ignore */
     }
   }
-  if (windowFullscreen || borderlessActive) await exitWindowFullscreen();
 }
 
 if (isTauri()) {

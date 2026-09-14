@@ -190,8 +190,7 @@ const catalog02: Record<string, string> = {
   "Buffer fill brightness": "버퍼 채움 밝기",
   "Buffer size": "버퍼 크기",
   Buffering: "버퍼링 중",
-  "Buffers the whole file in the background as you watch, even while paused, so big remuxes pre-load and you can scrub a cached file with no re-buffering. Works for debrid and torrent streams. Uses more disk and bandwidth; cleared when you switch or close.":
-    "시청 중이거나 일시 정지한 동안에도 전체 파일을 백그라운드에서 버퍼링합니다. 대용량 리먹스를 미리 불러오고 캐시된 파일을 재버퍼링 없이 탐색할 수 있습니다. 디브리드 및 토렌트 스트림에서 작동합니다. 디스크 공간과 대역폭을 더 사용하며, 전환하거나 닫으면 삭제됩니다.",
+  "Buffers the whole file in the background as you watch, even while paused, so big remuxes pre-load and you can scrub a cached file with no re-buffering. Works for debrid and P2P streams. Uses more disk and bandwidth; cleared when you switch or close.": "시청 중이거나 일시 정지한 동안에도 전체 파일을 백그라운드에서 버퍼링합니다. 대용량 리먹스를 미리 불러오고 캐시된 파일을 재버퍼링 없이 탐색할 수 있습니다. 디브리드 및 P2P 스트림에서 작동합니다. 디스크 공간과 대역폭을 더 사용하며, 전환하거나 닫으면 삭제됩니다.",
   "Bug reporters get listed in the release notes when their report leads to a shipped fix. Leave blank to stay anonymous.":
     "신고한 버그가 실제 수정으로 배포되면 릴리스 노트에 신고자가 기재됩니다. 익명으로 남으려면 비워 두세요.",
   "Bug reports": "버그 신고",
@@ -208,8 +207,8 @@ const catalog02: Record<string, string> = {
   "Build a source plugin": "소스 플러그인 만들기",
   "Build a theme": "테마 만들기",
   "Build from source": "소스에서 빌드",
-  "Build identity. Useful when filing a bug report at bugs@harbor.site.":
-    "빌드 식별 정보입니다. bugs@harbor.site에 버그를 신고할 때 유용합니다.",
+  "Build identity. Useful when filing a bug report.":
+    "빌드 식별 정보입니다. 버그를 신고할 때 유용합니다.",
   "Build one in the studio or import a theme file first, then come back to share it.":
     "먼저 스튜디오에서 테마를 만들거나 테마 파일을 가져온 다음 다시 공유해 보세요.",
   "Build or import the updated theme first, then come back to push it as a new version.":
@@ -837,8 +836,7 @@ const catalog02: Record<string, string> = {
   "Copy Webhook URL": "웹후크 URL 복사",
   "Copy code": "코드 복사",
   "Copy diagnostics": "진단 정보 복사",
-  "Copy diagnostics grabs the engine status and your P2P settings as JSON, handy to paste into a bug report. The engine folder holds the DHT cache (dht.json) and active torrent data.":
-    "진단 정보 복사는 엔진 상태와 P2P 설정을 JSON으로 가져오므로 버그 신고에 붙여 넣기 좋습니다. 엔진 폴더에는 DHT 캐시(dht.json)와 활성 토렌트 데이터가 저장됩니다.",
+  "Copy diagnostics grabs the engine status and your P2P settings as JSON, handy to paste into a bug report. The engine folder holds the DHT cache (dht.json) and active transfer data.": "진단 정보 복사는 엔진 상태와 P2P 설정을 JSON으로 가져오므로 버그 신고에 붙여 넣기 좋습니다. 엔진 폴더에는 DHT 캐시(dht.json)와 활성 전송 데이터가 저장됩니다.",
   "Copy error": "오류 복사",
   "Copy example": "예제 복사",
   "Copy filename": "파일 이름 복사",

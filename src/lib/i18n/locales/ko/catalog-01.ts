@@ -186,7 +186,7 @@ const catalog01: Record<string, string> = {
   Actions: "작업",
   Active: "활성",
   "Active and reachable": "활성 상태 및 연결 가능",
-  "Active torrents": "활성 토렌트",
+  "Active transfers": "활성 전송",
   Activity: "활동",
   "Actor, title, genre": "배우, 제목, 장르",
   "Actual size on screen": "화면의 실제 크기",
@@ -533,7 +533,8 @@ const catalog01: Record<string, string> = {
   "Already on the closest match for this release":
     "이미 이 릴리스와 가장 일치하는 자막을 사용 중입니다",
   "Also Nominated": "함께 후보에 오름",
-  "Also joins Harbor's Discord server.": "Harbor의 Discord 서버에도 참가합니다.",
+  "Linking your Discord account also joins you to Harbor's Discord server, so the bot can send your Backup keys privately.":
+    "Linking your Discord account also joins you to Harbor's Discord server, so the bot can send your Backup keys privately.",
   "Also known as": "다른 제목",
   "Also won": "추가 수상",
   Alternate: "대체",

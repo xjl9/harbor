@@ -55,6 +55,8 @@ export function useTextSync(
   stateRef.current = state;
   const regenTimer = useRef<number | null>(null);
   const previewGeneration = useRef(0);
+  const sessionGeneration = useRef(0);
+  const previewSelected = useRef(false);
   const onSavedTrackRef = useRef(onSavedTrack);
   onSavedTrackRef.current = onSavedTrack;
 
@@ -65,6 +67,11 @@ export function useTextSync(
     const b = bridgeRef.current;
     if (!b) return;
     if (constant) {
+      previewGeneration.current += 1;
+      if (previewSelected.current && state.sourceTrack) {
+        b.setSubtitleTrack(state.sourceTrack.id);
+        previewSelected.current = false;
+      }
       b.setSubDelay(deltaFn(state.points, state.nudge)(0));
       return;
     }
@@ -76,9 +83,17 @@ export function useTextSync(
         try {
           const corrected = applyLinear(cues, points, nudge, segments);
           const text = sourceFormat === "vtt" ? toVtt(corrected) : toSrt(corrected);
-          const path = await writeSubtitleFile(text, sourceFormat);
+          const path = await writeSubtitleFile(
+            text,
+            sourceFormat,
+            `preview-${crypto.randomUUID()}`,
+          );
           if (path && generation === previewGeneration.current) {
-            await b.addSubtitle(path, undefined, "Preview", true);
+            previewSelected.current = true;
+            await b.addSubtitle(path, state.sourceTrack?.lang, "Preview", true, {
+              provider: "Harbor Live Sync",
+              providerDerived: false,
+            });
             if (generation === previewGeneration.current) b.setSubDelay(0);
           }
         } catch {
@@ -87,14 +102,26 @@ export function useTextSync(
       })();
     }, 220);
     return () => {
+      previewGeneration.current += 1;
       if (regenTimer.current) window.clearTimeout(regenTimer.current);
     };
-  }, [state.syncMode, state.points, state.nudge, state.segments, state.cues, constant]);
+  }, [
+    state.syncMode,
+    state.points,
+    state.nudge,
+    state.segments,
+    state.cues,
+    state.sourceTrack,
+    state.sourceFormat,
+    constant,
+  ]);
 
   const enter = useCallback(async (sourceUrl: string | null, headers?: Record<string, string>) => {
     const b = bridgeRef.current;
     if (!b) return;
-    setState({ ...INITIAL, syncMode: "loading" });
+    const session = ++sessionGeneration.current;
+    previewGeneration.current += 1;
+    previewSelected.current = false;
     let baseOffset = 0;
     let sourceTrack: TrackInfo | null = null;
     const unsub = b.subscribe((s) => {
@@ -102,9 +129,19 @@ export function useTextSync(
       sourceTrack = s.subtitleTracks.find((track) => track.selected) ?? null;
     });
     unsub();
+    setState({ ...INITIAL, syncMode: "loading", baseOffset, sourceTrack });
     const res = await getCuesAnySource(b, sourceUrl, headers);
+    if (session !== sessionGeneration.current || b !== bridgeRef.current) return;
     if (!res.ok) {
-      setState({ ...INITIAL, syncMode: "active", error: res.reason });
+      setState({ ...INITIAL, syncMode: "active", baseOffset, sourceTrack, error: res.reason });
+      return;
+    }
+    let selectedId: string | null = null;
+    b.subscribe((s) => {
+      selectedId = s.subtitleTracks.find((track) => track.selected)?.id ?? null;
+    })();
+    if (selectedId !== (sourceTrack as TrackInfo | null)?.id) {
+      setState(INITIAL);
       return;
     }
     setState({
@@ -173,6 +210,7 @@ export function useTextSync(
   }, []);
 
   const exit = useCallback(() => {
+    sessionGeneration.current += 1;
     previewGeneration.current += 1;
     if (regenTimer.current) window.clearTimeout(regenTimer.current);
     regenTimer.current = null;
@@ -181,6 +219,10 @@ export function useTextSync(
 
   const discard = useCallback(() => {
     const b = bridgeRef.current;
+    if (stateRef.current.sourceTrack) {
+      b?.setSubtitleTrack(stateRef.current.sourceTrack.id);
+      previewSelected.current = false;
+    }
     b?.setSubDelay(stateRef.current.baseOffset);
     exit();
   }, [exit]);
@@ -188,6 +230,7 @@ export function useTextSync(
   const save = useCallback(async (): Promise<SaveResult> => {
     const b = bridgeRef.current;
     const cur = stateRef.current;
+    const session = sessionGeneration.current;
     if (!b || cur.syncMode !== "active" || !cur.cues) {
       return { ok: false, reason: "not-active" };
     }
@@ -197,8 +240,11 @@ export function useTextSync(
       regenTimer.current = null;
       const corrected = applyLinear(cur.cues, cur.points, cur.nudge, cur.segments);
       const text = cur.sourceFormat === "vtt" ? toVtt(corrected) : toSrt(corrected);
-      const fileName = syncedFileName(metaIdRef.current, cur.sourceTrack);
+      const fileName = `${syncedFileName(metaIdRef.current, cur.sourceTrack)}-${crypto.randomUUID()}`;
       const path = await writeSubtitleFile(text, cur.sourceFormat, fileName, true);
+      if (session !== sessionGeneration.current || b !== bridgeRef.current) {
+        return { ok: false, reason: "cancelled" };
+      }
       if (!path) return { ok: false, reason: "saved-write-failed" };
 
       const source = cur.sourceTrack;
@@ -229,6 +275,9 @@ export function useTextSync(
         matchReasons: ["timing synchronized to this video"],
         subId: syncedSubId,
       });
+      if (session !== sessionGeneration.current || b !== bridgeRef.current) {
+        return { ok: false, reason: "cancelled" };
+      }
       if (!applied) {
         b.setSubDelay(previewDelay);
         return { ok: false, reason: "subtitle-load-failed" };
@@ -255,6 +304,15 @@ export function useTextSync(
       return { ok: false, reason: e instanceof Error ? e.message : String(e) };
     }
   }, [exit]);
+
+  useEffect(
+    () => () => {
+      sessionGeneration.current += 1;
+      previewGeneration.current += 1;
+      if (regenTimer.current) window.clearTimeout(regenTimer.current);
+    },
+    [bridge, metaId],
+  );
 
   const dirty =
     state.points.length > 0 || state.nudge !== state.baseOffset || state.segments.length > 0;

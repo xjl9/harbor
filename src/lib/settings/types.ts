@@ -85,6 +85,15 @@ export type ProfileAudioMode = "auto" | "click" | "off";
 
 export type StreamPriorityEntry = { key: string; name: string };
 
+export type ScreensaverMediaKind = "image" | "gif" | "video";
+
+export type ScreensaverMedia = {
+  id: string;
+  name: string;
+  path: string;
+  kind: ScreensaverMediaKind;
+};
+
 export type Settings = {
   soundTheme: "none" | "glass" | "modern" | "retro" | "cinematic";
   sfxVolume: number;
@@ -168,6 +177,8 @@ export type Settings = {
   controllerCursor: ControllerCursorId;
   controllerCursorImage: string;
   controllerCursorSize: number;
+  controllerCursorEnabled: boolean;
+  controllerCursorHideMs: number;
   controllerKeyboardSize: number;
   controllerRepeatMs: number;
   controllerInitialDelayMs: number;
@@ -181,7 +192,12 @@ export type Settings = {
   heroFeed: "trending" | "trakt" | "simkl" | "classic";
   heroTrailers: boolean;
   heroTrailerAudio: boolean;
+  navIconAnimations: boolean;
+  bigPicturePlayerUi: "tenFoot" | "desktop";
   screensaver: boolean;
+  screensaverStyle: "ambient" | "catBoat" | "custom";
+  screensaverMedia: ScreensaverMedia[];
+  screensaverMediaId: string | null;
   screensaverDelayMin: number;
   resumePrompt: boolean;
   resumePlayback: boolean;
@@ -189,6 +205,7 @@ export type Settings = {
   fullscreenRestorePosition: boolean;
   contentAdvisoryToast: boolean;
   contentAdvisoryTheme: "colored" | "monochrome";
+  contentAdvisoryShowIgnore: boolean;
   playerVolumeHud: boolean;
   playerVolumeHudPosition: "center" | "top" | "top-left" | "top-right";
   customPlaybackSpeeds: number[];
@@ -334,6 +351,7 @@ export type Settings = {
   subOffsetIndicatorPosition: SubtitleOffsetPosition;
   subOffsetIndicatorSize: SubtitleOffsetSize;
   subShowInPip: boolean;
+  subHideSdh: boolean;
   secondarySubLang: string;
   subSecondaryPlacement: "top" | "bottom";
   subSecondaryScale: number;
@@ -404,6 +422,9 @@ export type Settings = {
   mpvExtraOptions: string;
   mpvQuality: "balanced" | "performance" | "quality";
   mpvHwdec: "auto" | "on" | "off";
+  mpvRenderer: "gpu-next" | "gpu";
+  uiGraphicsBackend: "auto" | "d3d11" | "opengl" | "vulkan" | "software";
+  mpvForceYuv420p: boolean;
   mpvBufferBoost: boolean;
   mpvBufferSize: BufferSizeId;
   mpvDownmixStereo: boolean;
@@ -460,6 +481,7 @@ export type Settings = {
   showSimklCard: boolean;
   showLetterboxdCard: boolean;
   externalContinueWatching: boolean;
+  cwSources: { library: boolean; trakt: boolean; simkl: boolean; local: boolean };
   showPlaylistsTab: boolean;
   skipProfileScreen: boolean;
   profilePromptInterval: "launch" | "15m" | "30m" | "never";
@@ -505,6 +527,10 @@ export type Settings = {
   topbarAppearance: "transparent" | "glass" | "filled";
   dragAnywhere: boolean;
   resumeDetailScroll: boolean;
+  pluginsEnabled: boolean;
+  pluginsGroupByRepo: boolean;
+  pluginsAutoCheck: boolean;
+  pluginsBackground: boolean;
   cwPerProfile: boolean;
   closeToTray: boolean;
   trayAlwaysOnTop: boolean;
@@ -512,6 +538,7 @@ export type Settings = {
   pauseUnfocused: boolean;
   cwSnapshotRetentionDays: number;
   cwSnapshotFullQuality: boolean;
+  cwPreferEpisodeStill: boolean;
   streamFilterLevel: "strict" | "balanced" | "off";
   blockTrackers: boolean;
   homeRows: {
@@ -575,6 +602,7 @@ export type Settings = {
   webhooks: {
     discordUrl: string;
     telegramUrl: string;
+    desktopEnabled: boolean;
     notifyMovies: boolean;
     notifyTv: boolean;
     notifyAnime: boolean;
@@ -621,7 +649,7 @@ export type Settings = {
     name: string;
     enabled: boolean;
     trigger: WebhookTrigger;
-    channels: { discord: boolean; telegram: boolean };
+    channels: { discord: boolean; telegram: boolean; desktop: boolean };
   }>;
   downloadDir: string;
   downloadCreateFolders: boolean;

@@ -1,4 +1,8 @@
 const coverage: Record<string, string> = {
+  "Sound descriptions": "ध्वनि विवरण",
+  "Hide sound effects and speaker names": "ध्वनि प्रभाव और वक्ताओं के नाम छिपाएँ",
+  "Removes bracketed descriptions like [door creaks] and shouted speaker labels like JOHN: while subtitles play, so a release that only ships an SDH track still reads as plain dialogue. Song lyrics, ordinary parentheses and non-Latin scripts are left alone. Skipped on forced and picture-based tracks.":
+    "चलते उपशीर्षकों में से [दरवाज़ा चरमराता है] जैसे कोष्ठक वाले विवरण और JOHN: जैसे बड़े लैटिन अक्षरों वाले वक्ता नाम हटा देता है, ताकि केवल SDH ट्रैक वाली रिलीज़ भी सामान्य संवाद की तरह पढ़ी जा सके। गानों के बोल, सामान्य कोष्ठक और ग़ैर-लैटिन लिपियाँ जस की तस रहती हैं। फ़ोर्स्ड और चित्र-आधारित ट्रैक पर लागू नहीं होता।",
   '"Compound" interest is calculated on:': '"चक्रवृद्धि" ब्याज की गणना इस पर होती है:',
   '"{name}" and everything in it will be removed. This cannot be undone.':
     '"{name}" और उसमें मौजूद सब कुछ हटा दिया जाएगा। इसे वापस नहीं लाया जा सकता।',
@@ -77,7 +81,8 @@ const coverage: Record<string, string> = {
   "All-time body of work, not who is trending. Trending and Top on TMDB are the live tabs.":
     "पूरे करियर का काम, न कि अभी कौन ट्रेंड कर रहा है. TMDB पर ट्रेंडिंग और टॉप लाइव टैब हैं.",
   "Almost done": "लगभग पूरा हो गया",
-  "Also joins Harbor's Discord server.": "Harbor के Discord सर्वर से भी जुड़ता है.",
+  "Linking your Discord account also joins you to Harbor's Discord server, so the bot can send your Backup keys privately.":
+    "Linking your Discord account also joins you to Harbor's Discord server, so the bot can send your Backup keys privately.",
   "An agreement between landlord and tenant": "मकान मालिक और किरायेदार के बीच समझौता",
   "An unexpected error occurred": "एक अनपेक्षित त्रुटि हुई",
   "AniList Comments": "AniList टिप्पणियाँ",

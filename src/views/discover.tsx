@@ -10,7 +10,7 @@ import {
 import { BackToTop } from "@/components/back-to-top";
 import { CollectionsRow } from "@/components/collections-row";
 import { CriticsPick } from "@/components/critics-pick";
-import { LazyMount } from "@/components/lazy-mount";
+import { BrandTiles } from "@/components/brand-tiles";
 import { DiscoveryQueueCta } from "@/components/discovery-queue-cta";
 import { TopPeopleCta } from "@/components/top-people-cta";
 import { FeaturedBanner } from "@/components/featured-banner";
@@ -71,6 +71,22 @@ const MAX_RAIL_PAGES = 10;
 const MIN_PAGE_YIELD = 4;
 const ROW_COUNT = 14;
 const DEDUP_PRIORITY = [ANCHOR_TOP_RATED, ANCHOR_AWARDS];
+
+type RowItem = { key: string; title: string };
+
+const SPECIAL_ROWS: Array<RowItem & { after: number }> = [
+  { key: "special:genres", title: "Browse by Genre", after: 0 },
+  { key: "special:queue", title: "Your Discovery Queue", after: 1 },
+  { key: "special:languages", title: "Browse by Language", after: 2 },
+  { key: "special:collections", title: "Collections", after: 2 },
+  { key: "special:critics", title: "Critics' Pick", after: 3 },
+  { key: "special:studios", title: "Top studios", after: 3 },
+  { key: "special:awards", title: "Browse by Award", after: 4 },
+  { key: "special:networks", title: "Top networks", after: 4 },
+  { key: "special:people", title: "Top People", after: -1 },
+];
+
+const isSpecialRow = (key: string) => key.startsWith("special:");
 
 export function Discover({ active = true }: { active?: boolean }) {
   const scrollRef = useRef<HTMLElement>(null);
@@ -162,25 +178,37 @@ export function Discover({ active = true }: { active?: boolean }) {
     let cancelled = false;
     let full = false;
     setFeatReady(false);
-    buildFeaturedFast(settings.tmdbKey, settings)
-      .then((r) => !cancelled && !full && setFeat((prev) => (prev.pool.length ? prev : r)))
-      .catch(() => {});
-    const fullDone = buildFeatured(settings.tmdbKey, settings)
+    setFeat({ featured: [], reserve: [], pool: [] });
+    const fastDone = buildFeaturedFast(settings.tmdbKey, settings)
       .then((r) => {
-        if (cancelled) return;
-        full = true;
-        setFeat(r);
+        if (!cancelled && !full) setFeat(rescoreFeatured(r.pool));
       })
       .catch(() => {});
     const warmDone = prewarmExternalWatched()
       .then(() => !cancelled && setFeat((prev) => rescoreFeatured(prev.pool)))
       .catch(() => {});
-    const warmCap = new Promise<void>((res) => window.setTimeout(res, 4000));
-    void Promise.allSettled([fullDone, Promise.race([warmDone, warmCap])]).then(
-      () => !cancelled && setFeatReady(true),
-    );
+    let warmTimer = 0;
+    const warmCap = new Promise<void>((res) => {
+      warmTimer = window.setTimeout(res, 4000);
+    });
+    const historyReady = Promise.race([warmDone, warmCap]);
+    // Show the eligible fast pool without waiting for every personalized lane.
+    void Promise.allSettled([fastDone, historyReady]).then(() => !cancelled && setFeatReady(true));
+    // Give the fast pool's identity lookups the queue before the larger build.
+    void fastDone.then(async () => {
+      if (cancelled) return;
+      try {
+        const r = await buildFeatured(settings.tmdbKey, settings);
+        if (cancelled) return;
+        full = true;
+        setFeat(rescoreFeatured(r.pool));
+      } catch {
+        // A failed enrichment must not discard usable fast results.
+      }
+    });
     return () => {
       cancelled = true;
+      clearTimeout(warmTimer);
     };
   }, [
     settings.tmdbKey,
@@ -290,10 +318,7 @@ export function Discover({ active = true }: { active?: boolean }) {
           startTransition(() => setRails((prev) => ({ ...prev, [railId]: list })));
         })
         .catch(() => {
-          if (epochRef.current !== myEpoch) return;
-          railPagesRef.current[railId] = 1;
-          railExhaustedRef.current[railId] = true;
-          startTransition(() => setRails((prev) => ({ ...prev, [railId]: [] })));
+          // Leave the page retryable; a transport failure is not an empty catalog.
         })
         .finally(() => {
           if (epochRef.current === myEpoch) railLoadingRef.current[railId] = false;
@@ -315,16 +340,19 @@ export function Discover({ active = true }: { active?: boolean }) {
     railPagesRef.current = {};
     railExhaustedRef.current = {};
     railLoadingRef.current = {};
-    setEpoch((e) => e + 1);
+    epochRef.current += 1;
+    setEpoch(epochRef.current);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rowSig, settings.tmdbKey, settings.region, settings.streaming, settings.tmdbLanguage]);
 
   useEffect(() => {
+    if (!active) return;
     for (const id of DEDUP_PRIORITY) ensureLoadedRef.current(id);
-  }, [epoch]);
+  }, [epoch, active]);
 
   const loadMore = useCallback(
     (railId: string) => {
+      if (railPagesRef.current[railId] == null) return;
       if (railLoadingRef.current[railId]) return;
       if (railExhaustedRef.current[railId]) return;
       const cur = railPagesRef.current[railId] ?? 1;
@@ -332,10 +360,12 @@ export function Discover({ active = true }: { active?: boolean }) {
       const def = dailyRows.find((r) => r.id === railId);
       if (!def) return;
       const next = cur + 1;
+      const myEpoch = epoch;
       railLoadingRef.current[railId] = true;
       def
         .fetch(next)
         .then((list) => {
+          if (epochRef.current !== myEpoch) return;
           railPagesRef.current[railId] = next;
           if (list.length < MIN_PAGE_YIELD) railExhaustedRef.current[railId] = true;
           startTransition(() =>
@@ -344,10 +374,10 @@ export function Discover({ active = true }: { active?: boolean }) {
         })
         .catch(() => {})
         .finally(() => {
-          railLoadingRef.current[railId] = false;
+          if (epochRef.current === myEpoch) railLoadingRef.current[railId] = false;
         });
     },
-    [dailyRows],
+    [dailyRows, epoch],
   );
 
   const featuredIds = useMemo(() => new Set(featured.map((m) => m.id)), [featured]);
@@ -379,27 +409,33 @@ export function Discover({ active = true }: { active?: boolean }) {
     return out;
   }, [hideAnime, deduped, animeVersion]);
 
-  const railItems = useMemo(
-    () => dailyRows.map((r) => ({ key: r.id, title: r.shelf.title })),
-    [dailyRows],
-  );
+  const railItems = useMemo(() => {
+    const base: RowItem[] = dailyRows.map((r) => ({ key: r.id, title: r.shelf.title }));
+    let peopleAfter = -1;
+    base.forEach((it, i) => {
+      if (it.key.startsWith("keyword:")) peopleAfter = i;
+    });
+    if (peopleAfter < 0) peopleAfter = base.length - 1;
+    const out: RowItem[] = [];
+    base.forEach((it, i) => {
+      out.push(it);
+      for (const s of SPECIAL_ROWS) {
+        if (s.after === i || (s.after === -1 && i === peopleAfter))
+          out.push({ key: s.key, title: s.title });
+      }
+    });
+    return out;
+  }, [dailyRows]);
   const railKeys = useMemo(() => railItems.map((r) => r.key), [railItems]);
   const visibleRails = useMemo(
     () => applyPageRows(railItems, pageRows.custom, false),
     [railItems, pageRows.custom],
   );
-  const peopleCtaIdx = useMemo(() => {
-    let idx = -1;
-    visibleRails.forEach((it, i) => {
-      if (it.key.startsWith("keyword:")) idx = i;
-    });
-    return idx >= 0 ? idx : visibleRails.length - 1;
-  }, [visibleRails]);
   const editRails = useMemo(
     () =>
       applyPageRows(railItems, pageRows.custom, true).filter((item) => {
         const d = dedupedShown[item.key];
-        return d == null || d.length > 0;
+        return isSpecialRow(item.key) || d == null || d.length > 0;
       }),
     [railItems, pageRows.custom, dedupedShown],
   );
@@ -440,6 +476,46 @@ export function Discover({ active = true }: { active?: boolean }) {
       onReset={() => pageRows.persist(resetPageRows())}
     />
   );
+
+  const renderRow = (item: RowItem) => {
+    const renamed = item.key in pageRows.custom.renamed ? item.title : undefined;
+    switch (item.key) {
+      case "special:genres":
+        return <GenreTiles title={renamed} />;
+      case "special:queue":
+        return shownQueue.length > 0 ? (
+          <DiscoveryQueueCta items={shownQueue} title={renamed} />
+        ) : null;
+      case "special:languages":
+        return <LanguageTiles title={renamed} />;
+      case "special:collections":
+        return settings.tmdbKey ? <CollectionsRow title={renamed} /> : null;
+      case "special:critics":
+        return criticsPick && !(hideAnime && metaLooksAnime(criticsPick)) ? (
+          <CriticsPick meta={criticsPick} title={renamed} />
+        ) : null;
+      case "special:studios":
+        return settings.tmdbKey ? <BrandTiles kind="studio" title={renamed} /> : null;
+      case "special:awards":
+        return <AwardTiles title={renamed} />;
+      case "special:networks":
+        return settings.tmdbKey ? <BrandTiles kind="network" title={renamed} /> : null;
+      case "special:people":
+        return <TopPeopleCta title={renamed} />;
+      default:
+        return (
+          <Rail
+            active={active}
+            railId={item.key}
+            allRails={dailyRows}
+            deduped={dedupedShown}
+            loadMore={loadMore}
+            ensureLoaded={ensureLoaded}
+            titleOverride={renamed}
+          />
+        );
+    }
+  };
 
   return (
     <main ref={scrollCb} className="flex-1 overflow-y-auto overflow-x-hidden px-12 pb-20 pt-28">
@@ -569,49 +645,11 @@ export function Discover({ active = true }: { active?: boolean }) {
                       }
                       isRenamed={item.key in pageRows.custom.renamed}
                     />
-                    {!hidden && (
-                      <Rail
-                        railId={item.key}
-                        allRails={dailyRows}
-                        deduped={dedupedShown}
-                        loadMore={loadMore}
-                        ensureLoaded={ensureLoaded}
-                        titleOverride={item.key in pageRows.custom.renamed ? item.title : undefined}
-                      />
-                    )}
+                    {!hidden && renderRow(item)}
                   </div>
                 );
               })
-            : visibleRails.map((item, i) => (
-                <Fragment key={item.key}>
-                  <LazyMount minHeight={340}>
-                    <Rail
-                      railId={item.key}
-                      allRails={dailyRows}
-                      deduped={dedupedShown}
-                      loadMore={loadMore}
-                      ensureLoaded={ensureLoaded}
-                      titleOverride={item.key in pageRows.custom.renamed ? item.title : undefined}
-                    />
-                  </LazyMount>
-
-                  {i === 0 && <GenreTiles />}
-                  {i === 1 && shownQueue.length > 0 && <DiscoveryQueueCta items={shownQueue} />}
-                  {i === 2 && <LanguageTiles />}
-                  {i === 2 && settings.tmdbKey && (
-                    <LazyMount minHeight={260}>
-                      <CollectionsRow />
-                    </LazyMount>
-                  )}
-                  {i === 3 && criticsPick && !(hideAnime && metaLooksAnime(criticsPick)) && (
-                    <LazyMount minHeight={580}>
-                      <CriticsPick meta={criticsPick} />
-                    </LazyMount>
-                  )}
-                  {i === 4 && <AwardTiles />}
-                  {i === peopleCtaIdx && <TopPeopleCta />}
-                </Fragment>
-              ))}
+            : visibleRails.map((item) => <Fragment key={item.key}>{renderRow(item)}</Fragment>)}
         </div>
       </ScrollRootContext.Provider>
       <BackToTop scrollRef={scrollRef} />

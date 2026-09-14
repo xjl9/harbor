@@ -4,6 +4,7 @@ use std::net::{IpAddr, SocketAddr};
 use std::sync::OnceLock;
 use std::time::Duration;
 
+use crate::http_redirect::same_origin;
 use base64::Engine;
 use serde::{Deserialize, Serialize};
 use tokio::sync::{Semaphore, SemaphorePermit};
@@ -149,15 +150,22 @@ fn host_is_blocked_literal(url: &reqwest::Url) -> bool {
     }
 }
 
-async fn validate_target(url: &reqwest::Url) -> Result<(), String> {
+// `allow_local` opts the target out of the SSRF guard for loopback, link-local,
+// and private network addresses. It is only set by callers that have explicitly
+// received a URL from the user (e.g. wiring up their own self-hosted Suwayomi
+// server), never for implicitly-discovered URLs.
+async fn validate_target(url: &reqwest::Url, allow_local: bool) -> Result<(), String> {
     let host = match url.host_str() {
         Some(h) => h.trim_start_matches('[').trim_end_matches(']').to_string(),
         None => return Ok(()),
     };
-    if host_is_blocked_literal(url) {
+    if host_is_blocked_literal(url) && !allow_local {
         return Err(format!("blocked internal target: {}", host));
     }
     if host.parse::<IpAddr>().is_ok() {
+        return Ok(());
+    }
+    if allow_local {
         return Ok(());
     }
     let port = url.port_or_known_default().unwrap_or(80);
@@ -175,12 +183,6 @@ async fn validate_target(url: &reqwest::Url) -> Result<(), String> {
         }
     }
     Ok(())
-}
-
-fn same_origin(a: &reqwest::Url, b: &reqwest::Url) -> bool {
-    a.scheme() == b.scheme()
-        && a.host_str() == b.host_str()
-        && a.port_or_known_default() == b.port_or_known_default()
 }
 
 fn is_https_downgrade(a: &reqwest::Url, b: &reqwest::Url) -> bool {
@@ -237,7 +239,7 @@ fn apply_redirect_method(
     }
 }
 
-fn http_client_builder() -> reqwest::ClientBuilder {
+pub(crate) fn http_client_builder() -> reqwest::ClientBuilder {
     reqwest::Client::builder()
         .no_proxy()
         .redirect(reqwest::redirect::Policy::none())
@@ -283,6 +285,8 @@ pub struct HarborFetchArgs {
     pub max_response_bytes: Option<u64>,
     pub credential_handle: Option<String>,
     pub public_network_only: Option<bool>,
+    pub allow_local_network: Option<bool>,
+    pub follow_redirects: Option<bool>,
 }
 
 #[derive(Debug, Serialize)]
@@ -293,6 +297,7 @@ pub struct HarborFetchResponse {
     pub body: String,
     pub content_type: Option<String>,
     pub headers: HashMap<String, String>,
+    pub url: Option<String>,
 }
 
 #[tauri::command]
@@ -311,13 +316,15 @@ async fn harbor_fetch_inner(
 ) -> Result<HarborFetchResponse, String> {
     let timeout = Duration::from_millis(args.timeout_ms.unwrap_or(DEFAULT_TIMEOUT_MS));
     let public_network_only = args.public_network_only.unwrap_or(false);
+    let allow_local_network = args.allow_local_network.unwrap_or(false);
+    let follow_redirects = args.follow_redirects.unwrap_or(true);
 
     let method = args.method.as_deref().unwrap_or("GET").to_uppercase();
     let mut current_method =
         reqwest::Method::from_bytes(method.as_bytes()).map_err(|e| format!("method: {}", e))?;
 
     let mut current_url = reqwest::Url::parse(&args.url).map_err(|e| format!("url: {}", e))?;
-    validate_target(&current_url).await?;
+    validate_target(&current_url, allow_local_network).await?;
 
     let mut subtitle_credential = args
         .credential_handle
@@ -425,7 +432,7 @@ async fn harbor_fetch_inner(
             }
         })?;
         let status = resp.status();
-        if !is_followable_redirect(status) {
+        if !follow_redirects || !is_followable_redirect(status) {
             break resp;
         }
         let location = resp
@@ -451,7 +458,7 @@ async fn harbor_fetch_inner(
             return Err("redirect from HTTPS to HTTP is not allowed".to_string());
         }
         if !public_network_only {
-            validate_target(&next_url).await?;
+            validate_target(&next_url, allow_local_network).await?;
         }
         let cross_origin = !same_origin(&current_url, &next_url);
         let had_body = body.is_some();
@@ -461,20 +468,7 @@ async fn harbor_fetch_inner(
         }
         if cross_origin {
             subtitle_credential = None;
-            strip_headers(
-                &mut headers,
-                &[
-                    "authorization",
-                    "proxy-authorization",
-                    "x-api-key",
-                    "api-key",
-                    "x-auth-token",
-                    "x-harbor-auth",
-                    "cookie",
-                    "referer",
-                    "origin",
-                ],
-            );
+            headers.retain(|(name, _)| crate::http_redirect::safe_cross_origin_header(name));
         }
         if had_body && body.is_none() {
             strip_headers(
@@ -503,6 +497,7 @@ async fn harbor_fetch_inner(
         .and_then(|v| v.to_str().ok())
         .map(|s| s.to_string());
     let response_headers = collect_headers(res.headers());
+    let final_url = res.url().to_string();
     let body = if let Some(max_bytes) = args.max_response_bytes {
         if res.content_length().is_some_and(|size| size > max_bytes) {
             return Err("response size limit exceeded".to_string());
@@ -555,6 +550,7 @@ async fn harbor_fetch_inner(
                     body: solved,
                     content_type: None,
                     headers: HashMap::new(),
+                    url: None,
                 });
             }
         }
@@ -566,6 +562,7 @@ async fn harbor_fetch_inner(
         body,
         content_type,
         headers: response_headers,
+        url: Some(final_url),
     })
 }
 
@@ -622,7 +619,7 @@ async fn harbor_upload_inner(args: HarborUploadArgs) -> Result<HarborFetchRespon
     let _permit = acquire_fetch_permit().await?;
     let client = http_client()?;
     let url = reqwest::Url::parse(&args.url).map_err(|e| format!("url: {}", e))?;
-    validate_target(&url).await?;
+    validate_target(&url, false).await?;
 
     let bytes = base64::engine::general_purpose::STANDARD
         .decode(args.data_base64.as_bytes())
@@ -662,6 +659,7 @@ async fn harbor_upload_inner(args: HarborUploadArgs) -> Result<HarborFetchRespon
         .and_then(|v| v.to_str().ok())
         .map(|s| s.to_string());
     let headers = collect_headers(resp.headers());
+    let url = Some(resp.url().to_string());
     let body = resp.text().await.unwrap_or_default();
     Ok(HarborFetchResponse {
         status,
@@ -669,6 +667,7 @@ async fn harbor_upload_inner(args: HarborUploadArgs) -> Result<HarborFetchRespon
         body,
         content_type,
         headers,
+        url,
     })
 }
 
@@ -679,8 +678,8 @@ fn cross_origin_redirect_forwards_body(cross_origin: bool, body: &Option<Vec<u8>
 #[cfg(test)]
 mod tests {
     use super::{
-        apply_redirect_method, cross_origin_redirect_forwards_body, is_https_downgrade,
-        is_public_network_ip, same_origin, strip_headers,
+        apply_redirect_method, cross_origin_redirect_forwards_body, host_is_blocked_literal,
+        is_https_downgrade, is_public_network_ip, same_origin, strip_headers, validate_target,
     };
 
     #[test]
@@ -689,9 +688,10 @@ mod tests {
             ("X-API-Key".to_string(), "secret".to_string()),
             ("Authorization".to_string(), "Bearer secret".to_string()),
             ("Cookie".to_string(), "session=secret".to_string()),
+            ("X-Unknown-Token".to_string(), "synthetic-only".to_string()),
             ("Accept".to_string(), "application/zip".to_string()),
         ];
-        strip_headers(&mut headers, &["x-api-key", "authorization", "cookie"]);
+        headers.retain(|(name, _)| crate::http_redirect::safe_cross_origin_header(name));
         assert_eq!(
             headers,
             vec![("Accept".to_string(), "application/zip".to_string())]
@@ -757,6 +757,56 @@ mod tests {
         for value in ["1.1.1.1", "8.8.8.8", "2606:4700:4700::1111"] {
             let ip: std::net::IpAddr = value.parse().unwrap();
             assert!(is_public_network_ip(ip), "{value}");
+        }
+    }
+
+    #[test]
+    fn guarded_fetch_blocks_loopback_literals() {
+        for value in [
+            "http://127.0.0.1:4567/api",
+            "http://[::1]:4567/api",
+            "http://[::ffff:127.0.0.1]:4567/api",
+            "http://0.0.0.0:4567/api",
+            "http://169.254.169.254/latest/meta-data/",
+        ] {
+            let url: reqwest::Url = value.parse().unwrap();
+            assert!(host_is_blocked_literal(&url), "{value}");
+        }
+        for value in [
+            "http://sonicbit.example.com:4567/api",
+            "http://192.168.1.10:4567/api",
+            "http://8.8.8.8:4567/api",
+        ] {
+            let url: reqwest::Url = value.parse().unwrap();
+            assert!(!host_is_blocked_literal(&url), "{value}");
+        }
+    }
+
+    #[tokio::test]
+    async fn validate_target_respects_allow_local() {
+        for value in [
+            "http://127.0.0.1:4567/api",
+            "http://[::1]:4567/api",
+            "http://[::ffff:127.0.0.1]:4567/api",
+            "http://0.0.0.0:4567/api",
+            "http://169.254.169.254/latest/meta-data/",
+        ] {
+            let url: reqwest::Url = value.parse().unwrap();
+            assert!(
+                validate_target(&url, false).await.is_err(),
+                "{value} blocked"
+            );
+            assert!(
+                validate_target(&url, true).await.is_ok(),
+                "{value} allowed with allow_local"
+            );
+        }
+        for value in ["http://192.168.1.10:4567/api", "http://8.8.8.8:4567/api"] {
+            let url: reqwest::Url = value.parse().unwrap();
+            assert!(
+                validate_target(&url, false).await.is_ok(),
+                "{value} public ok"
+            );
         }
     }
 }

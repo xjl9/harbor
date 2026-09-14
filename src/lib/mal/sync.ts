@@ -54,7 +54,11 @@ function saveSent(map: SentMap): void {
 
 type EntryResponse = {
   num_episodes: number | null;
-  my_list_status: { num_episodes_watched: number; status: string } | null;
+  my_list_status: {
+    num_episodes_watched: number;
+    status: string;
+    is_rewatching: boolean;
+  } | null;
 };
 
 type SaveResponse = {
@@ -103,6 +107,7 @@ export async function syncMalProgress(
   episode: number | undefined,
   title: string,
   absoluteEpisode?: number,
+  season?: number,
 ): Promise<void> {
   if (!isAuthenticated()) return;
   const ep = episode ?? 1;
@@ -113,7 +118,8 @@ export async function syncMalProgress(
       : null;
 
   const sent = loadSent();
-  if ((sent[harborId] ?? 0) >= (abs ?? ep)) return;
+  const sentKey = `${harborId}|${season ?? ""}|${ep}`;
+  if ((sent[sentKey] ?? 0) >= (abs ?? ep)) return;
 
   const flightKey = `${harborId}|${ep}|${abs ?? ""}`;
   if (inflight.has(flightKey)) return;
@@ -127,6 +133,11 @@ export async function syncMalProgress(
       `/anime/${malId}?fields=num_episodes,my_list_status`,
     );
 
+    // Never overwrite entries the user completed or marked as re-watching;
+    // auto-sync would otherwise flip completed/rewatching back to "watching".
+    const listStatus = cur?.my_list_status;
+    if (listStatus && (listStatus.status === "completed" || listStatus.is_rewatching)) return;
+
     const current = cur?.my_list_status?.num_episodes_watched ?? 0;
     const total = cur?.num_episodes ?? 0;
     let target = ep;
@@ -136,7 +147,7 @@ export async function syncMalProgress(
       target = total;
     }
     if (target <= current) {
-      sent[harborId] = Math.max(sent[harborId] ?? 0, current);
+      sent[sentKey] = Math.max(sent[sentKey] ?? 0, current);
       saveSent(sent);
       return;
     }
@@ -156,11 +167,11 @@ export async function syncMalProgress(
     );
 
     if (saved?.num_episodes_watched === target) {
-      sent[harborId] = target;
+      sent[sentKey] = target;
       saveSent(sent);
       emit({ kind: "ok", title, episode: target });
     } else {
-      sent[harborId] = Math.max(sent[harborId] ?? 0, target);
+      sent[sentKey] = Math.max(sent[sentKey] ?? 0, target);
       saveSent(sent);
       emit({ kind: "error", title, error: "update-not-confirmed" });
     }

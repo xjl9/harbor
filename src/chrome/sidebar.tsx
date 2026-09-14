@@ -1,3 +1,4 @@
+import { usePreviewNavCustomization } from "@/lib/theme-preview";
 import { ChevronDown, ChevronUp, Lock } from "lucide-react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { HarborMark } from "@/components/icons/harbor-mark";
@@ -14,7 +15,17 @@ import { CollapseToggle } from "@/chrome/sidebar/collapse-toggle";
 import { SidebarBigPictureEntry } from "@/chrome/sidebar/big-picture-entry";
 import { NAV_ITEMS, applyNavCustomization, type NavItem } from "@/chrome/nav-items";
 
-const PRIMARY_IDS = new Set(["home", "discover", "catalogs", "movies", "shows", "kids", "anime", "live", "sports", "vod"]);
+const PRIMARY_IDS = new Set([
+  "home",
+  "discover",
+  "catalogs",
+  "movies",
+  "shows",
+  "kids",
+  "anime",
+  "live",
+  "vod",
+]);
 
 export function Sidebar() {
   const { view, setView, chromeHidden } = useView();
@@ -26,6 +37,7 @@ export function Sidebar() {
 
   const { mark: customMark, wordmark: customWordmark } = useHarborLogo();
   const collapsed = settings.sidebarCollapsed;
+  const retainLabels = (settings.theme.preset as string) === "elegantfin" && !kid;
   const hybridBar =
     typeof window !== "undefined" &&
     "__TAURI_INTERNALS__" in window &&
@@ -37,6 +49,7 @@ export function Sidebar() {
       <aside
         aria-hidden={chromeHidden}
         data-harbor-sidebar
+        data-collapsed={collapsed ? "true" : "false"}
         className={`relative z-[60] flex w-[72px] shrink-0 flex-col border-e border-edge-soft bg-canvas transition-[opacity,transform,width] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] ${
           collapsed ? "" : "lg:w-60"
         } ${
@@ -48,31 +61,40 @@ export function Sidebar() {
         {kid && <KidsSidebarDoodles />}
         <div
           data-tauri-drag-region
+          data-harbor-sidebar-brand
           className={`flex shrink-0 items-center justify-center gap-0.5 px-3 text-ink ${
             collapsed ? "" : "lg:justify-start lg:px-7"
           } ${hybridBar ? "h-12" : "h-20"}`}
         >
+          {!hybridBar && (
+            <span data-harbor-sidebar-mark className="inline-flex shrink-0">
+              {customMark ? (
+                <img
+                  src={customMark}
+                  alt=""
+                  draggable={false}
+                  className={`h-9 w-9 shrink-0 object-contain ${collapsed ? "" : "lg:h-10 lg:w-10"}`}
+                />
+              ) : (
+                <HarborMark className={`h-9 w-9 shrink-0 ${collapsed ? "" : "lg:h-10 lg:w-10"}`} />
+              )}
+            </span>
+          )}
           {!hybridBar &&
-            (customMark ? (
-              <img
-                src={customMark}
-                alt=""
-                draggable={false}
-                className={`h-9 w-9 shrink-0 object-contain ${collapsed ? "" : "lg:h-10 lg:w-10"}`}
-              />
-            ) : (
-              <HarborMark className={`h-9 w-9 shrink-0 ${collapsed ? "" : "lg:h-10 lg:w-10"}`} />
-            ))}
-          {!hybridBar && !collapsed &&
+            (!collapsed || retainLabels) &&
             (customWordmark ? (
               <img
                 src={customWordmark}
                 alt=""
                 draggable={false}
+                data-harbor-sidebar-label
+                aria-hidden={collapsed || undefined}
                 className="hidden h-8 w-auto object-contain lg:inline-block"
               />
             ) : kid ? (
               <span
+                data-harbor-sidebar-label
+                aria-hidden={collapsed || undefined}
                 className="hidden whitespace-nowrap text-[42px] font-bold leading-none tracking-tight lg:inline-flex lg:items-center"
                 style={{
                   fontFamily: '"Fredoka", "Baloo 2", system-ui, sans-serif',
@@ -85,12 +107,18 @@ export function Sidebar() {
                   alt="o"
                   draggable={false}
                   className="inline-block h-[0.92em] w-auto"
-                  style={{ transform: "translateY(0.08em)", marginLeft: "-5px", marginRight: "-5px" }}
+                  style={{
+                    transform: "translateY(0.08em)",
+                    marginLeft: "-5px",
+                    marginRight: "-5px",
+                  }}
                 />
                 r
               </span>
             ) : (
               <span
+                data-harbor-sidebar-label
+                aria-hidden={collapsed || undefined}
                 className="hidden whitespace-nowrap text-[44px] font-medium leading-none tracking-tight lg:inline"
                 style={{
                   fontFamily: '"Fraunces", "Iowan Old Style", "Georgia", serif',
@@ -113,13 +141,14 @@ export function Sidebar() {
           setView={setView}
           locked={locked}
           collapsed={collapsed}
+          retainLabels={retainLabels}
           hiddenTabs={hiddenTabs}
           onPinNav={(v) => setPendingPinView(v)}
         />
-        <div className={`relative p-2 ${collapsed ? "" : "lg:p-4"}`}>
+        <div data-harbor-sidebar-footer className={`relative p-2 ${collapsed ? "" : "lg:p-4"}`}>
           <div className={`flex flex-col gap-1 pb-1 ${collapsed ? "items-center" : ""}`}>
-            <SidebarBigPictureEntry collapsed={collapsed} />
-            <CollapseToggle collapsed={collapsed} />
+            <SidebarBigPictureEntry collapsed={collapsed} retainLabels={retainLabels} />
+            <CollapseToggle collapsed={collapsed} retainLabels={retainLabels} />
           </div>
           {locked ? (
             <div
@@ -130,10 +159,18 @@ export function Sidebar() {
               <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-edge-soft bg-elevated/50 text-ink-subtle">
                 <Lock size={17} />
               </div>
-              {!collapsed && (
-                <div className="hidden min-w-0 flex-1 lg:block">
-                  <div className="truncate text-[13.5px] font-medium text-ink-muted">{t("chrome.locked")}</div>
-                  <div className="truncate text-[12px] text-ink-subtle">{t("chrome.parentalOn")}</div>
+              {(!collapsed || retainLabels) && (
+                <div
+                  data-harbor-sidebar-label
+                  aria-hidden={collapsed || undefined}
+                  className="hidden min-w-0 flex-1 lg:block"
+                >
+                  <div className="truncate text-[13.5px] font-medium text-ink-muted">
+                    {t("chrome.locked")}
+                  </div>
+                  <div className="truncate text-[12px] text-ink-subtle">
+                    {t("chrome.parentalOn")}
+                  </div>
                 </div>
               )}
             </div>
@@ -165,6 +202,7 @@ function ScrollableNav({
   setView,
   locked,
   collapsed,
+  retainLabels,
   hiddenTabs,
   onPinNav,
 }: {
@@ -172,13 +210,17 @@ function ScrollableNav({
   setView: (v: View) => void;
   locked: boolean;
   collapsed: boolean;
+  retainLabels: boolean;
   hiddenTabs: Record<LockableTab, boolean>;
   onPinNav: (v: View) => void;
 }) {
   const { settings } = useSettings();
   const kid = useActiveKid();
   const t = useT();
-  const items = applyNavCustomization(NAV_ITEMS, settings.navCustomization);
+  const items = applyNavCustomization(
+    NAV_ITEMS,
+    usePreviewNavCustomization(settings.navCustomization),
+  );
   const isItemVisible = (item: NavItem) => {
     if (kid) return item.view === "kids";
     if (item.view === "kids") return false;
@@ -240,6 +282,7 @@ function ScrollableNav({
               key={item.id}
               {...item}
               collapsed={collapsed}
+              retainLabels={retainLabels}
               big={!!kid}
               active={view === item.view}
               onClick={() => setView(item.view)}
@@ -251,6 +294,7 @@ function ScrollableNav({
               label="Play"
               big
               collapsed={collapsed}
+              retainLabels={retainLabels}
               active={false}
               onClick={() => {
                 setView("kids");
@@ -269,6 +313,7 @@ function ScrollableNav({
                 {...item}
                 gated={gated}
                 collapsed={collapsed}
+                retainLabels={retainLabels}
                 active={view === item.view}
                 onClick={() => (gated ? onPinNav(item.view) : setView(item.view))}
               />
@@ -338,6 +383,7 @@ function NavItem({
   onClick,
   gated,
   collapsed,
+  retainLabels = false,
   big,
   view,
 }: {
@@ -347,6 +393,7 @@ function NavItem({
   onClick?: () => void;
   gated?: boolean;
   collapsed?: boolean;
+  retainLabels?: boolean;
   big?: boolean;
   view?: View;
 }) {
@@ -374,7 +421,10 @@ function NavItem({
             : "text-ink-muted hover:bg-elevated/50 hover:text-ink"
       }`}
     >
-      <span className={`relative ${big ? "scale-110" : ""} ${gated ? "opacity-70" : ""}`}>
+      <span
+        data-harbor-sidebar-icon
+        className={`relative ${big ? "scale-110" : ""} ${gated ? "opacity-70" : ""}`}
+      >
         {render(Boolean(active || hovered), hovered)}
         {gated && (
           <span className="absolute -bottom-1 -end-1 flex h-4 w-4 items-center justify-center rounded-full bg-canvas text-ink-subtle ring-1 ring-edge">
@@ -382,8 +432,15 @@ function NavItem({
           </span>
         )}
       </span>
-      {!collapsed && <span className="hidden lg:inline">{text}</span>}
+      {(!collapsed || retainLabels) && (
+        <span
+          data-harbor-sidebar-label
+          aria-hidden={collapsed || undefined}
+          className="hidden lg:inline"
+        >
+          {text}
+        </span>
+      )}
     </button>
   );
 }
-

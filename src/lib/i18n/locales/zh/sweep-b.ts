@@ -173,8 +173,8 @@ const sweepB: Record<string, string> = {
     "可使用以下任一工具制作包，导出 JSON，将其托管为 gist，然后在下方粘贴原始链接。",
   "Build a source plugin": "构建来源插件",
   "Build from source": "从源代码构建",
-  "Build identity. Useful when filing a bug report at bugs@harbor.site.":
-    "版本标识。向 bugs@harbor.site 提交错误报告时很有用。",
+  "Build identity. Useful when filing a bug report.":
+    "版本标识。提交错误报告时很有用。",
   "Build your own": "打造属于你的",
   "Build your own palette": "创建自己的配色方案",
   "Building EPUB": "正在生成 EPUB",
@@ -893,9 +893,9 @@ const sweepB: Record<string, string> = {
   Directors: "导演",
   "Disable all": "全部禁用",
   "Disable rule": "禁用规则",
-  "Disable torrents entirely": "完全禁用种子资源",
+  "Disable P2P entirely": "完全禁用 P2P",
   Disabled: "已禁用",
-  "Disabled because torrents are disabled above": "已禁用，因为上方已禁用种子资源",
+  "Disabled because P2P is disabled above": "已禁用，因为上方已禁用 P2P",
   Discard: "放弃",
   "Discard changes": "放弃更改",
   "Discard recording": "放弃录制",
@@ -1158,6 +1158,9 @@ const sweepB: Record<string, string> = {
   "Episodes that air after you add a series grab themselves": "添加剧集后，新播出的集数会自动下载",
   "Episodes worth the evening": "值得花一晚追的剧集",
   "Episodes you can drop into without losing the thread.": "随时看一集，也不会跟丢剧情。",
+  "Cached source resolution and direct download links.": "已缓存来源解析与直接下载链接。",
+  "Cached source resolution and cloud library access.": "已缓存来源解析与云端资料库访问。",
+  "Both shows direct, debrid, and peer-to-peer results together. Direct/debrid keeps P2P results out of the way unless nothing else is available. P2P puts them first.": "“两者”会同时显示直链、debrid 和 P2P 结果。“直链/debrid”仅在没有其他来源时才显示 P2P 结果。“P2P”则将其排在最前。",
 };
 
 export default sweepB;

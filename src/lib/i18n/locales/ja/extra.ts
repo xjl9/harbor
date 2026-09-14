@@ -260,8 +260,7 @@ const extra: Record<string, string> = {
   "Continue from last watched": "前回視聴したところから再開",
   "Continue in your browser...": "ブラウザで続行してください...",
   "Copy diagnostics": "診断情報をコピー",
-  "Copy diagnostics grabs the engine status and your P2P settings as JSON, handy to paste into a bug report. The engine folder holds the DHT cache (dht.json) and active torrent data.":
-    "「診断情報をコピー」では、エンジンの状態とP2P設定をJSON形式で取得できます。バグ報告への貼り付けに便利です。エンジンフォルダーには、DHTキャッシュ（dht.json）と実行中のTorrentデータが保存されています。",
+  "Copy diagnostics grabs the engine status and your P2P settings as JSON, handy to paste into a bug report. The engine folder holds the DHT cache (dht.json) and active transfer data.": "「診断情報をコピー」では、エンジンの状態とP2P設定をJSON形式で取得できます。バグ報告への貼り付けに便利です。エンジンフォルダーには、DHTキャッシュ（dht.json）と実行中の転送データが保存されています。",
   "Copy your Harbor watchlist over to Trakt, or pull your Trakt watchlist into Harbor. Safe to run again, Trakt skips anything it already has.":
     "HarborのウォッチリストをTraktにコピーするか、TraktのウォッチリストをHarborに取り込めます。再実行しても安全です。Traktにすでにある作品はスキップされます。",
   "Corner radius": "角の丸み",
@@ -860,12 +859,11 @@ const extra: Record<string, string> = {
   "Show the full notes for this build": "このビルドのリリースノートを全文表示",
   "Show the IMDb rating and synopsis on episodes across the list, grid, and panel layouts.":
     "リスト、グリッド、パネルの各レイアウトで、エピソードにIMDb評価とあらすじを表示します。",
-  "Show the report button on every torrent stream, not just likely new releases.":
-    "新作と思われるものだけでなく、すべてのトレントストリームに報告ボタンを表示します。",
+  "Show the report button on every P2P stream, not just likely new releases.": "新作と思われるものだけでなく、すべてのP2Pストリームに報告ボタンを表示します。",
   "Show the Skip button": "「スキップ」ボタンを表示",
   "Show title": "タイトルを表示",
   "Show TMDB score on cards": "カードにTMDBスコアを表示",
-  "Show torrent name": "トレント名を表示",
+  "Show release name": "リリース名を表示",
   "Show Trakt score on cards": "カードにTraktスコアを表示",
   "Show Up Next on Simkl rail": "Simklレールに「次に見る」を表示",
   "Show what you're actually watching, under the title in the player.":

@@ -23,7 +23,7 @@ test("settings search indexes open settings under Global", () => {
   const nav = readFileSync(new URL("../src/views/settings/nav.tsx", import.meta.url), "utf8");
   const entries = [
     ...nav.matchAll(
-      /\{\s*label: "Open settings",\s*section: "hotkeys",\s*anchorTitle: "Global",\s*keywords: \[([^\]]+)\],?\s*\}/g,
+      /\{\s*label: "Open settings",\s*section: "hotkeys",\s*tab: "keys",\s*anchorTitle: "Global",\s*keywords: \[([^\]]+)\],?\s*\}/g,
     ),
   ];
   assert.equal(entries.length, 1, "exactly one Open settings search entry");

@@ -131,3 +131,27 @@ function readLegacy(): string | null {
     return null;
   }
 }
+
+const PICKER_BG_KEY = "bg_picker";
+const PICKER_DIM_KEY = "bg_picker_dim";
+
+export async function loadPickerBg(): Promise<{ image: string | null; dim: number }> {
+  const [image, dim] = await Promise.all([
+    themeKvGet(PICKER_BG_KEY).catch(() => null),
+    themeKvGet(PICKER_DIM_KEY).catch(() => null),
+  ]);
+  const parsed = dim === null ? NaN : Number(dim);
+  if (!Number.isFinite(parsed)) return { image, dim: 55 };
+  // Current sliders store whole percentages: a saved 1 must remain 1%, not 100%.
+  const pct = parsed > 0 && parsed < 1 ? parsed * 100 : parsed;
+  return { image, dim: Math.min(100, Math.max(0, Math.round(pct))) };
+}
+
+export async function savePickerBg(data: string | null): Promise<boolean> {
+  if (data == null) return themeKvDelete(PICKER_BG_KEY);
+  return themeKvPut(PICKER_BG_KEY, data);
+}
+
+export async function savePickerBgDim(dim: number): Promise<boolean> {
+  return themeKvPut(PICKER_DIM_KEY, String(dim));
+}

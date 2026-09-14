@@ -111,7 +111,7 @@ export function useAutoSync(params: {
   settings: Settings;
   authKey: string | null;
   subtitlePreflightSettled: boolean;
-}): AutoSyncHandle {
+}): AutoSyncHandle & { suspendForManualTiming: () => void } {
   const { bridgeRef, src, snap, engine, settings, authKey, subtitlePreflightSettled } = params;
   const [status, setStatus] = useState<AutoSyncStatus>("idle");
   const [offer, setOffer] = useState<PipelineOutcome | null>(null);
@@ -140,6 +140,7 @@ export function useAutoSync(params: {
     confidence: number;
   } | null>(null);
   const statusScopeRef = useRef<AutoSyncScope | null>(null);
+  const manualTimingMediaRef = useRef<string | null>(null);
   const liveSnapRef = useRef(snap);
   const srcRef = useRef(src);
   const settingsRef = useRef(settings);
@@ -198,6 +199,7 @@ export function useAutoSync(params: {
   );
 
   const isCurrentAutoSyncScope = useCallback((scope: AutoSyncScope | null) => {
+    if (manualTimingMediaRef.current === autoSyncMediaKey(srcRef.current)) return false;
     const currentSelected =
       liveSnapRef.current.subtitleTracks.find((track) => track.selected) ?? null;
     return isAutoSyncScopeCurrent(scope, {
@@ -352,6 +354,10 @@ export function useAutoSync(params: {
         return null;
 
       const activeMediaKey = autoSyncMediaKey(active);
+      if (manualTimingMediaRef.current === activeMediaKey) {
+        if (!force) return null;
+        manualTimingMediaRef.current = null;
+      }
       const key = autoSyncRunKey(activeMediaKey, activeSelected.id);
       if (!force && doneKeyRef.current === key) return null;
 
@@ -579,6 +585,16 @@ export function useAutoSync(params: {
     revert();
   }, [revert]);
 
+  const suspendForManualTiming = useCallback(() => {
+    // Unlike Stop/Revert, taking manual control must preserve the current offset.
+    manualTimingMediaRef.current = autoSyncMediaKey(srcRef.current);
+    activeDisposeRef.current?.();
+    stopDrift();
+    statusScopeRef.current = null;
+    setOffer(null);
+    setStatus("idle");
+  }, [stopDrift]);
+
   const feedback = useCallback((good: boolean) => {
     const s = settingsRef.current;
     if (s.subtitleAutoSyncCrowd === false) return;
@@ -650,6 +666,7 @@ export function useAutoSync(params: {
     run,
     stop,
     feedback,
+    suspendForManualTiming,
   };
 }
 

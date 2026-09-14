@@ -1,6 +1,6 @@
 {
   "name": "harbor",
-  "version": "0.9.121",
+  "version": "0.9.126",
   "private": true,
   "license": "MIT",
   "type": "module",
@@ -30,7 +30,7 @@
     "setup:fonts": "node scripts/fetch-fonts.mjs",
     "setup:all": "node scripts/fetch-libmpv.mjs && node scripts/fetch-mpv.mjs && node scripts/fetch-ffmpeg.mjs && node scripts/fetch-fonts.mjs",
     "typecheck": "tsc -b --pretty false",
-    "test": "node --experimental-loader ./scripts/node-test-loader.mjs --test tests/*.test.ts"
+    "test": "node --experimental-loader ./scripts/node-test-loader.mjs --test tests/*.test.ts tests/*.test.mjs"
   },
   "dependencies": {
     "@mediapipe/tasks-vision": "0.10.35",
@@ -43,6 +43,7 @@
     "@tauri-apps/plugin-dialog": "^2.7.1",
     "@tauri-apps/plugin-fs": "^2.5.1",
     "@tauri-apps/plugin-http": "^2.5.8",
+    "@tauri-apps/plugin-notification": "^2",
     "@tauri-apps/plugin-opener": "^2.5.3",
     "@tauri-apps/plugin-os": "^2.3.2",
     "@tauri-apps/plugin-process": "^2",
@@ -62,7 +63,8 @@
     "react-markdown": "^10.1.0",
     "rehype-raw": "^7.0.0",
     "remark-gfm": "^4.0.1",
-    "tailwindcss": "^4"
+    "tailwindcss": "^4",
+    "tldts": "7.4.12"
   },
   "devDependencies": {
     "@resvg/resvg-js": "^2.6.2",

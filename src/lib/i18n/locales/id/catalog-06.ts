@@ -599,8 +599,7 @@ const catalog: Record<string, string> = {
   "Nothing is uploaded and nothing ships with Harbor. Everything stays on this device and you are responsible for the images you add.":
     "Tidak ada yang diunggah dan Harbor tidak menyertakan apa pun. Semuanya tetap berada di perangkat ini dan Anda bertanggung jawab atas gambar yang ditambahkan.",
   "Nothing left in today's picks": "Tidak ada lagi dalam pilihan hari ini",
-  "Nothing left to confirm while torrents are disabled.":
-    "Tidak ada lagi yang perlu dikonfirmasi saat torrent dinonaktifkan.",
+  "Nothing left to confirm while P2P is disabled.": "Tidak ada lagi yang perlu dikonfirmasi saat P2P dinonaktifkan.",
   "Nothing left to post after removing links.":
     "Tidak ada lagi yang bisa diposting setelah tautan dihapus.",
   "Nothing matched this filter. Try another category or change your region in Settings.":
@@ -819,7 +818,7 @@ const catalog: Record<string, string> = {
   "Only show titles in these original languages on the Home rows. Leave all off to show everything.":
     "Hanya tampilkan judul dengan bahasa asli ini di deretan Beranda. Biarkan semuanya nonaktif untuk menampilkan semua judul.",
   "Only sites you have the right to read.": "Hanya situs yang berhak Anda baca.",
-  "Only start the torrent engine when needed": "Hanya jalankan mesin torrent saat diperlukan",
+  "Only start the P2P engine when needed": "Hanya jalankan mesin P2P saat diperlukan",
   "Only streams already in your debrid library.":
     "Hanya stream yang sudah ada di perpustakaan debrid Anda.",
   "Only the cash you withdrew": "Hanya uang tunai yang Anda tarik",
@@ -969,8 +968,7 @@ const catalog: Record<string, string> = {
     "Membuka Stremio di browser Anda. Mendukung akun email, Facebook, dan Apple.",
   "Opens Stremio in your browser. Works with email, Facebook, and Apple. Harbor never sees your password.":
     "Membuka Stremio di browser Anda. Mendukung email, Facebook, dan Apple. Harbor tidak pernah melihat kata sandi Anda.",
-  "Opens the folder holding the DHT cache and active torrent data.":
-    "Membuka folder yang menyimpan cache DHT dan data torrent aktif.",
+  "Opens the folder holding the DHT cache and active transfer data.": "Membuka folder yang menyimpan cache DHT dan data transfer aktif.",
   "Opens the free signup page": "Membuka halaman pendaftaran gratis",
   "Opens your API settings page": "Membuka halaman pengaturan API Anda",
   Optional: "Opsional",

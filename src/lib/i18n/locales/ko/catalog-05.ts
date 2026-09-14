@@ -766,8 +766,7 @@ const catalog05: Record<string, string> = {
   "Live preview": "실시간 미리보기",
   "Live preview is on. Done and Save both keep what you've picked as your Custom theme. Reset reverts the editor to the saved palette.":
     "실시간 미리보기가 켜져 있습니다. 완료와 저장 모두 선택한 내용을 사용자 지정 테마로 유지합니다. 초기화를 누르면 편집기가 저장된 팔레트로 되돌아갑니다.",
-  "Live state of Harbor's own torrent engine on this machine.":
-    "이 기기에서 실행 중인 Harbor 자체 토렌트 엔진의 실시간 상태입니다.",
+  "Live state of Harbor's own P2P engine on this machine.": "이 기기에서 실행 중인 Harbor 자체 P2P 엔진의 실시간 상태입니다.",
   "Live streams that actually work.": "실제로 작동하는 라이브 스트림입니다.",
   "Live sync": "실시간 동기화",
   "Live web": "실시간 웹",
@@ -857,7 +856,7 @@ const catalog05: Record<string, string> = {
     "로컬 저장 공간이 가득 찼습니다. 이 평점은 계정에만 저장됩니다.",
   "Local subtitle": "로컬 자막",
   "Local time": "현지 시간",
-  "Local torrent engine": "로컬 토렌트 엔진",
+  "Local P2P engine": "로컬 P2P 엔진",
   Locale: "로캘",
   Location: "위치",
   "Lock controls · {binding}": "조작 잠금 · {binding}",

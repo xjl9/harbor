@@ -126,7 +126,8 @@ const sweep: Record<string, string> = {
   "All times": "Mọi thời điểm",
   "All video": "Tất cả video",
   "All-time bests": "Hay nhất mọi thời đại",
-  "Also joins Harbor's Discord server.": "Đồng thời tham gia máy chủ Discord của Harbor.",
+  "Linking your Discord account also joins you to Harbor's Discord server, so the bot can send your Backup keys privately.":
+    "Linking your Discord account also joins you to Harbor's Discord server, so the bot can send your Backup keys privately.",
   "Always re-encode when casting": "Luôn mã hóa lại khi truyền phát",
   "Always stream P2P": "Luôn phát trực tuyến P2P",
   Amber: "Hổ phách",
@@ -529,8 +530,8 @@ const sweep: Record<string, string> = {
   "Favour titles from where you are": "Ưu tiên nội dung tại nơi bạn đang ở",
   "Favour titles from your region on Home": "Ưu tiên nội dung trong khu vực của bạn trên Trang chủ",
   Feishin: "Feishin",
-  "Fetches a small public test torrent, then reports UDP and HTTPS egress, DHT bootstrap and tracker reachability step by step.":
-    "Tải một torrent thử nghiệm công khai nhỏ, sau đó báo cáo từng bước về kết nối ra ngoài qua UDP và HTTPS, quá trình khởi động DHT và khả năng kết nối với tracker.",
+  "Fetches a small public test file over P2P, then reports UDP and HTTPS egress, DHT bootstrap and tracker reachability step by step.":
+    "Tải một tệp thử nghiệm công khai nhỏ qua P2P, sau đó báo cáo từng bước về kết nối ra ngoài qua UDP và HTTPS, quá trình khởi động DHT và khả năng kết nối với tracker.",
   "Filename hidden": "Đã ẩn tên tệp",
   "Filename shown": "Đã hiện tên tệp",
   "Files smaller than this are skipped when scanning a folder.":
@@ -613,8 +614,8 @@ const sweep: Record<string, string> = {
   "HDR tone-mapping (hdr-toys)": "Ánh xạ tông màu HDR (hdr-toys)",
   HELP: "TRỢ GIÚP",
   HIDIVE: "HIDIVE",
-  "Handles torrent playback and transcoding for this machine.":
-    "Xử lý việc phát torrent và chuyển mã trên thiết bị này.",
+  "Handles P2P playback and transcoding for this machine.":
+    "Xử lý việc phát P2P và chuyển mã trên thiết bị này.",
   "Harbor accepted that but returned no session. Try again.":
     "Harbor đã chấp nhận nhưng không trả về phiên. Hãy thử lại.",
   "Harbor account linked as {name}": "Đã liên kết tài khoản Harbor với tên {name}",
@@ -810,14 +811,14 @@ const sweep: Record<string, string> = {
   "Live TV source": "Nguồn TV trực tiếp",
   "Live TV sources": "Nguồn TV trực tiếp",
   "Live action": "Người đóng",
-  "Live state of Harbor's own torrent engine on this machine.":
-    "Trạng thái trực tiếp của công cụ torrent riêng của Harbor trên máy này.",
+  "Live state of Harbor's own P2P engine on this machine.":
+    "Trạng thái trực tiếp của công cụ P2P riêng của Harbor trên máy này.",
   "Loading more collections...": "Đang tải thêm bộ sưu tập...",
   "Loads a backup file and restores exactly what it contains, without touching the rest of your setup. Your Stremio sign-in on this device stays as is.":
     "Tải tệp sao lưu và khôi phục chính xác nội dung trong đó mà không ảnh hưởng đến phần thiết lập còn lại. Trạng thái đăng nhập Stremio trên thiết bị này được giữ nguyên.",
   "Local folder": "Thư mục cục bộ",
   "Local time": "Giờ địa phương",
-  "Local torrent engine": "Công cụ torrent cục bộ",
+  "Local P2P engine": "Công cụ P2P cục bộ",
   "Lock player controls": "Khóa điều khiển trình phát",
   "Logo & icon": "Logo & biểu tượng",
   "Logos and backdrops where TMDB comes up empty.": "Logo và ảnh nền khi TMDB không có dữ liệu.",
@@ -947,8 +948,7 @@ const sweep: Record<string, string> = {
     "Chưa có thiết bị nào kết nối. Điện thoại có thể đang dùng mạng khách hoặc TV và điện thoại đang dùng hai mạng khác nhau.",
   "Nothing here yet.": "Chưa có gì ở đây.",
   "Nothing in {genre} right now.": "Hiện không có nội dung nào thuộc {genre}.",
-  "Nothing left to confirm while torrents are disabled.":
-    "Không còn gì cần xác nhận khi torrent bị tắt.",
+  "Nothing left to confirm while P2P is disabled.": "Không còn gì cần xác nhận khi P2P bị tắt.",
   "Nothing on your TV changes until you confirm you have saved this.":
     "Nội dung trên TV sẽ không thay đổi cho đến khi bạn xác nhận đã lưu mục này.",
   "Nothing selected. Harbor will not load a subtitle on its own.":
@@ -994,8 +994,8 @@ const sweep: Record<string, string> = {
   "Open this page by scanning the code on your TV's setup screen.":
     "Mở trang này bằng cách quét mã trên màn hình thiết lập của TV.",
   "OpenSubtitles API key": "Khóa API OpenSubtitles",
-  "Opens the folder holding the DHT cache and active torrent data.":
-    "Mở thư mục chứa bộ nhớ đệm DHT và dữ liệu torrent đang hoạt động.",
+  "Opens the folder holding the DHT cache and active transfer data.":
+    "Mở thư mục chứa bộ nhớ đệm DHT và dữ liệu truyền đang hoạt động.",
   "Opens the free signup page": "Mở trang đăng ký miễn phí",
   "Opens your API settings page": "Mở trang cài đặt API",
   "Optional. Add one to turn on automatic subtitle sync.":
@@ -1034,8 +1034,8 @@ const sweep: Record<string, string> = {
   "Paste your key": "Dán khóa của bạn",
   "Paste your v3 API key": "Dán khóa API v3",
   Peacock: "Peacock",
-  "Peers, speed and progress on the player while a torrent streams. Sits top left, clear of the exit button.":
-    "Hiển thị số peer, tốc độ và tiến trình trên trình phát khi phát torrent. Nằm ở góc trên bên trái, không che nút thoát.",
+  "Peers, speed and progress on the player while a P2P stream plays. Sits top left, clear of the exit button.":
+    "Hiển thị số peer, tốc độ và tiến trình trên trình phát khi phát luồng P2P. Nằm ở góc trên bên trái, không che nút thoát.",
   "People from the week's hottest titles, weighted by what is being talked about.":
     "Những người xuất hiện trong các tựa phim hot nhất tuần, ưu tiên theo mức độ được bàn luận.",
   Philo: "Philo",
@@ -1489,8 +1489,8 @@ const sweep: Record<string, string> = {
     "Đường chấm biểu thị việc nén đều toàn bộ dải. Đường cong duy trì ở mức cao giúp vùng trung sáng nổi bật và nén vùng sáng muộn hơn; đường cong thấp hơn giảm dần sớm và cho hình ảnh dịu hơn.",
   "The editor is a working copy of the player. Click any control on it to move, resize, restyle or hide that control.":
     "Trình chỉnh sửa là bản sao đang hoạt động của trình phát. Nhấp vào bất kỳ nút điều khiển nào để di chuyển, đổi kích thước, đổi kiểu hoặc ẩn nút đó.",
-  "The engine listens on a local port and joins the DHT to find peers. Active torrents are the streams it currently has open.":
-    "Công cụ lắng nghe trên một cổng cục bộ và tham gia DHT để tìm máy ngang hàng. Torrent đang hoạt động là các luồng hiện đang được mở.",
+  "The engine listens on a local port and joins the DHT to find peers. Active transfers are the streams it currently has open.":
+    "Công cụ lắng nghe trên một cổng cục bộ và tham gia DHT để tìm máy ngang hàng. Các lượt truyền đang hoạt động là các luồng hiện đang được mở.",
   "The key is saved on this device only.": "Khóa chỉ được lưu trên thiết bị này.",
   "The label looks high (1080p / 4K) but doesn't match expected file size or release window. Often a CAM or TS rebadged. Try a Theater Capture stream or check the source list before committing.":
     "Nhãn ghi chất lượng cao (1080p / 4K) nhưng không khớp với kích thước tệp hoặc thời điểm phát hành dự kiến. Thường là bản CAM hoặc TS được đổi nhãn. Hãy thử luồng Theater Capture hoặc kiểm tra danh sách nguồn trước khi xem.",
@@ -1592,7 +1592,7 @@ const sweep: Record<string, string> = {
   "Top 100 Producer": "Top 100 nhà sản xuất",
   "Top 100 Writer": "Top 100 biên kịch",
   "Top {n}, ranked by the work they left behind": "Top {n}, xếp hạng theo di sản tác phẩm",
-  "Torrent streaming": "Phát torrent",
+  "P2P streaming": "Phát P2P",
   Trackers: "Trình theo dõi",
   "Tracking what you watch": "Theo dõi nội dung bạn xem",
   "Tracks whose name contains one of these words are skipped.":

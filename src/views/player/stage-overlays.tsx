@@ -20,6 +20,7 @@ import {
 } from "@/components/player/content-advisory-toast";
 import { useT } from "@/lib/i18n";
 import { isMobileNative } from "@/lib/platform";
+import { useCaptionsPopoutOpen } from "@/lib/player/captions-popout-state";
 
 export const StageOverlays = memo(function StageOverlays({
   snap,
@@ -52,25 +53,35 @@ export const StageOverlays = memo(function StageOverlays({
   volumeHudPosition: VolumeHudPosition;
   videoFillPill: string | null;
   subDropToast: string | null;
-  contentAdvisory: { categories: ParentalCategory[]; playKey: string; imdbId: string | null };
+  contentAdvisory: {
+    categories: ParentalCategory[];
+    playKey: string;
+    imdbId: string | null;
+    mpaRating?: string | null;
+  };
   contentAdvisoryPosition: ContentAdvisoryPosition;
   onSubDelay: (sec: number) => void;
   onEnterSync?: () => void;
   chromeVisible: boolean;
 }) {
   const t = useT();
+  const captionsPopout = useCaptionsPopoutOpen();
   const showVolumeIndicator = volumeIndicator.visible;
   const topVolumeShowing = showVolumeIndicator && volumeHudPosition === "top";
+  const primarySubtitleVisible =
+    !subAssNative && snap.subtitleTracks.some((track) => track.selected);
   return (
     <>
-      {(!pipMode || subShowInPip) && (!subAssNative || snap.secondarySubText) && (
-        <SubtitleOverlay
-          text={subAssNative ? "" : snap.subText}
-          startSec={snap.subStartSec}
-          scale={pipMode ? 0.45 : 1}
-          secondaryText={snap.secondarySubText}
-        />
-      )}
+      {(!pipMode || subShowInPip) &&
+        !captionsPopout &&
+        (!subAssNative || snap.secondarySubText) && (
+          <SubtitleOverlay
+            text={primarySubtitleVisible ? snap.subText : ""}
+            startSec={primarySubtitleVisible ? snap.subStartSec : 0}
+            scale={pipMode ? 0.45 : 1}
+            secondaryText={snap.secondarySubText}
+          />
+        )}
       {showStats && !pipMode && <StatsOverlay snap={snap} engine={engine} />}
       {!pipMode && <SubtitleOffsetIndicator delaySec={subtitleOffsetSec} />}
       {!pipMode && (
@@ -115,6 +126,7 @@ export const StageOverlays = memo(function StageOverlays({
           playKey={contentAdvisory.playKey}
           titleId={contentAdvisory.imdbId}
           position={contentAdvisoryPosition}
+          mpaRating={contentAdvisory.mpaRating}
         />
       )}
       {!pipMode && <SubStyleBar />}

@@ -3,6 +3,8 @@ import { Check, ChevronDown, Hourglass, RotateCcw } from "lucide-react";
 import { Play } from "@/components/icons/play-filled";
 import { SPOILER_TEXT_CLASS, SPOILER_THUMB_CLASS, type SpoilerMask } from "@/lib/spoilers";
 import type { PlayEpisode } from "@/lib/view";
+import { parseKitsuId } from "@/lib/providers/kitsu";
+import { splitFranchiseDisplaySeason } from "@/lib/streams/anime-identity-core";
 import { useSettings } from "@/lib/settings";
 import { EpisodeRatingBadge } from "@/views/detail/episode-rating-badge";
 import { useT } from "@/lib/i18n";
@@ -22,6 +24,7 @@ export function EpisodeRow({
   watched = false,
   spoiler,
   imdbRating,
+  metaId,
 }: {
   episode: PlayEpisode;
   expanded: boolean;
@@ -31,6 +34,7 @@ export function EpisodeRow({
   watched?: boolean;
   spoiler?: SpoilerMask;
   imdbRating?: number;
+  metaId?: string;
 }) {
   const t = useT();
   const { settings } = useSettings();
@@ -38,7 +42,13 @@ export function EpisodeRow({
   const tmdbVal = episode.rating != null && episode.rating > 0 ? episode.rating : null;
   const ratingVal = imdbVal ?? tmdbVal;
   const hasMeta = !!episode.airDate || episode.runtime != null;
-  const epLabel = `S${episode.imdbSeason ?? episode.season} · E${String(episode.imdbEpisode ?? episode.episode).padStart(2, "0")}`;
+  const partSeason =
+    splitFranchiseDisplaySeason(parseKitsuId(episode.kitsuStreamId ?? "")) ??
+    splitFranchiseDisplaySeason(parseKitsuId(metaId ?? ""));
+  const epLabel =
+    partSeason != null
+      ? `S${partSeason} · E${String(episode.episode).padStart(2, "0")}`
+      : `S${episode.imdbSeason ?? episode.season} · E${String(episode.imdbEpisode ?? episode.episode).padStart(2, "0")}`;
   const hasStill = !!episode.still;
   const [imgFailed, setImgFailed] = useState(false);
   return (
@@ -50,7 +60,9 @@ export function EpisodeRow({
       <div className="flex gap-4 p-3">
         <div className="relative aspect-video h-[88px] shrink-0 overflow-hidden rounded-xl bg-canvas/60 ring-1 ring-edge-soft/60">
           {hasStill && !imgFailed && (
-            <div className={`h-full w-full overflow-hidden ${spoiler?.thumb ? SPOILER_THUMB_CLASS : ""}`}>
+            <div
+              className={`h-full w-full overflow-hidden ${spoiler?.thumb ? SPOILER_THUMB_CLASS : ""}`}
+            >
               <img
                 src={episode.still}
                 alt=""
@@ -86,7 +98,9 @@ export function EpisodeRow({
         </div>
         <div className="flex min-w-0 flex-1 flex-col justify-between gap-2">
           <div className="flex items-start justify-between gap-2">
-            <p className={`line-clamp-2 text-[14.5px] font-semibold leading-snug text-ink ${spoiler?.title ? SPOILER_TEXT_CLASS : ""}`}>
+            <p
+              className={`line-clamp-2 text-[14.5px] font-semibold leading-snug text-ink ${spoiler?.title ? SPOILER_TEXT_CLASS : ""}`}
+            >
               {episode.name ?? t("Episode {n}", { n: episode.episode })}
             </p>
             {isCurrent && (
@@ -100,7 +114,11 @@ export function EpisodeRow({
               onClick={onPlay}
               className="flex h-11 flex-1 items-center justify-center gap-2 rounded-full bg-[color-mix(in_srgb,var(--color-accent)_82%,var(--color-canvas))] px-4 text-[14px] font-semibold text-canvas transition-[background-color] hover:bg-[color-mix(in_srgb,var(--color-accent)_92%,var(--color-canvas))]"
             >
-              {isCurrent ? <RotateCcw size={15} strokeWidth={2.6} /> : <Play size={16} fill="currentColor" />}
+              {isCurrent ? (
+                <RotateCcw size={15} strokeWidth={2.6} />
+              ) : (
+                <Play size={16} fill="currentColor" />
+              )}
               {isCurrent ? t("Restart") : t("Play")}
             </button>
             <button
@@ -135,7 +153,9 @@ export function EpisodeRow({
               </div>
             )}
             {episode.overview ? (
-              <p className={`text-[13px] leading-relaxed text-ink-muted ${spoiler?.desc ? SPOILER_TEXT_CLASS : ""}`}>
+              <p
+                className={`text-[13px] leading-relaxed text-ink-muted ${spoiler?.desc ? SPOILER_TEXT_CLASS : ""}`}
+              >
                 {episode.overview}
               </p>
             ) : (

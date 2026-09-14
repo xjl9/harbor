@@ -278,9 +278,8 @@ const settingsFill: Record<string, string> = {
   "Slow addons and P2P sources often need more than 10 seconds to start. Raise this if streams are being skipped before they get a fair chance.":
     "غالبًا ما تحتاج الإضافات البطيئة ومصادر P2P إلى أكثر من 10 ثوانٍ لتبدأ. ارفع هذه القيمة إذا كان يتم تخطّي البثّ قبل أن تُتاح له فرصة كافية.",
   "{n} sec": "{n} ثانية",
-  "Only start the torrent engine when needed": "لا تُشغّل محرّك التورنت إلا عند الحاجة",
-  "Harbor normally starts its torrent engine at launch so the first P2P stream connects faster. That keeps a DHT node running and talking to the network even when you are not watching anything. Turn this on if you are on a metered or limited connection: the engine then starts the first time you actually play a torrent. Takes effect next launch.":
-    "يبدأ Harbor عادةً محرّك التورنت عند الإقلاع ليتصل أول بثّ P2P أسرع، وهذا يُبقي عقدة DHT تعمل وتتواصل مع الشبكة حتى وأنت لا تشاهد شيئًا. فعّل هذا الخيار إذا كان اتصالك محدودًا أو محسوب الاستهلاك: عندها يبدأ المحرّك أول مرة تُشغّل فيها تورنت فعليًا. يسري عند الإقلاع التالي.",
+  "Only start the P2P engine when needed": "لا تُشغّل محرّك P2P إلا عند الحاجة",
+  "Harbor normally starts its P2P engine at launch so the first P2P stream connects faster. That keeps a DHT node running and talking to the network even when you are not watching anything. Turn this on if you are on a metered or limited connection: the engine then starts the first time you actually play a P2P stream. Takes effect next launch.": "يبدأ Harbor عادةً محرّك P2P عند الإقلاع ليتصل أول بثّ P2P أسرع، وهذا يُبقي عقدة DHT تعمل وتتواصل مع الشبكة حتى وأنت لا تشاهد شيئًا. فعّل هذا الخيار إذا كان اتصالك محدودًا أو محسوب الاستهلاك: عندها يبدأ المحرّك أول مرة تُشغّل فيها بثّ P2P فعليًا. يسري عند الإقلاع التالي.",
   "What fullscreen does": "ما الذي يفعله ملء الشاشة",
   "True fullscreen covers the whole screen and hides the taskbar. Maximize fills the screen but keeps the taskbar and title bar, so you can still switch apps.":
     "ملء الشاشة الحقيقي يغطّي الشاشة بالكامل ويُخفي شريط المهام. أما التكبير فيملأ الشاشة مع الإبقاء على شريط المهام وشريط العنوان، لتتمكّن من التنقّل بين التطبيقات.",

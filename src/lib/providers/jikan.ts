@@ -47,21 +47,30 @@ function bestTitle(a: JikanAnime): string {
 }
 
 const FRANCHISE_STRIP_RX: RegExp[] = [
-  /\s*[-:]?\s*(?:1st|2nd|3rd|4th|5th|6th|7th|8th|9th|10th|11th|12th|First|Second|Third|Fourth|Fifth|Sixth|Seventh|Eighth|Ninth|Tenth|Final|Last)\s+(?:Season|Cour|Part)\b.*$/i,
-  /\s*[-:]?\s*Season\s+\d+\b.*$/i,
-  /\s+S\d+(?:\s|$).*/i,
-  /\s*[-:]?\s*(?:Part|Cour|Chapter)\s+\d+\b.*$/i,
-  /\s+(?:II|III|IV|V|VI|VII|VIII|IX|X)\s*$/,
+  /\s*[-:(]?\s*(?:1st|2nd|3rd|4th|5th|6th|7th|8th|9th|10th|11th|12th|First|Second|Third|Fourth|Fifth|Sixth|Seventh|Eighth|Ninth|Tenth|Final|Last)\s+(?:Season|Cour|Part|Chapter)\b.*$/i,
+  /\s*[-:(]?\s*Season\s+\d+\b.*$/i,
+  /\s*[-:(]?\s*S\d+(?:\s|\)|:|$).*/i,
+  /\s*[-:(]?\s*(?:Part|Cour|Chapter)\s+\d+\b.*$/i,
+  /\s*[-:(]?\s*(?:II|III|IV|V|VI|VII|VIII|IX|X)\b[)\s:-]*$/i,
+  /\s+[-:(]*\s*(?:19|20)\d{2}[)\s:]*$/,
 ];
 
 export function stripFranchiseSuffix(name: string): string {
   let t = name;
   for (const rx of FRANCHISE_STRIP_RX) t = t.replace(rx, "");
-  return t.replace(/[\s°'."’˚_:\-]+$/g, "").trim();
+  return t.replace(/[\s°'."’˚_:-]+$/g, "").trim();
 }
 
 export function animeFranchiseKey(name: string): string {
   return stripFranchiseSuffix(name).toLowerCase();
+}
+
+/** CW dedup key: collapses rows differing only by franchise suffix. */
+export function franchiseDedupKey(name: string): string {
+  return stripFranchiseSuffix(name)
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "")
+    .trim();
 }
 
 function franchiseKey(a: JikanAnime): string {
@@ -195,7 +204,10 @@ function throttledJikanFetch(url: string, timeoutMs: number): Promise<Response> 
   return result;
 }
 
-async function jikanQuery(path: string, params: Record<string, string | number> = {}): Promise<Meta[]> {
+async function jikanQuery(
+  path: string,
+  params: Record<string, string | number> = {},
+): Promise<Meta[]> {
   const effective = adultContentHidden() ? { sfw: "true", ...params } : params;
   const qs = new URLSearchParams();
   for (const [k, v] of Object.entries(effective)) qs.set(k, String(v));
@@ -242,7 +254,8 @@ export const jikanAiringNow = (page = 1) => jikanQuery("/seasons/now", { page })
 export const jikanUpcoming = (page = 1) => jikanQuery("/seasons/upcoming", { page });
 export const jikanTopAnime = (page = 1) => jikanQuery("/top/anime", { page });
 export const jikanTopAiring = (page = 1) => jikanQuery("/top/anime", { filter: "airing", page });
-export const jikanTopPopular = (page = 1) => jikanQuery("/top/anime", { filter: "bypopularity", page });
+export const jikanTopPopular = (page = 1) =>
+  jikanQuery("/top/anime", { filter: "bypopularity", page });
 export const jikanTopMovies = (page = 1) => jikanQuery("/top/anime", { type: "movie", page });
 export const jikanTopTv = (page = 1) => jikanQuery("/top/anime", { type: "tv", page });
 export const jikanNewReleases = (page = 1) =>
@@ -335,7 +348,8 @@ export const jikanByEra = (start: string, end: string, page = 1) =>
 const GEM_MEMBER_CEILING = 350_000;
 const GEM_SCORED_BY_FLOOR = 4_000;
 
-const SEQUEL_RX = /\b(?:1st|2nd|3rd|4th|5th|6th|7th|8th|9th|10th|11th|12th|Final|Last|Second|Third|Fourth|Fifth|Sixth|Seventh|Eighth|Ninth|Tenth)\s+(?:Season|Cour|Part)\b|\bSeason\s+\d+\b|\bS\d+\b|\b(?:Part|Cour)\s+\d+\b|\s(?:II|III|IV|V|VI|VII|VIII|IX|X)$/i;
+const SEQUEL_RX =
+  /\b(?:1st|2nd|3rd|4th|5th|6th|7th|8th|9th|10th|11th|12th|Final|Last|Second|Third|Fourth|Fifth|Sixth|Seventh|Eighth|Ninth|Tenth)\s+(?:Season|Cour|Part)\b|\bSeason\s+\d+\b|\bS\d+\b|\b(?:Part|Cour)\s+\d+\b|\s(?:II|III|IV|V|VI|VII|VIII|IX|X)$/i;
 
 function isSequelTitle(a: JikanAnime): boolean {
   const candidates = [a.title_english, a.title, a.title_japanese].filter(Boolean) as string[];

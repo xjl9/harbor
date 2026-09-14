@@ -1,6 +1,6 @@
 [package]
 name = "harbor"
-version = "0.9.121"
+version = "0.9.126"
 description = "A Stremio client built for adventure"
 edition = "2021"
 
@@ -27,6 +27,7 @@ tauri-plugin-http = "2"
 tauri-plugin-dialog = "2"
 tauri-plugin-fs = "2"
 tauri-plugin-deep-link = "2"
+tauri-plugin-notification = "2"
 walkdir = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
@@ -62,6 +63,7 @@ rustls = { version = "0.23", default-features = false, features = [
 ] }
 harbor-core = { path = "../harbor-core" }
 tauri-plugin-harbor-player = { path = "plugins/tauri-plugin-harbor-player" }
+harbor-install-recovery = { path = "../harbor-install-recovery" }
 librqbit = { version = "=8.1.1", default-features = false, features = ["rust-tls"] }
 url = "2"
 realfft = "3"
@@ -88,6 +90,7 @@ tauri-plugin-updater = "2"
 minisign-verify = "0.2"
 tauri-plugin-process = "2"
 tauri-plugin-window-state = "2"
+notify-rust = "4"
 # native-tls means schannel on Windows and Security.framework on macOS, but it
 # means a cross-compiled OpenSSL on Android. Keep `default-features = false` on
 # both halves or Cargo turns reqwest's defaults back on for every target.
@@ -111,6 +114,7 @@ windows = { version = "0.61", features = [
   "Win32_Graphics_Gdi",
   "Win32_Graphics_Dxgi",
   "Win32_Graphics_Dxgi_Common",
+  "Win32_Devices_Display",
   "Win32_System_Threading",
   "Win32_System_Power",
   "Win32_System_JobObjects",

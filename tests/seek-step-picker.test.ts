@@ -10,6 +10,17 @@ const at = (p: string) => new URL(`../${p}`, import.meta.url);
 const btn = readFileSync(at("src/components/player/transport/seek-step-btn.tsx"), "utf8");
 const keys = readFileSync(at("src/views/player/hooks/use-keyboard-shortcuts.ts"), "utf8");
 
+test("step seeks use exact mode and retain Linux media notifications", () => {
+  const controls = readFileSync(at("src/views/player/hooks/use-playback-controls.ts"), "utf8");
+  const step = controls.slice(
+    controls.indexOf("const seekStep ="),
+    controls.indexOf("const seekTo ="),
+  );
+  assert.match(step, /seek\(target, "exact"\);\s*notifyMediaSeeked\(target\)/);
+  assert.match(step, /observed !== acc.clock && observed < acc.target - SEEK_REBASE_TOLERANCE_SEC/);
+  assert.match(step, /clock: observed/);
+});
+
 test("the picker offers both seek steps, not just the arrow one", () => {
   assert.match(btn, /const shortSeconds = sanitizeSeekStep\(/);
   assert.match(btn, /settings\.seekBackStepShortSec : settings\.seekForwardStepShortSec/);

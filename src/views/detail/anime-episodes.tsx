@@ -35,7 +35,10 @@ import { useAnimeTvdbPanel } from "./anime-episodes/use-anime-tvdb-panel";
 import { useFranchiseEpisodes } from "./anime-episodes/use-franchise-episodes";
 import { isFranchiseExtra } from "@/lib/providers/anime-detail";
 import { franchiseRoot, franchiseRootSync } from "@/lib/providers/anime-franchise-root";
-import { isScopedSplitFranchiseRoot } from "@/lib/streams/anime-identity-core";
+import {
+  isScopedSplitFranchiseRoot,
+  splitFranchiseDisplaySeason,
+} from "@/lib/streams/anime-identity-core";
 import { useAnimeWatchedRouting } from "./anime-episodes/use-anime-watched-routing";
 import { useAnimeFranchiseNav } from "./anime-episodes/use-anime-franchise-nav";
 import { useTvdbProxyImages } from "./anime-episodes/use-tvdb-proxy-images";
@@ -157,10 +160,11 @@ export function AnimeEpisodes({
     mwVersion,
   });
   const intentSeasonKey = useMemo(() => {
+    const partScoped = splitFranchiseDisplaySeason(parseKitsuId(meta.id)) != null;
     const counts = new Map<number, number>();
     for (const ep of episodes) {
       if (ep.sourceMetaId != null) continue;
-      const s = ep.imdbSeason;
+      const s = partScoped ? (ep.seasonNumber ?? ep.imdbSeason) : ep.imdbSeason;
       if (s == null || s < 1) continue;
       counts.set(s, (counts.get(s) ?? 0) + 1);
     }
@@ -523,10 +527,7 @@ export function AnimeEpisodes({
                 }
               />
             ) : tvdbPanel.active ? (
-              <div
-                aria-hidden
-                className="h-10 w-44 animate-pulse rounded-full bg-white/[0.06]"
-              />
+              <div aria-hidden className="h-10 w-44 animate-pulse rounded-full bg-white/[0.06]" />
             ) : effectiveOrder ? (
               <SeasonArcPicker
                 items={pickerItems}

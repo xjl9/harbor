@@ -1,4 +1,8 @@
 const coverage: Record<string, string> = {
+  "Sound descriptions": "Descrizioni sonore",
+  "Hide sound effects and speaker names": "Nascondi effetti sonori e nomi dei personaggi",
+  "Removes bracketed descriptions like [door creaks] and shouted speaker labels like JOHN: while subtitles play, so a release that only ships an SDH track still reads as plain dialogue. Song lyrics, ordinary parentheses and non-Latin scripts are left alone. Skipped on forced and picture-based tracks.":
+    "Rimuove le descrizioni tra parentesi quadre come [la porta cigola] e i nomi dei personaggi in maiuscolo come JOHN: mentre scorrono i sottotitoli, così una versione che include solo una traccia SDH resta leggibile come dialogo normale. Testi delle canzoni, parentesi tonde normali e alfabeti non latini restano intatti. Non si applica alle tracce forzate e a quelle basate su immagini.",
   " (you)": " (tu)",
   '"Compound" interest is calculated on:': "Gli interessi composti si calcolano su:",
   "1 week": "1 settimana",
@@ -71,7 +75,6 @@ const coverage: Record<string, string> = {
   "All-time bests": "Il meglio di sempre",
   "All-time body of work, not who is trending. Trending and Top on TMDB are the live tabs.":
     "Conta l'intera carriera, non chi è di tendenza. Di tendenza e Top su TMDB sono le schede aggiornate in tempo reale.",
-  "Also joins Harbor's Discord server.": "Entra anche nel server Discord di Harbor.",
   "An agreement between landlord and tenant": "Un contratto tra locatore e conduttore",
   "An unexpected error occurred": "Si è verificato un errore imprevisto",
   "And for the naughty ones: browsing or rating an adult addon never shows on Discord.":
@@ -447,8 +450,8 @@ const coverage: Record<string, string> = {
   "Not quit without long notice": "Non dimetterti senza un lungo preavviso",
   "Not right?": "Non è così?",
   "Not share their confidential info": "Non divulgare le sue informazioni riservate",
-  "Nothing left to confirm while torrents are disabled.":
-    "Non resta nulla da confermare finché i torrent sono disattivati.",
+  "Nothing left to confirm while P2P is disabled.":
+    "Non resta nulla da confermare finché il P2P è disattivato.",
   "Nothing until next year begins": "Nessuna retribuzione fino all'inizio dell'anno successivo",
   Notifications: "Notifiche",
   OK: "OK",
@@ -603,8 +606,8 @@ const coverage: Record<string, string> = {
   "Show forum threads and comments from AniList on anime detail pages.":
     "Mostra nelle pagine dei dettagli degli anime le discussioni del forum e i commenti di AniList.",
   "Show others' drawings": "Mostra i disegni degli altri",
-  "Show the report button on every torrent stream, not just likely new releases.":
-    "Mostra il pulsante di segnalazione su ogni stream torrent, non solo sulle probabili nuove uscite.",
+  "Show the report button on every P2P stream, not just likely new releases.":
+    "Mostra il pulsante di segnalazione su ogni stream P2P, non solo sulle probabili nuove uscite.",
   "Showing first {shown} of {total} channels. Use search or a category to narrow down.":
     "Sono mostrati i primi {shown} di {total} canali. Usa la ricerca o una categoria per restringere i risultati.",
   "Showing last synced ranking": "Mostra l'ultima classifica sincronizzata",
@@ -1286,6 +1289,8 @@ const coverage: Record<string, string> = {
   "Paste your TheIntroDB API key": "Incolla la tua chiave API TheIntroDB",
   "Optional. TheIntroDB answers without a key, but a key raises your rate limit so timing keeps arriving when you binge. Get one at":
     "Facoltativo. TheIntroDB risponde anche senza chiave, ma una chiave aumenta il limite di richieste, così i tempi continuano ad arrivare durante le maratone. Ottienine una su",
+  "Linking your Discord account also joins you to Harbor's Discord server, so the bot can send your Backup keys privately.":
+    "Linking your Discord account also joins you to Harbor's Discord server, so the bot can send your Backup keys privately.",
 };
 
 export default coverage;

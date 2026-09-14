@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Dices, Flag, Undo2 } from "lucide-react";
 import type { Meta } from "@/lib/cinemeta";
 import { useT } from "@/lib/i18n";
@@ -5,6 +6,7 @@ import { useSettings } from "@/lib/settings";
 import { chooseHeading, endVoyage, metaById, rerollHeadings, undoPick } from "@/lib/voyage/store";
 import type { Voyage } from "@/lib/voyage/types";
 import { PortCard } from "./port-card";
+import { PortHoverCard, usePortHover } from "./port-hover-card";
 
 export function VoyagePicker({ voyage }: { voyage: Voyage }) {
   const t = useT();
@@ -14,6 +16,9 @@ export function VoyagePicker({ voyage }: { voyage: Voyage }) {
     .map((id) => metaById(voyage, id))
     .filter((m): m is Meta => !!m);
   const picked = voyage.routeIds.length;
+  const hover = usePortHover();
+  const lineup = voyage.headingIds.join(",");
+  useEffect(() => hover.drop(), [lineup]);
 
   return (
     <div className="flex flex-col gap-3">
@@ -33,10 +38,16 @@ export function VoyagePicker({ voyage }: { voyage: Voyage }) {
             meta={meta}
             index={i}
             state="heading"
-            onClick={() => chooseHeading(meta.id, tmdbKey)}
+            onHover={(rect) => (rect ? hover.enter(meta, rect) : hover.leave())}
+            onClick={() => {
+              hover.drop();
+              chooseHeading(meta.id, tmdbKey);
+            }}
           />
         ))}
       </div>
+
+      {hover.meta && hover.anchor && <PortHoverCard meta={hover.meta} anchor={hover.anchor} />}
 
       <div className="mt-1 flex items-center justify-between gap-2">
         <button

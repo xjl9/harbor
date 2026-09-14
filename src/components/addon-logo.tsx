@@ -155,6 +155,7 @@ export function AddonLogo({
         loading="lazy"
         decoding="async"
         referrerPolicy="no-referrer"
+        className="harbor-addon-logo"
         onError={() => {
           if (!remoteFailed && fallback) setRemoteFailed(true);
         }}

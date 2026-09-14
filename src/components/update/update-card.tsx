@@ -13,6 +13,7 @@ import {
 import { releaseNote, type ReleaseNote } from "@/lib/updater/release-notes";
 import { useT } from "@/lib/i18n";
 import { RichNote } from "./rich-notes";
+import { experimentalReleaseNote } from "@/lib/updater/experimental-notes";
 
 function mb(bytes: number): string {
   return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
@@ -29,7 +30,10 @@ export function UpdateCard() {
   }, []);
   useEffect(() => {
     let ok = true;
-    if (u.status === "available" && u.version) {
+    if (u.channel === "experimental") {
+      setRich(experimentalReleaseNote(u.version));
+    } else if (u.version) {
+      setRich(null);
       releaseNote(u.version).then((n) => ok && setRich(n));
     } else {
       setRich(null);
@@ -37,7 +41,7 @@ export function UpdateCard() {
     return () => {
       ok = false;
     };
-  }, [u.status, u.version]);
+  }, [u.status, u.version, u.channel]);
 
   const pct = Math.round(u.progress * 100);
   const determinate = u.totalBytes > 0;
@@ -59,21 +63,28 @@ export function UpdateCard() {
           </div>
           <div className="flex min-w-0 flex-1 flex-col">
             <span className="text-[15px] font-semibold text-ink">
-              {u.status === "downloaded"
-                ? t("update.ready")
-                : u.status === "installing"
-                  ? t("update.installing")
-                  : u.status === "downloading"
-                    ? t("update.downloading")
-                    : u.status === "error"
-                      ? u.installFailed
-                        ? t("Finish updating Harbor")
-                        : t("update.failed")
-                      : t("update.available")}
+              {u.intent === "return-beta"
+                ? t("Return to beta")
+                : u.status === "downloaded"
+                  ? t("update.ready")
+                  : u.status === "installing"
+                    ? t("update.installing")
+                    : u.status === "downloading"
+                      ? t("update.downloading")
+                      : u.status === "error"
+                        ? u.installFailed
+                          ? t("Finish updating Harbor")
+                          : t("update.failed")
+                        : t("update.available")}
             </span>
             {u.version && (
               <span className="text-[12.5px] text-ink-subtle">
-                {t("update.harborVersion", { version: u.version })}
+                {u.channel === "experimental" && u.experimentalVersion
+                  ? t("Experimental {version} · Build {buildId}", {
+                      version: u.experimentalVersion,
+                      buildId: u.buildId ?? "—",
+                    })
+                  : t("update.harborVersion", { version: u.version })}
               </span>
             )}
           </div>
@@ -100,7 +111,7 @@ export function UpdateCard() {
           </p>
         )}
 
-        {u.status === "available" && (rich || u.notes) && (
+        {["available", "downloading", "downloaded"].includes(u.status) && (rich || u.notes) && (
           <div className="mx-5 mb-1 max-h-[248px] overflow-y-auto rounded-xl border border-edge-soft/60 bg-canvas/40 px-3.5 py-3">
             {rich ? (
               <RichNote note={rich} />
@@ -141,7 +152,7 @@ export function UpdateCard() {
         {u.status === "error" && (
           <div className="mx-5 mb-1 rounded-xl border border-danger/40 bg-danger/10 px-3.5 py-3 text-[12.5px] leading-relaxed text-ink-muted">
             {u.error ?? t("update.errorServer")}
-            {u.installFailed && (
+            {u.installFailed && u.channel !== "experimental" && u.intent !== "return-beta" && (
               <span className="mt-1.5 block text-ink-subtle">
                 {t(
                   "Download and run the installer to finish updating. If it keeps failing, run it as administrator once.",
@@ -182,7 +193,8 @@ export function UpdateCard() {
           {u.status === "error" && (
             <>
               <GhostButton onClick={closeUpdatePanel}>{t("common.close")}</GhostButton>
-              {u.installFailed ? (
+              {u.intent === "return-beta" ? null : u.installFailed &&
+                u.channel !== "experimental" ? (
                 <PrimaryButton
                   onClick={() => void (u.handoff ? openHandoffDownload() : openManualDownload())}
                 >

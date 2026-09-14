@@ -1,4 +1,5 @@
 import { makeSafeTauriUnlisten } from "@/lib/tauri-unlisten";
+import { focusWindow } from "@/lib/window";
 
 const EVENT = "harbor:deeplink-install";
 const OPEN_EVENT = "harbor:deeplink-open";
@@ -117,6 +118,10 @@ export function parseStremioOpen(url: string): DeepLinkOpen | null {
   return null;
 }
 
+export function shareDeepLink(type: string, id: string): string {
+  return `harbor://detail/${encodeURIComponent(type)}/${encodeURIComponent(id)}`;
+}
+
 export function parseHarborOpen(url: string): DeepLinkOpen | null {
   if (!url.startsWith("harbor://")) return null;
   return parseDetailPath(url.slice("harbor://".length));
@@ -219,6 +224,17 @@ export async function startDeepLinkBridge(): Promise<() => void> {
         if (shouldForward(u)) emitDeepLinkInstall(u);
       }),
     );
+    const unlistenNotificationClick = makeSafeTauriUnlisten(
+      await listen<string>("harbor:notification-click", (e) => {
+        const u = e.payload;
+        if (typeof u !== "string" || !u) return;
+        const open = parseHarborOpen(u);
+        if (open) {
+          emitDeepLinkOpen(open);
+          void focusWindow();
+        }
+      }),
+    );
     let lastCap = "";
     let lastCapAt = 0;
     const forwardLinuxBrowserInstall = async (e: { payload: string }) => {
@@ -280,6 +296,9 @@ export async function startDeepLinkBridge(): Promise<() => void> {
       } catch {}
       try {
         unlistenNative();
+      } catch {}
+      try {
+        unlistenNotificationClick();
       } catch {}
       try {
         unlistenBrowserCap();

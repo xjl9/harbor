@@ -1108,7 +1108,7 @@ export function DetailView({
     manualWatchedVersion,
     manualWatchedVersion,
   );
-  const prevSeriesWatchedVerRef = useRef(-1);
+  const prevSeriesWatchedVerRef = useRef(seriesWatchedVer);
   const stremioVideosRef = useRef<{ imdb: string; videos: NonNullable<Meta["videos"]> } | null>(
     null,
   );
@@ -1959,6 +1959,7 @@ export function DetailView({
                 meta={playMeta}
                 videos={cinemetaFull.videos}
                 stremioWatched={stremioWatched}
+                resumeSeason={lastPlay?.season}
               />
             </FadeInUp>
           )}

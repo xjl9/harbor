@@ -156,9 +156,8 @@ const settings: Record<string, string> = {
   "Delete rule": "Excluir regra",
   "Disable all": "Desativar tudo",
   "Disable rule": "Desativar regra",
-  "Disable torrents entirely": "Desativar torrents completamente",
-  "Disabled because torrents are disabled above":
-    "Desativado porque os torrents estão desativados acima",
+  "Disable P2P entirely": "Desativar P2P completamente",
+  "Disabled because P2P is disabled above": "Desativado porque o P2P está desativado acima",
   "Edit layout": "Editar layout",
   "Enable TV navigation above to use focus navigation in the player.":
     "Ative a navegação de TV acima para usar a navegação por foco no player.",
@@ -192,8 +191,7 @@ const settings: Record<string, string> = {
   "Groq API key (gsk-...)": "Chave de API do Groq (gsk-...)",
   "Group Refresh on the left beside Back instead of the far right of the header.":
     "Agrupar Atualizar à esquerda, ao lado de Voltar, em vez de na extremidade direita do cabeçalho.",
-  "Harbor will not start the torrent engine, contact trackers, or run DHT. Use this if you only want debrid and direct links. Turn off to re-enable torrent streaming.":
-    "O Harbor não iniciará o mecanismo de torrent, não contatará trackers nem executará o DHT. Use isso se você quiser apenas debrid e links diretos. Desative para reativar o streaming por torrent.",
+  "Harbor will not start the P2P engine, contact trackers, or run DHT. Use this if you only want debrid and direct links. Turn off to re-enable P2P streaming.": "O Harbor não iniciará o mecanismo P2P, não contatará trackers nem executará o DHT. Use isso se você quiser apenas debrid e links diretos. Desative para reativar o streaming por P2P.",
   "Hide badge": "Ocultar selo",
   "Hide manga": "Ocultar mangá",
   "Hide pack instructions": "Ocultar instruções do pacote",
@@ -340,8 +338,7 @@ const settings: Record<string, string> = {
     "Estes selos são desenhados nos pôsteres enquanto você navega. O RPDB, nas chaves acima, é uma opção separada que grava as notas na própria imagem do pôster.",
   "This score only appears on cards.": "Esta nota só aparece nos cards.",
   "Top 10 ribbon": "Faixa Top 10",
-  "Torrents are disabled. Uncached streams will not play unless they come from a debrid service or a direct link. To use torrents, toggle this off.":
-    "Os torrents estão desativados. Streams não armazenados em cache não serão reproduzidos, a menos que venham de um serviço debrid ou de um link direto. Para usar torrents, desative isso.",
+  "P2P is disabled. Uncached streams will not play unless they come from a debrid service or a direct link. To use P2P, toggle this off.": "O P2P está desativado. Streams não armazenados em cache não serão reproduzidos, a menos que venham de um serviço debrid ou de um link direto. Para usar P2P, desative isso.",
   "True black menus": "Menus em preto absoluto",
   "Try it": "Experimentar",
   "Turn off to hide the sync badge during playback.":
@@ -361,8 +358,7 @@ const settings: Record<string, string> = {
     "Use as teclas de seta e Enter para mover o foco pelo Harbor. Desative isso para deixar as teclas de seta livres e desativar a navegação por foco em todos os lugares.",
   "Use your own image as the app icon": "Usar sua própria imagem como ícone do app",
   "Watchlist bookmark": "Marcador de watchlist",
-  "When off, a torrent stops the moment you close or switch the stream, so nothing keeps downloading in the background. Turn on to let it keep going after you leave; manage or pause those from the Downloads tab.":
-    "Quando desativado, um torrent para no momento em que você fecha ou troca o stream, então nada continua baixando em segundo plano. Ative para deixá-lo continuar depois que você sair; gerencie ou pause esses downloads na aba Downloads.",
+  "When off, a P2P transfer stops the moment you close or switch the stream, so nothing keeps downloading in the background. Turn on to let it keep going after you leave; manage or pause those from the Downloads tab.": "Quando desativado, uma transferência P2P para no momento em que você fecha ou troca o stream, então nada continua baixando em segundo plano. Ative para deixá-la continuar depois que você sair; gerencie ou pause esses downloads na aba Downloads.",
   "Where scores appear": "Onde as notas aparecem",
   "Where the Refresh button sits in the picker header. Default keeps it on the right, across from Back.":
     "Onde o botão Atualizar fica no cabeçalho do seletor. O padrão o mantém à direita, do lado oposto ao Voltar.",
@@ -615,8 +611,8 @@ const settings: Record<string, string> = {
   "Scans your Stremio library and rewrites any item whose shape doesn't match Stremio's exact schema.":
     "Verifica sua biblioteca do Stremio e reescreve qualquer item cujo formato não corresponda exatamente ao esquema do Stremio.",
   About: "Sobre",
-  "Build identity. Useful when filing a bug report at bugs@harbor.site.":
-    "Identidade da build. Útil ao registrar um relatório de bug em bugs@harbor.site.",
+  "Build identity. Useful when filing a bug report.":
+    "Identidade da build. Útil ao registrar um relatório de bug.",
   "Reveal the show or movie artwork.": "Revelar a arte da série ou filme.",
   Legal: "Legal",
   "Made with": "Feito com",
@@ -666,8 +662,7 @@ const settings: Record<string, string> = {
   "Real-Debrid API token": "Token de API do Real-Debrid",
   "API token": "Token de API",
   "API key": "Chave de API",
-  "Faster and quieter than torrents if you already pay for Usenet. Configure on the addon page, paste the manifest URL it returns.":
-    "Mais rápido e discreto que torrents se você já paga por Usenet. Configure na página do addon, cole a URL do manifesto que ele retornar.",
+  "Faster and quieter than P2P if you already pay for Usenet. Configure on the addon page, paste the manifest URL it returns.": "Mais rápido e discreto que P2P se você já paga por Usenet. Configure na página do addon, cole a URL do manifesto que ele retornar.",
   "Searches and streams directly off Easynews. No debrid needed. Just your Easynews login.":
     "Pesquisa e transmite diretamente do Easynews. Não precisa de debrid. Só o seu login do Easynews.",
   Expired: "Expirado",
@@ -1596,7 +1591,7 @@ const settings: Record<string, string> = {
   "Motion smoothing": "Suavização de movimento",
   "Interpolates frames for smoother panning, best on anime. Needs a display refresh rate above the video's frame rate, and can stutter on weak GPUs. mpv only.":
     "Interpola quadros para uma panorâmica mais suave, ideal para animes. Requer uma taxa de atualização da tela acima da taxa de quadros do vídeo e pode engasgar em GPUs fracas. Somente mpv.",
-  "Direct torrent streaming": "Streaming direto de torrent",
+  "Direct P2P streaming": "Streaming direto por P2P",
   "When you have no debrid set up, or a torrent isn't cached, stream it straight from the bundled engine on localhost:11470. This connects to peers over your own connection, the same way Stremio's built-in streaming does.":
     "Quando você não tem um debrid configurado, ou um torrent não está em cache, transmita direto do mecanismo integrado em localhost:11470. Isso conecta a peers pela sua própria conexão, do mesmo jeito que o streaming nativo do Stremio faz.",
   "Use Harbor's built-in engine (beta)": "Usar o mecanismo integrado do Harbor (beta)",
@@ -1690,16 +1685,14 @@ const settings: Record<string, string> = {
   "Local engine": "Mecanismo local",
   "Built-in peer-to-peer streaming, served from your own machine.":
     "Streaming peer-to-peer integrado, servido a partir da sua própria máquina.",
-  "Active torrents": "Torrents ativos",
+  "Active transfers": "Transferências ativas",
   "Run self-test": "Executar autoteste",
   "Running self-test": "Executando autoteste",
   "Restart engine": "Reiniciar mecanismo",
-  "Self-test is disabled while strict remote streaming is on. It downloads a test torrent over peer-to-peer on this machine.":
-    "O autoteste fica desativado enquanto a transmissão remota estrita está ativa. Ele baixa um torrent de teste via peer-to-peer nesta máquina.",
+  "Self-test is disabled while strict remote streaming is on. It downloads a small test file over peer-to-peer on this machine.": "O autoteste fica desativado enquanto a transmissão remota estrita está ativa. Ele baixa um pequeno arquivo de teste via peer-to-peer nesta máquina.",
   "Self-test": "Autoteste",
   "Remote streaming server": "Servidor de streaming remoto",
-  "Point Harbor at a streaming server on another machine, like the Stremio service on a home server. Torrents download and stream from that machine instead of this one.":
-    "Aponte o Harbor para um servidor de streaming em outra máquina, como o serviço Stremio em um servidor doméstico. Os torrents baixam e transmitem daquela máquina em vez desta.",
+  "Point Harbor at a streaming server on another machine, like the Stremio service on a home server. P2P streams download and play from that machine instead of this one.": "Aponte o Harbor para um servidor de streaming em outra máquina, como o serviço Stremio em um servidor doméstico. Os streams P2P baixam e tocam daquela máquina em vez desta.",
   "Use exclusively (never fall back to local)": "Usar exclusivamente (nunca recorrer ao local)",
   "If the server is unreachable, playback fails instead of streaming locally. Use this when your VPN runs on the server machine and torrent traffic must never leave this one.":
     "Se o servidor estiver inacessível, a reprodução falha em vez de transmitir localmente. Use isso quando sua VPN roda na máquina do servidor e o tráfego de torrent nunca deve sair dela.",
@@ -2336,6 +2329,9 @@ const settings: Record<string, string> = {
     "{count} título nunca mais mostrará o aviso de conteúdo.",
   "{count} titles will never show the content advisory again.#few":
     "{count} títulos nunca mais mostrarão o aviso de conteúdo.",
+  "Cached source resolution and direct download links.": "Resolução de fontes em cache e links de download direto.",
+  "Cached source resolution and cloud library access.": "Resolução de fontes em cache e acesso à biblioteca na nuvem.",
+  "Both shows direct, debrid, and peer-to-peer results together. Direct/debrid keeps P2P results out of the way unless nothing else is available. P2P puts them first.": "Ambos mostra juntos os resultados diretos, de debrid e peer-to-peer. Direto/debrid deixa os resultados P2P de lado, a menos que não haja mais nada disponível. P2P os coloca primeiro.",
 };
 
 export default settings;

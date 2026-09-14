@@ -19,8 +19,10 @@ import {
   sanitizeSubtitleOffsetSize,
 } from "@/lib/player/subtitle-offset";
 import { sanitizeBufferSize } from "@/lib/player/buffer-profile";
+import { sanitizeScreensaverMedia } from "@/lib/screensaver/media";
 import {
   sanitizeControllerCursor,
+  sanitizeControllerCursorHideMs,
   sanitizeControllerCursorImage,
   sanitizeControllerCursorSize,
 } from "@/lib/gamepad/cursor";
@@ -121,8 +123,21 @@ export function sanitizeTheme(t: Partial<ThemeSettings> | undefined): ThemeSetti
   };
 }
 
+let cachedKey: string | null = null;
+let cachedRaw: string | null = null;
+let cachedSettings: Settings | null = null;
+
 export function loadStoredSettings(rawKey: string = STORAGE_KEY): Settings {
   const raw = localStorage.getItem(rawKey);
+  if (cachedSettings && cachedKey === rawKey && cachedRaw === raw) return cachedSettings;
+  const settings = parseStoredSettings(raw);
+  cachedKey = rawKey;
+  cachedRaw = raw;
+  cachedSettings = settings;
+  return settings;
+}
+
+function parseStoredSettings(raw: string | null): Settings {
   if (!raw) {
     return {
       ...DEFAULT,
@@ -163,8 +178,7 @@ export function loadStoredSettings(rawKey: string = STORAGE_KEY): Settings {
       _playbackSourcePreferenceV2?: boolean;
     };
     if (!parsed._playbackSourcePreferenceV1) {
-      parsed.playbackSourcePreference =
-        parsed.localPlaybackMode === "local" ? "local" : "online";
+      parsed.playbackSourcePreference = parsed.localPlaybackMode === "local" ? "local" : "online";
       parsed.preferredMediaServerId = null;
       parsed._playbackSourcePreferenceV1 = true;
     }
@@ -201,12 +215,11 @@ export function loadStoredSettings(rawKey: string = STORAGE_KEY): Settings {
       parsed.stremioDeeplinkInstall = true;
       parsed._stremioDeeplinkOnByDefault = true;
     }
-    if (!parsed._contentAdvisoryOnByDefaultV1) {
-      parsed.contentAdvisoryToast = true;
-      parsed._contentAdvisoryOnByDefaultV1 = true;
-    }
     if (parsed.contentAdvisoryTheme !== "monochrome" && parsed.contentAdvisoryTheme !== "colored") {
       parsed.contentAdvisoryTheme = "colored";
+    }
+    if (typeof parsed.contentAdvisoryShowIgnore !== "boolean") {
+      parsed.contentAdvisoryShowIgnore = true;
     }
     if (!parsed._skipButtonHideSecV2) {
       if (
@@ -312,6 +325,10 @@ export function loadStoredSettings(rawKey: string = STORAGE_KEY): Settings {
       }
       parsed._navThemeRepairV1 = true;
     }
+    if (parsed.cwSources == null) {
+      const ext = parsed.externalContinueWatching === true;
+      parsed.cwSources = { library: true, trakt: ext, simkl: ext, local: true };
+    }
     const posterCards = normalizePosterCardSettings(parsed);
     return {
       ...DEFAULT,
@@ -328,8 +345,20 @@ export function loadStoredSettings(rawKey: string = STORAGE_KEY): Settings {
           ? parsed.fullscreenClockEnabled
           : DEFAULT.fullscreenClockEnabled,
       controllerCursor: sanitizeControllerCursor(parsed.controllerCursor),
+      screensaverStyle:
+        parsed.screensaverStyle === "catBoat" || parsed.screensaverStyle === "custom"
+          ? parsed.screensaverStyle
+          : "ambient",
+      screensaverMedia: sanitizeScreensaverMedia(parsed.screensaverMedia),
+      screensaverMediaId:
+        typeof parsed.screensaverMediaId === "string" ? parsed.screensaverMediaId : null,
       controllerCursorImage: sanitizeControllerCursorImage(parsed.controllerCursorImage),
       controllerCursorSize: sanitizeControllerCursorSize(parsed.controllerCursorSize),
+      controllerCursorEnabled:
+        typeof parsed.controllerCursorEnabled === "boolean"
+          ? parsed.controllerCursorEnabled
+          : DEFAULT.controllerCursorEnabled,
+      controllerCursorHideMs: sanitizeControllerCursorHideMs(parsed.controllerCursorHideMs),
       fullscreenClockFormat: sanitizeFullscreenClockFormat(parsed.fullscreenClockFormat),
       fullscreenClockStyle: sanitizeFullscreenClockStyle(parsed.fullscreenClockStyle),
       fullscreenClockShowSeconds:
@@ -436,7 +465,16 @@ export function loadStoredSettings(rawKey: string = STORAGE_KEY): Settings {
           anime: parsed.customCalendar?.mediaTypes?.anime !== false,
         },
       },
-      webhookRules: Array.isArray(parsed.webhookRules) ? parsed.webhookRules : [],
+      webhookRules: Array.isArray(parsed.webhookRules)
+        ? parsed.webhookRules.map((r) => ({
+            ...r,
+            channels: {
+              discord: r.channels?.discord ?? false,
+              telegram: r.channels?.telegram ?? false,
+              desktop: r.channels?.desktop ?? false,
+            },
+          }))
+        : [],
       customStreamFilters: Array.isArray(parsed.customStreamFilters)
         ? parsed.customStreamFilters
         : DEFAULT.customStreamFilters,

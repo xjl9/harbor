@@ -1,5 +1,6 @@
 import { activeProfileId, activeProfileIsPrimary } from "@/lib/active-profile-id";
 import { getSecret, setSecret } from "@/lib/secret-store";
+import { clearPendingStops } from "./pending-sync";
 import { REFRESH_THRESHOLD_SEC } from "./config";
 import type { TraktSession } from "./types";
 
@@ -39,7 +40,11 @@ function read(): TraktSession | null {
     const settingsRaw = activeProfileIsPrimary() ? localStorage.getItem("harbor.settings") : null;
     if (settingsRaw) {
       const s = JSON.parse(settingsRaw);
-      if (typeof s?.traktAccessToken === "string" && typeof s?.traktRefreshToken === "string" && typeof s?.traktExpiresAt === "number") {
+      if (
+        typeof s?.traktAccessToken === "string" &&
+        typeof s?.traktRefreshToken === "string" &&
+        typeof s?.traktExpiresAt === "number"
+      ) {
         const now = Date.now();
         const expiresInSec = Math.floor((s.traktExpiresAt - now) / 1000);
         const session: TraktSession = {
@@ -89,6 +94,9 @@ export function getSession(): TraktSession | null {
 
 export function setSession(session: TraktSession | null): void {
   ensureLoaded();
+  if (!session || !cached || session.username !== cached.username) {
+    clearPendingStops();
+  }
   cached = session;
   write(session);
   for (const fn of subscribers) fn();

@@ -8,6 +8,7 @@ import test from "node:test";
 const read = (path: string) => readFileSync(new URL(path, import.meta.url), "utf8");
 
 function body(source: string, signature: string): string {
+  source = source.replace(/\r\n/g, "\n");
   const start = source.indexOf(signature);
   assert.ok(start >= 0, `missing ${signature}`);
   const end = source.indexOf("\n}\n", start);
@@ -17,7 +18,7 @@ function body(source: string, signature: string): string {
 
 const stateSource = read("../src/lib/fullscreen-state.ts");
 const hookSource = read("../src/views/player/hooks/use-fullscreen.ts");
-const settingsSource = read("../src/views/settings/player-panel/play-mode-section.tsx");
+const settingsSource = read("../src/views/settings/quality-panel/window-options.tsx");
 
 test("fullscreen state offers three distinct window modes", () => {
   assert.match(
@@ -63,12 +64,15 @@ test("a borderless session survives a stray DOM fullscreenchange", () => {
 });
 
 test("exiting any fullscreen also leaves borderless", () => {
-  assert.match(stateSource, /if \(windowFullscreen \|\| borderlessActive\) await exitWindowFullscreen\(\);/);
+  assert.match(
+    body(stateSource, "export async function exitAnyFullscreen()"),
+    /if \(windowFullscreen \|\| borderlessActive\) \{\s*await exitWindowFullscreen\(\);\s*return;/,
+  );
 });
 
 test("the fullscreen mode setting exposes borderless to the user", () => {
-  assert.match(settingsSource, /\{ value: "fullscreen", label: t\("True fullscreen"\) \}/);
-  assert.match(settingsSource, /\{ value: "borderless", label: t\("Borderless window"\) \}/);
-  assert.match(settingsSource, /\{ value: "maximized", label: t\("Maximize"\) \}/);
+  assert.match(settingsSource, /<option value="fullscreen">\{t\("True fullscreen"\)\}<\/option>/);
+  assert.match(settingsSource, /<option value="borderless">\{t\("Borderless window"\)\}<\/option>/);
+  assert.match(settingsSource, /<option value="maximized">\{t\("Maximize"\)\}<\/option>/);
   assert.match(settingsSource, /normalizeFullscreenMode\(settings\.fullscreenMode\)/);
 });

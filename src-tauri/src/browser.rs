@@ -124,7 +124,7 @@ pub async fn browser_open(app: AppHandle, url: String) -> Result<(), String> {
             });
         }
 
-        let result = builder.build();
+        let result = crate::browser_args::match_main(&app_for_main, builder).build();
         match result {
             Ok(window) => {
                 eprintln!("[browser] window built, label={}", window.label());

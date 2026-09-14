@@ -38,7 +38,37 @@ import { resolvePreferredAnimeTitle } from "@/lib/anime-title";
 import { stripFranchiseSuffix } from "@/lib/providers/jikan";
 import { getAnimeCwId } from "@/lib/anime-cw-ids";
 import { aniZipLookupKey, applyAniZipEpisode, needsAniZipSyncIds } from "@/lib/cw-anime-episode";
+import { isSplitFranchiseKitsu } from "@/lib/providers/anime-franchise-root";
+import { parseKitsuId } from "@/lib/providers/kitsu";
+import {
+  isForeignSplitSeason,
+  splitFranchiseDisplaySeason,
+} from "@/lib/streams/anime-identity-core";
+import { classifyAnimeNumbering } from "@/lib/subtitles/anime-numbering";
 import { ThreeLiquidGlassSurface } from "@/components/ThreeLiquidGlassSurface";
+
+// Bleach: Thousand-Year Blood War is split across four cours that carry their
+// own arc name appended to the base title (e.g. "... - The Separation"). The
+// library keeps the arc name, but the card should show only the base title.
+// This is a closed set of the four cour subtitles; do not add anime names here.
+const ANIME_ARC_STRIP: ReadonlyArray<{ matcher: string; replace: string }> = [
+  { matcher: "The Blood Warfare", replace: "" },
+  { matcher: "The Separation", replace: "" },
+  { matcher: "The Conflict", replace: "" },
+  { matcher: "The Calamity", replace: "" },
+];
+
+function stripAnimeArcSuffix(name: string): string {
+  let t = name;
+  for (const { matcher, replace } of ANIME_ARC_STRIP) {
+    t = t.replace(new RegExp(`(?:\\s*[-:—]\\s*|\\s)${escapeRegExp(matcher)}$`, "i"), replace);
+  }
+  return t.replace(/[\s°'."’˚_:-]+$/g, "").trim();
+}
+
+function escapeRegExp(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
 
 type Props = {
   item: LibraryItem;
@@ -77,8 +107,7 @@ export const ContinueCard = memo(function ContinueCard({
   const snapshot = readSnapshot(item._id);
   const isExternal = !!item.external;
   const externalLogo = item.external === "trakt" ? traktLogo : simklLogo;
-  const externalLabel =
-    item.external === "trakt" ? t("Paused on Trakt") : t("Paused on Simkl");
+  const externalLabel = item.external === "trakt" ? t("Paused on Trakt") : t("Paused on Simkl");
   const dur = item.state?.duration ?? 0;
   const off = item.state?.timeOffset ?? 0;
   const progress = dur > 0 ? Math.min(1, off / dur) : 0;
@@ -125,13 +154,17 @@ export const ContinueCard = memo(function ContinueCard({
   const [metaBg, setMetaBg] = useState<string | undefined>();
   const [hydratedMeta, setHydratedMeta] = useState<Meta | null>(null);
   const [kitsuVideo, setKitsuVideo] = useState<AnimeKitsuVideo | null>(null);
+  const [absoluteNumber, setAbsoluteNumber] = useState<number | null>(null);
   const [epTitle, setEpTitle] = useState<string | null>(null);
+  const [epStill, setEpStill] = useState<string | null>(null);
   const [translatedTitle, setTranslatedTitle] = useState<string | null>(null);
   const [imgIdx, setImgIdx] = useState(0);
   const cardRef = useRef<HTMLButtonElement>(null);
 
   const candidates = useMemo(() => {
     const thumb = upNext ? undefined : snapshot;
+    const still =
+      upNext || !settings.cwPreferEpisodeStill ? undefined : hiResStill(epStill ?? undefined);
     const seen = new Set<string>();
     const out: string[] = [];
     for (const u of [thumb, metaBg, item.background, item.poster]) {
@@ -141,16 +174,30 @@ export const ContinueCard = memo(function ContinueCard({
       seen.add(d);
       out.push(d);
     }
+    if (still && !seen.has(still)) out.unshift(still);
     return out;
-  }, [snapshot, metaBg, item.background, item.poster, upNext]);
+  }, [
+    snapshot,
+    epStill,
+    settings.cwPreferEpisodeStill,
+    metaBg,
+    item.background,
+    item.poster,
+    upNext,
+  ]);
 
   const src = candidates[imgIdx];
+
+  useEffect(() => {
+    setImgIdx(0);
+  }, [candidates]);
 
   useEffect(() => {
     setLogo(undefined);
     setMetaBg(undefined);
     setHydratedMeta(null);
     setKitsuVideo(null);
+    setAbsoluteNumber(null);
     setTranslatedTitle(null);
     setImgIdx(0);
     const el = cardRef.current;
@@ -195,6 +242,29 @@ export const ContinueCard = memo(function ContinueCard({
                 m.videos.find((v) => v.id === item.state?.video_id) ??
                 m.videos.find((v) => v.episode === animeEp);
               if (vid) setKitsuVideo(vid);
+            }
+            const key = aniZipLookupKey(item._id);
+            if (key && animeEp != null && Number.isFinite(animeEp) && animeEp > 0) {
+              const lookup =
+                key.scheme === "mal"
+                  ? aniZipByMal
+                  : key.scheme === "anilist"
+                    ? aniZipByAnilist
+                    : key.scheme === "anidb"
+                      ? aniZipByAnidb
+                      : aniZipByKitsu;
+              lookup(key.id)
+                .then((az) => {
+                  if (cancelled || !az?.episodes) return;
+                  if (classifyAnimeNumbering(az) !== "longRunning") return;
+                  // For continuous long-running entries, the entry-relative number
+                  // IS the absolute number (AniZip keys them 1..N across the whole
+                  // run, and only populates absoluteEpisodeNumber sparsely).
+                  const azEp = az.episodes[String(animeEp)];
+                  const abs = azEp?.absoluteEpisodeNumber ?? animeEp;
+                  if (abs != null && Number.isFinite(abs) && abs > 0) setAbsoluteNumber(abs);
+                })
+                .catch(() => {});
             }
           })
           .catch(() => {});
@@ -263,6 +333,7 @@ export const ContinueCard = memo(function ContinueCard({
 
   useEffect(() => {
     setEpTitle(null);
+    setEpStill(null);
     if (!ep || kitsuThreeSeg) return;
     if (/^(kitsu|mal|anilist|anidb):/.test(item._id)) return;
     let cancelled = false;
@@ -272,6 +343,7 @@ export const ContinueCard = memo(function ContinueCard({
         if (cancelled) return;
         const found = eps.find((e) => e.episode === ep.episode);
         if (found?.name) setEpTitle(found.name);
+        if (found?.still) setEpStill(found.still);
       })
       .catch(() => {});
     return () => {
@@ -282,20 +354,35 @@ export const ContinueCard = memo(function ContinueCard({
 
   const episodeTitle = epTitle ?? kitsuVideo?.title ?? null;
 
+  const isAnimeItem = /^(kitsu|mal|anilist|anidb):/.test(item._id);
+  const cardKitsuId =
+    parseKitsuId(item._id) ??
+    parseKitsuId(kitsuVideo?.id ?? "") ??
+    parseKitsuId(getAnimeCwId(item._id) ?? "");
+  const seasonForeignCard = isForeignSplitSeason(
+    isSplitFranchiseKitsu(cardKitsuId),
+    ep?.season,
+    kitsuVideo?.imdbSeason,
+  );
+  const partSeasonCard = splitFranchiseDisplaySeason(cardKitsuId);
   const animeSeasonMapped =
+    !seasonForeignCard &&
     kitsuVideo &&
     kitsuVideo.imdbSeason != null &&
     kitsuVideo.imdbSeason >= 2 &&
     kitsuVideo.imdbEpisode != null
       ? { season: kitsuVideo.imdbSeason, episode: kitsuVideo.imdbEpisode }
       : null;
-  const sub = animeSeasonMapped
-    ? `S${animeSeasonMapped.season} · E${String(animeSeasonMapped.episode).padStart(2, "0")}`
-    : ep
-      ? `S${ep.season}E${ep.episode}`
-      : animeEp && Number.isFinite(animeEp) && animeEp > 0
-        ? `Ep ${animeEp}`
-        : "";
+  const sub =
+    isAnimeItem && absoluteNumber != null && Number.isFinite(absoluteNumber) && absoluteNumber > 0
+      ? `Ep ${absoluteNumber}`
+      : animeSeasonMapped
+        ? `S${animeSeasonMapped.season} · E${String(animeSeasonMapped.episode).padStart(2, "0")}`
+        : ep
+          ? `S${partSeasonCard ?? ep.season}E${ep.episode}`
+          : animeEp && Number.isFinite(animeEp) && animeEp > 0
+            ? `Ep ${animeEp}`
+            : "";
 
   const meta: Meta = hydratedMeta
     ? { ...hydratedMeta, id: item._id, type: libraryMetaType(item.type) }
@@ -308,7 +395,9 @@ export const ContinueCard = memo(function ContinueCard({
       };
 
   const rawTitle = translatedTitle || hydratedMeta?.name?.trim() || item.name;
-  const displayTitle = isAnimeCwItem(item) ? stripFranchiseSuffix(rawTitle) || rawTitle : rawTitle;
+  const displayTitle = isAnimeCwItem(item)
+    ? stripAnimeArcSuffix(stripFranchiseSuffix(rawTitle)) || rawTitle
+    : rawTitle;
 
   const onOpenDetails = () => {
     const isAnime = /^(kitsu|mal|anilist|anidb):/.test(meta.id);
@@ -590,10 +679,6 @@ export const ContinueCard = memo(function ContinueCard({
             radius="9999px"
             shaderRadius={0.58}
             intensity={0.9}
-            experimentalStyle={{
-              background:
-                "linear-gradient(145deg, rgba(8,12,18,0.50), rgba(8,12,18,0.38) 52%, rgba(8,12,18,0.44))",
-            }}
             style={{
               boxShadow: "inset 0 1px 0 rgba(255,255,255,0.10), inset 0 -1px 0 rgba(0,0,0,0.05)",
             }}
@@ -602,6 +687,8 @@ export const ContinueCard = memo(function ContinueCard({
           >
             <button
               type="button"
+              tabIndex={-1}
+              data-tv-skip="true"
               onClick={onPlay}
               aria-label={t("Play {name}", { name: displayTitle })}
               title={t("Play")}
@@ -615,6 +702,8 @@ export const ContinueCard = memo(function ContinueCard({
         <div className="pointer-events-none absolute inset-x-0 top-0 z-10 flex aspect-[16/9] items-center justify-center opacity-0 transition-opacity duration-[220ms] group-hover:opacity-100 group-focus-within:opacity-100">
           <button
             type="button"
+            tabIndex={-1}
+            data-tv-skip="true"
             onClick={onPlay}
             aria-label={t("Play {name}", { name: displayTitle })}
             title={t("Play")}
@@ -626,6 +715,8 @@ export const ContinueCard = memo(function ContinueCard({
       )}
       <button
         type="button"
+        tabIndex={-1}
+        data-tv-skip="true"
         onClick={onOpenDetails}
         aria-label={`${t("Open details")}: ${displayTitle}`}
         className="mt-2.5 block w-full truncate rounded-sm text-start text-[13px] font-medium text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
@@ -639,10 +730,6 @@ export const ContinueCard = memo(function ContinueCard({
               radius="9999px"
               shaderRadius={0.58}
               intensity={0.9}
-              experimentalStyle={{
-                background:
-                  "linear-gradient(145deg, rgba(8,12,18,0.50), rgba(8,12,18,0.38) 52%, rgba(8,12,18,0.44))",
-              }}
               style={{
                 boxShadow: "inset 0 1px 0 rgba(255,255,255,0.10), inset 0 -1px 0 rgba(0,0,0,0.05)",
               }}
@@ -651,6 +738,8 @@ export const ContinueCard = memo(function ContinueCard({
             >
               <button
                 type="button"
+                tabIndex={-1}
+                data-tv-skip="true"
                 onClick={(e) => {
                   e.stopPropagation();
                   onDismiss(item);
@@ -665,6 +754,8 @@ export const ContinueCard = memo(function ContinueCard({
         ) : (
           <button
             type="button"
+            tabIndex={-1}
+            data-tv-skip="true"
             onClick={(e) => {
               e.stopPropagation();
               onDismiss(item);
@@ -680,6 +771,11 @@ export const ContinueCard = memo(function ContinueCard({
     </div>
   );
 });
+
+function hiResStill(url?: string): string | undefined {
+  if (!url) return url;
+  return url.replace("/t/p/w300/", "/t/p/w780/");
+}
 
 function downscaleTmdb(url?: string): string | undefined {
   if (!url) return url;

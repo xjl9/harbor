@@ -1,5 +1,6 @@
 import { safeFetch } from "@/lib/safe-fetch";
 import { createRequestScheduler } from "@/lib/request-scheduler";
+import { createCatalogCache, isCatalogPath } from "./tmdb-catalog-cache";
 
 export const TMDB = "https://api.themoviedb.org/3";
 export const IMG = "https://image.tmdb.org/t/p";
@@ -7,6 +8,7 @@ export const IMG = "https://image.tmdb.org/t/p";
 const tmdbRequests = createRequestScheduler({ concurrency: 6 });
 
 const tmdbInflight = new Map<string, Promise<unknown>>();
+const catalogCache = createCatalogCache();
 
 let tmdbLanguage = "";
 
@@ -106,13 +108,24 @@ export async function get<T>(
   const lang = effectiveTmdbLanguage();
   if (lang && !params.language) url.searchParams.set("language", lang);
   for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
+  url.searchParams.sort();
   const target = url.toString();
+  // The full URL scopes raw pages by API key, language, region, filters and page.
+  // User-specific ranking and watched filtering still run afresh after retrieval.
+  const cacheable = isCatalogPath(path);
+  const cached = cacheable ? catalogCache.get<T>(target) : undefined;
+  if (cached !== undefined) return cached;
   const shared = tmdbInflight.get(target);
-  if (shared) return shared as Promise<T | null>;
+  if (shared) {
+    const data = await (shared as Promise<T | null>);
+    return cacheable ? structuredClone(data) : data;
+  }
   const run = fetchWithRetry<T>(target, path);
   tmdbInflight.set(target, run);
   try {
-    return await run;
+    const data = await run;
+    if (cacheable) catalogCache.set(target, data);
+    return data;
   } finally {
     tmdbInflight.delete(target);
   }

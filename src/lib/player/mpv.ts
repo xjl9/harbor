@@ -90,6 +90,8 @@ type MpvEvent =
 
 type ExternalSubtitleMetadata = {
   url: string;
+  lang?: string;
+  title?: string;
   cues?: SubCue[];
   originalUrl?: string;
   downloadAuth?: SubtitleLoadMetadata["downloadAuth"];
@@ -139,6 +141,8 @@ export type MpvOptions = {
   anime4kShaders?: string[];
   d3d11Flip?: boolean;
   macEdr?: boolean;
+  renderer?: "gpu-next" | "gpu";
+  forceYuv420p?: boolean;
   extraOptions?: string;
   fullDownload?: boolean;
   getEmbedRect?: () => Promise<MpvRect | null> | MpvRect | null;
@@ -154,6 +158,8 @@ function mpvReuseConfigKey(options: MpvOptions | undefined, hdrToSdr: boolean): 
     anime4kShaders: options?.anime4kShaders ?? [],
     d3d11Flip: options?.d3d11Flip === true,
     macEdr: options?.macEdr === true,
+    renderer: options?.renderer ?? "gpu-next",
+    forceYuv420p: options?.forceYuv420p === true,
     extraOptions: options?.extraOptions ?? "",
     fullDownload: options?.fullDownload === true,
   });
@@ -281,9 +287,19 @@ export function createMpvBridge(mpvOptions?: MpvOptions): PlayerBridge {
   let suppressEndFileUntil = 0;
   let svpFilterFailed = false;
   let secondarySid: string | null = null;
+  let primarySubtitleOff = false;
+  const confirmPrimarySubtitleVisibility = (off: boolean) => {
+    primarySubtitleOff = off;
+    if (off) {
+      // mpv may not deliver an empty sub-text event when the track is disabled.
+      snap.subText = "";
+      snap.subStartSec = 0;
+    }
+  };
   let subtitleAddSelectionId = 0;
   const mainSubtitleSelection = new SubtitleSelectionCoordinator();
   const secondarySubtitleSelection = new SubtitleSelectionCoordinator();
+  let pendingSubtitlePick: { id: string | null; origin: string } | null = null;
   let subtitleTransitionQueue: Promise<void> = Promise.resolve();
   const enqueueSubtitleTransition = <T>(task: () => Promise<T>): Promise<T> => {
     const result = subtitleTransitionQueue.then(task, task);
@@ -296,6 +312,7 @@ export function createMpvBridge(mpvOptions?: MpvOptions): PlayerBridge {
   const invalidateSubtitleSelections = () => {
     mainSubtitleSelection.invalidate();
     secondarySubtitleSelection.invalidate();
+    pendingSubtitlePick = null;
   };
   let observedPaused: boolean | null = null;
   const applyDefaultVodBufferPhase = async (
@@ -358,6 +375,7 @@ export function createMpvBridge(mpvOptions?: MpvOptions): PlayerBridge {
       mpvUrl = mpvUrl.replace(/\\/g, "/");
       const externalMetadata: ExternalSubtitleMetadata = {
         url: originalUrl,
+        lang: subtitle.lang,
         cues: preparedCues,
         originalUrl,
         format: preparedFormat,
@@ -492,6 +510,72 @@ export function createMpvBridge(mpvOptions?: MpvOptions): PlayerBridge {
     listeners.forEach((l) => l(next));
   };
 
+  // mpv's WASAPI output re-roots to the OS default audio device via its own
+  // hotplug notification. For device-topology changes (e.g. HDMI <-> Bluetooth,
+  // which differ in sample rate and format) that internal reload is unreliable
+  // and can leave audio routed to a now-unavailable endpoint, producing silence
+  // until the stream is restarted. When `audio-device-list` changes (mpv fires
+  // a property-change on every hotplug / default-device switch) we re-assert the
+  // device and force an `ao-reload`, which re-initializes the audio output onto
+  // the current default device — the same re-init a stream restart performs.
+  //
+  // After screensaver / system sleep, Windows can release the WASAPI endpoint
+  // without firing a hotplug event, leaving mpv with a stale device ID.  The
+  // `visibilitychange` listener below catches that case: when the app becomes
+  // visible again we schedule the same device re-assertion + ao-reload and
+  // re-select whichever audio track was active before the failure.
+  let audioDeviceReloadTimer: number | null = null;
+  const scheduleAudioDeviceReload = () => {
+    if (!isWindowsDesktop()) return;
+    if (!mpvStarted) return;
+    if (snap.status !== "playing" && snap.status !== "paused") return;
+    if (audioDeviceReloadTimer != null) window.clearTimeout(audioDeviceReloadTimer);
+    audioDeviceReloadTimer = window.setTimeout(() => {
+      audioDeviceReloadTimer = null;
+      void (async () => {
+        // Remember the selected audio track so we can restore it after the
+        // output reload deselects it (mpv drops the track on ao init failure).
+        const prevAid = snap.audioTracks.find((t) => t.selected)?.id ?? null;
+        await applyAudioDevice(appliedAudioDevice ?? "auto").catch(() => {});
+        await invoke("mpv_command", { cmd: ["ao-reload"] }).catch(() => {});
+        if (prevAid) {
+          await invoke("mpv_set_property", { name: "aid", value: prevAid }).catch(() => {});
+        }
+      })();
+    }, 300);
+  };
+
+  // After screensaver / system sleep Windows may silently release the WASAPI
+  // audio endpoint without firing a device-list hotplug event.  When the app
+  // becomes visible again we schedule an audio output reload so mpv re-binds
+  // to the current default device and restores audio.
+  const onVisibilityRestore = () => {
+    if (document.visibilityState !== "visible") return;
+    scheduleAudioDeviceReload();
+  };
+  if (typeof document !== "undefined") {
+    document.addEventListener("visibilitychange", onVisibilityRestore);
+  }
+
+  // A Windows screensaver paints over the window without hiding the document,
+  // so `visibilitychange` never fires for it. Dismissing the screensaver does
+  // return activation to the app window, so a refocus after a long absence is
+  // the wake signal here. The absence gate keeps ordinary alt-tab returns
+  // from paying for an `ao-reload` they don't need.
+  const FOCUS_RELOAD_MIN_ABSENT_MS = 60_000;
+  let lastWindowBlur = Date.now();
+  const onWindowBlur = () => {
+    lastWindowBlur = Date.now();
+  };
+  const onWindowFocusRestore = () => {
+    if (Date.now() - lastWindowBlur < FOCUS_RELOAD_MIN_ABSENT_MS) return;
+    scheduleAudioDeviceReload();
+  };
+  if (typeof window !== "undefined") {
+    window.addEventListener("blur", onWindowBlur);
+    window.addEventListener("focus", onWindowFocusRestore);
+  }
+
   const handleEvent = (raw: MpvEvent) => {
     if (raw.event === "log") {
       const prefix = String((raw as { prefix?: unknown }).prefix ?? "");
@@ -529,6 +613,7 @@ export function createMpvBridge(mpvOptions?: MpvOptions): PlayerBridge {
       if (name === "eof-reached" && data === true) snap.status = "ended";
       if (name === "volume" && typeof data === "number") snap.volume = data / 100;
       if (name === "mute" && typeof data === "boolean") snap.muted = data;
+      if (name === "audio-device-list") scheduleAudioDeviceReload();
       if (name === "track-list" && Array.isArray(data)) {
         const list = data as Array<Record<string, unknown>>;
         pendingTracks["track-list"] = list;
@@ -574,13 +659,14 @@ export function createMpvBridge(mpvOptions?: MpvOptions): PlayerBridge {
           const info: TrackInfo = {
             id,
             label,
-            lang,
+            // A prepared file can lose (or mis-detect) the provider's language.
+            lang: extMeta?.lang || lang,
             kind: type === "audio" ? "audio" : "subtitle",
             selected,
             codec,
             channels,
             channelCount,
-            title,
+            title: extMeta?.title || title,
             external,
             prepared: extMeta?.prepared,
             autoSelectionEligible: extMeta?.autoSelectionEligible,
@@ -620,11 +706,16 @@ export function createMpvBridge(mpvOptions?: MpvOptions): PlayerBridge {
         }
         snap.audioTracks = audio;
         snap.subtitleTracks = subs;
+        confirmPrimarySubtitleVisibility(!subs.some((track) => track.selected));
       }
       if (name === "sub-delay" && typeof data === "number") snap.subDelaySec = data;
       if (name === "audio-delay" && typeof data === "number") snap.audioDelaySec = data;
-      if (name === "sub-text") snap.subText = typeof data === "string" ? data : "";
-      if (name === "sub-start" && typeof data === "number") snap.subStartSec = data;
+      if (name === "sub-text") {
+        snap.subText = !primarySubtitleOff && typeof data === "string" ? data : "";
+      }
+      if (name === "sub-start") {
+        snap.subStartSec = !primarySubtitleOff && typeof data === "number" ? data : 0;
+      }
       if (name === "secondary-sub-text") {
         snap.secondarySubText = typeof data === "string" ? data : "";
       }
@@ -752,6 +843,7 @@ export function createMpvBridge(mpvOptions?: MpvOptions): PlayerBridge {
       snap.errorMessage = null;
       snap.audioTracks = [];
       snap.subtitleTracks = [];
+      primarySubtitleOff = false;
       snap.subText = "";
       snap.subStartSec = 0;
       snap.secondarySubText = "";
@@ -840,6 +932,8 @@ export function createMpvBridge(mpvOptions?: MpvOptions): PlayerBridge {
             fullDownload: opts.fullDownload === true,
             startupProfile: nextStartupProfile,
             headers: src.headers ?? null,
+            renderer: opts.renderer ?? "gpu-next",
+            forceYuv420p: opts.forceYuv420p === true,
             extraOptions: opts.extraOptions || undefined,
           },
         });
@@ -882,9 +976,14 @@ export function createMpvBridge(mpvOptions?: MpvOptions): PlayerBridge {
       invoke("mpv_command", { cmd: [dir > 0 ? "frame-step" : "frame-back-step"] }).catch(() => {});
     },
     setVolume(v) {
+      snap.volume = v;
+      if (v > 0) snap.muted = false;
+      emit();
       invoke("mpv_set_property", { name: "volume", value: Math.round(v * 100) }).catch(() => {});
     },
     setMuted(m) {
+      snap.muted = m;
+      emit();
       invoke("mpv_set_property", { name: "mute", value: m }).catch(() => {});
     },
     setRate(r) {
@@ -895,37 +994,55 @@ export function createMpvBridge(mpvOptions?: MpvOptions): PlayerBridge {
     setAudioTrack(id) {
       invoke("mpv_set_property", { name: "aid", value: Number(id) || id }).catch(() => {});
     },
-    setSubtitleTrack(id) {
+    canAutoSelectSubtitle: () => mainSubtitleSelection.canAutoSelect(mediaRevision),
+    setSubtitleTrack(id, origin = "manual") {
+      if (!mainSubtitleSelection.claim(mediaRevision, origin)) return;
       const requestMediaRevision = mediaRevision;
       mainSubtitleSelection.begin(
         requestMediaRevision,
         id ?? "__harbor-subtitles-off__",
         snap.subtitleTracks.find((track) => track.selected)?.id ?? null,
       );
-      snap = {
-        ...snap,
-        subText: "",
-        subStartSec: 0,
-        subtitleTracks: snap.subtitleTracks.map((track) => ({
-          ...track,
-          selected: id != null && track.id === id,
-        })),
-      };
-      emit();
+      if (pendingSubtitlePick?.id === id && pendingSubtitlePick.origin === origin) return;
+      const pick = { id, origin };
+      pendingSubtitlePick = pick;
+      const canCommit = () =>
+        requestMediaRevision === mediaRevision &&
+        (origin === "manual" || mainSubtitleSelection.canAutoSelect(mediaRevision));
       void enqueueSubtitleTransition(async () => {
-        if (requestMediaRevision !== mediaRevision) return;
+        if (!canCommit()) return;
         await resetSubtitleFpsBeforeMpvTransition();
-        if (requestMediaRevision !== mediaRevision) return;
+        if (!canCommit()) return;
         await invoke("mpv_set_property", {
           name: "sid",
           value: id == null ? "no" : Number(id) || id,
         });
-      }).catch((error) => {
-        if (requestMediaRevision === mediaRevision) {
-          console.warn("[mpv] could not select a subtitle after resetting subtitle FPS", error);
-          window.dispatchEvent(new Event(SUBTITLE_FPS_TRANSITION_FAILED_EVENT));
-        }
-      });
+        if (requestMediaRevision !== mediaRevision) return;
+        const selectedSid = await invoke<string | number | boolean>("mpv_get_property", {
+          name: "sid",
+        });
+        if (requestMediaRevision !== mediaRevision) return;
+        confirmPrimarySubtitleVisibility(
+          selectedSid === false ||
+            selectedSid === "no" ||
+            selectedSid === "" ||
+            selectedSid == null,
+        );
+        snap.subtitleTracks = snap.subtitleTracks.map((track) => ({
+          ...track,
+          selected: track.id === String(selectedSid),
+        }));
+        emit();
+      })
+        .catch((error) => {
+          if (requestMediaRevision === mediaRevision) {
+            console.warn("[mpv] could not select a subtitle after resetting subtitle FPS", error);
+            window.dispatchEvent(new Event(SUBTITLE_FPS_TRANSITION_FAILED_EVENT));
+          }
+        })
+        .finally(() => {
+          if (pendingSubtitlePick === pick) pendingSubtitlePick = null;
+        });
     },
     setSecondarySubtitleTrack(id) {
       const requestMediaRevision = mediaRevision;
@@ -1005,10 +1122,10 @@ export function createMpvBridge(mpvOptions?: MpvOptions): PlayerBridge {
         );
       }
     },
-    async addSubtitle(url, lang, title, select, metadata): Promise<boolean> {
+    async addSubtitle(url, lang, title, select, metadata, origin = "manual"): Promise<boolean> {
       const requestMediaRevision = mediaRevision;
       const requestLoadId = mediaLoadId;
-      const wantsSelection = select ?? true;
+      const wantsSelection = (select ?? true) && mainSubtitleSelection.claim(mediaRevision, origin);
       const selectionRequest = wantsSelection
         ? mainSubtitleSelection.begin(
             mediaRevision,
@@ -1071,6 +1188,8 @@ export function createMpvBridge(mpvOptions?: MpvOptions): PlayerBridge {
       try {
         const externalMetadata: ExternalSubtitleMetadata = {
           url: metadata?.originalUrl ?? url,
+          lang,
+          title,
           cues: preparedCues,
           originalUrl: metadata?.originalUrl ?? url,
           downloadAuth: metadata?.downloadAuth,
@@ -1247,7 +1366,7 @@ export function createMpvBridge(mpvOptions?: MpvOptions): PlayerBridge {
     },
     subscribe(l) {
       listeners.add(l);
-      l(snap);
+      l({ ...snap });
       return () => {
         listeners.delete(l);
       };
@@ -1320,6 +1439,13 @@ export function createMpvBridge(mpvOptions?: MpvOptions): PlayerBridge {
         }
       }
       geomTauriUnlisten = [];
+      document.removeEventListener("visibilitychange", onVisibilityRestore);
+      window.removeEventListener("blur", onWindowBlur);
+      window.removeEventListener("focus", onWindowFocusRestore);
+      if (audioDeviceReloadTimer != null) {
+        window.clearTimeout(audioDeviceReloadTimer);
+        audioDeviceReloadTimer = null;
+      }
       mpvStarted = false;
       currentIsLive = null;
       currentStartupProfile = null;

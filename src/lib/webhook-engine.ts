@@ -7,6 +7,7 @@ import {
   todayLocalISO,
   type CalendarItem,
   type LastFiredState,
+  type WebhookKind,
 } from "./calendar";
 import {
   fetchAnticipatedCalendar,
@@ -236,11 +237,11 @@ function ruleKey(ruleId: string, item: CalendarItem): string {
   return `rule:${ruleId}:${item.id}`;
 }
 
-function legacyKey(source: SourceKey, kind: "discord" | "telegram", item: CalendarItem): string {
+function legacyKey(source: SourceKey, kind: WebhookKind, item: CalendarItem): string {
   return `${source}:${kind}:${item.id}`;
 }
 
-function legacyBaselineKey(source: SourceKey, kind: "discord" | "telegram"): string {
+function legacyBaselineKey(source: SourceKey, kind: WebhookKind): string {
   return `__baseline__:${source}:${kind}`;
 }
 
@@ -265,8 +266,8 @@ export async function runWebhookTick(
   settings: Settings,
   authKey: string | null,
 ): Promise<{ fired: number; channels: ChannelResult[] }> {
-  const { discordUrl, telegramUrl, sources } = settings.webhooks;
-  if (!discordUrl && !telegramUrl) return { fired: 0, channels: [] };
+  const { discordUrl, telegramUrl, desktopEnabled, sources } = settings.webhooks;
+  if (!discordUrl && !telegramUrl && !desktopEnabled) return { fired: 0, channels: [] };
   const todayISO = todayLocalISO();
   const fireEnd = fireWindowEnd();
   const state: LastFiredState = loadLastFiredState();
@@ -290,9 +291,15 @@ export async function runWebhookTick(
     const rows = await sourceFor(source);
     const typed = applyContentTypeFilter(rows, settings.webhooks);
     const fireable = typed.filter((i) => inFutureWindow(i, todayISO, fireEnd));
-    for (const channel of ["discord", "telegram"] as const) {
-      const url = channel === "discord" ? discordUrl : telegramUrl;
-      if (!url) continue;
+    for (const channel of ["discord", "telegram", "desktop"] as const) {
+      const enabled =
+        channel === "discord"
+          ? !!discordUrl
+          : channel === "telegram"
+            ? !!telegramUrl
+            : desktopEnabled;
+      if (!enabled) continue;
+      const url = channel === "discord" ? discordUrl : channel === "telegram" ? telegramUrl : "";
 
       if (!state[legacyBaselineKey(source, channel)]) {
         if (typed.length === 0) continue;
@@ -318,7 +325,7 @@ export async function runWebhookTick(
   const trackedPersonIds = settings.customCalendar.trackedPeople.map((p) => p.id);
   for (const rule of settings.webhookRules) {
     if (!rule.enabled) continue;
-    if (!rule.channels.discord && !rule.channels.telegram) continue;
+    if (!rule.channels.discord && !rule.channels.telegram && !rule.channels.desktop) continue;
     let candidates: CalendarItem[] = [];
     if (rule.trigger.event === "liveTvEvent") {
       candidates = await fetchLiveTvEvents(
@@ -353,15 +360,17 @@ export async function runWebhookTick(
 
     const newMatched = matched.filter((i) => !state[ruleKey(rule.id, i)]);
     if (newMatched.length === 0) continue;
-    const targets = (["discord", "telegram"] as const).filter(
-      (c) => rule.channels[c] && (c === "discord" ? discordUrl : telegramUrl),
+    const targets = (["discord", "telegram", "desktop"] as const).filter(
+      (c) =>
+        rule.channels[c] &&
+        (c === "discord" ? !!discordUrl : c === "telegram" ? !!telegramUrl : desktopEnabled),
     );
     if (targets.length === 0) continue;
     for (const item of newMatched) state[ruleKey(rule.id, item)] = todayISO;
     const aborted = commit(state, "rule fire", channelResults, totalFired);
     if (aborted) return aborted;
     for (const channel of targets) {
-      const url = channel === "discord" ? discordUrl! : telegramUrl!;
+      const url = channel === "discord" ? discordUrl! : channel === "telegram" ? telegramUrl! : "";
       const text = `Harbor rule "${rule.name}": ${newMatched.length} new ${newMatched.length === 1 ? "release" : "releases"}`;
       const result = await fireWebhook(channel, url, { text, items: newMatched });
       channelResults.push({ kind: `rule:${rule.id}/${channel}`, ...result });

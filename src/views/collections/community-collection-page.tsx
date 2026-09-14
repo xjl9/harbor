@@ -5,6 +5,7 @@ import { posterPlate } from "@/components/poster";
 import { ResultPoster } from "@/components/search/result-poster";
 import { BackToTop } from "@/components/back-to-top";
 import { useView } from "@/lib/view";
+import { MangaMatchPicker } from "./manga-match-picker";
 import { useCollection, type CollectionItem, type CollectionItemType } from "@/lib/collections";
 import type { MetaType } from "@/lib/cinemeta";
 import { CommunityShareButton } from "./community-share-button";
@@ -53,6 +54,7 @@ export function CommunityCollectionPage({
     [items, typeFilter],
   );
   const [gridHeight, setGridHeight] = useState<number>();
+  const [matchItem, setMatchItem] = useState<CollectionItem | null>(null);
   const gridObs = useRef<ResizeObserver | null>(null);
   const gridMeasureRef = useCallback((el: HTMLDivElement | null) => {
     gridObs.current?.disconnect();
@@ -100,6 +102,13 @@ export function CommunityCollectionPage({
 
   const open = (item: CollectionItem) => {
     if (item.type === "manga") {
+      // Metadata ids (anilist:<id>, mal:<id>) are not readable directly: the
+      // detail/reader pipeline only accepts source-scoped ids, so let the user
+      // pick the matching copy on their own sources instead of guessing.
+      if (item.id.startsWith("anilist:") || item.id.startsWith("mal:")) {
+        setMatchItem(item);
+        return;
+      }
       openManga(item.id);
       return;
     }
@@ -198,7 +207,9 @@ export function CommunityCollectionPage({
           <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-edge-soft bg-canvas/40 px-8 py-16 text-center">
             <p className="font-display text-[19px] font-medium text-ink">{t("Nothing here yet")}</p>
             <p className="max-w-sm text-[13.5px] leading-relaxed text-ink-muted">
-              {t("Open the editor to add the movies, shows, and manga that belong in this collection.")}
+              {t(
+                "Open the editor to add the movies, shows, and manga that belong in this collection.",
+              )}
             </p>
             <button
               type="button"
@@ -294,6 +305,16 @@ export function CommunityCollectionPage({
         )}
       </div>
       <BackToTop scrollRef={scrollRef} />
+      {matchItem && (
+        <MangaMatchPicker
+          name={matchItem.name}
+          onSelect={(mangaId) => {
+            setMatchItem(null);
+            openManga(mangaId);
+          }}
+          onClose={() => setMatchItem(null)}
+        />
+      )}
     </main>
   );
 }

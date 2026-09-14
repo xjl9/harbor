@@ -1,58 +1,57 @@
 import { useEffect, useRef, useState } from "react";
-import { fetchProfileAlias, isPlaceholderName, nameEquals, pushNameToProfileAlias } from "@/lib/account/name-sync";
+import { fetchProfileAlias, nameEquals, pushNameToProfileAlias } from "@/lib/account/name-sync";
+import { createNameSyncSession } from "@/lib/account/name-sync-session";
+import { bindNameSyncState } from "@/lib/account/name-sync-state";
 import { useProfiles } from "@/lib/profiles";
 import { currentAuthor, subscribeAuthor } from "@/lib/theme-auth";
 import { useTogether } from "@/lib/together/provider";
-
-type SyncState = { id: string | null; ready: boolean; alias: string | null };
 
 export function HarborNameSync() {
   const [author, setAuthor] = useState(currentAuthor);
   const { displayName, setDisplayName } = useTogether();
   const { activeProfile, updateProfile } = useProfiles();
-  const state = useRef<SyncState>({ id: null, ready: false, alias: null });
+  const latest = useRef({ displayName, activeProfile, setDisplayName, updateProfile });
+  latest.current = { displayName, activeProfile, setDisplayName, updateProfile };
+  const sessionRef = useRef<ReturnType<typeof createNameSyncSession> | null>(null);
 
   useEffect(() => subscribeAuthor(() => setAuthor(currentAuthor())), []);
 
   useEffect(() => {
-    if (!author?.handle) {
-      state.current = { id: null, ready: false, alias: null };
-      return;
-    }
-    if (state.current.id === author.id) return;
-    state.current = { id: author.id, ready: false, alias: null };
-    const authorId = author.id;
-    const localAtStart = (displayName ?? "").trim();
-    let cancelled = false;
-    void fetchProfileAlias(author.handle).then((alias) => {
-      if (cancelled || state.current.id !== authorId) return;
-      if (alias && !isPlaceholderName(alias)) {
-        state.current.alias = alias;
-        if (!nameEquals(alias, displayName)) setDisplayName(alias);
-        if (activeProfile && !activeProfile.kid && !nameEquals(alias, activeProfile.name)) {
-          updateProfile(activeProfile.id, { name: alias });
+    if (!author?.handle) return;
+    const accountId = author.id;
+    const handle = author.handle;
+    const session = createNameSyncSession({
+      name: latest.current.displayName,
+      load: () => fetchProfileAlias(handle, accountId),
+      save: (name) => pushNameToProfileAlias(name, accountId),
+      apply: (alias) => {
+        const current = latest.current;
+        if (!nameEquals(alias, current.displayName)) current.setDisplayName(alias);
+        if (
+          current.activeProfile &&
+          !current.activeProfile.kid &&
+          !nameEquals(alias, current.activeProfile.name)
+        ) {
+          current.updateProfile(current.activeProfile.id, { name: alias });
         }
-      } else if (!isPlaceholderName(localAtStart)) {
-        state.current.alias = localAtStart;
-        void pushNameToProfileAlias(localAtStart);
-      }
-      state.current.ready = true;
+      },
+      status: (phase) => binding.publish(phase),
     });
+    const binding = bindNameSyncState(accountId, () => {
+      void session.retry();
+    });
+    sessionRef.current = session;
+    void session.start();
     return () => {
-      cancelled = true;
+      session.dispose();
+      binding.dispose();
+      if (sessionRef.current === session) sessionRef.current = null;
     };
-  }, [author?.id, author?.handle, displayName, activeProfile, setDisplayName, updateProfile]);
+  }, [author?.id, author?.handle]);
 
   useEffect(() => {
-    if (!author?.handle) return;
-    const st = state.current;
-    if (st.id !== author.id || !st.ready) return;
-    const name = (displayName ?? "").trim();
-    if (!name || isPlaceholderName(name)) return;
-    if (st.alias !== null && nameEquals(st.alias, name)) return;
-    st.alias = name;
-    void pushNameToProfileAlias(name);
-  }, [displayName, author?.id, author?.handle]);
+    sessionRef.current?.update(displayName);
+  }, [displayName]);
 
   return null;
 }

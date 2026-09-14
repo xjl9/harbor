@@ -223,7 +223,7 @@ const catalogAC: Record<string, string> = {
   Actions: "कार्रवाइयाँ",
   Active: "सक्रिय",
   "Active and reachable": "सक्रिय और पहुँच योग्य",
-  "Active torrents": "सक्रिय टोरेंट",
+  "Active transfers": "सक्रिय ट्रांसफ़र",
   Activity: "गतिविधि",
   Actor: "अभिनेता",
   "Actor, title, genre": "अभिनेता, शीर्षक, शैली",
@@ -579,7 +579,8 @@ const catalogAC: Record<string, string> = {
     "TMDB लॉगिन पहले से है? साइन इन करके आगे बढ़ें. नहीं तो रजिस्टर दबाएँ और उपयोगकर्ता नाम, पासवर्ड और ईमेल भरें.",
   "Already on the closest match for this release": "आप इस रिलीज़ के सबसे करीबी मिलान पर पहले से हैं",
   "Also Nominated": "अन्य नामांकन",
-  "Also joins Harbor's Discord server.": "Harbor के Discord सर्वर से भी जुड़ता है.",
+  "Linking your Discord account also joins you to Harbor's Discord server, so the bot can send your Backup keys privately.":
+    "Linking your Discord account also joins you to Harbor's Discord server, so the bot can send your Backup keys privately.",
   "Also known as": "इस नाम से भी जाना जाता है",
   "Also won": "यह भी जीता",
   Alternate: "वैकल्पिक",
@@ -1220,8 +1221,8 @@ const catalogAC: Record<string, string> = {
   "Buffer fill brightness": "बफ़र फ़िल की ब्राइटनेस",
   "Buffer size": "बफ़र का आकार",
   Buffering: "बफ़र हो रहा है",
-  "Buffers the whole file in the background as you watch, even while paused, so big remuxes pre-load and you can scrub a cached file with no re-buffering. Works for debrid and torrent streams. Uses more disk and bandwidth; cleared when you switch or close.":
-    "देखते समय पूरी फ़ाइल को बैकग्राउंड में बफ़र करता है, पॉज़ होने पर भी, ताकि बड़े रीमक्स पहले से लोड हो जाएँ और आप कैश की गई फ़ाइल में बिना दोबारा बफ़रिंग के आगे-पीछे जा सकें। डीब्रिड और टोरेंट स्ट्रीम के साथ काम करता है। अधिक डिस्क और बैंडविड्थ इस्तेमाल करता है; स्विच करने या बंद करने पर साफ़ हो जाता है।",
+  "Buffers the whole file in the background as you watch, even while paused, so big remuxes pre-load and you can scrub a cached file with no re-buffering. Works for debrid and P2P streams. Uses more disk and bandwidth; cleared when you switch or close.":
+    "देखते समय पूरी फ़ाइल को बैकग्राउंड में बफ़र करता है, पॉज़ होने पर भी, ताकि बड़े रीमक्स पहले से लोड हो जाएँ और आप कैश की गई फ़ाइल में बिना दोबारा बफ़रिंग के आगे-पीछे जा सकें। डीब्रिड और P2P स्ट्रीम के साथ काम करता है। अधिक डिस्क और बैंडविड्थ इस्तेमाल करता है; स्विच करने या बंद करने पर साफ़ हो जाता है।",
   "Bug reporters get listed in the release notes when their report leads to a shipped fix. Leave blank to stay anonymous.":
     "अगर किसी बग रिपोर्ट के कारण कोई सुधार रिलीज़ होता है, तो रिपोर्ट करने वाले का नाम रिलीज़ नोट्स में जोड़ा जाता है। गुमनाम रहने के लिए खाली छोड़ें।",
   "Bug reports": "बग रिपोर्ट",
@@ -1238,8 +1239,8 @@ const catalogAC: Record<string, string> = {
   "Build a source plugin": "स्रोत प्लगइन बनाएँ",
   "Build a theme": "थीम बनाएँ",
   "Build from source": "सोर्स कोड से बिल्ड करें",
-  "Build identity. Useful when filing a bug report at bugs@harbor.site.":
-    "बिल्ड की पहचान। bugs@harbor.site पर बग रिपोर्ट दर्ज करते समय उपयोगी।",
+  "Build identity. Useful when filing a bug report.":
+    "बिल्ड की पहचान। बग रिपोर्ट दर्ज करते समय उपयोगी।",
   "Build one in the studio or import a theme file first, then come back to share it.":
     "पहले स्टूडियो में एक थीम बनाएँ या थीम फ़ाइल इंपोर्ट करें, फिर उसे साझा करने के लिए वापस आएँ.",
   "Build or import the updated theme first, then come back to push it as a new version.":
@@ -1893,8 +1894,8 @@ const catalogAC: Record<string, string> = {
   "Copy Webhook URL": "Webhook URL कॉपी करें",
   "Copy code": "कोड कॉपी करें",
   "Copy diagnostics": "डायग्नोस्टिक्स कॉपी करें",
-  "Copy diagnostics grabs the engine status and your P2P settings as JSON, handy to paste into a bug report. The engine folder holds the DHT cache (dht.json) and active torrent data.":
-    "डायग्नोस्टिक्स कॉपी करने पर इंजन की स्थिति और आपकी P2P सेटिंग्स JSON के रूप में मिलती हैं, जिन्हें बग रिपोर्ट में आसानी से पेस्ट किया जा सकता है। इंजन फ़ोल्डर में DHT कैश (dht.json) और सक्रिय टोरेंट डेटा होता है।",
+  "Copy diagnostics grabs the engine status and your P2P settings as JSON, handy to paste into a bug report. The engine folder holds the DHT cache (dht.json) and active transfer data.":
+    "डायग्नोस्टिक्स कॉपी करने पर इंजन की स्थिति और आपकी P2P सेटिंग्स JSON के रूप में मिलती हैं, जिन्हें बग रिपोर्ट में आसानी से पेस्ट किया जा सकता है। इंजन फ़ोल्डर में DHT कैश (dht.json) और सक्रिय ट्रांसफ़र डेटा होता है।",
   "Copy error": "त्रुटि कॉपी करें",
   "Copy example": "उदाहरण कॉपी करें",
   "Copy filename": "फ़ाइल का नाम कॉपी करें",

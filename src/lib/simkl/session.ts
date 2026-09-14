@@ -1,5 +1,6 @@
 import { activeProfileId, activeProfileIsPrimary } from "@/lib/active-profile-id";
 import { getSecret, setSecret } from "@/lib/secret-store";
+import { clearPendingWatches } from "./pending-sync";
 import type { SimklSession } from "./types";
 
 const BASE_KEY = "harbor.simkl.session.v1";
@@ -61,6 +62,9 @@ export function getSession(): SimklSession | null {
 
 export function setSession(session: SimklSession | null): void {
   ensureLoaded();
+  if (!session || !cached || session.username !== cached.username) {
+    clearPendingWatches();
+  }
   cached = session;
   write(session);
   for (const fn of subscribers) fn();

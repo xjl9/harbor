@@ -663,7 +663,7 @@ const sweepD: Record<string, string> = {
   "Nothing is uploaded and nothing ships with Harbor. Everything stays on this device and you are responsible for the images you add.":
     "不会上传任何内容，Harbor 也不附带任何内容。所有内容都保留在此设备上，你需要为添加的图片负责。",
   "Nothing left in today's picks": "今日推荐已全部看完",
-  "Nothing left to confirm while torrents are disabled.": "种子功能已禁用，无需再确认任何内容。",
+  "Nothing left to confirm while P2P is disabled.": "P2P 已禁用，无需再确认任何内容。",
   "Nothing left to post after removing links.": "移除链接后没有可发布的内容。",
   "Nothing matched. Try the franchise's first film name.":
     "未找到匹配内容。请尝试搜索该系列第一部电影的名称。",

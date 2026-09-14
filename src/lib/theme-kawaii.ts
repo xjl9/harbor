@@ -296,7 +296,7 @@ nav[data-harbor-sidebar][data-tv-scroll-focus]::after {
 
 .harbor-row-track:not(.pt-14) {
   margin-top: 0;
-  padding-block: 8px;
+  padding-block: 15px 8px;
   margin-bottom: -8px;
   background-color: #fdf6ec;
   background-image: none;
@@ -428,6 +428,31 @@ main:not(.fixed):not([data-live-page]) > .harbor-hero-bleed:not([class~="absolut
   margin-left: 0 !important;
   padding-inline: 0 !important;
   border-radius: 0 !important;
+}
+
+/* Full-bleed hero pages (person, studio, network, collection) must reach the top
+   behind the nav like the movie/show detail hero; drop kawaii's catalog top pad. */
+html:not([data-mpv-embed="1"]):not([data-big-picture="true"]):not([data-player-chrome-mounted]) main:not(.fixed):not([data-live-page]):has(.brand-hero),
+html:not([data-mpv-embed="1"]):not([data-big-picture="true"]):not([data-player-chrome-mounted]) main:not(.fixed):not([data-live-page]):has(.harbor-bleed-stremio):not(:has(> .harbor-bleed-stremio)) {
+  padding-top: 0 !important;
+  background-color: #fdf6ee !important;
+}
+
+/* Restore the studio hero's own top padding (the catalog rule shrinks it) so the
+   logo and title still clear the nav once the main padding is gone. */
+html:not([data-mpv-embed="1"]):not([data-big-picture="true"]):not([data-player-chrome-mounted]) main:not(.fixed):not([data-live-page]) > .brand-hero:not(#hb) {
+  padding-top: 104px !important;
+}
+
+/* Person/collection blurred backdrops fade out at the bottom so they dissolve
+   into the page instead of ending on a hard line through the text. */
+html:not([data-mpv-embed="1"]):not([data-big-picture="true"]):not([data-player-chrome-mounted]) main:not(.fixed):not([data-live-page]) > :nth-child(1 of :not([class~="fixed"])) > .harbor-bleed-stremio[class~="absolute"] {
+  -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 62%, transparent 96%) !important;
+  mask-image: linear-gradient(to bottom, #000 0%, #000 62%, transparent 96%) !important;
+  -webkit-mask-repeat: no-repeat !important;
+  mask-repeat: no-repeat !important;
+  -webkit-mask-size: 100% 100% !important;
+  mask-size: 100% 100% !important;
 }
 
 [class~="bg-canvas/55"] {
@@ -647,7 +672,7 @@ input[type="radio"] {
   box-shadow: 0 2px 0 var(--kw-pink-hot-drop), 0 0 0 4px var(--kw-pink-soft) !important;
 }
 
-[role="switch"] {
+[role="switch"]:not(.hset-row), .hset-switch {
   background: var(--kw-cream-deep) !important;
   background-image: none !important;
   border-radius: 999px !important;
@@ -655,12 +680,12 @@ input[type="radio"] {
   transition: background-color 220ms ease-in-out, box-shadow 220ms ease-in-out !important;
 }
 
-[role="switch"][aria-checked="true"] {
+[role="switch"][aria-checked="true"]:not(.hset-row), .hset-row[aria-checked="true"] .hset-switch {
   background: var(--kw-pink) !important;
   box-shadow: inset 0 0 0 2px var(--kw-pink-deep) !important;
 }
 
-[role="switch"] > span {
+[role="switch"]:not(.hset-row) > span, .hset-switch > span {
   background: #ffffff !important;
   border-radius: 50% !important;
   box-shadow: 0 2px 0 rgba(169, 125, 99, 0.45) !important;
@@ -668,13 +693,87 @@ input[type="radio"] {
   transition-duration: 220ms !important;
 }
 
-[role="switch"][aria-checked="true"] > span {
+[role="switch"][aria-checked="true"]:not(.hset-row) > span, .hset-row[aria-checked="true"] .hset-switch > span {
   box-shadow: 0 2px 0 var(--kw-pink-hot-drop) !important;
 }
 
-[role="switch"]:focus-visible {
+[role="switch"]:not(.hset-row):focus-visible, .hset-row:focus-visible .hset-switch {
   outline: 3px solid var(--kw-pink) !important;
   outline-offset: 3px !important;
+}
+
+/* Settings: warm the flat peach shell and give the two panes clear structure. */
+.harbor-settings-shell,
+.harbor-settings-shell .hset-heading,
+.harbor-settings-shell .hset-main {
+  background-color: #fdf6ee !important;
+}
+
+.harbor-settings-shell .hset-tools,
+.harbor-settings-shell .hset-sidebar {
+  background-color: #fbe6d3 !important;
+}
+
+.harbor-settings-shell .hset-sidebar {
+  border-inline-end: 2px solid #e6d2bd !important;
+}
+
+.harbor-settings-shell .hset-tools [class~="group/find"] {
+  background-color: #fffdf9 !important;
+  border-radius: 12px !important;
+  box-shadow: inset 0 0 0 2px #e6d2bd !important;
+}
+
+.harbor-settings-shell .hset-tools [class~="group/find"]:focus-within {
+  box-shadow: inset 0 0 0 2px var(--color-accent) !important;
+}
+
+.hset-nav-row:hover,
+.hset-nav-child:hover {
+  background: #f6ddc9 !important;
+  color: #3b2a1c !important;
+}
+
+.hset-nav-row[data-active],
+.hset-nav-child[data-active] {
+  background: #f7d9e2 !important;
+  color: #8a3a56 !important;
+}
+
+.hset-nav-row[data-active]::before,
+.hset-nav-child[data-active]::before {
+  background: var(--color-accent) !important;
+}
+
+.harbor-settings-shell .harbor-settings-label {
+  color: #a06a4a !important;
+}
+
+/* Addon detail hero uses a -mt-24/-mx-12 bleed that expects the view's own
+   pt-24/px-12; kawaii's catalog padding breaks the math and the hero escapes. */
+html:not([data-mpv-embed="1"]):not([data-big-picture="true"]):not([data-player-chrome-mounted]) main:not(.fixed):not([data-live-page]):has(> [class*="-mt-24"][class*="-mx-12"]) {
+  padding-top: 96px !important;
+}
+
+html:not([data-mpv-embed="1"]):not([data-big-picture="true"]):not([data-player-chrome-mounted]) main:not(.fixed):not([data-live-page]) > [class*="-mt-24"][class*="-mx-12"]:not(#kw) {
+  padding-top: 128px !important;
+  margin-inline: 0 !important;
+}
+
+/* Floating scroll-to-top / back-to-top pills: washed icon on white is unreadable. */
+[class~="bg-elevated/85"][class*="rounded-full"],
+.fixed[class*="rounded-md"][class*="end-5"][class~="bg-elevated"] {
+  background-color: #fbe6d3 !important;
+  border-color: #e3c9ae !important;
+  color: #7a5c4f !important;
+}
+
+/* Addon logos: many manifests ship white/transparent marks that vanish on the
+   light cards; give them a soft pink backing so they always read. */
+.harbor-addon-logo {
+  background: #fbdce6 !important;
+  object-fit: contain !important;
+  box-shadow: inset 0 0 0 1.5px #e6c3d0, 0 1px 2px rgba(120, 80, 70, 0.18) !important;
 }
 
 button.h-1\\.5.rounded-full {
@@ -1319,7 +1418,7 @@ header [data-harbor-nav] {
 }
 
 
-[class*="z-[180]"].fixed.inset-0 > div {
+[class*="z-[180]"].fixed.inset-0 > div:not([class*="inset-0"]) {
   position: relative;
   padding: 64px 56px 48px !important;
   border-radius: 10px !important;
@@ -1329,7 +1428,7 @@ header [data-harbor-nav] {
   overflow: visible !important;
 }
 
-[class*="z-[180]"].fixed.inset-0 > div::before {
+[class*="z-[180]"].fixed.inset-0 > div:not([class*="inset-0"])::before {
   content: "";
   position: absolute;
   left: 0;
@@ -1381,12 +1480,12 @@ header [data-harbor-nav] {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  [class*="z-[180]"].fixed.inset-0 > div::after { animation: none; }
+  [class*="z-[180]"].fixed.inset-0 > div:not([class*="inset-0"])::after { animation: none; }
   [class*="z-[180]"] button:hover .rounded-full.bg-elevated { transform: none; }
 }
 
 
-[class*="z-[180]"].fixed.inset-0 > div {
+[class*="z-[180]"].fixed.inset-0 > div:not([class*="inset-0"]) {
   padding-bottom: 74px !important;
 }
 
@@ -1929,4 +2028,8 @@ main:not(.fixed):not([data-live-page]) > :nth-child(1 of :not([class~="fixed"]))
   color: #6b5852 !important;
 }
 
+
+.harbor-service-glow {
+  display: none;
+}
 `;

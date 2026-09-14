@@ -72,7 +72,7 @@ export type Author = {
 
 export type RawUser = Author;
 
-type Session = { token: string; refresh?: string | null; user: Author };
+type Session = { token: string; refresh?: string | null; user: Author; refreshedAt?: number };
 
 const subs = new Set<() => void>();
 
@@ -111,6 +111,10 @@ function parseSession(raw: string | null): Session | null {
     return {
       token: s.token,
       refresh: typeof s.refresh === "string" ? s.refresh : null,
+      refreshedAt:
+        typeof s.refreshedAt === "number" && Number.isFinite(s.refreshedAt) && s.refreshedAt > 0
+          ? s.refreshedAt
+          : undefined,
       user: toAuthor(s.user),
     };
   } catch {
@@ -150,8 +154,10 @@ migrateLegacyGlobal();
 repairCopiedSessions();
 let loadedProfile = activeProfileId();
 let session: Session | null = readSession();
+let sessionGeneration = 0;
 
 function setSession(next: Session | null): void {
+  if (next?.user.id !== session?.user.id) sessionGeneration += 1;
   session = next;
   loadedProfile = activeProfileId();
   try {
@@ -167,6 +173,7 @@ function setSession(next: Session | null): void {
 function reloadSession(): void {
   const id = activeProfileId();
   if (id === loadedProfile) return;
+  sessionGeneration += 1;
   loadedProfile = id;
   migrateLegacyGlobal();
   session = readSession();
@@ -195,15 +202,19 @@ export function applyAuthResult(d: {
   refresh?: string | null;
   user: RawUser;
 }): void {
+  sessionGeneration += 1;
   setSession({
     token: d.token,
-    refresh: d.refresh ?? (session ? session.refresh : null),
+    refresh:
+      d.refresh ??
+      (session?.token === d.token && session.user.id === d.user.id ? session.refresh : null),
     user: toAuthor(d.user),
+    refreshedAt: Date.now(),
   });
 }
 
 export function applyServerUser(user: RawUser): void {
-  if (!session) return;
+  if (!session || session.user.id !== user.id) return;
   setSession({ ...session, user: toAuthor(user) });
 }
 
@@ -212,37 +223,127 @@ export function applyAvatarUrl(url: string | null): void {
   setSession({ ...session, user: { ...session.user, avatar: url } });
 }
 
-export function applyTokens(token: string, refresh?: string | null): void {
-  if (!session) return;
-  setSession({ ...session, token, refresh: refresh ?? session.refresh });
+// Token rotation preserves this scope; login, logout and profile switches invalidate it.
+export function captureSessionScope(): () => boolean {
+  reloadSession();
+  const generation = sessionGeneration;
+  const profile = loadedProfile;
+  return () => generation === sessionGeneration && profile === activeProfileId();
 }
 
-let refreshing: Promise<boolean> | null = null;
-export function refreshToken(): Promise<boolean> {
-  if (refreshing) return refreshing;
-  const refresh = session?.refresh ?? null;
-  if (!refresh) return Promise.resolve(false);
-  refreshing = (async () => {
+const SESSION_REFRESH_MS = 6 * 60 * 60 * 1000;
+type RefreshState = {
+  refresh: string;
+  promise?: Promise<boolean>;
+  failures: number;
+  retryAt: number;
+  revokeOnComplete?: boolean;
+};
+const refreshes = new Map<string, RefreshState>();
+
+export function sessionRefreshDelay(): number | null {
+  reloadSession();
+  if (!session?.refresh) return null;
+  const state = refreshes.get(sessionKey());
+  const retryAt = state?.refresh === session.refresh ? state.retryAt : 0;
+  const due =
+    state?.refresh === session.refresh && state.failures
+      ? retryAt
+      : session.refreshedAt
+        ? session.refreshedAt + SESSION_REFRESH_MS
+        : 0;
+  return Math.min(SESSION_REFRESH_MS, Math.max(0, Math.max(due, retryAt) - Date.now()));
+}
+
+export async function refreshToken(rejectedToken?: string): Promise<boolean> {
+  const isCurrent = captureSessionScope();
+  const captured = session;
+  if (!captured) return false;
+  // Another request may already have renewed the token that received this 401.
+  if (rejectedToken && captured.token !== rejectedToken) return true;
+  const refresh = captured.refresh;
+  if (!refresh) return false;
+  const key = sessionKey();
+  let state = refreshes.get(key);
+  if (!state || state.refresh !== refresh) {
+    state = { refresh, failures: 0, retryAt: 0 };
+    refreshes.set(key, state);
+  }
+  if (state.promise) return (await state.promise) && isCurrent();
+  if (Date.now() < state.retryAt) return false;
+  const attempt = state;
+  const matches = (value: Session | null) =>
+    value?.user.id === captured.user.id &&
+    value.token === captured.token &&
+    value.refresh === refresh;
+  const stored = () => {
+    if (sessionKey() === key) return session;
+    try {
+      return parseSession(localStorage.getItem(key));
+    } catch {
+      return null;
+    }
+  };
+  const save = (next: Session | null) => {
+    if (sessionKey() === key) setSession(next);
+    else {
+      // Rotation consumes the old credential: retain it only in its unchanged origin profile.
+      try {
+        if (next) localStorage.setItem(key, JSON.stringify(next));
+        else localStorage.removeItem(key);
+      } catch {
+        /* Storage may be unavailable. Never write into the active profile instead. */
+      }
+    }
+  };
+  attempt.promise = (async () => {
     try {
       const r = await safeFetch(`${API}/identity/api/token/refresh`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ refresh }),
+        signal: AbortSignal.timeout(15_000),
       });
-      if (!r.ok) return false;
-      const d = (await r.json().catch(() => null)) as { token?: unknown; refresh?: unknown } | null;
-      if (d && typeof d.token === "string") {
-        applyTokens(d.token, typeof d.refresh === "string" ? d.refresh : undefined);
-        return true;
+      const d = (await r.json().catch(() => null)) as {
+        token?: unknown;
+        refresh?: unknown;
+        error?: unknown;
+      } | null;
+      if (attempt.revokeOnComplete) {
+        if (r.ok && typeof d?.token === "string" && d.token) {
+          await postAuth("logout", {}, d.token, AbortSignal.timeout(15_000)).catch(() => {});
+        }
+        return false;
       }
-      return false;
+      const origin = stored();
+      if (!matches(origin)) return false;
+      // Only an explicit invalid-refresh response is evidence of an ended session.
+      if (r.status === 401 && d?.error === "refresh_invalid") {
+        save(null);
+        return false;
+      }
+      if (
+        !r.ok ||
+        typeof d?.token !== "string" ||
+        !d.token ||
+        typeof d.refresh !== "string" ||
+        !d.refresh
+      )
+        throw new Error("Refresh failed");
+      save({ ...origin!, token: d.token, refresh: d.refresh, refreshedAt: Date.now() });
+      return true;
     } catch {
+      attempt.failures += 1;
+      attempt.retryAt =
+        Date.now() + Math.min(30_000 * 2 ** Math.min(attempt.failures - 1, 4), 300_000);
       return false;
     } finally {
-      refreshing = null;
+      attempt.promise = undefined;
+      // Requests can initiate refresh outside the background runner; reschedule its backoff too.
+      for (const fn of subs) fn();
     }
   })();
-  return refreshing;
+  return (await attempt.promise) && isCurrent();
 }
 
 export function subscribeAuthor(fn: () => void): () => void {
@@ -252,13 +353,19 @@ export function subscribeAuthor(fn: () => void): () => void {
   };
 }
 
-async function postAuth(path: string, body: Record<string, unknown>, bearer?: string) {
+async function postAuth(
+  path: string,
+  body: Record<string, unknown>,
+  bearer?: string,
+  signal?: AbortSignal,
+) {
   const headers: Record<string, string> = { "Content-Type": "application/json" };
   if (bearer) headers.Authorization = `Bearer ${bearer}`;
   const r = await safeFetch(`${API}/auth/${path}`, {
     method: "POST",
     headers,
     body: JSON.stringify(body),
+    signal,
   });
   const d = await r.json().catch(() => ({}));
   if (!r.ok) throw new Error(d.error || "Request failed.");
@@ -269,20 +376,29 @@ export async function registerAuthor(
   username: string,
   password: string,
 ): Promise<{ recoveryCode: string }> {
+  const isCurrent = captureSessionScope();
   const d = await postAuth("register", { username, password });
-  setSession({ token: d.token, user: toAuthor(d.user) });
+  if (!isCurrent()) throw new Error("Account changed");
+  applyAuthResult(d);
   return { recoveryCode: d.recoveryCode };
 }
 
 export async function loginAuthor(username: string, password: string): Promise<void> {
+  const isCurrent = captureSessionScope();
   const d = await postAuth("login", { username, password });
-  setSession({ token: d.token, user: toAuthor(d.user) });
+  if (!isCurrent()) throw new Error("Account changed");
+  applyAuthResult(d);
 }
 
 export async function logoutAuthor(): Promise<void> {
+  reloadSession();
   const token = authToken();
-  if (token) await postAuth("logout", {}, token).catch(() => {});
+  const pending = refreshes.get(sessionKey());
+  if (pending && pending.refresh === session?.refresh) pending.revokeOnComplete = true;
+  refreshes.delete(sessionKey());
+  sessionGeneration += 1;
   setSession(null);
+  if (token) await postAuth("logout", {}, token, AbortSignal.timeout(15_000)).catch(() => {});
 }
 
 export async function recoverAuthor(
@@ -290,8 +406,10 @@ export async function recoverAuthor(
   recoveryCode: string,
   newPassword: string,
 ): Promise<{ recoveryCode: string }> {
+  const isCurrent = captureSessionScope();
   const d = await postAuth("recover", { username, recoveryCode, newPassword });
-  setSession({ token: d.token, user: toAuthor(d.user) });
+  if (!isCurrent()) throw new Error("Account changed");
+  applyAuthResult(d);
   return { recoveryCode: d.recoveryCode };
 }
 

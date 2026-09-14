@@ -28,8 +28,7 @@ const catalog09: Record<string, string> = {
   "Select renderer": "렌더러 선택",
   "Self-host": "직접 호스팅",
   "Self-test": "자체 테스트",
-  "Self-test is disabled while strict remote streaming is on. It downloads a test torrent over peer-to-peer on this machine.":
-    "엄격한 원격 스트리밍이 켜져 있는 동안에는 자체 테스트를 사용할 수 없습니다. 이 기기에서 P2P로 테스트 토렌트를 다운로드합니다.",
+  "Self-test is disabled while strict remote streaming is on. It downloads a small test file over peer-to-peer on this machine.": "엄격한 원격 스트리밍이 켜져 있는 동안에는 자체 테스트를 사용할 수 없습니다. 이 기기에서 P2P로 작은 테스트 파일을 다운로드합니다.",
   Send: "보내기",
   "Send a bug report": "버그 신고 보내기",
   "Send a bug report straight to the Harbor team. Screenshots and screen recordings welcome.":
@@ -405,15 +404,14 @@ const catalog09: Record<string, string> = {
     "키보드로 일시 정지하거나 재생을 다시 시작할 때 플레이어 컨트롤을 표시합니다. 자막을 가리지 않도록 계속 숨기려면 끄세요.",
   "Show the player controls when you pause or resume using the keyboard. Turn off to keep them hidden so they don't cover subtitles.":
     "키보드로 일시 정지하거나 재개할 때 플레이어 컨트롤을 표시합니다. 자막을 가리지 않도록 계속 숨기려면 끄세요.",
-  "Show the report button on every torrent stream, not just likely new releases.":
-    "모든 토렌트 스트림에 신고 버튼 표시(최신작으로 추정되는 항목만이 아님)",
+  "Show the report button on every P2P stream, not just likely new releases.": "모든 P2P 스트림에 신고 버튼 표시(최신작으로 추정되는 항목만이 아님)",
   "Show them anyway": "그래도 표시",
   "Show this catalog": "이 카탈로그 표시",
   "Show this control": "이 컨트롤 표시",
   "Show this panel": "이 패널 표시",
   "Show thumbnail preview on hover": "마우스를 올리면 썸네일 미리보기 표시",
   "Show title": "제목 표시",
-  "Show torrent name": "토렌트 이름 표시",
+  "Show release name": "릴리스 이름 표시",
   "Show track details": "트랙 세부 정보 표시",
   "Show translation": "번역 보기",
   "Show up to 6 of your lists on your profile": "프로필에 목록을 최대 6개 표시합니다",

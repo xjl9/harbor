@@ -297,15 +297,14 @@ const catalog: Record<string, string> = {
     "Tampilkan kontrol pemutar saat Anda menjeda atau melanjutkan dengan keyboard. Nonaktifkan agar kontrol tetap tersembunyi sehingga tidak menutupi subtitle.",
   "Show the player controls when you pause or resume using the keyboard. Turn off to keep them hidden so they don't cover subtitles.":
     "Tampilkan kontrol pemutar saat Anda menjeda atau melanjutkan dengan keyboard. Nonaktifkan agar kontrol tetap tersembunyi sehingga tidak menutupi subtitle.",
-  "Show the report button on every torrent stream, not just likely new releases.":
-    "Tampilkan tombol laporan pada setiap stream torrent, bukan hanya yang kemungkinan merupakan rilisan baru.",
+  "Show the report button on every P2P stream, not just likely new releases.": "Tampilkan tombol laporan pada setiap stream P2P, bukan hanya yang kemungkinan merupakan rilisan baru.",
   "Show them anyway": "Tetap tampilkan",
   "Show this catalog": "Tampilkan katalog ini",
   "Show this control": "Tampilkan kontrol ini",
   "Show this panel": "Tampilkan panel ini",
   "Show thumbnail preview on hover": "Tampilkan pratinjau thumbnail saat penunjuk diarahkan",
   "Show title": "Tampilkan judul",
-  "Show torrent name": "Tampilkan nama torrent",
+  "Show release name": "Tampilkan nama rilis",
   "Show track details": "Tampilkan detail trek",
   "Show translation": "Tampilkan terjemahan",
   "Show up to 6 of your lists on your profile": "Tampilkan hingga 6 daftar Anda di profil",

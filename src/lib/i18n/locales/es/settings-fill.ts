@@ -175,8 +175,7 @@ const settingsFill: Record<string, string> = {
     "Harbor lo carga automáticamente cuando existe una pista en ese idioma. También puedes establecer o quitar la pista secundaria para un video desde el menú de subtítulos del reproductor.",
   "Harbor needs a TMDB key for artwork, rows and collections. It is free.":
     "Harbor necesita una clave de TMDB para las imágenes, las filas y las colecciones. Es gratuita.",
-  "Harbor normally starts its torrent engine at launch so the first P2P stream connects faster. That keeps a DHT node running and talking to the network even when you are not watching anything. Turn this on if you are on a metered or limited connection: the engine then starts the first time you actually play a torrent. Takes effect next launch.":
-    "Harbor normalmente inicia su motor de torrents al abrirse para que la primera fuente P2P se conecte más rápido. Esto mantiene un nodo DHT activo y comunicándose con la red incluso cuando no estás viendo nada. Activa esta opción si usas una conexión de uso medido o limitada: el motor se iniciará cuando reproduzcas un torrent por primera vez. Se aplicará la próxima vez que abras la app.",
+  "Harbor normally starts its P2P engine at launch so the first P2P stream connects faster. That keeps a DHT node running and talking to the network even when you are not watching anything. Turn this on if you are on a metered or limited connection: the engine then starts the first time you actually play a P2P stream. Takes effect next launch.": "Harbor normalmente inicia su motor P2P al abrirse para que la primera fuente P2P se conecte más rápido. Esto mantiene un nodo DHT activo y comunicándose con la red incluso cuando no estás viendo nada. Activa esta opción si usas una conexión de uso medido o limitada: el motor se iniciará cuando reproduzcas una fuente P2P por primera vez. Se aplicará la próxima vez que abras la app.",
   "Harbor on other devices": "Harbor en otros dispositivos",
   "Harbor plays IPTV from your own provider. Add a playlist and the guide fills in.":
     "Harbor reproduce IPTV de tu propio proveedor. Agrega una lista de reproducción y la guía se completará.",
@@ -290,8 +289,7 @@ const settingsFill: Record<string, string> = {
   "One-off donation": "Donación única",
   "Only show Continue Watching for the profile that's active. Each profile sees just its own progress, so what you watch stays hidden from the other profiles that share this Stremio account.":
     "Muestra Continuar viendo únicamente para el perfil activo. Cada perfil solo ve su propio progreso, así que lo que ves permanece oculto para los demás perfiles que comparten esta cuenta de Stremio.",
-  "Only start the torrent engine when needed":
-    "Iniciar el motor de torrents solo cuando sea necesario",
+  "Only start the P2P engine when needed": "Iniciar el motor P2P solo cuando sea necesario",
   "Open Languages": "Abrir Idiomas",
   OpenSubtitles: "OpenSubtitles",
   "Over 100 self-hosted apps: the *arr stack, debrid tools, books and audiobooks, and more.":

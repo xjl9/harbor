@@ -24,6 +24,9 @@ export type ContextMenuTarget =
   | { kind: "addon"; addonId: string; label: string }
   | { kind: "edit"; element: HTMLElement | null; selection: string }
   | { kind: "backdrop"; metaId: string; url: string }
+  | { kind: "person"; id: number }
+  | { kind: "manga"; id: string }
+  | { kind: "ebook"; id: string }
   | {
       kind: "subtitle";
       label: string;

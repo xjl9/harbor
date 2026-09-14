@@ -167,8 +167,7 @@ const catalog: Record<string, string> = {
   "Copy Webhook URL": "Salin URL Webhook",
   "Copy code": "Salin kode",
   "Copy diagnostics": "Salin diagnostik",
-  "Copy diagnostics grabs the engine status and your P2P settings as JSON, handy to paste into a bug report. The engine folder holds the DHT cache (dht.json) and active torrent data.":
-    "Salin diagnostik mengambil status mesin dan pengaturan P2P Anda dalam format JSON, praktis untuk ditempelkan ke laporan bug. Folder mesin berisi cache DHT (dht.json) dan data torrent aktif.",
+  "Copy diagnostics grabs the engine status and your P2P settings as JSON, handy to paste into a bug report. The engine folder holds the DHT cache (dht.json) and active transfer data.": "Salin diagnostik mengambil status mesin dan pengaturan P2P Anda dalam format JSON, praktis untuk ditempelkan ke laporan bug. Folder mesin berisi cache DHT (dht.json) dan data transfer aktif.",
   "Copy error": "Kesalahan penyalinan",
   "Copy example": "Salin contoh",
   "Copy filename": "Salin nama file",
@@ -656,7 +655,7 @@ const catalog: Record<string, string> = {
   "Direct .m3u link": "Tautan .m3u langsung",
   "Direct .m3u or get.php URL with credentials baked in.":
     "URL .m3u atau get.php langsung dengan kredensial yang sudah disertakan.",
-  "Direct torrent streaming": "Streaming torrent langsung",
+  "Direct P2P streaming": "Streaming P2P langsung",
   "Directed by": "Disutradarai oleh",
   Directing: "Penyutradaraan",
   Direction: "Arah",
@@ -665,10 +664,9 @@ const catalog: Record<string, string> = {
   Directors: "Para sutradara",
   "Disable all": "Nonaktifkan semua",
   "Disable rule": "Nonaktifkan aturan",
-  "Disable torrents entirely": "Nonaktifkan torrent sepenuhnya",
+  "Disable P2P entirely": "Nonaktifkan P2P sepenuhnya",
   Disabled: "Dinonaktifkan",
-  "Disabled because torrents are disabled above":
-    "Dinonaktifkan karena torrent dinonaktifkan di atas",
+  "Disabled because P2P is disabled above": "Dinonaktifkan karena P2P dinonaktifkan di atas",
   "Disabled while strict remote streaming is on":
     "Dinonaktifkan saat streaming jarak jauh ketat aktif",
   "Discard changes": "Buang perubahan",
@@ -963,6 +961,9 @@ const catalog: Record<string, string> = {
   "Embedded track": "Trek tertanam",
   "Emergency medical care in crisis zones, independent of politics.":
     "Layanan medis darurat di zona krisis, independen dari politik.",
+  "Cached source resolution and direct download links.": "Resolusi sumber yang di-cache dan tautan unduhan langsung.",
+  "Cached source resolution and cloud library access.": "Resolusi sumber yang di-cache dan akses pustaka cloud.",
+  "Both shows direct, debrid, and peer-to-peer results together. Direct/debrid keeps P2P results out of the way unless nothing else is available. P2P puts them first.": "Keduanya menampilkan hasil langsung, debrid, dan peer-to-peer bersama-sama. Langsung/debrid menyisihkan hasil P2P kecuali tidak ada pilihan lain. P2P menempatkannya di urutan pertama.",
 };
 
 export default catalog;

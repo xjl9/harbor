@@ -2,6 +2,7 @@ import { getAnimeCwId } from "@/lib/anime-cw-ids";
 import { registerCache } from "@/lib/memory-profiler";
 import { externalToKitsu, imdbToKitsu } from "./anime-mapping";
 import { kitsuRelated, parseKitsuId } from "./kitsu";
+import { isScopedSplitFranchiseRoot } from "@/lib/streams/anime-identity-core";
 
 const MAX_WALK = 8;
 const rootCache = new Map<string, string>();
@@ -36,7 +37,10 @@ function persistRoots() {
   rootFlushTimer = window.setTimeout(() => {
     try {
       const entries = [...rootCache.entries()].slice(-ROOT_MAX);
-      localStorage.setItem(ROOT_KEY, JSON.stringify({ t: Date.now(), m: Object.fromEntries(entries) }));
+      localStorage.setItem(
+        ROOT_KEY,
+        JSON.stringify({ t: Date.now(), m: Object.fromEntries(entries) }),
+      );
     } catch {
       localStorage.removeItem(ROOT_KEY);
     }
@@ -94,7 +98,13 @@ async function walkUp(startKitsu: number): Promise<number[]> {
     }
     if (ancestors.length === 0) break;
     ancestors.sort((a, b) =>
-      a.series !== b.series ? (a.series ? -1 : 1) : a.year !== b.year ? a.year - b.year : a.id - b.id,
+      a.series !== b.series
+        ? a.series
+          ? -1
+          : 1
+        : a.year !== b.year
+          ? a.year - b.year
+          : a.id - b.id,
     );
     current = ancestors[0].id;
     visited.add(current);
@@ -129,6 +139,13 @@ export async function franchiseRoot(id: string): Promise<string> {
 
 export function franchiseRootSync(id: string): string | null {
   return rootCache.get(id) ?? null;
+}
+
+export function isSplitFranchiseKitsu(kitsuId: number | null | undefined): boolean {
+  if (kitsuId == null || !Number.isFinite(kitsuId)) return false;
+  const root = franchiseRootSync(`kitsu:${kitsuId}`);
+  const n = root ? Number(root.split(":")[1]) : NaN;
+  return isScopedSplitFranchiseRoot(Number.isFinite(n) ? n : null);
 }
 
 export function prefetchFranchiseRoot(id: string): void {

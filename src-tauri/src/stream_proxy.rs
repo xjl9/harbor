@@ -104,7 +104,10 @@ impl ProxyState {
             port: 0,
             #[cfg(target_os = "linux")]
             local_port: 0,
-            client: reqwest::Client::new(),
+            client: reqwest::Client::builder()
+                .redirect(reqwest::redirect::Policy::none())
+                .build()
+                .expect("proxy HTTP client"),
             hls: HlsState::new(),
         }
     }
@@ -133,6 +136,7 @@ impl ProxyState {
                 }
             };
         let client = reqwest::Client::builder()
+            .redirect(reqwest::redirect::Policy::none())
             .pool_idle_timeout(std::time::Duration::from_secs(60))
             .build()
             .map_err(|e| format!("client build: {}", e))?;
@@ -619,7 +623,7 @@ async fn fetch_prebuffer_prefix(
         }
         req = req.header(key, value);
     }
-    let upstream = req.send().await.map_err(|_| "request")?;
+    let upstream = crate::http_redirect::send_get(&client, req, url).await?;
     let status = upstream.status();
     if status != StatusCode::PARTIAL_CONTENT {
         return Err("range");
@@ -847,7 +851,7 @@ async fn forward_upstream(
         req = req.header(k, v);
     }
 
-    let upstream = match req.send().await {
+    let upstream = match crate::http_redirect::send_get(&state.client, req, &session.url).await {
         Ok(r) => r,
         Err(e) => {
             return (StatusCode::BAD_GATEWAY, format!("upstream error: {}", e)).into_response();

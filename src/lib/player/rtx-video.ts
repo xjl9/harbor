@@ -32,13 +32,31 @@ function buildFilter(hdrActive: boolean, vsrScale: number | null): string | null
   return `${RTX_VF_LABEL}:d3d11vpp=${options.join(":")}`;
 }
 
-async function applyRtxVideoNow(req: RtxVideoRequest, sessionKey: string | number): Promise<void> {
-  if (!isWindowsDesktop()) return;
-  if (currentSessionKey !== sessionKey) {
-    currentSessionKey = sessionKey;
-    appliedFilter = null;
+async function clearRtxVideo(): Promise<void> {
+  // The Windows mpv instance survives player views; resetting JS state alone
+  // leaves its native filter attached to the next file.
+  await invoke("mpv_command", { cmd: ["vf", "remove", RTX_VF_LABEL] }).catch(() => {});
+  appliedFilter = null;
+  if (hasPreviousHintMode) {
+    await invoke("mpv_set_property", {
+      name: HINT_MODE_PROPERTY,
+      value: previousHintMode,
+    }).catch(() => {});
     previousHintMode = undefined;
     hasPreviousHintMode = false;
+  }
+}
+
+async function applyRtxVideoNow(
+  req: RtxVideoRequest,
+  sessionKey: string | number,
+  generation: number,
+): Promise<void> {
+  if (!isWindowsDesktop()) return;
+  if (currentSessionKey !== sessionKey) {
+    await clearRtxVideo();
+    if (generation !== stateGeneration) return;
+    currentSessionKey = sessionKey;
   }
   const hdrRequested = req.hdr && !isRtxHdrBlocked(req.hdrToSdr, req.svpActive);
   const vsrRequested = req.vsr && !isRtxVsrBlocked(req.svpActive);
@@ -61,6 +79,7 @@ async function applyRtxVideoNow(req: RtxVideoRequest, sessionKey: string | numbe
     }
   }
 
+  if (generation !== stateGeneration) return;
   if (hdrActive && !hasPreviousHintMode) {
     let snapshot: unknown;
     try {
@@ -69,6 +88,7 @@ async function applyRtxVideoNow(req: RtxVideoRequest, sessionKey: string | numbe
       console.warn("[rtx-video] could not snapshot the current colorspace hint mode", error);
       hdrActive = false;
     }
+    if (generation !== stateGeneration) return;
     if (hdrActive) {
       try {
         await invoke("mpv_set_property", { name: HINT_MODE_PROPERTY, value: "source" });
@@ -81,10 +101,12 @@ async function applyRtxVideoNow(req: RtxVideoRequest, sessionKey: string | numbe
     }
   }
 
+  if (generation !== stateGeneration) return;
   const desired = buildFilter(hdrActive, vsrScale);
   if (desired !== appliedFilter) {
     await invoke("mpv_command", { cmd: ["vf", "remove", RTX_VF_LABEL] }).catch(() => {});
     appliedFilter = null;
+    if (generation !== stateGeneration) return;
     if (desired) {
       try {
         await invoke("mpv_command", { cmd: ["vf", "add", desired] });
@@ -112,15 +134,19 @@ export function applyRtxVideo(req: RtxVideoRequest, sessionKey: string | number)
     .catch(() => {})
     .then(() => {
       if (generation !== stateGeneration) return;
-      return applyRtxVideoNow(req, sessionKey);
+      return applyRtxVideoNow(req, sessionKey, generation);
     });
   return applyQueue;
 }
 
 export function resetRtxVideoState(): void {
   stateGeneration += 1;
-  currentSessionKey = null;
-  appliedFilter = null;
-  previousHintMode = undefined;
-  hasPreviousHintMode = false;
+  // Run after any in-flight native command and before the next session's work.
+  // Preserve the hint snapshot until cleanup has actually restored it.
+  applyQueue = applyQueue
+    .catch(() => {})
+    .then(async () => {
+      if (isWindowsDesktop()) await clearRtxVideo();
+      currentSessionKey = null;
+    });
 }

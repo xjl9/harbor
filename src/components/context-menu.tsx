@@ -16,12 +16,15 @@ import {
   Maximize,
   Navigation,
   RotateCcw,
+  Share2,
   UserPlus,
   Wallpaper,
 } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { useActiveAddon } from "@/lib/active-addon";
 import { copyText } from "@/components/player/copy-link-button";
+import { emitListToast } from "@/components/lists/list-toast";
+import { shareDeepLink } from "@/lib/deep-link";
 import { magnetFromHash } from "@/lib/debrid/types";
 import { openUrl } from "@/lib/window";
 import {
@@ -84,6 +87,9 @@ export function ContextMenu() {
     openAddonDetail,
     openSettings,
     meta: currentMeta,
+    personId,
+    mangaId,
+    ebookId,
     topKind,
     player,
   } = useView();
@@ -105,6 +111,13 @@ export function ContextMenu() {
   const { toggle: toggleFavorite } = useMediaFavorites();
   const isFav = useIsFavorite(targetMetaId);
   const isAutoDl = useIsAutoDownloaded(targetMetaId ?? "");
+
+  const shareLink = (type: string, id: string) => {
+    void copyText(shareDeepLink(type, id)).then((ok) => {
+      if (ok) emitListToast(t("Link copied"));
+    });
+    close();
+  };
 
   const goToHost = () => {
     if (!hostLocation) return;
@@ -132,7 +145,22 @@ export function ContextMenu() {
         open(e, { kind: "edit", element: el, selection });
         return;
       }
-      if (topKind === "person") return;
+      if (topKind === "person") {
+        if (personId == null) return;
+        e.preventDefault();
+        open(e, { kind: "person", id: personId });
+        return;
+      }
+      if (topKind === "manga" && mangaId) {
+        e.preventDefault();
+        open(e, { kind: "manga", id: mangaId });
+        return;
+      }
+      if (topKind === "ebook" && ebookId) {
+        e.preventDefault();
+        open(e, { kind: "ebook", id: ebookId });
+        return;
+      }
       if (e.target instanceof HTMLElement && e.target.closest("[data-person-card]")) return;
       const backdropEl =
         e.target instanceof HTMLElement ? e.target.closest("[data-title-backdrop]") : null;
@@ -164,7 +192,7 @@ export function ContextMenu() {
     };
     document.addEventListener("contextmenu", handler);
     return () => document.removeEventListener("contextmenu", handler);
-  }, [open, currentMeta, menuMeta, topKind, activeAddon]);
+  }, [open, currentMeta, menuMeta, topKind, activeAddon, personId, mangaId, ebookId]);
 
   useEffect(() => {
     if (!state) return;
@@ -327,6 +355,14 @@ export function ContextMenu() {
         />,
       );
     }
+    items.push(
+      <Item
+        key="share-link"
+        icon={<Share2 size={14} strokeWidth={2} />}
+        label={t("Share as link")}
+        onClick={() => shareLink(meta.type, meta.id)}
+      />,
+    );
     if (inSession && !playerActions) {
       items.push(
         <Item
@@ -500,6 +536,36 @@ export function ContextMenu() {
           close();
         }}
         disabled={!download}
+      />,
+    );
+  } else if (state.target.kind === "person") {
+    const target = state.target;
+    items.push(
+      <Item
+        key="share-person"
+        icon={<Share2 size={14} strokeWidth={2} />}
+        label={t("Share as link")}
+        onClick={() => shareLink("person", String(target.id))}
+      />,
+    );
+  } else if (state.target.kind === "manga") {
+    const target = state.target;
+    items.push(
+      <Item
+        key="share-manga"
+        icon={<Share2 size={14} strokeWidth={2} />}
+        label={t("Share as link")}
+        onClick={() => shareLink("manga", target.id)}
+      />,
+    );
+  } else if (state.target.kind === "ebook") {
+    const target = state.target;
+    items.push(
+      <Item
+        key="share-ebook"
+        icon={<Share2 size={14} strokeWidth={2} />}
+        label={t("Share as link")}
+        onClick={() => shareLink("ebook", target.id)}
       />,
     );
   } else {

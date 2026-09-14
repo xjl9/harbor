@@ -700,7 +700,7 @@ const sweepA: Record<string, string> = {
   active: "已启用",
   Active: "已启用",
   "Active and reachable": "活跃且可连接",
-  "Active torrents": "活跃种子",
+  "Active transfers": "活跃传输",
   Activity: "动态",
   Actor: "演员",
   Actors: "演员",

@@ -1,9 +1,12 @@
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { X } from "lucide-react";
 import { Play } from "@/components/icons/play-filled";
+import simklLogo from "@/assets/simkl.png";
+import traktLogo from "@/assets/trakt.svg";
 import type { Meta } from "@/lib/cinemeta";
 import { useAuth } from "@/lib/auth";
 import { FLIP_ORIGIN_ATTR } from "@/lib/motion";
+import { anyProfileSharesStremioWith, useProfiles } from "@/lib/profiles";
 import { useHideAnime } from "@/lib/anime-hide";
 import { useHeroLogos } from "@/components/anime-hero/use-hero-logos";
 import { detectAnimeForCw, useDetectedAnimeVersion } from "@/lib/anime-detect";
@@ -149,6 +152,9 @@ function useCwWatchedSources(cwItems: LibraryItem[]): {
 export function useMobileCw(limit = 14): LibraryItem[] {
   const { authKey } = useAuth();
   const { settings } = useSettings();
+  const { activeProfile, profiles } = useProfiles();
+  const hideSharedCw =
+    settings.cwPerProfile && anyProfileSharesStremioWith(activeProfile, profiles);
   const hideAnime = useHideAnime();
   const layerActive = useLayerActive();
   const cloudItems = useCwCloudLibrary(authKey, layerActive);
@@ -157,7 +163,7 @@ export function useMobileCw(limit = 14): LibraryItem[] {
   const items =
     cloudItems.length > 0 || cloudKey !== authKey ? cloudItems : cloudCache;
   const externalCw = useExternalCw(
-    !settings.cwPerProfile && settings.externalContinueWatching,
+    !hideSharedCw && (settings.cwSources.trakt || settings.cwSources.simkl),
   );
   const localItems = useLocalCwLibraryItems();
   const dismissVersion = useCwDismissVersion();
@@ -196,7 +202,7 @@ export function useMobileCw(limit = 14): LibraryItem[] {
     void rootsVersion;
     void animeDetectVer;
     return mergeContinueWatching(items, externalCw, localItems, {
-      cwPerProfile: settings.cwPerProfile,
+      cwPerProfile: hideSharedCw,
       hideAnime,
     });
   }, [
@@ -207,7 +213,7 @@ export function useMobileCw(limit = 14): LibraryItem[] {
     rootsVersion,
     animeDetectVer,
     hideAnime,
-    settings.cwPerProfile,
+    hideSharedCw,
   ]);
 
   const resurfaceLibrary = useMemo(() => {
@@ -344,7 +350,7 @@ function MobileCwCard({
   const dur = item.state?.duration ?? 0;
   const off = item.state?.timeOffset ?? 0;
   const progress = dur > 0 ? Math.min(1, off / dur) : 0;
-  const external = item.external === "simkl";
+  const external = !!item.external;
   // Up-next entries carry the previous episode's duration with a reset
   // offset, so a remaining-time label would be wrong for them.
   const remaining = dur > 0 && !external && !item.upNext ? formatRemaining(dur - off, t) : "";
@@ -401,7 +407,16 @@ function MobileCwCard({
             </div>
           )}
           <span className="absolute bottom-2.5 start-2.5 flex max-w-[calc(100%-20px)] items-center gap-1.5 rounded-full bg-black/55 px-2.5 py-1 text-[11px] font-semibold text-white backdrop-blur-sm">
-            <Play size={11} strokeWidth={0} fill="currentColor" className="shrink-0" />
+            {item.external ? (
+              <img
+                src={item.external === "trakt" ? traktLogo : simklLogo}
+                alt=""
+                title={item.external === "trakt" ? t("Paused on Trakt") : t("Paused on Simkl")}
+                className="h-3.5 w-3.5 shrink-0 rounded-sm"
+              />
+            ) : (
+              <Play size={11} strokeWidth={0} fill="currentColor" className="shrink-0" />
+            )}
             {sub ? (
               <>
                 <span className="shrink-0">{sub}</span>

@@ -1,6 +1,8 @@
 import { ChevronDown, ChevronLeft, RefreshCw } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import type { Meta } from "@/lib/cinemeta";
+import { parseKitsuId } from "@/lib/providers/kitsu";
+import { splitFranchiseDisplaySeason } from "@/lib/streams/anime-identity-core";
 import { useT } from "@/lib/i18n";
 import { useSettings } from "@/lib/settings";
 import type { PlayEpisode } from "@/lib/view";
@@ -88,6 +90,11 @@ export function PickerHeader({
   const phone = isPhoneShell();
   const phoneH1 =
     "font-display text-[clamp(30px,8.5vw,40px)] font-medium leading-[1.04] tracking-[-0.02em] text-ink [overflow-wrap:break-word]";
+  const partSeason = episode
+    ? splitFranchiseDisplaySeason(
+        parseKitsuId(episode.kitsuStreamId ?? "") ?? parseKitsuId(meta.id),
+      )
+    : null;
   return (
     <header className="flex flex-col gap-3">
       {episode ? (
@@ -101,7 +108,9 @@ export function PickerHeader({
           >
             {absoluteEpisode != null
               ? `${meta.name} · Episode ${absoluteEpisode}`
-              : `${meta.name} · Season ${episode.imdbSeason ?? episode.season} · Episode ${String(episode.imdbEpisode ?? episode.episode).padStart(2, "0")}`}
+              : partSeason != null
+                ? `${meta.name} · Season ${partSeason} · Episode ${String(episode.episode).padStart(2, "0")}`
+                : `${meta.name} · Season ${episode.imdbSeason ?? episode.season} · Episode ${String(episode.imdbEpisode ?? episode.episode).padStart(2, "0")}`}
           </p>
           <h1
             className={

@@ -2,6 +2,9 @@ import { useEffect } from "react";
 import type { Meta } from "@/lib/cinemeta";
 import { useView, type PlayEpisode } from "@/lib/view";
 import { requestMobileIntent } from "@/views/mobile/mobile-intent";
+import { parseKitsuId } from "@/lib/providers/kitsu";
+import { splitFranchiseDisplaySeason } from "@/lib/streams/anime-identity-core";
+import { useT } from "@/lib/i18n";
 import { openUrl } from "@/lib/window";
 import { isPhoneShell } from "./picker-utils";
 
@@ -19,6 +22,7 @@ export function AutoExhaustedModal({
   onBrowseManually: () => void;
 }) {
   const { goBack, setView, openSettings } = useView();
+  const t = useT();
   const phone = isPhoneShell();
   // Both branches of the cause list below name an expired or missing debrid key,
   // and the modal offered no way to go and check one. Debrid keys live on the
@@ -39,10 +43,16 @@ export function AutoExhaustedModal({
     openSettings("streaming");
   };
   const title = meta.name ?? "this title";
+  const partSeason = episode
+    ? (splitFranchiseDisplaySeason(parseKitsuId(episode.kitsuStreamId ?? "")) ??
+      splitFranchiseDisplaySeason(parseKitsuId(meta.id)))
+    : null;
   const epSuffix = episode
     ? absoluteEpisode != null
       ? ` E${absoluteEpisode}`
-      : ` S${episode.imdbSeason ?? episode.season}E${String(episode.imdbEpisode ?? episode.episode).padStart(2, "0")}`
+      : partSeason != null
+        ? ` S${partSeason}E${String(episode.episode).padStart(2, "0")}`
+        : ` S${episode.imdbSeason ?? episode.season}E${String(episode.imdbEpisode ?? episode.episode).padStart(2, "0")}`
     : "";
   const subject = `Harbor: no working stream for ${title}${epSuffix}`;
   const body =
@@ -60,7 +70,7 @@ export function AutoExhaustedModal({
     console.warn(`[play] no working stream for ${title}${epSuffix} after ${triedCount} sources`);
   }, [title, epSuffix, triedCount]);
 
-  const mailto = `mailto:bugs@harbor.site?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  const reportUrl = `https://github.com/harborstremio/harbor/issues/new?title=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
   return (
     <main
       className={
@@ -117,10 +127,10 @@ export function AutoExhaustedModal({
             {phone ? "Check debrid key" : "Open settings"}
           </button>
           <button
-            onClick={() => openUrl(mailto)}
+            onClick={() => openUrl(reportUrl)}
             className="flex h-11 items-center justify-center rounded-full bg-elevated text-[13.5px] font-medium text-ink ring-1 ring-edge-soft transition-colors hover:bg-raised"
           >
-            Send a bug report
+            {t("Report a bug")}
           </button>
           <button
             onClick={goBack}

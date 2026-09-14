@@ -1,0 +1,129 @@
+{
+  "notes": {
+    "0.9.126": {
+      "title": "Harbor Beta 0.9.126",
+      "intro": "Account, playback, subtitle, and browsing improvements, with more reliable name saving and session handling.",
+      "sections": [
+        {
+          "heading": "Accounts and sessions",
+          "items": [
+            "Improved Harbor display-name saving, retry handling, and account isolation.",
+            "Added proactive Harbor session renewal and a single retry for eligible requests after an expired session. Temporary connection failures preserve your saved session; revoked sessions still require sign-in."
+          ]
+        },
+        {
+          "heading": "Playback and subtitles",
+          "items": [
+            "Fixed the Windows player startup background and cleanup of Harbor's RTX filter when switching between eligible SDR and HDR sources.",
+            "Fixed subtitle text remaining visible after selecting Off, including late subtitle events.",
+            "Included seeking, Windows audio recovery, and content-advisory updates.",
+            "Load custom mpv scripts before player initialization and open the separate Windows player on Harbor's display (#1422). HDR display restoration still needs device-specific verification, especially in separate-window mode.",
+            "Improved subtitle pop-out placement and prevented duplicate subtitle overlays while it is open.",
+            "Improved playback statistics: unavailable drop counters no longer appear as a measured zero. This is not a universal fix for fullscreen stuttering."
+          ]
+        },
+        {
+          "heading": "Browsing and retained changes",
+          "items": [
+            "Improved Discover loading and scrolling behavior.",
+            "Updated settings layouts and profile-background previews, and added the subtitle-FPS icon to the icon collection.",
+            "Added custom screensaver videos, GIFs and images, richer Voyage hover details, and corrected settings-search destinations.",
+            "Improved anime Continue Watching deduplication and Bleach TYBW episode labels. Added offline retry queues for Trakt and Simkl progress, isolated by Harbor profile (#1421).",
+            "Retained the approved Continue Watching and plugin updates, along with earlier beta and experimental fixes.",
+            "These version-specific release notes remain available offline after installation."
+          ]
+        },
+        {
+          "heading": "Request security",
+          "items": [
+            "Improved provider domain checks, including public suffixes and shared hosting domains."
+          ]
+        },
+        {
+          "heading": "Please test",
+          "items": [
+            "Save a display name, reopen settings, and restart Harbor. Confirm the saved name and sign-in remain.",
+            "Check a failed save while offline, then reconnect and retry. A failed save must not report success.",
+            "Check account actions after real session renewal without signing in again. Offline recovery and expiry retry have passed simulated tests; live verification is still pending.",
+            "Turn subtitles Off while a line is visible, seek, then turn them on again. Check that no old line stays on screen.",
+            "On Windows, switch from SDR playback with RTX enabled to HDR and back. Check the picture, seeking, audio, and fullscreen.",
+            "Finish an episode offline, reconnect, and check tracker history. Switch profiles and confirm pending progress does not move to the other profile.",
+            "Check custom screensaver playback, subtitle pop-out open/close, settings search, and separate-window placement on a second monitor.",
+            "Report problems through Harbor's official Discord support. Include your version, platform, steps, and expected result. Remove passwords, tokens, and private URLs from anything you share."
+          ]
+        },
+        {
+          "heading": "A note from Talal",
+          "items": [
+            "Thank you for helping improve Harbor. Please try the features you use every day and tell us if anything feels different. If something goes wrong, note what you were doing, your Harbor version, and your operating system. For playback issues, include whether HDR, RTX, or fullscreen was enabled. Clear steps and a short recording help us investigate. Please hide passwords, tokens, and private links before sharing. — Talal"
+          ]
+        }
+      ]
+    },
+    "0.9.125": {
+      "title": "Harbor Beta 0.9.125",
+      "intro": "Playback, subtitles, Continue Watching, navigation, and library improvements brought forward from Experimental 0.0.3 and 0.0.4, together with the latest approved beta changes.",
+      "sections": [
+        {
+          "heading": "Playback, subtitles, and X-Ray",
+          "items": [
+            "Fixed Arabic/English subtitle identity and grouping, and preserved manual Live Try timing through seeking and pause/resume.",
+            "Improved encrypted HLS playback to address repeated segment stalls (#1400).",
+            "Improved Windows audio-output switching and recovery (#1334), and restored window bounds and maximized state after leaving fullscreen (#1394).",
+            "Select an X-Ray actor to browse their movies and TV shows without leaving the player.",
+            "Added Linux MPRIS desktop media controls for playback, seeking, volume, and metadata (#1372)."
+          ]
+        },
+        {
+          "heading": "Continue Watching and your library",
+          "items": [
+            "Dismissed cards can return when you make further progress, including progress from Trakt and Simkl. Improved external-source refresh and retained shared-profile safeguards (#1411, #1359).",
+            "Added optional episode-still artwork for Continue Watching, with your saved frame as a fallback. This preference is off by default (#1411).",
+            "Season selection follows watch progress (#1401).",
+            "Added drag-and-drop list reordering (#1361) and descriptions for custom and featured lists (#1371)."
+          ]
+        },
+        {
+          "heading": "Navigation and appearance",
+          "items": [
+            "Improved TV/controller navigation across settings, settings focus, and home search (#1408).",
+            "Improved Arabic/RTL navigation in Big Picture, the poster dock, and live TV multiview (#1406).",
+            "Restored the standard row arrows while retaining navigation fixes. Liquid Glass arrows are unchanged.",
+            "Restored ElegantFin sidebar collapse and Back alignment (#1399).",
+            "Refreshed the content advisory popup with translucent styling and updated animations. Removed the migration that automatically enabled content advisories.",
+            "Updated studio/network facts: removed average-rating/runtime facts and display an IMDb score for the featured acclaimed title when available.",
+            "Added a custom background and dimming control for the Who's watching screen."
+          ]
+        },
+        {
+          "heading": "Books, manga, and more",
+          "items": [
+            "Added full Edge TTS voice discovery for ebooks (#1409).",
+            "Included manga downloads, browsing/extension improvements, and AniList/MAL progress tracking (#1385).",
+            "Included desktop notifications (#1398) and controller cursor toggle, idle auto-hide, and input-yield options (#1362).",
+            "Experimental release notes remain available after installation, including offline. Beta 0.9.125 includes its own bundled changelog fallback.",
+            "Updated regression coverage for navigation, subtitles, release notes, Continue Watching, and background controls."
+          ]
+        },
+        {
+          "heading": "Account changes",
+          "items": [
+            "Discord account sign-in, linking, and recovery have been removed. Discord Rich Presence is separate and remains available."
+          ]
+        },
+        {
+          "heading": "A note from Talal",
+          "items": [
+            "Sorry for the delay, everyone, and thank you for your patience. The stable release will be published soon. Thank you to every tester, developer, and contributor helping us improve Harbor."
+          ]
+        },
+        {
+          "heading": "Credits",
+          "items": [
+            "Credits: Thunderhawkk, uddx7, O1Abdulrahman, anmol210202, pengunnn, OwaisByte, kalashnikxvxiii, Talal1011, and the Harbor contributors."
+          ]
+        }
+      ]
+    }
+  }
+}

@@ -1,3 +1,4 @@
+import { usePreviewNavCustomization } from "@/lib/theme-preview";
 import { useState } from "react";
 import { isDesktopTauri } from "@/lib/platform";
 import { Search } from "lucide-react";
@@ -24,7 +25,7 @@ import { close, minimize, toggleMaximize } from "@/lib/window";
 // on the desktop for the rest of the session.
 const isDesktopChrome = () => isDesktopTauri();
 
-const PRIMARY_IDS = new Set(["home", "discover", "movies", "shows", "kids", "anime", "live", "sports", "vod"]);
+const PRIMARY_IDS = new Set(["home", "discover", "movies", "shows", "kids", "anime", "live", "vod"]);
 
 export function SideRail() {
   const { view, setView, chromeHidden } = useView();
@@ -49,7 +50,7 @@ export function SideRail() {
     (!item.parentalKey || !locked || !hiddenTabs[item.parentalKey]) &&
     !(item.hideKey && settings.hideContent[item.hideKey]);
 
-  const items = applyNavCustomization(NAV_ITEMS, settings.navCustomization);
+  const items = applyNavCustomization(NAV_ITEMS, usePreviewNavCustomization(settings.navCustomization));
   const primary = items.filter((item) => PRIMARY_IDS.has(item.id) && isVisible(item));
   const secondary = items.filter(
     (item) => item.id !== "settings" && !PRIMARY_IDS.has(item.id) && isVisible(item),

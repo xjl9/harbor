@@ -8,12 +8,18 @@ import type { KitsuEpisode } from "@/lib/providers/kitsu";
 import { useSettings } from "@/lib/settings";
 import { SPOILER_TEXT_CLASS, SPOILER_THUMB_CLASS, type SpoilerMask } from "@/lib/spoilers";
 import { animeSeasonKey } from "./anime-season-key";
+import { parseKitsuId } from "@/lib/providers/kitsu";
+import { splitFranchiseDisplaySeason } from "@/lib/streams/anime-identity-core";
 import { useView } from "@/lib/view";
 import { useT } from "@/lib/i18n";
 import { FillerBadge, UpcomingBadge } from "../badges";
 import { EpisodeRatingBadge } from "../episode-rating-badge";
 import { EpisodeDownloadButton } from "../episode-download-button";
 import { isUpcomingDate } from "../helpers";
+
+function partDisplaySeason(metaId: string, sourceMetaId?: string): number | null {
+  return splitFranchiseDisplaySeason(parseKitsuId(sourceMetaId ?? metaId));
+}
 
 export function AnimeEpisodeRow({
   meta,
@@ -78,8 +84,19 @@ export function AnimeEpisodeRow({
         className="flex min-w-0 flex-1 gap-6 text-start"
       >
         <div className="relative w-[200px] shrink-0">
-          <div className={spoiler?.thumb ? `overflow-hidden rounded-lg ${SPOILER_THUMB_CLASS}` : undefined}>
-            <Poster src={ep.thumbnail ?? undefined} seed={String(ep.id)} ratio="landscape" className="rounded-lg" lazy fallbacks={[ep.thumbnailFallback, meta.background]} />
+          <div
+            className={
+              spoiler?.thumb ? `overflow-hidden rounded-lg ${SPOILER_THUMB_CLASS}` : undefined
+            }
+          >
+            <Poster
+              src={ep.thumbnail ?? undefined}
+              seed={String(ep.id)}
+              ratio="landscape"
+              className="rounded-lg"
+              lazy
+              fallbacks={[ep.thumbnailFallback, meta.background]}
+            />
           </div>
           <div className="absolute inset-0 flex items-center justify-center rounded-lg bg-canvas/40 opacity-0 transition-opacity group-hover:opacity-100">
             <div className="flex h-12 w-12 items-center justify-center rounded-full bg-ink text-canvas">
@@ -101,7 +118,10 @@ export function AnimeEpisodeRow({
           )}
           {progress.ratio > 0.01 && (
             <div className="absolute inset-x-1 bottom-1 h-[3px] overflow-hidden rounded-full bg-black/55">
-              <div className="h-full rounded-full bg-accent" style={{ width: `${Math.max(2, progress.ratio * 100)}%` }} />
+              <div
+                className="h-full rounded-full bg-accent"
+                style={{ width: `${Math.max(2, progress.ratio * 100)}%` }}
+              />
             </div>
           )}
         </div>
@@ -117,9 +137,11 @@ export function AnimeEpisodeRow({
             <span>
               {[
                 showSeason
-                  ? `S${ep.imdbSeason ?? ep.seasonNumber ?? 1} · E${ep.number}`
+                  ? `S${partDisplaySeason(meta.id, ep.sourceMetaId) ?? ep.imdbSeason ?? ep.seasonNumber ?? 1} · E${ep.number}`
                   : `E${ep.number}`,
-                ep.absoluteNumber && ep.absoluteNumber !== ep.number ? `Abs E${ep.absoluteNumber}` : null,
+                ep.absoluteNumber && ep.absoluteNumber !== ep.number
+                  ? `Abs E${ep.absoluteNumber}`
+                  : null,
                 ep.length ? t("{n} min", { n: ep.length }) : null,
                 formatAirDate(ep.airdate) || null,
               ]

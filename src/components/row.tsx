@@ -10,10 +10,12 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { flushSync } from "react-dom";
+import { observeWithin } from "@/lib/visibility";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { ThreeLiquidGlassSurface } from "@/components/ThreeLiquidGlassSurface";
 import { NavChevron } from "./nav-arrow";
-import { useT } from "@/lib/i18n";
+import { useT, useUiLanguage, isRtl as checkRtl } from "@/lib/i18n";
 import { useSettings } from "@/lib/settings";
 import { useView } from "@/lib/view";
 import { resetPosterDock as resetPosterDockItems, updatePosterDock } from "@/lib/poster-dock";
@@ -30,7 +32,7 @@ const EAGER_COUNT = 6;
 const NEAR_MARGIN = "300px";
 const FAR_RELEASE_MS = 15000;
 
-export type RowShape = "portrait" | "landscape" | "service" | "rank" | "tile";
+export type RowShape = "portrait" | "landscape" | "service" | "rank" | "tile" | "square";
 
 export const TV_CARD_MIN = 318;
 
@@ -81,9 +83,11 @@ function LazyChild({
     const el = ref.current;
     if (!el) return;
     let hideTimer: number | null = null;
-    const io = new IntersectionObserver(
-      (entries) => {
-        if (entries[0]?.isIntersecting) {
+    const stopIo = observeWithin(
+      el,
+      NEAR_MARGIN,
+      (entry) => {
+        if (entry.isIntersecting) {
           if (hideTimer != null) {
             window.clearTimeout(hideTimer);
             hideTimer = null;
@@ -96,9 +100,8 @@ function LazyChild({
           }, FAR_RELEASE_MS);
         }
       },
-      { root, rootMargin: NEAR_MARGIN },
+      root,
     );
-    io.observe(el);
     const recheck = window.setTimeout(() => {
       const rect = el.getBoundingClientRect();
       const rr = root.getBoundingClientRect();
@@ -112,7 +115,7 @@ function LazyChild({
       if (within) setVisible(true);
     }, 400);
     return () => {
-      io.disconnect();
+      stopIo();
       window.clearTimeout(recheck);
       if (hideTimer != null) window.clearTimeout(hideTimer);
     };
@@ -161,6 +164,20 @@ function LazyChild({
   );
 }
 
+let pendingWrites: Array<() => void> = [];
+
+function batchWrite(fn: () => void): void {
+  pendingWrites.push(fn);
+  if (pendingWrites.length > 1) return;
+  queueMicrotask(() => {
+    const fns = pendingWrites;
+    pendingWrites = [];
+    flushSync(() => {
+      for (const f of fns) f();
+    });
+  });
+}
+
 function Skeleton({ shape }: { shape: RowShape }) {
   const { settings } = useSettings();
   const radius = settings.posterRadius;
@@ -175,7 +192,8 @@ function Skeleton({ shape }: { shape: RowShape }) {
   if (shape === "tile") {
     return <div className="aspect-[5/4] w-full rounded-2xl bg-elevated/30" />;
   }
-  const aspect = shape === "landscape" ? "aspect-[16/9]" : "aspect-[2/3]";
+  const aspect =
+    shape === "landscape" ? "aspect-[16/9]" : shape === "square" ? "aspect-square" : "aspect-[2/3]";
   const hideText = shape === "portrait" && settings.hidePosterTitles;
   return (
     <div className="flex w-full min-w-0 flex-col gap-2.5">
@@ -193,6 +211,7 @@ function Skeleton({ shape }: { shape: RowShape }) {
 export function Row({
   title,
   titleExtra,
+  headerDescription,
   className = "",
   min = 144,
   shape = "portrait",
@@ -210,6 +229,7 @@ export function Row({
 }: {
   title?: React.ReactNode;
   titleExtra?: React.ReactNode;
+  headerDescription?: React.ReactNode;
   className?: string;
   min?: number;
   shape?: RowShape;
@@ -227,12 +247,16 @@ export function Row({
 }) {
   const { settings } = useSettings();
   const t = useT();
+  const { rememberRowScroll, recallRowScroll } = useView();
+  const lang = useUiLanguage();
+  const rtl = checkRtl(lang);
   const tvCards =
     shape === "portrait" && settings.rowCardStyle === "tv" && holdsPosterCards(children);
   const effShape: RowShape = tvCards ? "landscape" : shape;
   const effMin = Math.max(72, Math.round((tvCards ? TV_CARD_MIN : min) * settings.posterScale));
   const expandingCards = effShape === "portrait" && settings.posterBackdropExpansion;
   const dockEnabled = effShape === "portrait" && settings.posterDockMagnification;
+  const posterHeightRatio = effShape === "landscape" ? 9 / 16 : effShape === "square" ? 1 : 1.5;
   const containerRef = useRef<HTMLDivElement>(null);
   const trackRef = useRef<HTMLDivElement>(null);
   const [trackEl, setTrackEl] = useState<HTMLDivElement | null>(null);
@@ -252,30 +276,37 @@ export function Row({
     onEndRef.current = onEndReached;
   });
 
-  const rtlRef = useRef(false);
+  const [near, setNear] = useState(false);
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    return observeWithin(el, "600px", (e) => setNear(e.isIntersecting));
+  }, []);
   const measure = () => {
     const container = containerRef.current;
     if (!container) return;
-    rtlRef.current = getComputedStyle(container).direction === "rtl";
     const available = container.getBoundingClientRect().width;
     if (available <= 0) return;
     const fits = Math.max(1, Math.floor((available + GAP) / (effMin + GAP)));
     const raw = (available - (fits - 1) * GAP) / fits;
-    setCellWidth((Math.ceil(raw * 64) + 1) / 64);
+    const next = (Math.ceil(raw * 64) + 1) / 64;
+    batchWrite(() => setCellWidth(next));
   };
 
-  const readPos = (el: HTMLDivElement) => (rtlRef.current ? -el.scrollLeft : el.scrollLeft);
+  const readPos = (el: HTMLDivElement) => (rtl ? -el.scrollLeft : el.scrollLeft);
   const writePos = (el: HTMLDivElement, pos: number) => {
-    el.scrollLeft = rtlRef.current ? -pos : pos;
+    el.scrollLeft = rtl ? -pos : pos;
   };
 
   const measureScroll = () => {
     const el = trackRef.current;
     if (!el) return;
     const pos = readPos(el);
-    setCanPrev(pos > 1);
     const remaining = el.scrollWidth - el.clientWidth - pos;
-    setCanNext(remaining > 1);
+    batchWrite(() => {
+      setCanPrev(pos > 1);
+      setCanNext(remaining > 1);
+    });
     if (el.clientWidth > 0 && remaining < 800) onEndRef.current?.();
   };
 
@@ -362,11 +393,10 @@ export function Row({
   const childCount = Children.count(children);
   const restoredRef = useRef(false);
   const userInteractedRef = useRef(false);
-  const { rememberRowScroll, recallRowScroll } = useView();
   useLayoutEffect(() => {
     measure();
     measureScroll();
-  }, [childCount, trackEl, effMin]);
+  }, [childCount, trackEl, effMin, rtl]);
   useLayoutEffect(() => {
     if (!trackEl || cellWidth == null) return;
     if (scrollKey && !restoredRef.current && childCount > 0) {
@@ -482,7 +512,6 @@ export function Row({
     if (!el) return;
     userInteractedRef.current = true;
     cancelGlide();
-    const rtl = rtlRef.current;
     const cur = rtl ? -el.scrollLeft : el.scrollLeft;
     const max = el.scrollWidth - el.clientWidth;
     const stride = strideRef.current;
@@ -514,7 +543,6 @@ export function Row({
       resetPosterDock();
       return;
     }
-    const rtl = rtlRef.current;
     updatePosterDock({
       track,
       pointerX,
@@ -524,7 +552,7 @@ export function Row({
       rtl,
       transitionMs: settings.posterDockTransitionMs,
     });
-  }, [cellWidth, dockEnabled, effMin, resetPosterDock, settings.posterDockTransitionMs]);
+  }, [cellWidth, dockEnabled, effMin, resetPosterDock, rtl, settings.posterDockTransitionMs]);
   const schedulePosterDock = useCallback(
     (clientX: number) => {
       dockPointerXRef.current = clientX;
@@ -553,7 +581,6 @@ export function Row({
   };
 
   const glideTo = (el: HTMLDivElement, target: number, snappy = false) => {
-    const rtl = rtlRef.current;
     const start = rtl ? -el.scrollLeft : el.scrollLeft;
     const distance = target - start;
     if (Math.abs(distance) < 2) {
@@ -651,7 +678,7 @@ export function Row({
     const v = d.vel;
     const projection = -((v * Math.abs(v)) / (2 * friction));
     const projectedRaw = el.scrollLeft + projection;
-    const projected = rtlRef.current ? -projectedRaw : projectedRaw;
+    const projected = rtl ? -projectedRaw : projectedRaw;
     const stride = (cellWidth ?? effMin) + GAP;
     const max = el.scrollWidth - el.clientWidth;
     const targetIdx = Math.round(projected / stride);
@@ -677,14 +704,17 @@ export function Row({
       {(title || onViewAll || headerRight) && (
         <div className="flex items-baseline justify-between gap-4 pe-1">
           {title && (
-            <div className="flex min-w-0 items-center gap-2">
-              <h3
-                className={`truncate font-medium tracking-tight ${titleClassName}`}
-                style={{ fontSize: `${Math.round(17 * settings.rowTitleScale * titleScale)}px` }}
-              >
-                {title}
-              </h3>
-              {titleExtra}
+            <div className="flex min-w-0 flex-col gap-1">
+              <div className="flex min-w-0 items-center gap-2">
+                <h3
+                  className={`truncate font-medium tracking-tight ${titleClassName}`}
+                  style={{ fontSize: `${Math.round(17 * settings.rowTitleScale * titleScale)}px` }}
+                >
+                  {title}
+                </h3>
+                {titleExtra}
+              </div>
+              {headerDescription}
             </div>
           )}
           {(onViewAll || headerRight) && (
@@ -729,6 +759,7 @@ export function Row({
             }}
             onClickCapture={onClickCapture}
             onDragStart={(e) => e.preventDefault()}
+            data-far={near ? undefined : ""}
             className={`harbor-row-track items-start gap-5 overflow-x-auto overflow-y-hidden ${trackPad} [scroll-snap-type:x_mandatory] [&>*]:[scroll-snap-align:start] [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] [overflow-anchor:none] [overscroll-behavior-x:contain] [&_img]:select-none [&_img]:[-webkit-user-drag:none] ${
               expandingCards
                 ? "harbor-expanding-card-scope harbor-expanding-row flex flex-nowrap"
@@ -736,11 +767,11 @@ export function Row({
             }`}
             style={
               {
-                "--row-poster-height": `${(cellWidth ?? effMin) * (effShape === "landscape" ? 9 / 16 : 1.5)}px`,
+                "--row-poster-height": `${(cellWidth ?? effMin) * posterHeightRatio}px`,
                 ...(expandingCards
                   ? {}
                   : { gridAutoColumns: cellWidth != null ? `${cellWidth}px` : `${effMin}px` }),
-                transform: "translateZ(0)",
+                transform: near ? "translateZ(0)" : undefined,
                 contain: expandingCards ? "style" : "layout style",
               } as React.CSSProperties
             }
@@ -823,14 +854,10 @@ function EdgeArrow({
           intensity={0.9}
           interactive={false}
           alwaysActive
-          experimentalStyle={{
-            background:
-              "linear-gradient(145deg, rgba(8,12,18,0.50), rgba(8,12,18,0.38) 52%, rgba(8,12,18,0.44))",
-          }}
           style={{
-            boxShadow: "inset 0 1px 0 rgba(255,255,255,0.10), inset 0 -1px 0 rgba(0,0,0,0.05)",
+            boxShadow: "inset 0 1px 0 rgba(255,255,255,0.08), inset 0 -1px 0 rgba(0,0,0,0.04)",
           }}
-          className={`h-11 w-11 pointer-events-auto border border-white/[0.08] transition-opacity duration-200 ${
+          className={`h-11 w-11 pointer-events-auto border border-white/[0.06] transition-opacity duration-200 ${
             visible
               ? "opacity-85 group-hover/row:opacity-100 focus-within:opacity-100"
               : "pointer-events-none opacity-0"
@@ -871,7 +898,7 @@ function EdgeArrow({
         onClick={onClick}
         aria-label={label}
         tabIndex={visible ? 0 : -1}
-        data-tv-skip=""
+        data-tv-skip="true"
         className={`group/edge grid h-full w-full place-items-center ${
           visible ? "pointer-events-auto" : "pointer-events-none"
         }`}

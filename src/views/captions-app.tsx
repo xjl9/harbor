@@ -11,11 +11,12 @@ const SMALL = { w: 468, h: 168 };
 const LARGE = { w: 720, h: 260 };
 
 const CHROME_BTN =
-  "flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-md bg-white/[0.06] text-ink-subtle transition-colors duration-150 ease-[var(--ease-out)] hover:bg-white/[0.10] hover:text-ink active:scale-[0.97]";
+  "flex h-[26px] w-[26px] shrink-0 items-center justify-center bg-white/[0.08] text-white/70 transition-colors duration-150 hover:bg-white/[0.18] hover:text-white active:scale-[0.97]";
 
 export function CaptionsApp() {
   const t = useT();
   const [cue, setCue] = useState<Cue>({ text: "", lang: null, paused: false });
+  const [last, setLast] = useState("");
   const [big, setBig] = useState(false);
   const [atBottom, setAtBottom] = useState(true);
   const scrollRef = useRef<HTMLDivElement | null>(null);
@@ -25,13 +26,25 @@ export function CaptionsApp() {
     let off: (() => void) | null = null;
     void (async () => {
       const un = await listen<Cue>("captions://cue", (e) => {
-        if (!dead) setCue({ text: e.payload.text ?? "", lang: e.payload.lang ?? null, paused: Boolean(e.payload.paused) });
+        if (!dead)
+          setCue({
+            text: e.payload.text ?? "",
+            lang: e.payload.lang ?? null,
+            paused: Boolean(e.payload.paused),
+          });
+      });
+      const unText = await listen<string>("captions://text", (e) => {
+        if (!dead) setCue((c) => ({ ...c, text: typeof e.payload === "string" ? e.payload : "" }));
       });
       if (dead) {
         un();
+        unText();
         return;
       }
-      off = un;
+      off = () => {
+        un();
+        unText();
+      };
       void invoke("captions_request_state").catch(() => {});
     })();
     return () => {
@@ -41,6 +54,10 @@ export function CaptionsApp() {
       } catch {}
     };
   }, []);
+
+  useEffect(() => {
+    if (cue.text) setLast(cue.text);
+  }, [cue.text]);
 
   useEffect(() => {
     const el = scrollRef.current;
@@ -78,57 +95,85 @@ export function CaptionsApp() {
     if (e.button !== 0) return;
     const el = e.target as HTMLElement;
     if (el.closest("[data-no-drag]")) return;
-    void getCurrentWindow().startDragging().catch(() => {});
+    const edge = 8;
+    if (
+      e.clientX < edge ||
+      e.clientY < edge ||
+      e.clientX > window.innerWidth - edge ||
+      e.clientY > window.innerHeight - edge
+    )
+      return;
+    void getCurrentWindow()
+      .startDragging()
+      .catch(() => {});
   }, []);
+
+  const shown = cue.text || last;
 
   return (
     <div className="h-screen w-screen bg-transparent p-[6px]">
       <section
         onPointerDown={drag}
-        className="flex h-full w-full cursor-grab select-none flex-col gap-[10px] rounded-md bg-elevated p-[14px] ring-1 ring-edge shadow-[0_10px_30px_-12px_rgba(0,0,0,0.6)] active:cursor-grabbing"
+        className="group relative flex h-full w-full cursor-grab select-none flex-col bg-black/70 active:cursor-grabbing"
       >
-        <header className="flex shrink-0 items-center gap-[10px]">
-          <span className="rounded-full bg-white/[0.06] px-[10px] py-[3px] text-[10.5px] font-semibold uppercase tracking-[0.06em] text-ink-subtle ring-1 ring-edge-soft">
-            {cue.lang ?? t("Subtitles")}
-          </span>
+        <div
+          data-no-drag
+          className="absolute end-1.5 top-1.5 z-10 flex items-center gap-1 opacity-0 transition-opacity duration-150 group-hover:opacity-100"
+        >
+          {cue.lang && (
+            <span className="me-1.5 text-[10px] font-semibold uppercase tracking-[0.1em] text-white/55">
+              {cue.lang}
+            </span>
+          )}
           {cue.paused && (
-            <span className="text-[10.5px] font-semibold uppercase tracking-[0.06em] text-ink-subtle">
+            <span className="me-1.5 text-[10px] font-semibold uppercase tracking-[0.1em] text-white/55">
               {t("Paused")}
             </span>
           )}
-          <div className="ms-auto flex items-center gap-[6px]" data-no-drag>
-            <button
-              type="button"
-              onClick={resize}
-              aria-label={big ? t("Shrink") : t("Expand")}
-              title={big ? t("Shrink") : t("Expand")}
-              className={CHROME_BTN}
-            >
-              {big ? <Minimize2 size={14} strokeWidth={2.2} /> : <Maximize2 size={14} strokeWidth={2.2} />}
-            </button>
-            <button
-              type="button"
-              onClick={close}
-              aria-label={t("Close")}
-              title={t("Close")}
-              className={CHROME_BTN}
-            >
-              <X size={15} strokeWidth={2.4} />
-            </button>
-          </div>
-        </header>
+          <button
+            type="button"
+            onClick={resize}
+            aria-label={big ? t("Shrink") : t("Expand")}
+            title={big ? t("Shrink") : t("Expand")}
+            className={CHROME_BTN}
+          >
+            {big ? (
+              <Minimize2 size={13} strokeWidth={2.2} />
+            ) : (
+              <Maximize2 size={13} strokeWidth={2.2} />
+            )}
+          </button>
+          <button
+            type="button"
+            onClick={close}
+            aria-label={t("Close")}
+            title={t("Close")}
+            className={CHROME_BTN}
+          >
+            <X size={14} strokeWidth={2.4} />
+          </button>
+        </div>
 
         <div
           ref={scrollRef}
           onScroll={onScroll}
-          data-no-drag
-          className="min-h-0 flex-1 overflow-y-auto rounded-md bg-canvas/50 px-[12px] py-[10px] ring-1 ring-inset ring-edge-soft [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          className="min-h-0 flex-1 overflow-y-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         >
-          {cue.text ? (
-            <p className="whitespace-pre-wrap text-[14px] leading-[1.55] text-ink">{cue.text}</p>
-          ) : (
-            <p className="text-[13px] leading-[1.55] text-ink-subtle">{t("Waiting for the next line")}</p>
-          )}
+          <div className="flex min-h-full items-center justify-center px-7 py-5">
+            {shown ? (
+              <p
+                className={`whitespace-pre-wrap text-center text-[18px] font-medium leading-[1.4] text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.6)] transition-opacity duration-300 ${
+                  cue.text ? "" : "opacity-40"
+                }`}
+              >
+                {shown}
+              </p>
+            ) : (
+              <p className="text-center text-[14px] text-white/55">
+                {t("Waiting for the next line")}
+              </p>
+            )}
+          </div>
         </div>
 
         {!atBottom && (
@@ -138,9 +183,9 @@ export function CaptionsApp() {
             data-no-drag
             aria-label={t("Jump to latest")}
             title={t("Jump to latest")}
-            className="mx-auto flex h-[24px] w-[36px] shrink-0 items-center justify-center rounded-full bg-white/[0.06] text-ink-subtle transition-colors duration-150 ease-[var(--ease-out)] hover:bg-white/[0.10] hover:text-ink"
+            className="absolute bottom-1.5 left-1/2 flex h-[22px] w-[34px] -translate-x-1/2 items-center justify-center bg-white/[0.1] text-white/70 transition-colors duration-150 hover:bg-white/[0.2] hover:text-white"
           >
-            <ChevronDown size={15} strokeWidth={2.4} />
+            <ChevronDown size={14} strokeWidth={2.4} />
           </button>
         )}
       </section>

@@ -367,7 +367,7 @@ const catalog01: Record<string, string> = {
   Actions: "Azioni",
   Active: "Attivo",
   "Active and reachable": "Attivo e raggiungibile",
-  "Active torrents": "Torrent attivi",
+  "Active transfers": "Trasferimenti attivi",
   Activity: "Attività",
   Actor: "Attore",
   "Actor, title, genre": "Attore, titolo, genere",
@@ -711,7 +711,8 @@ const catalog01: Record<string, string> = {
     "Hai già un account TMDB? Accedi e salta i passaggi successivi. Altrimenti premi Registrati e inserisci nome utente, password ed email.",
   "Already on the closest match for this release":
     "Sei già sulla corrispondenza più vicina per questa versione",
-  "Also joins Harbor's Discord server.": "Entra anche nel server Discord di Harbor.",
+  "Linking your Discord account also joins you to Harbor's Discord server, so the bot can send your Backup keys privately.":
+    "Linking your Discord account also joins you to Harbor's Discord server, so the bot can send your Backup keys privately.",
   "Also known as": "Conosciuto anche come",
   "Also won": "Ha vinto anche",
   Alternate: "Alternativo",

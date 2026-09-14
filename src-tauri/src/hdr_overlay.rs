@@ -66,6 +66,7 @@ pub async fn hdr_overlay_open(app: AppHandle) -> Result<(), String> {
             .focused(false);
         #[cfg(windows)]
         let builder = builder.transparent(true);
+        let builder = crate::browser_args::match_main(&app_clone, builder);
         let result = builder.build();
         match result {
             Ok(_) => {

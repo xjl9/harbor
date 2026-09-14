@@ -645,8 +645,7 @@ const catalog07: Record<string, string> = {
   "Select identified titles to export.": "Seleziona i titoli identificati da esportare.",
   "Self-host": "Hosting autonomo",
   "Self-test": "Test automatico",
-  "Self-test is disabled while strict remote streaming is on. It downloads a test torrent over peer-to-peer on this machine.":
-    "Il test automatico è disattivato quando è attivo lo streaming remoto rigoroso. Scarica un torrent di prova tramite P2P su questo dispositivo.",
+  "Self-test is disabled while strict remote streaming is on. It downloads a small test file over peer-to-peer on this machine.": "Il test automatico è disattivato quando è attivo lo streaming remoto rigoroso. Scarica un piccolo file di prova tramite P2P su questo dispositivo.",
   Send: "Invia",
   "Send a bug report": "Invia una segnalazione di bug",
   "Send a bug report straight to the Harbor team. Screenshots and screen recordings welcome.":
@@ -1022,15 +1021,14 @@ const catalog07: Record<string, string> = {
     "Mostra i controlli del player quando metti in Pausa o Riprendi con la tastiera. Disattiva per lasciarli nascosti ed evitare che coprano i Sottotitoli.",
   "Show the player controls when you pause or resume using the keyboard. Turn off to keep them hidden so they don't cover subtitles.":
     "Mostra i controlli del player quando metti in Pausa o Riprendi con la tastiera. Disattiva per lasciarli nascosti ed evitare che coprano i Sottotitoli.",
-  "Show the report button on every torrent stream, not just likely new releases.":
-    "Mostra il pulsante di segnalazione su ogni stream torrent, non solo sulle probabili nuove uscite.",
+  "Show the report button on every P2P stream, not just likely new releases.": "Mostra il pulsante di segnalazione su ogni stream P2P, non solo sulle probabili nuove uscite.",
   "Show them anyway": "Mostrali comunque",
   "Show this catalog": "Mostra questo catalogo",
   "Show this control": "Mostra questo comando",
   "Show this panel": "Mostra questo pannello",
   "Show thumbnail preview on hover": "Mostra l'anteprima della miniatura al passaggio del mouse",
   "Show title": "Mostra titolo",
-  "Show torrent name": "Mostra il nome del torrent",
+  "Show release name": "Mostra il nome della release",
   "Show track details": "Mostra i dettagli della traccia",
   "Show translation": "Mostra la traduzione",
   "Show up to 6 of your lists on your profile": "Mostra fino a 6 delle tue liste sul profilo",

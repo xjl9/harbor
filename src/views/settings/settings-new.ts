@@ -2,8 +2,9 @@ import { useSyncExternalStore } from "react";
 
 const NEW_BADGE_RESET_GENERATION = 1;
 
-const NEW_SECTIONS = new Set(["library", "badges", "theme", "tv"]);
+const NEW_SECTIONS = new Set(["library", "badges", "theme", "tv", "plugins", "bigPicture"]);
 const NEW_SETTINGS = new Set([
+  "plugins:use-plugins",
   "library:award-tab",
   "library:top-10",
   "theme:hero-video",
@@ -11,6 +12,7 @@ const NEW_SETTINGS = new Set([
   "theme:liquid-glass",
   "tv:subtitle-look",
   "mpv:buffer-size",
+  "home:prefer-episode-still",
 ]);
 
 const LS = "harbor.settingsNew.v1";
@@ -67,13 +69,21 @@ export function markSettingSeen(id: string): void {
 }
 
 export function useSettingsNew(): (id: string) => boolean {
-  useSyncExternalStore(subscribe, () => snapshot, () => snapshot);
+  useSyncExternalStore(
+    subscribe,
+    () => snapshot,
+    () => snapshot,
+  );
   const seen = new Set(store.sections);
   return (id: string) => NEW_SECTIONS.has(id) && !seen.has(id);
 }
 
 export function useSettingNew(): (id: string) => boolean {
-  useSyncExternalStore(subscribe, () => snapshot, () => snapshot);
+  useSyncExternalStore(
+    subscribe,
+    () => snapshot,
+    () => snapshot,
+  );
   const seen = new Set(store.items);
   return (id: string) => NEW_SETTINGS.has(id) && !seen.has(id);
 }

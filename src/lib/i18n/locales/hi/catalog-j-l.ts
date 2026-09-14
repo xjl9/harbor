@@ -336,8 +336,7 @@ const catalogJL: Record<string, string> = {
   "Live preview": "लाइव प्रीव्यू",
   "Live preview is on. Done and Save both keep what you've picked as your Custom theme. Reset reverts the editor to the saved palette.":
     "लाइव प्रीव्यू चालू है। ‘हो गया’ और ‘सेव’, दोनों आपके चुने हुए विकल्पों को आपकी कस्टम थीम के रूप में रखते हैं। रीसेट करने पर एडिटर सेव किए गए पैलेट पर लौट जाता है।",
-  "Live state of Harbor's own torrent engine on this machine.":
-    "इस मशीन पर Harbor के अपने टोरेंट इंजन की लाइव स्थिति।",
+  "Live state of Harbor's own P2P engine on this machine.": "इस मशीन पर Harbor के अपने P2P इंजन की लाइव स्थिति।",
   "Live streams that actually work.": "लाइव स्ट्रीम जो सच में काम करती हैं।",
   "Live sync": "लाइव सिंक",
   "Live web": "लाइव वेब",
@@ -432,7 +431,7 @@ const catalogJL: Record<string, string> = {
     "लोकल स्टोरेज भर गया है। ये रेटिंग सिर्फ़ आपके अकाउंट पर रहेंगी।",
   "Local subtitle": "लोकल सबटाइटल",
   "Local time": "स्थानीय समय",
-  "Local torrent engine": "लोकल टोरेंट इंजन",
+  "Local P2P engine": "लोकल P2P इंजन",
   Locale: "लोकेल",
   Location: "स्थान",
   "Lock controls · {binding}": "कंट्रोल लॉक करें · {binding}",

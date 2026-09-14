@@ -14,17 +14,32 @@ const SELECTOR = [
 ].join(", ");
 
 const KEY_TO_DIR: Record<string, Dir> = {
-  ArrowUp: "up", ArrowDown: "down", ArrowLeft: "left", ArrowRight: "right",
-  Up: "up", Down: "down", Left: "left", Right: "right",
+  ArrowUp: "up",
+  ArrowDown: "down",
+  ArrowLeft: "left",
+  ArrowRight: "right",
+  Up: "up",
+  Down: "down",
+  Left: "left",
+  Right: "right",
 };
 
 const CODE_TO_DIR: Record<string, Dir> = {
-  ArrowUp: "up", ArrowDown: "down", ArrowLeft: "left", ArrowRight: "right",
+  ArrowUp: "up",
+  ArrowDown: "down",
+  ArrowLeft: "left",
+  ArrowRight: "right",
 };
 
 const KEYCODE_TO_DIR: Record<number, Dir> = {
-  38: "up", 40: "down", 37: "left", 39: "right",
-  19: "up", 20: "down", 21: "left", 22: "right",
+  38: "up",
+  40: "down",
+  37: "left",
+  39: "right",
+  19: "up",
+  20: "down",
+  21: "left",
+  22: "right",
 };
 
 export const CENTER_KEYCODES = new Set([13, 23, 32]);
@@ -41,26 +56,35 @@ const LOCAL_KEYBOARD_SELECTOR = [
   '[role="tablist"]',
 ].join(", ");
 
+const PRESS_INPUT_TYPES = new Set([
+  "button",
+  "checkbox",
+  "color",
+  "file",
+  "image",
+  "radio",
+  "reset",
+  "submit",
+]);
+
+function inputType(el: HTMLInputElement) {
+  return (el.getAttribute("type") || "text").toLowerCase();
+}
+
 export function isEditable(el: HTMLElement | null) {
   if (!el) return false;
+  if (el.isContentEditable) return true;
+  if (el instanceof HTMLInputElement) return !PRESS_INPUT_TYPES.has(inputType(el));
   const tag = el.tagName;
-  return tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || el.isContentEditable;
+  return tag === "TEXTAREA" || tag === "SELECT";
 }
 
 export function isSearchLikeField(el: HTMLElement | null) {
   if (!el) return false;
   if (el instanceof HTMLTextAreaElement) return true;
   if (!(el instanceof HTMLInputElement)) return false;
-  const type = (el.getAttribute("type") || "text").toLowerCase();
-  const role = (el.getAttribute("role") || "").toLowerCase();
-  const inputMode = (el.getAttribute("inputmode") || "").toLowerCase();
-  const textEntryTypes = new Set(["text", "search", "email", "url", "tel", "password"]);
-  return (
-    textEntryTypes.has(type) ||
-    role === "searchbox" ||
-    inputMode === "search" ||
-    inputMode === "text"
-  );
+  const type = inputType(el);
+  return type !== "range" && !PRESS_INPUT_TYPES.has(type);
 }
 
 export function navOwnsFocus(el: HTMLElement | null): boolean {
@@ -71,7 +95,8 @@ export function isVisible(el: HTMLElement) {
   if (!el.isConnected) return false;
   if (el.closest('[hidden], [inert], [aria-hidden="true"]')) return false;
   const style = window.getComputedStyle(el);
-  if (style.display === "none" || style.visibility === "hidden" || parseFloat(style.opacity) === 0) return false;
+  if (style.display === "none" || style.visibility === "hidden" || parseFloat(style.opacity) === 0)
+    return false;
   const rect = el.getBoundingClientRect();
   if (rect.width <= 0 || rect.height <= 0) return false;
   if (el.getClientRects().length === 0) return false;
@@ -109,7 +134,15 @@ export function isOnScreen(el: HTMLElement, margin = ONSCREEN_MARGIN): boolean {
 }
 
 export function isInNav(el: HTMLElement): boolean {
-  return !!el.closest("[data-harbor-nav]");
+  return !!el.closest("[data-harbor-nav], [data-tv-nav-zone]");
+}
+
+export function isRangeInput(el: HTMLElement | null): el is HTMLInputElement {
+  return el instanceof HTMLInputElement && el.type === "range";
+}
+
+export function isRtl(el?: HTMLElement | null): boolean {
+  return window.getComputedStyle(el ?? document.documentElement).direction === "rtl";
 }
 
 export function isInHero(el: HTMLElement): boolean {
@@ -124,15 +157,17 @@ export function zoneOf(el: HTMLElement): "nav" | "hero" | "content" {
 
 export function getSoundType(el: HTMLElement): "light" | "movie" {
   if (isInNav(el)) return "light";
-  if (el.closest('[role="dialog"], [role="menu"], [role="tablist"], [role="switch"], form')) return "light";
-  const container = el.closest('[data-media-card], [data-tv-hero-zone]');
+  if (el.closest('[role="dialog"], [role="menu"], [role="tablist"], [role="switch"], form'))
+    return "light";
+  const container = el.closest("[data-media-card], [data-tv-hero-zone]");
   if (container || el.querySelector("img")) return "movie";
   return "light";
 }
 
 export function getFocusable(root: ParentNode = document): HTMLElement[] {
   const all = Array.from(root.querySelectorAll<HTMLElement>(SELECTOR)).filter(
-    (el) => isVisible(el) && !el.closest("[data-tv-skip]") && (zoneOf(el) === "nav" || isOnScreen(el)),
+    (el) =>
+      isVisible(el) && !el.closest("[data-tv-skip]") && (zoneOf(el) === "nav" || isOnScreen(el)),
   );
   return all.filter((el) => !all.some((other) => other !== el && other.contains(el)));
 }
@@ -166,10 +201,14 @@ export function getNavFocusTarget(): HTMLElement | null {
   );
 }
 
-export function scrollNavItemIntoView(el: HTMLElement, mode: "center" | "nearest" = "center") {
+export function scrollNavItemIntoView(
+  el: HTMLElement,
+  mode: "center" | "nearest" = "center",
+): boolean {
   const sidebarRoot =
-    el.closest<HTMLElement>("[data-harbor-sidebar]") ?? el.closest<HTMLElement>("[data-tv-nav-zone]");
-  if (!sidebarRoot) return;
+    el.closest<HTMLElement>("[data-harbor-sidebar]") ??
+    el.closest<HTMLElement>("[data-tv-nav-zone]");
+  if (!sidebarRoot) return false;
 
   let scroller: HTMLElement | null = el.parentElement;
   while (scroller) {
@@ -184,7 +223,7 @@ export function scrollNavItemIntoView(el: HTMLElement, mode: "center" | "nearest
   if (!scroller && sidebarRoot.scrollHeight > sidebarRoot.clientHeight + 1) {
     scroller = sidebarRoot;
   }
-  if (!scroller) return;
+  if (!scroller) return false;
 
   const itemRect = el.getBoundingClientRect();
   const scrollerRect = scroller.getBoundingClientRect();
@@ -192,22 +231,121 @@ export function scrollNavItemIntoView(el: HTMLElement, mode: "center" | "nearest
   if (mode === "center") {
     const itemCenter = itemRect.top + itemRect.height / 2;
     const scrollerCenter = scrollerRect.top + scrollerRect.height / 2;
-    scroller.scrollTo({ top: scroller.scrollTop + itemCenter - scrollerCenter, behavior: "smooth" });
-    return;
+    scroller.scrollTo({
+      top: scroller.scrollTop + itemCenter - scrollerCenter,
+      behavior: "smooth",
+    });
+    return true;
   }
 
   const edgePadding = 12;
   if (itemRect.top < scrollerRect.top + edgePadding) {
     scroller.scrollBy({ top: itemRect.top - scrollerRect.top - edgePadding, behavior: "smooth" });
   } else if (itemRect.bottom > scrollerRect.bottom - edgePadding) {
-    scroller.scrollBy({ top: itemRect.bottom - scrollerRect.bottom + edgePadding, behavior: "smooth" });
+    scroller.scrollBy({
+      top: itemRect.bottom - scrollerRect.bottom + edgePadding,
+      behavior: "smooth",
+    });
   }
+  return true;
+}
+
+export function navZoneReentry(nearest: HTMLElement, candidates: HTMLElement[]): HTMLElement {
+  const zone = nearest.closest<HTMLElement>("[data-tv-nav-zone]");
+  if (!zone) return nearest;
+  const marked = candidates.filter(
+    (el) => zone.contains(el) && el.matches('[data-active], [aria-current="page"]'),
+  );
+  return marked[marked.length - 1] ?? nearest;
+}
+
+const SCROLLABLE = /(auto|scroll|overlay)/;
+
+function bandInset(scroller: HTMLElement) {
+  const cs = window.getComputedStyle(scroller);
+  const start = Number.parseFloat(cs.scrollPaddingBlockStart);
+  const end = Number.parseFloat(cs.scrollPaddingBlockEnd);
+  return {
+    start: Number.isFinite(start) ? start : 0,
+    end: Number.isFinite(end) ? end : 0,
+  };
+}
+
+function bandDelta(start: number, size: number, near: number, far: number) {
+  if (size >= far - near) return start - near;
+  return start - (near + far - size) / 2;
+}
+
+function isPinned(el: HTMLElement) {
+  const position = window.getComputedStyle(el).position;
+  return position === "sticky" || position === "fixed";
+}
+
+export function scrollFocusIntoView(el: HTMLElement) {
+  const rect = el.getBoundingClientRect();
+  let pinned = isPinned(el);
+  let shiftY = 0;
+  let shiftX = 0;
+
+  const settle = (
+    scroller: HTMLElement,
+    boxTop: number,
+    boxStart: number,
+    scrollsY: boolean,
+    scrollsX: boolean,
+  ) => {
+    const inset = bandInset(scroller);
+    const room = Math.max(0, scroller.scrollHeight - scroller.clientHeight);
+    const top = scrollsY
+      ? Math.max(
+          -scroller.scrollTop,
+          Math.min(
+            bandDelta(
+              rect.top - shiftY,
+              rect.height,
+              boxTop + inset.start,
+              boxTop + scroller.clientHeight - inset.end,
+            ),
+            room - scroller.scrollTop,
+          ),
+        )
+      : 0;
+    const left = scrollsX
+      ? bandDelta(rect.left - shiftX, rect.width, boxStart, boxStart + scroller.clientWidth)
+      : 0;
+    if (Math.abs(top) <= 1 && Math.abs(left) <= 1) return;
+    scroller.scrollBy({ top, left, behavior: "smooth" });
+    shiftY += top;
+    shiftX += left;
+  };
+
+  let node: HTMLElement | null = el.parentElement;
+  while (node && node !== document.body && node !== document.documentElement) {
+    const cs = window.getComputedStyle(node);
+    const scrollsY = SCROLLABLE.test(cs.overflowY) && node.scrollHeight > node.clientHeight + 1;
+    const scrollsX = SCROLLABLE.test(cs.overflowX) && node.scrollWidth > node.clientWidth + 1;
+    if ((scrollsY || scrollsX) && !pinned) {
+      const box = node.getBoundingClientRect();
+      settle(node, box.top + node.clientTop, box.left + node.clientLeft, scrollsY, scrollsX);
+    }
+    if (cs.position === "sticky" || cs.position === "fixed") pinned = true;
+    node = node.parentElement;
+  }
+
+  if (pinned) return;
+  const root = document.scrollingElement;
+  if (!(root instanceof HTMLElement)) return;
+  const scrollsY = root.scrollHeight > root.clientHeight + 1;
+  const scrollsX = root.scrollWidth > root.clientWidth + 1;
+  if (scrollsY || scrollsX) settle(root, 0, 0, scrollsY, scrollsX);
 }
 
 export function getActiveModal(target: HTMLElement | null): HTMLElement | null {
   const owned = target?.closest<HTMLElement>(MODAL_SELECTOR);
   if (owned && isVisible(owned)) return owned;
-  const visible = Array.from(document.querySelectorAll<HTMLElement>(MODAL_SELECTOR)).filter(isVisible);
+  const visible = Array.from(document.querySelectorAll<HTMLElement>(MODAL_SELECTOR)).filter(
+    isVisible,
+  );
   return visible[visible.length - 1] ?? null;
 }
 
@@ -216,9 +354,11 @@ export function isLocallyManaged(target: HTMLElement | null): boolean {
 }
 
 function getRect(el: HTMLElement) {
-  const cell = el.closest<HTMLElement>("[data-tv-nav-base-width]");
+  const cell = el.closest<HTMLElement>(
+    "[data-tv-nav-cell], [data-tv-nav-base-width], [data-tv-text-field]",
+  );
   const r = cell?.getBoundingClientRect() ?? el.getBoundingClientRect();
-  const baseWidth = cell ? Number(cell.dataset.tvNavBaseWidth) : undefined;
+  const baseWidth = cell?.dataset.tvNavBaseWidth ? Number(cell.dataset.tvNavBaseWidth) : undefined;
   const rtl = cell ? window.getComputedStyle(cell).direction === "rtl" : false;
   return stableCardNavigationRect(r, baseWidth, rtl);
 }
@@ -243,13 +383,17 @@ export function findClosestByY(from: HTMLElement, candidates: HTMLElement[]): HT
   return best;
 }
 
-export function hasLeftNeighborInRow(active: HTMLElement, root: ParentNode = document): boolean {
+export function hasInlineStartNeighbor(
+  active: HTMLElement,
+  root: ParentNode = document,
+  rtl = false,
+): boolean {
   const src = getRect(active);
   return getFocusable(root).some((el) => {
     if (el === active || isInNav(el)) return false;
     const dst = getRect(el);
     const sameRow = Math.abs(dst.cy - src.cy) < Math.max(24, src.height * 0.6);
-    return sameRow && dst.cx < src.cx - 8;
+    return sameRow && (rtl ? dst.cx > src.cx + 8 : dst.cx < src.cx - 8);
   });
 }
 
@@ -257,6 +401,10 @@ export function getDirection(e: KeyboardEvent): Dir | null {
   if (KEY_TO_DIR[e.key]) return KEY_TO_DIR[e.key];
   if (CODE_TO_DIR[e.code]) return CODE_TO_DIR[e.code];
   return KEYCODE_TO_DIR[e.keyCode] ?? null;
+}
+
+export function isNativeArrowKey(e: KeyboardEvent): boolean {
+  return CODE_TO_DIR[e.key] != null || CODE_TO_DIR[e.code] != null;
 }
 
 export function isBackKey(e: KeyboardEvent): boolean {
@@ -269,7 +417,11 @@ export function getInitialFocus(list: HTMLElement[]) {
   return list.find((el) => el.hasAttribute("data-tv-initial-focus")) ?? list[0] ?? null;
 }
 
-export function findBest(focused: HTMLElement, candidates: HTMLElement[], dir: Dir): HTMLElement | null {
+export function findBest(
+  focused: HTMLElement,
+  candidates: HTMLElement[],
+  dir: Dir,
+): HTMLElement | null {
   const src = getRect(focused);
   const horizontal = dir === "left" || dir === "right";
   const rowSlop = Math.max(24, src.height * 0.6);
@@ -288,10 +440,13 @@ export function findBest(focused: HTMLElement, candidates: HTMLElement[], dir: D
     if (horizontal && Math.abs(dst.cy - src.cy) >= rowSlop) continue;
 
     const primary =
-      dir === "right" ? Math.max(0, dst.left - src.right) :
-      dir === "left" ? Math.max(0, src.left - dst.right) :
-      dir === "down" ? Math.max(0, dst.top - src.bottom) :
-      Math.max(0, src.top - dst.bottom);
+      dir === "right"
+        ? Math.max(0, dst.left - src.right)
+        : dir === "left"
+          ? Math.max(0, src.left - dst.right)
+          : dir === "down"
+            ? Math.max(0, dst.top - src.bottom)
+            : Math.max(0, src.top - dst.bottom);
 
     const secondary = horizontal ? Math.abs(dst.cy - src.cy) : Math.abs(dst.cx - src.cx);
 

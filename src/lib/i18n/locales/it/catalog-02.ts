@@ -141,8 +141,7 @@ const catalog02: Record<string, string> = {
   "Buffer fill": "Riempimento del buffer",
   "Buffer fill brightness": "Luminosità del riempimento del buffer",
   Buffering: "Buffering",
-  "Buffers the whole file in the background as you watch, even while paused, so big remuxes pre-load and you can scrub a cached file with no re-buffering. Works for debrid and torrent streams. Uses more disk and bandwidth; cleared when you switch or close.":
-    "Carica in buffer l'intero file in background durante la visione, anche in pausa, così i remux di grandi dimensioni vengono precaricati e puoi spostarti all'interno di un file in cache senza dover attendere un nuovo buffering. Funziona con gli stream debrid e torrent. Usa più spazio su disco e larghezza di banda; la cache viene svuotata quando cambi contenuto o chiudi.",
+  "Buffers the whole file in the background as you watch, even while paused, so big remuxes pre-load and you can scrub a cached file with no re-buffering. Works for debrid and P2P streams. Uses more disk and bandwidth; cleared when you switch or close.": "Carica in buffer l'intero file in background durante la visione, anche in pausa, così i remux di grandi dimensioni vengono precaricati e puoi spostarti all'interno di un file in cache senza dover attendere un nuovo buffering. Funziona con gli stream debrid e P2P. Usa più spazio su disco e larghezza di banda; la cache viene svuotata quando cambi contenuto o chiudi.",
   "Bug reporters get listed in the release notes when their report leads to a shipped fix. Leave blank to stay anonymous.":
     "Chi segnala un bug viene citato nelle note di rilascio se la segnalazione porta a una correzione pubblicata. Lascia vuoto per restare anonimo.",
   "Bug reports": "Segnalazioni di bug",
@@ -158,8 +157,8 @@ const catalog02: Record<string, string> = {
     "Crea un pacchetto con uno di questi strumenti, esporta il JSON, pubblicalo come gist e incolla qui sotto il link raw.",
   "Build a source plugin": "Crea un plugin per le fonti",
   "Build from source": "Compila dal codice sorgente",
-  "Build identity. Useful when filing a bug report at bugs@harbor.site.":
-    "Identificativo della build. Utile quando segnali un bug a bugs@harbor.site.",
+  "Build identity. Useful when filing a bug report.":
+    "Identificativo della build. Utile quando segnali un bug.",
   "Build one in the studio or import a theme file first, then come back to share it.":
     "Creane uno nello studio o importa prima un file di tema, poi torna qui per condividerlo.",
   "Build your own": "Crea il tuo",
@@ -797,8 +796,7 @@ const catalog02: Record<string, string> = {
   "Copy Webhook URL": "Copia URL del webhook",
   "Copy code": "Copia codice",
   "Copy diagnostics": "Copia diagnostica",
-  "Copy diagnostics grabs the engine status and your P2P settings as JSON, handy to paste into a bug report. The engine folder holds the DHT cache (dht.json) and active torrent data.":
-    "Copia diagnostica acquisisce lo stato del motore e le impostazioni P2P in formato JSON, da incollare comodamente in una segnalazione di bug. La cartella del motore contiene la cache DHT (dht.json) e i dati dei torrent attivi.",
+  "Copy diagnostics grabs the engine status and your P2P settings as JSON, handy to paste into a bug report. The engine folder holds the DHT cache (dht.json) and active transfer data.": "Copia diagnostica acquisisce lo stato del motore e le impostazioni P2P in formato JSON, da incollare comodamente in una segnalazione di bug. La cartella del motore contiene la cache DHT (dht.json) e i dati dei trasferimenti attivi.",
   "Copy error": "Errore di copia",
   "Copy example": "Copia esempio",
   "Copy filename": "Copia nome file",

@@ -15,18 +15,11 @@ import {
   type PollHandle,
   type PollResult,
 } from "./device-auth";
-import {
-  getSession,
-  setSession,
-  subscribeSession,
-} from "./session";
+import { getSession, setSession, subscribeSession } from "./session";
 import { stremioIdToTraktTarget, type TraktEpisodeRef } from "./ids";
-import {
-  scrobblePause,
-  scrobbleStart,
-  scrobbleStop,
-} from "./scrobble";
+import { scrobblePause, scrobbleStart, scrobbleStop } from "./scrobble";
 import { pushWatched } from "./history";
+import { armOnlineFlush, flushPendingStops, recordPendingStop } from "./pending-sync";
 import type { DeviceCode, TraktSession, TraktTarget } from "./types";
 
 export type ConnectState =
@@ -53,10 +46,7 @@ type Value = {
   cancelConnect: () => void;
   disconnect: () => void;
   scrobble: (action: "start" | "pause" | "stop", args: ScrobbleArgs) => Promise<void>;
-  resolveTarget: (
-    metaId: string,
-    episode?: TraktEpisodeRef,
-  ) => TraktTarget | null;
+  resolveTarget: (metaId: string, episode?: TraktEpisodeRef) => TraktTarget | null;
 };
 
 const Ctx = createContext<Value | null>(null);
@@ -119,13 +109,10 @@ export function TraktProvider({ children }: { children: ReactNode }) {
     setConnectState({ kind: "idle" });
   }, []);
 
-  const resolveTarget = useCallback(
-    (metaId: string, episode?: TraktEpisodeRef) => {
-      const r = stremioIdToTraktTarget(metaId, episode);
-      return r.ok ? r.target : null;
-    },
-    [],
-  );
+  const resolveTarget = useCallback((metaId: string, episode?: TraktEpisodeRef) => {
+    const r = stremioIdToTraktTarget(metaId, episode);
+    return r.ok ? r.target : null;
+  }, []);
 
   const scrobble = useCallback(
     async (action: "start" | "pause" | "stop", args: ScrobbleArgs) => {
@@ -137,11 +124,28 @@ export function TraktProvider({ children }: { children: ReactNode }) {
       else if (action === "pause") await scrobblePause(target, progress);
       else {
         const outcome = await scrobbleStop(target, progress);
-        if (outcome === "failed") await pushWatched(target);
+        let confirmed = outcome === "recorded" || outcome === "already-recorded";
+        if (!confirmed) confirmed = await pushWatched(target);
+        if (!confirmed) recordPendingStop(args.metaId, args.episode, progress);
       }
     },
     [resolveTarget],
   );
+
+  useEffect(
+    () =>
+      armOnlineFlush({
+        hasSession: () => getSession() != null,
+        resolveTarget,
+        stopScrobble: scrobbleStop,
+        markWatched: pushWatched,
+      }),
+    [resolveTarget],
+  );
+
+  useEffect(() => {
+    if (session) void flushPendingStops().catch(() => {});
+  }, [session]);
 
   const value = useMemo<Value>(
     () => ({
