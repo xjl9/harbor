@@ -94,6 +94,10 @@ targets:
         # simulator SDK that surfaces as undefined __swift_FORCE_LOAD_$_swiftCompatibility56.
         # Force-link them for the simulator only; the device SDK links clean (CI is green).
         OTHER_LDFLAGS[sdk=iphonesimulator*]: $(inherited) -L$(DT_TOOLCHAIN_DIR)/usr/lib/swift/iphonesimulator -lswiftCompatibility56 -lswiftCompatibilityConcurrency -lswiftCompatibilityPacks
+        # Xcode 26's device SDK needs the same force-link: the archive on the Mini
+        # died on __swift_FORCE_LOAD_$_swiftCompatibility56 for arm64 iphoneos too
+        # (the CI lane on Xcode 16.4 never hit it).
+        OTHER_LDFLAGS[sdk=iphoneos*]: $(inherited) -L$(DT_TOOLCHAIN_DIR)/usr/lib/swift/iphoneos -lswiftCompatibility56 -lswiftCompatibilityConcurrency -lswiftCompatibilityPacks
       groups: [app]
     dependencies:
       - framework: {{ lib-output-file-name }}
